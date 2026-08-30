@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package everstack.traces.v1;
+
+import "everstack/traces/v1/observability.proto";
+import "google/api/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/traces/v1;traces";
+
+// ObservabilityService provides access to pre-aggregated metrics, sessions, and users
+service ObservabilityService {
+  // GetMetricsDashboard returns top-level KPI metrics for the dashboard
+  rpc GetMetricsDashboard(GetMetricsDashboardRequest) returns (GetMetricsDashboardResponse) {
+    option (google.api.http) = {
+      post: "/v1/observability/metrics/dashboard"
+      body: "*"
+    };
+  }
+
+  // GetMetricsTimeSeries returns time-bucketed metric data for charts
+  rpc GetMetricsTimeSeries(GetMetricsTimeSeriesRequest) returns (GetMetricsTimeSeriesResponse) {
+    option (google.api.http) = {
+      post: "/v1/observability/metrics/timeseries"
+      body: "*"
+    };
+  }
+
+  // GetMetricsBreakdown returns Top-N grouped metrics for ranked panels.
+  rpc GetMetricsBreakdown(GetMetricsBreakdownRequest) returns (GetMetricsBreakdownResponse) {
+    option (google.api.http) = {
+      post: "/v1/observability/metrics/breakdown"
+      body: "*"
+    };
+  }
+
+  // ListTraceSessions returns paginated session aggregations
+  rpc ListTraceSessions(ListTraceSessionsRequest) returns (ListTraceSessionsResponse) {
+    option (google.api.http) = {
+      post: "/v1/observability/sessions"
+      body: "*"
+    };
+  }
+
+  // GetTraceSession returns a single session by ID
+  rpc GetTraceSession(GetTraceSessionRequest) returns (GetTraceSessionResponse) {
+    option (google.api.http) = {
+      get: "/v1/observability/sessions/{session_id}"
+    };
+  }
+
+  // ListTraceUsers returns paginated user aggregations
+  rpc ListTraceUsers(ListTraceUsersRequest) returns (ListTraceUsersResponse) {
+    option (google.api.http) = {
+      post: "/v1/observability/users"
+      body: "*"
+    };
+  }
+
+  // GetTraceUser returns a single user by ID
+  rpc GetTraceUser(GetTraceUserRequest) returns (GetTraceUserResponse) {
+    option (google.api.http) = {
+      get: "/v1/observability/users/{user_id}"
+    };
+  }
+
+  // GetOutcomeDashboard returns aggregated outcome KPIs from auto-scoring data
+  rpc GetOutcomeDashboard(GetOutcomeDashboardRequest) returns (GetOutcomeDashboardResponse) {
+    option (google.api.http) = {
+      post: "/v1/observability/outcomes/dashboard"
+      body: "*"
+    };
+  }
+
+  // GetOutcomeTimeSeries returns time-bucketed score data for trend charts
+  rpc GetOutcomeTimeSeries(GetOutcomeTimeSeriesRequest) returns (GetOutcomeTimeSeriesResponse) {
+    option (google.api.http) = {
+      post: "/v1/observability/outcomes/timeseries"
+      body: "*"
+    };
+  }
+}

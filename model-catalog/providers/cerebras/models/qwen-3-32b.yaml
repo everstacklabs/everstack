@@ -1,0 +1,20 @@
+name: "qwen-3-32b"
+display_name: "Qwen 3 32B"
+family: "qwen"
+status: "deprecated"
+
+cost:
+  input_per_1k: 0.0005
+  output_per_1k: 0.0007
+
+limits:
+  max_tokens: 131072
+  max_completion_tokens: 16384
+
+capabilities:
+  - chat
+  - function_calling
+
+modalities:
+  input: ["text"]
+  output: ["text"]

@@ -1,0 +1,130 @@
+syntax = "proto3";
+
+package everstack.providers.v1;
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/providers/model_discovery/v1;model_discovery";
+
+// ModelDiscoveryService provides model discovery and management for meta-providers
+service ModelDiscoveryService {
+  // SearchModels searches for available models from a meta-provider
+  rpc SearchModels(SearchModelsRequest) returns (SearchModelsResponse);
+  
+  // AddCustomModel adds a custom model to the database
+  rpc AddCustomModel(AddCustomModelRequest) returns (AddCustomModelResponse);
+  
+  // ListCustomModels lists all custom models for a provider or all providers
+  rpc ListCustomModels(ListCustomModelsRequest) returns (ListCustomModelsResponse);
+  
+  // DeleteCustomModel removes a custom model
+  rpc DeleteCustomModel(DeleteCustomModelRequest) returns (DeleteCustomModelResponse);
+  
+  // UpdateCustomModel updates a custom model's metadata
+  rpc UpdateCustomModel(UpdateCustomModelRequest) returns (UpdateCustomModelResponse);
+  
+  // GetCustomModel retrieves a specific custom model
+  rpc GetCustomModel(GetCustomModelRequest) returns (GetCustomModelResponse);
+}
+
+// DiscoveredModel represents a model discovered from a meta-provider's API
+message DiscoveredModel {
+  string id = 1; // Unique identifier
+  string name = 2; // Model name/identifier
+  string display_name = 3; // Human-readable name
+  string provider = 4; // Provider name
+  map<string, string> metadata = 5; // Additional metadata (pricing, context_length, etc.)
+  string description = 6; // Model description
+  repeated string capabilities = 7; // Model capabilities
+  int64 context_length = 8; // Context window size
+  string pricing_info = 9; // Pricing information as JSON string
+}
+
+// CustomModel represents a user-configured custom model
+message CustomModel {
+  string id = 1;
+  string provider_name = 2;
+  string model_name = 3;
+  string display_name = 4;
+  map<string, string> model_metadata = 5;
+  string source = 6; // "manual" or "discovered"
+  bool is_active = 7;
+  string created_at = 8;
+  string updated_at = 9;
+}
+
+// SearchModelsRequest requests model search from a meta-provider
+message SearchModelsRequest {
+  string provider_name = 1; // Provider to search (openrouter, huggingface, ollama)
+  string query = 2; // Search query (optional for providers that list all)
+  int32 limit = 3; // Maximum number of results (optional)
+  bool use_provider_api_key = 4; // Whether to use stored API key for auth
+  string custom_base_url = 5; // Optional custom base URL (for Ollama, etc.)
+}
+
+// SearchModelsResponse returns discovered models
+message SearchModelsResponse {
+  repeated DiscoveredModel models = 1;
+  int32 total_count = 2;
+  string provider_name = 3;
+  string warning = 4; // Optional warning message (e.g., local connection failed but showing cloud models)
+}
+
+// AddCustomModelRequest adds a custom model
+message AddCustomModelRequest {
+  string provider_name = 1;
+  string model_name = 2;
+  string display_name = 3;
+  map<string, string> model_metadata = 4;
+  string source = 5; // "manual" or "discovered"
+}
+
+// AddCustomModelResponse returns the created model
+message AddCustomModelResponse {
+  CustomModel model = 1;
+}
+
+// ListCustomModelsRequest lists custom models
+message ListCustomModelsRequest {
+  string provider_name = 1; // Optional: filter by provider
+  bool active_only = 2; // Only return active models
+}
+
+// ListCustomModelsResponse returns custom models
+message ListCustomModelsResponse {
+  repeated CustomModel models = 1;
+  int32 total_count = 2;
+}
+
+// DeleteCustomModelRequest deletes a custom model
+message DeleteCustomModelRequest {
+  string id = 1; // Custom model ID
+}
+
+// DeleteCustomModelResponse confirms deletion
+message DeleteCustomModelResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// UpdateCustomModelRequest updates a custom model
+message UpdateCustomModelRequest {
+  string id = 1;
+  string display_name = 2;
+  map<string, string> model_metadata = 3;
+  bool is_active = 4;
+}
+
+// UpdateCustomModelResponse returns the updated model
+message UpdateCustomModelResponse {
+  CustomModel model = 1;
+}
+
+// GetCustomModelRequest retrieves a specific custom model
+message GetCustomModelRequest {
+  string id = 1; // Custom model ID
+}
+
+// GetCustomModelResponse returns the custom model
+message GetCustomModelResponse {
+  CustomModel model = 1;
+}
+

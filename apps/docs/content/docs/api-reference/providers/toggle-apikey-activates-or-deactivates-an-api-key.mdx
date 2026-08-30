@@ -1,0 +1,164 @@
+---
+title: "PATCH Toggle APIKey activates or deactivates an API key"
+description: "ToggleAPIKey activates or deactivates an API key"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Toggle APIKey activates or deactivates an API key</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-orange-500/10 text-orange-600 dark:text-orange-400">PATCH</span>
+    <code className="text-sm text-fd-muted-foreground">{"/v1/providers/api-keys/{keyId}/toggle"}</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="patch"
+  path="/v1/providers/api-keys/{keyId}/toggle"
+  parameters={[{"name":"keyId","in":"path","required":true,"schema":{"type":"string"}}]}
+  defaultBody={`{
+  "isActive": true
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X PATCH "http://localhost:8089/v1/providers/api-keys/{keyId}/toggle" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"isActive":true}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/providers/api-keys/{keyId}/toggle", {
+  method: "PATCH",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "isActive": true
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.patch(
+    "http://localhost:8089/v1/providers/api-keys/{keyId}/toggle",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "isActive": true
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "key": {
+    "id": "string",
+    "providerConfigId": "string",
+    "keyName": "string",
+    "keyMasked": "string",
+    "weight": 0,
+    "isActive": true,
+    "createdAt": "string",
+    "updatedAt": "string",
+    "source": "string"
+  }
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+### Parameters
+
+| Name | In | Type | Required | Description |
+|------|-----|------|----------|-------------|
+| `keyId` | path | `string` | **Yes** |  |
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `isActive` | `boolean` | No |  |
+
+
+### Responses
+
+#### 200 API key toggled successfully
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `key` | `object` |  |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

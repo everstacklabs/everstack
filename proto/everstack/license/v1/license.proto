@@ -1,0 +1,291 @@
+syntax = "proto3";
+
+package everstack.license.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/license/v1;license";
+
+enum LicenseType {
+  LICENSE_TYPE_UNSPECIFIED = 0;
+  LICENSE_TYPE_FREE = 1;
+  LICENSE_TYPE_BASIC = 2;
+  LICENSE_TYPE_PRO = 3;
+  LICENSE_TYPE_ENTERPRISE = 4;
+}
+
+enum LicenseStatus {
+  LICENSE_STATUS_UNSPECIFIED = 0;
+  LICENSE_STATUS_ACTIVE = 1;
+  LICENSE_STATUS_INACTIVE = 2;
+  LICENSE_STATUS_EXPIRED = 3;
+  LICENSE_STATUS_SUSPENDED = 4;
+  LICENSE_STATUS_CANCELLED = 5;
+}
+
+enum UsageLimitsType {
+  USAGE_LIMITS_TYPE_UNSPECIFIED = 0;
+  USAGE_LIMITS_TYPE_REQUESTS = 1;
+  USAGE_LIMITS_TYPE_EXECUTIONS = 2;
+  USAGE_LIMITS_TYPE_STORAGE = 3;
+  USAGE_LIMITS_TYPE_BANDWIDTH = 4;
+  USAGE_LIMITS_TYPE_RPS = 5;
+  USAGE_LIMITS_TYPE_RPM = 6;
+  USAGE_LIMITS_TYPE_RPH = 7;
+  // Agent-related limits (added for unified agent/trooper model)
+  USAGE_LIMITS_TYPE_AGENTS = 8;
+  USAGE_LIMITS_TYPE_PERSISTENT_AGENTS = 9;
+  USAGE_LIMITS_TYPE_CONCURRENT_RUNNING = 10;
+  USAGE_LIMITS_TYPE_SANDBOX_MEMORY_MB = 11;
+  USAGE_LIMITS_TYPE_MESSAGES_MONTHLY = 12;
+  USAGE_LIMITS_TYPE_CHANNEL_BINDINGS = 13;
+  USAGE_LIMITS_TYPE_SPAWN_DEPTH = 14;
+  USAGE_LIMITS_TYPE_SESSION_RETENTION_DAYS = 15;
+}
+
+message UsageLimits {
+  UsageLimitsType type = 1;
+  int64 value = 2;
+}
+
+message FeatureFlag {
+  string name = 1;
+  bool enabled = 2;
+}
+
+message License {
+  string id = 1;
+  LicenseType type = 2;
+  LicenseStatus license_status = 3;
+  string license_key = 4;
+  repeated UsageLimits usage_limits = 5;
+  repeated FeatureFlag feature_flags = 6;
+  google.protobuf.Timestamp expires_at = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  string instance_id = 10;
+}
+
+message CreateLicenseRequest {
+  LicenseType type = 1;
+  LicenseStatus license_status = 2;
+  repeated UsageLimits usage_limits = 4;
+  repeated FeatureFlag feature_flags = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  google.protobuf.Timestamp expires_at = 8;
+  string instance_id = 9;
+}
+
+message CreateLicenseResponse {
+  License license = 1;
+  reserved 2 to 10;
+  reserved "instance_id", "license_status", "type", "usage_limits", "feature_flags", "created_at", "updated_at", "expires_at";
+}
+
+message UpdateLicenseRequest {}
+
+message UpdateLicenseResponse {}
+
+message DeleteLicenseRequest {
+  string id = 1;
+}
+
+message DeleteLicenseResponse {
+  bool success = 1;
+}
+
+message GetLicenseRequest {
+  string license_key = 1;
+}
+
+message GetLicenseResponse {
+  string license_key = 1;
+}
+
+message ValidateLicenseRequest {
+  string license_key = 1;
+}
+
+message ValidateLicenseResponse {
+  bool valid = 1;
+}
+
+// BillingPeriod represents the billing cycle for a plan
+enum BillingPeriod {
+  BILLING_PERIOD_UNSPECIFIED = 0;
+  BILLING_PERIOD_MONTHLY = 1;
+  BILLING_PERIOD_YEARLY = 2;
+}
+
+// GenerateActivationToken - Portal endpoint to generate activation tokens
+message GenerateActivationTokenRequest {
+  string tenant_id = 1;  // Tenant ID from authenticated portal session
+  string plan_tier = 2;  // free, basic, pro, enterprise
+  int32 ttl_seconds = 3; // Token validity duration (default: 600 = 10 minutes)
+  BillingPeriod billing_period = 4; // Billing cycle (monthly or yearly)
+  string instance_id = 5; // Optional: pre-bind token to specific gateway instance for automatic activation
+}
+
+message GenerateActivationTokenResponse {
+  string activation_token = 1; // JWT token to be provided to gateway
+  string nonce = 2;            // Nonce for tracking (optional, for audit)
+  int64 expires_at = 3;        // Unix timestamp when token expires
+}
+
+// GetPlans - Fetch available license plans
+message GetPlansRequest {}
+
+message GetPlansResponse {
+  repeated Plan plans = 1;
+}
+
+// Plan represents a license plan configuration
+message Plan {
+  string tier = 1;                      // free, basic, pro, enterprise
+  string name = 2;                      // Display name
+  string description = 3;               // Plan description
+  int32 trial_duration_days = 4;        // Trial period in days
+  PlanPricing pricing = 5;              // Pricing information
+  bool highlight = 6;                   // Whether to highlight this plan
+  repeated PlanFeature features = 7;    // Available features
+  repeated PlanUsageLimit usage_limits = 8; // Usage limits
+  int32 seat_limit = 9;                 // Max users allowed (0 = unlimited)
+  int32 instance_limit = 10;             // Max instances allowed (0 = unlimited)
+}
+
+message PlanPricing {
+  string monthly = 1;
+  string yearly = 2;
+  string discounted = 3;  // Discounted yearly price
+  string suggested = 4;   // Marketing text for suggested option
+  PerSeatPricing per_seat = 5; // Per additional seat pricing
+}
+
+// Per-seat pricing for additional users beyond included seats
+message PerSeatPricing {
+  string monthly = 1;     // Monthly per-seat price
+  string yearly = 2;      // Yearly per-seat price
+  string sub_text = 3;    // Description e.g. "per additional seat beyond 3 included"
+}
+
+message PlanFeature {
+  string name = 1;
+  bool enabled = 2;
+}
+
+message PlanUsageLimit {
+  string type = 1;       // RPM, TOKENS, REQUESTS, etc.
+  int64 value = 2;       // -1 for unlimited
+  string sub_text = 3;   // Additional info like "+$0.50 per 1M tokens over 10M"
+}
+
+// ============================================
+// Spend Limits
+// ============================================
+
+// SpendLimitType represents the type of spend tracking
+enum SpendLimitType {
+  SPEND_LIMIT_TYPE_UNSPECIFIED = 0;
+  SPEND_LIMIT_TYPE_ESTIMATED_COST = 1;  // Real-time estimated API cost based on token usage
+  SPEND_LIMIT_TYPE_ACTUAL_BILLING = 2;  // Actual Stripe billing charges
+}
+
+// SpendLimitPeriod represents the time period for spend limits
+enum SpendLimitPeriod {
+  SPEND_LIMIT_PERIOD_UNSPECIFIED = 0;
+  SPEND_LIMIT_PERIOD_DAILY = 1;
+  SPEND_LIMIT_PERIOD_MONTHLY = 2;
+}
+
+// SpendLimitAction represents what happens when a limit is exceeded
+enum SpendLimitAction {
+  SPEND_LIMIT_ACTION_UNSPECIFIED = 0;
+  SPEND_LIMIT_ACTION_BLOCK = 1;   // Block further requests
+  SPEND_LIMIT_ACTION_WARN = 2;    // Log warnings but allow requests
+  SPEND_LIMIT_ACTION_NOTIFY = 3;  // Send email notification only
+}
+
+// SpendLimit represents a spending limit configuration
+message SpendLimit {
+  string id = 1;                       // Unique identifier
+  string organization_id = 2;          // Organization this limit applies to
+  string instance_id = 3;              // Optional: specific instance override (empty = org-wide)
+  SpendLimitType limit_type = 4;       // Type of spend tracking
+  double limit_amount = 5;             // USD amount limit
+  SpendLimitPeriod period = 6;         // Time period for the limit
+  SpendLimitAction action_on_exceed = 7; // What to do when limit is exceeded
+  double current_spend = 8;            // Current spend in the period
+  google.protobuf.Timestamp last_reset_at = 9; // When the spend counter was last reset
+  bool enabled = 10;                   // Whether this limit is active
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// GetSpendLimits - Fetch spend limits for an organization or instance
+message GetSpendLimitsRequest {
+  string organization_id = 1;  // Required: organization to fetch limits for
+  string instance_id = 2;      // Optional: specific instance (empty = fetch all org limits)
+}
+
+message GetSpendLimitsResponse {
+  repeated SpendLimit spend_limits = 1;
+  double total_estimated_spend = 2;  // Current period's total estimated spend
+  double total_actual_spend = 3;     // Current period's total actual billing
+}
+
+// SetSpendLimit - Create or update a spend limit
+message SetSpendLimitRequest {
+  string organization_id = 1;          // Required: organization this limit applies to
+  string instance_id = 2;              // Optional: specific instance override
+  SpendLimitType limit_type = 3;       // Type of spend tracking
+  double limit_amount = 4;             // USD amount limit
+  SpendLimitPeriod period = 5;         // Time period for the limit
+  SpendLimitAction action_on_exceed = 6; // What to do when limit is exceeded
+  bool enabled = 7;                    // Whether this limit is active
+}
+
+message SetSpendLimitResponse {
+  SpendLimit spend_limit = 1;  // The created or updated spend limit
+}
+
+// DeleteSpendLimit - Remove a spend limit
+message DeleteSpendLimitRequest {
+  string id = 1;  // ID of the spend limit to delete
+}
+
+message DeleteSpendLimitResponse {
+  bool success = 1;
+}
+
+// CheckSpendLimit - Real-time check if a request should be allowed based on spend limits
+message CheckSpendLimitRequest {
+  string organization_id = 1;   // Required: organization to check
+  string instance_id = 2;       // Optional: specific instance
+  double estimated_cost = 3;    // Estimated cost of the pending request (USD)
+}
+
+message CheckSpendLimitResponse {
+  bool allowed = 1;                    // Whether the request should be allowed
+  SpendLimitAction action = 2;         // Action to take (if limit exceeded)
+  string limit_exceeded_message = 3;   // Human-readable message if limit exceeded
+  double current_spend = 4;            // Current spend in the period
+  double limit_amount = 5;             // The limit that would be exceeded
+  double remaining_budget = 6;         // Remaining budget before limit
+}
+
+// UpdateSpendUsage - Update the current spend for an organization/instance
+message UpdateSpendUsageRequest {
+  string organization_id = 1;
+  string instance_id = 2;       // Optional: specific instance
+  double estimated_cost = 3;    // Estimated cost to add (from gateway)
+  double actual_cost = 4;       // Actual cost to add (from billing)
+  string idempotency_key = 5;   // UUID for deduplication (reused on retry, cleared on success)
+}
+
+message UpdateSpendUsageResponse {
+  double new_estimated_spend = 1;
+  double new_actual_spend = 2;
+  bool limit_exceeded = 3;       // Whether any limit is now exceeded
+  SpendLimitAction action = 4;   // Action to take if limit exceeded
+}

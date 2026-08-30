@@ -1,0 +1,56 @@
+name: "ollama"
+display_name: "Ollama"
+base_url: "http://localhost:11434"
+api_version: "2024-01-01"
+
+# Provider type - meta-provider with dynamic model discovery (local)
+provider_type: "meta"
+supports_model_discovery: true
+discovery_api_endpoint: "http://localhost:11434/api/tags"
+
+# Authentication - Ollama is local, no auth required
+auth:
+  type: "none"
+  header_name: ""
+  header_format: ""
+  env_var: ""
+
+# Rate limiting - generous for local
+rate_limits:
+  requests_per_minute: 10000
+  tokens_per_minute: 1000000
+  concurrent_requests: 100
+
+# Supported features
+capabilities:
+  chat: true
+  completions: true
+  embeddings: true
+  function_calling: false
+  vision: false
+  streaming: true
+  fine_tuning: false
+  assistants: false
+
+# Model families (dynamic - models discovered at runtime)
+model_families:
+  ollama:
+    description: "Local Ollama models"
+    capabilities: ["chat", "completions", "embeddings"]
+    max_tokens: 32768
+
+# Default settings
+defaults:
+  temperature: 0.7
+  max_tokens: 1000
+  top_p: 1.0
+  top_k: 40
+  timeout: 120s
+  retry_attempts: 3
+  retry_delay: 1s
+
+# Error handling
+error_mapping:
+  "connection_failed": "server_error"
+  "model_not_found": "model_unavailable"
+

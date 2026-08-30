@@ -1,0 +1,156 @@
+---
+title: evs config
+description: Manage CLI profiles, contexts, and configuration values.
+icon: Settings
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+## What it does
+
+`evs config` manages named profiles (contexts) that hold your CLI settings: API endpoint, org, workspace, output format, and transport. Each profile is independent, so you can switch between cloud, self-hosted, and staging environments with a single command.
+
+Config is stored at `~/.config/everstack/config.yaml`.
+
+## Subcommands
+
+### set
+
+```bash
+evs config set <key> <value>
+```
+
+Sets a value in the active profile.
+
+```bash
+evs config set api_url https://api.your-domain.com
+evs config set org my-org
+evs config set workspace staging
+evs config set output json
+```
+
+**Valid keys:**
+
+| Key | Description |
+|---|---|
+| `api_url` | Everstack API base URL |
+| `org` | Default organization slug |
+| `workspace` | Default workspace slug |
+| `output` | Default output format: `table`, `json`, `yaml`, `wide` |
+| `transport` | API transport: `grpc` (default) or `rest` |
+
+### get
+
+```bash
+evs config get <key>
+```
+
+Prints the value of a single config key from the active profile.
+
+```bash
+evs config get api_url
+# https://api.your-domain.com
+```
+
+### list
+
+```bash
+evs config list
+```
+
+Prints the resolved config for the active profile, including values from environment variables and defaults.
+
+```yaml
+api_url: https://api.your-domain.com
+context: default
+org: my-org
+output: table
+transport: grpc
+workspace: ""
+```
+
+### use-context
+
+```bash
+evs config use-context <name>
+```
+
+Switches the active profile. Creates the profile if it does not exist.
+
+```bash
+evs config use-context prod
+evs config use-context staging
+```
+
+### current-context
+
+```bash
+evs config current-context
+```
+
+Prints the active context name and a summary of its resolved settings.
+
+```
+Context:   prod
+API URL:   https://api.your-domain.com
+Org:       my-org
+Workspace: production
+Output:    table
+```
+
+## Named profiles
+
+Each profile stores a set of connection and display settings. A typical multi-environment setup:
+
+```yaml
+# ~/.config/everstack/config.yaml
+active_context: prod
+contexts:
+  default:
+    api_url: https://api.your-domain.com
+    org: my-org
+  prod:
+    api_url: https://api.your-domain.com
+    org: my-org
+    workspace: production
+    output: json
+  staging:
+    api_url: https://staging-api.your-domain.com
+    org: my-org
+    workspace: staging
+```
+
+Switch between them:
+
+```bash
+evs config use-context staging
+evs sandbox list
+
+evs config use-context prod
+evs sandbox list
+```
+
+## Resolution order
+
+Settings are resolved in this order (higher wins):
+
+1. Explicit flag (e.g. `--api-url`, `--org`)
+2. Environment variable (e.g. `EVS_API_URL`, `EVS_ORG`)
+3. Active profile value from `~/.config/everstack/config.yaml`
+4. Built-in default (where the setting has one)
+
+There is no built-in API endpoint. A context gets its endpoint from `evs login --api-url`, `evs config set api_url`, or `EVS_API_URL`.
+
+## Environment variables
+
+| Variable | Equivalent config key | Description |
+|---|---|---|
+| `EVS_API_URL` | `api_url` | Override the API endpoint |
+| `EVS_ORG` | `org` | Override the active organization |
+| `EVS_WORKSPACE` | `workspace` | Override the active workspace |
+| `EVS_OUTPUT` | `output` | Override the output format |
+| `EVS_TRANSPORT` | `transport` | Override the transport (`grpc` or `rest`) |
+
+<Callout type="info">
+Credentials (tokens and API keys) are stored separately in `~/.config/everstack/credentials`, not in this config file. See [evs login](/cli/login) for details.
+</Callout>

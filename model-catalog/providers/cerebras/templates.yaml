@@ -1,0 +1,6 @@
+default:
+  name: "Default"
+  description: "Standard Cerebras gateway settings"
+  settings:
+    timeout: 45s
+    retry_attempts: 2

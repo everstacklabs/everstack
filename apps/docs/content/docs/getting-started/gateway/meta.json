@@ -1,0 +1,11 @@
+{
+  "title": "Gateway",
+  "pages": [
+    "overview",
+    "routing",
+    "caching",
+    "rate-limiting",
+    "load-balancing",
+    "cors"
+  ]
+}

@@ -1,0 +1,60 @@
+name: "minimax"
+display_name: "MiniMax"
+base_url: "https://api.minimax.io/v1"
+api_version: "v1"
+
+provider_type: "static"
+supports_model_discovery: false
+
+auth:
+  type: "api_key"
+  header_name: "Authorization"
+  header_format: "Bearer {api_key}"
+  env_var: "MINIMAX_API_KEY"
+
+rate_limits:
+  requests_per_minute: 120
+  tokens_per_minute: 720000
+  concurrent_requests: 50
+
+capabilities:
+  chat: true
+  completions: false
+  embeddings: false
+  function_calling: true
+  vision: false
+  streaming: true
+  fine_tuning: false
+  assistants: false
+
+model_families:
+  minimax-m2.5:
+    description: "MiniMax M2.5 family — peak performance coding and agentic models"
+    capabilities: ["chat", "function_calling"]
+    max_tokens: 200000
+  minimax-m2.1:
+    description: "MiniMax M2.1 family — 230B MoE models with polyglot coding"
+    capabilities: ["chat", "function_calling"]
+    max_tokens: 200000
+  minimax-m2:
+    description: "MiniMax M2 — 200K context with agentic capabilities"
+    capabilities: ["chat", "function_calling"]
+    max_tokens: 200000
+  minimax-m1:
+    description: "MiniMax M1 — legacy model with function calling"
+    capabilities: ["chat", "function_calling"]
+    max_tokens: 128000
+
+defaults:
+  temperature: 0.7
+  max_tokens: 2048
+  top_p: 1.0
+  timeout: 60s
+  retry_attempts: 3
+  retry_delay: 1s
+
+error_mapping:
+  "rate_limit_exceeded": "rate_limit_exceeded"
+  "payment_required": "payment_required"
+  "model_not_found": "model_unavailable"
+  "invalid_api_key": "authentication_failed"

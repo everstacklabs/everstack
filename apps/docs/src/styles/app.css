@@ -1,0 +1,208 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+
+/*
+ * Everstack brand theme for Fumadocs
+ *
+ * How it works:
+ *   @theme {} → registers Tailwind design tokens AND sets :root (light mode) defaults
+ *   .dark {}  → overrides CSS custom properties at runtime when dark class is present
+ *
+ * Brand palette (from packages/tailwind-config/shared-styles.css):
+ *   brand-main: neutral dark blue-gray  (hue ~268-286)
+ *   brand-secondary: purple accent      (hue ~282-292)
+ */
+
+:root {
+  --fd-layout-width: 90%;
+  --fd-sidebar-width: 480px;
+}
+
+html {
+  overscroll-behavior: none;
+  scroll-behavior: smooth;
+}
+
+/* ── Light mode defaults (overrides Fumadocs neutral light) ── */
+@theme {
+  --color-fd-background: oklch(0.985 0 0);
+  --color-fd-foreground: oklch(0.141 0.005 285.823);
+  --color-fd-card: oklch(0.975 0.001 286.375);
+  --color-fd-card-foreground: oklch(0.141 0.005 285.823);
+  --color-fd-popover: oklch(0.985 0 0);
+  --color-fd-popover-foreground: oklch(0.141 0.005 285.823);
+  --color-fd-muted: oklch(0.967 0.001 286.375);
+  --color-fd-muted-foreground: oklch(0.552 0.016 285.938);
+  --color-fd-secondary: oklch(0.967 0.001 286.375);
+  --color-fd-secondary-foreground: oklch(0.21 0.006 285.885);
+  --color-fd-accent: oklch(0.958 0.02 292.22);
+  --color-fd-accent-foreground: oklch(0.21 0.006 285.885);
+  --color-fd-primary: oklch(0.545 0.239 284.39);
+  --color-fd-primary-foreground: oklch(0.985 0 0);
+  --color-fd-border: oklch(0.92 0.004 286.32);
+  --color-fd-ring: oklch(0.871 0.006 286.286);
+  --color-fd-border: transparent;
+}
+
+/* ── Dark mode overrides (overrides Fumadocs neutral .dark) ── */
+.dark {
+  --color-fd-background: oklch(0.1456 0.0088 273.8726); /* brand-main-950 */
+  --color-fd-foreground: oklch(0.985 0 0);
+  --color-fd-card: oklch(0.1823 0.0107 268.1014); /* brand-main-900 */
+  --color-fd-card-foreground: oklch(0.985 0 0);
+  --color-fd-popover: oklch(0.1823 0.0107 268.1014); /* brand-main-900 */
+  --color-fd-popover-foreground: oklch(0.985 0 0);
+  --color-fd-muted: oklch(0.2091 0.0147 266.8769); /* brand-main-800 */
+  --color-fd-muted-foreground: oklch(0.705 0.015 286.067);
+  --color-fd-secondary: oklch(0.274 0.006 286.033);
+  --color-fd-secondary-foreground: oklch(0.985 0 0);
+  --color-fd-accent: oklch(0.2091 0.0147 266.8769); /* brand-main-800 */
+  --color-fd-accent-foreground: oklch(0.985 0 0);
+  --color-fd-primary: oklch(0.694 0.158 287.83); /* brand-secondary-400 */
+  --color-fd-primary-foreground: oklch(0.985 0 0);
+  --color-fd-border: oklch(0.274 0.006 286.033);
+  --color-fd-ring: oklch(0.442 0.017 285.786);
+}
+
+/* Sidebar in dark mode — slightly distinct surface */
+.dark #nd-sidebar {
+  --color-fd-muted: oklch(0.2091 0.0147 266.8769); /* brand-main-800 */
+  --color-fd-secondary: oklch(0.2313 0.0203 267.7859); /* brand-main-700 */
+  --color-fd-muted-foreground: oklch(
+    0.7606 0.0088 271.3593
+  ); /* brand-main-100 */
+}
+
+/* ── Sidebar scroll fix — ensure both axes scroll properly ── */
+#nd-sidebar [data-radix-scroll-area-viewport] {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* ── Hide the root "Documentation" link (redundant with sidebar tabs) ── */
+#nd-sidebar > div > a[href="/docs"],
+#nd-sidebar-mobile > div > a[href="/docs"] {
+  display: none;
+}
+
+/* ── Hide the tree-connector left border inside sidebar folders ── */
+#nd-sidebar [data-state]::before {
+  display: none;
+}
+
+/* ── Sidebar section separators — tighten spacing ── */
+#nd-sidebar p.inline-flex {
+  margin-top: 0.625rem;
+  margin-bottom: 0.25rem;
+  padding-left: 0;
+  padding-right: 0;
+  padding-inline: 0;
+}
+
+/* Nested separators inside folders — subtler than top-level "Platform" etc. */
+#nd-sidebar [data-state] p.inline-flex {
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  color: var(--color-fd-muted-foreground);
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  margin-left: -0.5rem;
+  padding-inline: 0;
+}
+
+/* ── API reference sidebar badges ── */
+.api-sidebar-item__content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  border: none;
+  width: 100%;
+}
+
+.api-sidebar-item__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  flex-wrap: wrap;
+  text-wrap: wrap;
+  text-wrap-mode: wrap;
+  min-width: 0;
+}
+
+.api-sidebar-item__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 1.25rem;
+  min-width: 2.5rem;
+  padding: 0 0.375rem;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/* ── Light mode method colors (brand-tinted) ── */
+.api-sidebar-item__badge[data-method="GET"] {
+  color: oklch(0.4 0.1 160);
+  background: oklch(0.955 0.025 160);
+}
+
+.api-sidebar-item__badge[data-method="POST"] {
+  color: oklch(0.453 0.25 281.95); /* brand-secondary-700 */
+  background: oklch(0.958 0.02 292.22); /* brand-secondary-50 */
+}
+
+.api-sidebar-item__badge[data-method="PUT"],
+.api-sidebar-item__badge[data-method="PATCH"] {
+  color: oklch(0.48 0.1 73);
+  background: oklch(0.955 0.03 73);
+}
+
+.api-sidebar-item__badge[data-method="DELETE"] {
+  color: oklch(0.47 0.14 25);
+  background: oklch(0.955 0.03 25);
+}
+
+.api-sidebar-item__badge[data-method="OPTIONS"],
+.api-sidebar-item__badge[data-method="HEAD"] {
+  color: var(--color-fd-muted-foreground);
+  background: var(--color-fd-muted);
+}
+
+/* ── Dark mode badge overrides ── */
+.dark .api-sidebar-item__badge[data-method="GET"] {
+  color: oklch(0.75 0.14 160);
+  background: oklch(0.22 0.03 160 / 0.5);
+}
+
+.dark .api-sidebar-item__badge[data-method="POST"] {
+  color: oklch(0.694 0.158 287.83); /* brand-secondary-400 */
+  background: oklch(0.203 0.111 282.03 / 0.6); /* brand-secondary-950 */
+}
+
+.dark .api-sidebar-item__badge[data-method="PUT"],
+.dark .api-sidebar-item__badge[data-method="PATCH"] {
+  color: oklch(0.78 0.11 73);
+  background: oklch(0.24 0.03 73 / 0.5);
+}
+
+.dark .api-sidebar-item__badge[data-method="DELETE"] {
+  color: oklch(0.72 0.14 25);
+  background: oklch(0.24 0.04 25 / 0.5);
+}
+
+.dark .api-sidebar-item__badge[data-method="OPTIONS"],
+.dark .api-sidebar-item__badge[data-method="HEAD"] {
+  color: oklch(0.6 0.01 270);
+  background: oklch(0.22 0.015 270 / 0.5);
+}

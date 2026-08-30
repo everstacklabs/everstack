@@ -1,0 +1,3 @@
+-- Data-only migration. The inserted rows are indistinguishable from facts
+-- produced by the materialized view, so rollback intentionally leaves them in
+-- place rather than deleting valid historical metrics.

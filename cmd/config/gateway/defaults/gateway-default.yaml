@@ -1,0 +1,304 @@
+# =============================================================================
+# Everstack Default Configuration
+# =============================================================================
+# This is the bundled default configuration that allows zero-config startup.
+# All values can be overridden via environment variables with the EVS_ prefix.
+#
+# For the complete list of supported environment variables, see:
+#   cmd/config/gateway/validator/envvars.go
+#
+# Common Environment Variables:
+#   EVS_DATABASE_MODE=hybrid              -> database.mode (single or hybrid)
+#   EVS_POSTGRES_DSN=postgres://...       -> database.postgres.dsn
+#   EVS_CLICKHOUSE_DSN=clickhouse://...   -> database.clickhouse.dsn
+#   EVS_SERVER_PORT=8089                  -> server.config.port
+#   EVS_CACHE_TYPE=redis                  -> cache.type
+#   EVS_CACHE_REDIS_ADDRESS=redis:6379    -> cache.redis.address
+#   EVS_TELEMETRY_ENABLED=true            -> server.telemetry.otel.enabled
+#   EVS_TELEMETRY_OTEL_COLLECTOR_URL=...  -> server.telemetry.otel.collector_url
+#
+# For production, provide your own config via:
+#   1. --config flag:     mf serve --config /path/to/gateway.yaml
+#   2. --config with URL: mf serve --config https://example.com/gateway.yaml
+#   3. Environment var:   export EVS_CONFIG_URL=https://example.com/gateway.yaml
+#   4. Mount volume:      docker run -v ./gateway.yaml:/app/config/gateway.yaml ...
+#
+# For remote configs with authentication, set EVS_CONFIG_AUTH_TOKEN.
+# =============================================================================
+
+server:
+  config:
+    port: 8089
+    host: "0.0.0.0"
+    external_port: 8089
+    external_domain: "localhost"
+    enforce_external_domain: false # Set to true in production to reject requests not matching external_domain
+    external_secure: false
+
+  log:
+    level: "info"
+    formatter:
+      format: "text"
+
+  metrics:
+    type: "otel"
+
+  tracing:
+    type: "otel"
+    fraction: 0.1
+
+  # Telemetry configuration (OTEL logging and tracing)
+  # Disabled by default to avoid connection errors when OTEL collector is not available
+  # Enable by setting EVS_TELEMETRY_ENABLED=true and EVS_TELEMETRY_OTEL_COLLECTOR_URL
+  telemetry:
+    otel:
+      enabled: false # Set to true when you have an OTEL collector running
+      mode: "embedded" # "embedded" for self-hosted, "external" for cloud
+      collector_url: "localhost:4317" # Override with EVS_TELEMETRY_OTEL_COLLECTOR_URL
+      service_name: "everstack-gateway"
+      tenant_type: "self_hosted"
+      instance_owner: "user"
+      # Direct export to ClickHouse (required for embedded mode)
+      # When enabled, ClickHouse connection details are derived from database.clickhouse.dsn
+      # This ensures a single source of truth for ClickHouse configuration
+      direct_export:
+        enabled: true # Set to true to export logs/traces to ClickHouse
+      # Distributed tracing configuration
+      # Traces are exported to ClickHouse via the OTEL collector
+      tracing:
+        sampling_rate: 1.0 # 0.0 to 1.0 (1.0 = trace 100% of requests)
+        granularity: "standard" # "minimal", "standard", "detailed"
+        trace_provider_calls: true # Trace individual provider HTTP requests
+        trace_stream_chunks: false # Trace streaming chunks (noisy, detailed mode only)
+        trace_fallbacks: true # Trace fallback attempts
+        trace_key_rotation: false # Trace key rotation events
+
+  tls:
+    enabled: false
+
+  cors:
+    enabled: true
+    allowed_origins:
+      - "*"
+    allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allowed_headers: ["*"]
+    allow_credentials: true
+
+  security:
+    # API key hash secret - override with EVS_SERVER_SECURITY_API_KEY_HASH_SECRET
+    api_key_hash_secret: "change-me-in-production-use-a-random-64-char-hex-string"
+
+# =============================================================================
+# Database Configuration
+# =============================================================================
+# Override with environment variables:
+#   EVS_DATABASE_MODE=hybrid (single or hybrid; hybrid uses Postgres + ClickHouse)
+#   EVS_POSTGRES_DSN=postgres://user:pass@host:5432/dbname
+#   EVS_CLICKHOUSE_DSN=clickhouse://user:pass@host:9000/dbname
+
+database:
+  # Mode: "single" (default) uses only one database, "hybrid" uses Postgres + ClickHouse
+  # Override with EVS_DATABASE_MODE environment variable
+  mode: "hybrid"
+  type: "postgres"
+  postgres:
+    # DSN format: postgres://user:password@host:port/database?sslmode=disable
+    # Override by setting EVS_POSTGRES_DSN environment variable (takes precedence)
+    dsn: "postgres://postgres:postgres@localhost:5432/everstack?sslmode=disable"
+    max_open_conns: 100
+    max_idle_conns: 50
+    conn_max_lifetime: "5m"
+
+  clickhouse:
+    # DSN format: clickhouse://user:password@host:9000/database
+    # Override by setting EVS_CLICKHOUSE_DSN environment variable (takes precedence)
+    dsn: "clickhouse://clickhouse:clickhouse@localhost:9000/everstack"
+    max_open_conns: 50
+    max_idle_conns: 25
+    conn_max_lifetime: "10m"
+
+# =============================================================================
+# Authentication Configuration
+# =============================================================================
+# Controls how users authenticate to the admin dashboard.
+#
+# Modes:
+#   - "none"    : No authentication (default). Dashboard is open to anyone.
+#   - "builtin" : Built-in email/password + magic link. First user = owner.
+#   - "oidc"    : OpenID Connect (Keycloak, Auth0, Okta, Authelia, etc.)
+#
+# Environment variables:
+#   EVS_AUTH_MODE=builtin
+#   EVS_AUTH_BUILTIN_SESSION_SECRET=your-secret
+#   EVS_AUTH_OIDC_ISSUER_URL=https://...
+#   EVS_AUTH_OIDC_CLIENT_ID=everstack
+#   EVS_AUTH_OIDC_CLIENT_SECRET=secret
+
+auth:
+  mode: "none" # Options: none, builtin, oidc
+
+  # Built-in Authentication (mode: "builtin")
+  # Self-contained auth with email/password and optional magic links.
+  # The first registered user becomes the instance owner.
+  # builtin:
+  #   session_secret: ""          # Required for persistent sessions across restarts
+  #   session_max_age: 604800     # Session duration in seconds (default: 7 days)
+  #   session_secure: true        # Set to false for local dev over HTTP (not HTTPS)
+  #   session_same_site: "lax"    # Cookie SameSite: lax, strict, none (use none for cross-origin UI/API)
+  #   seat_limit: 0               # Max users allowed (0 = unlimited)
+
+  # OpenID Connect Authentication (mode: "oidc")
+  # Works with any OIDC provider: Keycloak, Auth0, Okta, Azure AD, etc.
+  # oidc:
+  #   issuer_url: "https://auth.example.com/realms/everstack"
+  #   client_id: "everstack"
+  #   client_secret: ""           # Or use EVS_AUTH_OIDC_CLIENT_SECRET env var
+  #   redirect_uri: "http://localhost:8089/auth/callback"
+  #   scopes: ["openid", "profile", "email"]
+  #   admin_claim: "groups"       # JWT claim for role checking (optional)
+  #   admin_value: "admins"       # Value that grants admin access (optional)
+
+# =============================================================================
+# Cache Configuration
+# =============================================================================
+# Override with environment variables:
+#   EVS_CACHE_TYPE=redis
+#   EVS_CACHE_REDIS_ADDRESS=redis:6379
+
+cache:
+  enabled: true
+  type: "memory"
+
+  memory:
+    max_size: 50000
+    ttl: "10m"
+
+  redis:
+    address: ""
+    password: ""
+    db: 0
+    ttl: "10m"
+    pool_size: 100
+
+# =============================================================================
+# Gateway Configuration
+# =============================================================================
+# Configure your LLM providers by creating your own config file.
+# The default config has no models configured.
+
+gateway:
+  # Model configurations - No models by default
+  # Create your own config to add providers like:
+  #
+  # models:
+  #   - provider: openai
+  #     model:
+  #       - gpt-4o
+  #       - gpt-4o-mini
+  #     api_key: sk-your-api-key
+  #     base_url: https://api.openai.com/v1
+  #     max_tokens: 4096
+  #     default: true
+  #
+  #   - provider: anthropic
+  #     model:
+  #       - claude-3-5-sonnet-20241022
+  #     api_key: sk-ant-your-api-key
+  #     base_url: https://api.anthropic.com/v1
+  #     max_tokens: 4096
+  models: []
+
+  rate_limit:
+    enabled: true
+    requests_per_minute: 500
+    burst: 100
+    key_source: "correlation"
+
+  load_balancer:
+    enabled: true
+    strategy: "round_robin"
+    key_source: "correlation"
+
+  memory:
+    enabled: false
+    type: "memory"
+    ttl: "24h"
+
+  capabilities:
+    function_calling:
+      enabled: true
+    embeddings:
+      enabled: true
+    streaming:
+      enabled: true
+
+  guardrails:
+    enabled: false
+
+  agents:
+    enabled: false
+
+  plugins:
+    enabled: false
+
+  file_processing:
+    enabled: false
+
+# =============================================================================
+# Feature Flags
+# =============================================================================
+
+features:
+  # Vector memory store. Defaulted on so the dashboard's "Add documents"
+  # flow works out of the box on every managed instance — previous
+  # default was off, which surfaced as "Memory service is currently
+  # unavailable" 503 errors on every AddDocuments call. Managed
+  # instances can still disable via override.
+  enable_memory: true
+  memory:
+    backend: pgvector
+    embedding_models:
+      - model: text-embedding-3-small
+        dimension: 1536
+  gateway:
+    enable_streaming: true
+    enable_embeddings: true
+    enable_function_calling: true
+    enable_agents: false
+    enable_response_caching: true
+    enable_request_logging: true
+    enable_health_checks: true
+    enable_sse: false
+  # Context compaction for chat completions. The gateway side
+  # automatically summarises the oldest portion of long transcripts
+  # before they hit the provider, so token bills don't grow
+  # unboundedly when a chat client re-sends the full history every
+  # turn — the same pattern Claude Code / Codex / Opencode use.
+  #
+  # Three tiers (utilization = prompt_tokens / max_context_tokens):
+  #   ≥ background_threshold (0.80): summarise oldest 30%.
+  #   ≥ aggressive_threshold (0.85): summarise oldest 60%.
+  #   ≥ emergency_threshold  (0.95): hard-truncate, no LLM call.
+  #
+  # Per-call opt-out: clients send `metadata.compact: "off"` to skip.
+  # Provider-scope opt-out: drop the provider from
+  # `enabled_for_providers` (default list covers the providers where
+  # compaction is most valuable).
+  compact:
+    enabled: true
+    max_context_tokens: 128000
+    background_threshold: 0.80
+    aggressive_threshold: 0.85
+    emergency_threshold: 0.95
+    summarization_model: "gpt-4o-mini"
+    enabled_for_providers: ["anthropic", "openai"]
+
+# =============================================================================
+# Alerts Configuration (disabled by default)
+# =============================================================================
+
+alerts:
+  server:
+    enabled: false
+  gateway:
+    enabled: false

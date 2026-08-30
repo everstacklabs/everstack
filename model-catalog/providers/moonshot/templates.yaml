@@ -1,0 +1,42 @@
+high_performance:
+  name: "High Performance"
+  description: "Optimized for high throughput and low latency"
+  settings:
+    timeout: 30s
+    retry_attempts: 2
+    retry_delay: 500ms
+    connection_pool_size: 50
+    max_concurrent_requests: 25
+
+cost_optimized:
+  name: "Cost Optimized"
+  description: "Optimized for cost efficiency"
+  settings:
+    timeout: 120s
+    retry_attempts: 1
+    retry_delay: 2s
+    connection_pool_size: 10
+    max_concurrent_requests: 5
+  recommended_models:
+    - moonshot-v1-8k
+    - moonshot-v1-32k
+
+reasoning:
+  name: "Reasoning Tasks"
+  description: "Optimized for complex reasoning and problem solving"
+  settings:
+    temperature: 0.3
+    max_tokens: 16384
+  recommended_models:
+    - kimi-k2-thinking
+    - kimi-k2-thinking-turbo
+
+coding:
+  name: "Coding Assistant"
+  description: "Optimized for code generation and review"
+  settings:
+    temperature: 0.2
+    max_tokens: 8192
+  recommended_models:
+    - kimi-k2.5
+    - kimi-k2-0905-preview

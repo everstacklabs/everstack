@@ -1,0 +1,40 @@
+# Local Development Configuration
+# ================================
+# Copy this file to cmd/config/local.yaml for local development:
+#   cp cmd/config/local.yaml.example cmd/config/local.yaml
+#
+# This file is gitignored and will override cmd/config/default.yaml values.
+# Environment variables have the highest priority and override both files.
+#
+# Alternative: Use environment variables instead of this file:
+#   MF_SERVICES_LICENSE_URL=http://localhost:8091 go run ./cmd serve
+#
+# For frontend (Vite), create apps/admin/.env.local:
+#   VITE_LICENSE_SERVICE_URL=http://localhost:8091
+
+# =============================================================================
+# Cloud Services (Local Development)
+# =============================================================================
+# Override these to point to locally running services
+
+services:
+  license:
+    url: http://localhost:8091
+
+  # Uncomment as you add more local services
+  # auth:
+  #   url: http://localhost:8092
+  # functions:
+  #   url: http://localhost:8093
+  # prompts:
+  #   url: http://localhost:8094
+
+# =============================================================================
+# Security Policy (Development)
+# =============================================================================
+
+security:
+  license_enforcement:
+    enabled: false  # Disable for local development
+    dry_run: true   # Log violations but don't block
+

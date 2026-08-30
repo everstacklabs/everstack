@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+package everstack.channels.v1;
+
+import "google/api/annotations.proto";
+import "everstack/channels/v1/channels.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/channels/v1;channels";
+
+service ChannelsService {
+  rpc CreateChannel(CreateChannelRequest) returns (CreateChannelResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: { description: "Create a new channel binding" }
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/channels"
+      body: "*"
+    };
+  }
+
+  rpc GetChannel(GetChannelRequest) returns (GetChannelResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: { description: "Get channel by ID" }
+      }
+    };
+    option (google.api.http) = { get: "/v1/channels/{id}" };
+  }
+
+  rpc UpdateChannel(UpdateChannelRequest) returns (UpdateChannelResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: { description: "Update a channel binding" }
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/channels/{id}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteChannel(DeleteChannelRequest) returns (DeleteChannelResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: { description: "Delete a channel binding" }
+      }
+    };
+    option (google.api.http) = { delete: "/v1/channels/{id}" };
+  }
+
+  rpc ListChannels(ListChannelsRequest) returns (ListChannelsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: { description: "List channel bindings" }
+      }
+    };
+    option (google.api.http) = { get: "/v1/channels" };
+  }
+
+  rpc TestChannel(TestChannelRequest) returns (TestChannelResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: { description: "Test channel connectivity" }
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/channels/{id}/test"
+      body: "*"
+    };
+  }
+
+  rpc ListChannelStatuses(ListChannelStatusesRequest) returns (ListChannelStatusesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: { description: "List runtime status of all channels" }
+      }
+    };
+    option (google.api.http) = { get: "/v1/channels/statuses" };
+  }
+
+  rpc ListChannelSessions(ListChannelSessionsRequest) returns (ListChannelSessionsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: { description: "List sessions created by a channel" }
+      }
+    };
+    option (google.api.http) = { get: "/v1/channels/{channel_id}/sessions" };
+  }
+
+  rpc ListPlatformChannels(ListPlatformChannelsRequest) returns (ListPlatformChannelsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: { description: "List available channels from the connected platform" }
+      }
+    };
+    option (google.api.http) = { get: "/v1/channels/{channel_config_id}/platform-channels" };
+  }
+}

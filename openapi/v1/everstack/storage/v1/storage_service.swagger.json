@@ -1,0 +1,1035 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/storage/v1/storage_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "ObjectStorageService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/storage/complete-upload": {
+      "post": {
+        "operationId": "ObjectStorageService_CompleteUpload",
+        "responses": {
+          "200": {
+            "description": "Confirm upload completion and register object",
+            "schema": {
+              "$ref": "#/definitions/v1CompleteUploadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CompleteUploadRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ObjectStorageService"
+        ]
+      }
+    },
+    "/v1/storage/configs": {
+      "get": {
+        "operationId": "ObjectStorageService_ListStorageConfigs",
+        "responses": {
+          "200": {
+            "description": "List storage configs for tenant",
+            "schema": {
+              "$ref": "#/definitions/v1ListStorageConfigsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ObjectStorageService"
+        ]
+      },
+      "post": {
+        "operationId": "ObjectStorageService_ConfigureStorage",
+        "responses": {
+          "200": {
+            "description": "Configure a storage backend",
+            "schema": {
+              "$ref": "#/definitions/v1ConfigureStorageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ConfigureStorageRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ObjectStorageService"
+        ]
+      }
+    },
+    "/v1/storage/configs/{configId}": {
+      "get": {
+        "operationId": "ObjectStorageService_GetStorageConfig",
+        "responses": {
+          "200": {
+            "description": "Get storage config by ID",
+            "schema": {
+              "$ref": "#/definitions/v1GetStorageConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "configId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ObjectStorageService"
+        ]
+      },
+      "delete": {
+        "operationId": "ObjectStorageService_DeleteStorageConfig",
+        "responses": {
+          "200": {
+            "description": "Delete storage config",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteStorageConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "configId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ObjectStorageService"
+        ]
+      },
+      "patch": {
+        "operationId": "ObjectStorageService_UpdateStorageConfig",
+        "responses": {
+          "200": {
+            "description": "Update storage config",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateStorageConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "configId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ObjectStorageServiceUpdateStorageConfigBody"
+            }
+          }
+        ],
+        "tags": [
+          "ObjectStorageService"
+        ]
+      }
+    },
+    "/v1/storage/objects": {
+      "get": {
+        "operationId": "ObjectStorageService_ListObjects",
+        "responses": {
+          "200": {
+            "description": "List objects filtered by purpose and reference",
+            "schema": {
+              "$ref": "#/definitions/v1ListObjectsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "purpose",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "OBJECT_PURPOSE_UNSPECIFIED",
+              "OBJECT_PURPOSE_DATASET",
+              "OBJECT_PURPOSE_ARTIFACT",
+              "OBJECT_PURPOSE_UPLOAD",
+              "OBJECT_PURPOSE_EVAL_RESULT",
+              "OBJECT_PURPOSE_VOICE_AUDIO"
+            ],
+            "default": "OBJECT_PURPOSE_UNSPECIFIED"
+          },
+          {
+            "name": "referenceId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "referenceType",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ObjectStorageService"
+        ]
+      }
+    },
+    "/v1/storage/objects/{objectId}": {
+      "delete": {
+        "operationId": "ObjectStorageService_DeleteObject",
+        "responses": {
+          "200": {
+            "description": "Delete an object from storage",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteObjectResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "objectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ObjectStorageService"
+        ]
+      }
+    },
+    "/v1/storage/objects/{objectId}/download-url": {
+      "get": {
+        "operationId": "ObjectStorageService_GetPresignedDownloadURL",
+        "responses": {
+          "200": {
+            "description": "Get a presigned URL to download an object",
+            "schema": {
+              "$ref": "#/definitions/v1GetPresignedDownloadURLResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "objectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ObjectStorageService"
+        ]
+      }
+    },
+    "/v1/storage/upload-url": {
+      "post": {
+        "operationId": "ObjectStorageService_GetPresignedUploadURL",
+        "responses": {
+          "200": {
+            "description": "Get a presigned URL for direct upload to storage",
+            "schema": {
+              "$ref": "#/definitions/v1GetPresignedUploadURLResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetPresignedUploadURLRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ObjectStorageService"
+        ]
+      }
+    },
+    "/v1/storage/uploads/{objectId}": {
+      "get": {
+        "operationId": "ObjectStorageService_GetUploadStatus",
+        "responses": {
+          "200": {
+            "description": "Get durable upload verification and retry status",
+            "schema": {
+              "$ref": "#/definitions/v1GetUploadStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "objectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ObjectStorageService"
+        ]
+      }
+    },
+    "/v1/storage/usage": {
+      "get": {
+        "operationId": "ObjectStorageService_GetStorageUsage",
+        "responses": {
+          "200": {
+            "description": "Get storage usage and quota for tenant",
+            "schema": {
+              "$ref": "#/definitions/v1GetStorageUsageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ObjectStorageService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "ObjectStorageServiceUpdateStorageConfigBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "bucket": {
+          "type": "string"
+        },
+        "accessKeyId": {
+          "type": "string"
+        },
+        "secretAccessKey": {
+          "type": "string"
+        },
+        "pathPrefix": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "protobufNullValue": {
+      "type": "string",
+      "enum": [
+        "NULL_VALUE"
+      ],
+      "default": "NULL_VALUE",
+      "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1CompleteUploadRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "objectId": {
+          "type": "string"
+        },
+        "checksumSha256": {
+          "type": "string"
+        },
+        "sizeBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "metadata": {
+          "type": "object"
+        }
+      }
+    },
+    "v1CompleteUploadResponse": {
+      "type": "object",
+      "properties": {
+        "object": {
+          "$ref": "#/definitions/v1StorageObject"
+        },
+        "state": {
+          "$ref": "#/definitions/v1UploadState"
+        }
+      }
+    },
+    "v1ConfigureStorageRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "provider": {
+          "$ref": "#/definitions/v1StorageProvider"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "bucket": {
+          "type": "string"
+        },
+        "accessKeyId": {
+          "type": "string"
+        },
+        "secretAccessKey": {
+          "type": "string"
+        },
+        "pathPrefix": {
+          "type": "string"
+        },
+        "isDefault": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1ConfigureStorageResponse": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "$ref": "#/definitions/v1StorageConfig"
+        }
+      }
+    },
+    "v1DeleteObjectResponse": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "$ref": "#/definitions/v1UploadState"
+        }
+      }
+    },
+    "v1DeleteStorageConfigResponse": {
+      "type": "object"
+    },
+    "v1GetPresignedDownloadURLResponse": {
+      "type": "object",
+      "properties": {
+        "downloadUrl": {
+          "type": "string"
+        },
+        "expiresInSeconds": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1GetPresignedUploadURLRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": "string"
+        },
+        "sizeBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "purpose": {
+          "$ref": "#/definitions/v1ObjectPurpose"
+        },
+        "referenceId": {
+          "type": "string"
+        },
+        "referenceType": {
+          "type": "string"
+        },
+        "configId": {
+          "type": "string",
+          "title": "optional, uses default if empty"
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "title": "optional for legacy clients; required for replay safety"
+        },
+        "expectedChecksumSha256": {
+          "type": "string",
+          "title": "optional lowercase SHA-256"
+        }
+      }
+    },
+    "v1GetPresignedUploadURLResponse": {
+      "type": "object",
+      "properties": {
+        "uploadUrl": {
+          "type": "string"
+        },
+        "objectId": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "expiresInSeconds": {
+          "type": "string",
+          "format": "int64"
+        },
+        "state": {
+          "$ref": "#/definitions/v1UploadState"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        }
+      }
+    },
+    "v1GetStorageConfigResponse": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "$ref": "#/definitions/v1StorageConfig"
+        }
+      }
+    },
+    "v1GetStorageUsageResponse": {
+      "type": "object",
+      "properties": {
+        "usage": {
+          "$ref": "#/definitions/v1StorageUsage"
+        }
+      }
+    },
+    "v1GetUploadStatusResponse": {
+      "type": "object",
+      "properties": {
+        "upload": {
+          "$ref": "#/definitions/v1StorageUpload"
+        }
+      }
+    },
+    "v1ListObjectsResponse": {
+      "type": "object",
+      "properties": {
+        "objects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1StorageObject"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        },
+        "totalCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListStorageConfigsResponse": {
+      "type": "object",
+      "properties": {
+        "configs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1StorageConfig"
+          }
+        }
+      }
+    },
+    "v1ObjectPurpose": {
+      "type": "string",
+      "enum": [
+        "OBJECT_PURPOSE_UNSPECIFIED",
+        "OBJECT_PURPOSE_DATASET",
+        "OBJECT_PURPOSE_ARTIFACT",
+        "OBJECT_PURPOSE_UPLOAD",
+        "OBJECT_PURPOSE_EVAL_RESULT",
+        "OBJECT_PURPOSE_VOICE_AUDIO"
+      ],
+      "default": "OBJECT_PURPOSE_UNSPECIFIED",
+      "title": "ObjectPurpose defines how the object is used"
+    },
+    "v1StorageConfig": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "provider": {
+          "$ref": "#/definitions/v1StorageProvider"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "bucket": {
+          "type": "string"
+        },
+        "pathPrefix": {
+          "type": "string"
+        },
+        "isDefault": {
+          "type": "boolean"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "systemManaged": {
+          "type": "boolean"
+        }
+      },
+      "description": "StorageConfig represents a configured storage backend. Provider credentials\nare write-only and are never returned in this message."
+    },
+    "v1StorageObject": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "configId": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": "string"
+        },
+        "sizeBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "checksumSha256": {
+          "type": "string"
+        },
+        "purpose": {
+          "$ref": "#/definitions/v1ObjectPurpose"
+        },
+        "referenceId": {
+          "type": "string"
+        },
+        "referenceType": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "deletedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "StorageObject represents metadata about a stored object"
+    },
+    "v1StorageProvider": {
+      "type": "string",
+      "enum": [
+        "STORAGE_PROVIDER_UNSPECIFIED",
+        "STORAGE_PROVIDER_S3",
+        "STORAGE_PROVIDER_R2",
+        "STORAGE_PROVIDER_MINIO",
+        "STORAGE_PROVIDER_GCS",
+        "STORAGE_PROVIDER_EVERSTACK"
+      ],
+      "default": "STORAGE_PROVIDER_UNSPECIFIED",
+      "description": "- STORAGE_PROVIDER_EVERSTACK: Everstack is a logical, system-managed connection. Physical storage-cell\nplacement and credentials are intentionally absent from this API.",
+      "title": "StorageProvider defines the object storage backend type"
+    },
+    "v1StorageUpload": {
+      "type": "object",
+      "properties": {
+        "objectId": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "configId": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": "string"
+        },
+        "expectedSizeBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "expectedChecksumSha256": {
+          "type": "string"
+        },
+        "actualSizeBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "actualChecksumSha256": {
+          "type": "string"
+        },
+        "purpose": {
+          "$ref": "#/definitions/v1ObjectPurpose"
+        },
+        "referenceId": {
+          "type": "string"
+        },
+        "referenceType": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/definitions/v1UploadState"
+        },
+        "reservationState": {
+          "type": "string"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "lastErrorCode": {
+          "type": "string"
+        },
+        "attemptCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "lastErrorAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "nextAttemptAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "transitions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UploadTransition"
+          }
+        }
+      },
+      "description": "StorageUpload exposes verification and retry state without making pending\nbytes visible as a ready StorageObject."
+    },
+    "v1StorageUsage": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "totalBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "objectCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "quotaBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reservedBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "reservedObjectCount": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "title": "StorageUsage represents current storage usage for a tenant"
+    },
+    "v1UpdateStorageConfigResponse": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "$ref": "#/definitions/v1StorageConfig"
+        }
+      }
+    },
+    "v1UploadState": {
+      "type": "string",
+      "enum": [
+        "UPLOAD_STATE_UNSPECIFIED",
+        "UPLOAD_STATE_PENDING",
+        "UPLOAD_STATE_TRANSFERRED",
+        "UPLOAD_STATE_VERIFYING",
+        "UPLOAD_STATE_READY",
+        "UPLOAD_STATE_FAILED",
+        "UPLOAD_STATE_QUARANTINED",
+        "UPLOAD_STATE_DELETING",
+        "UPLOAD_STATE_DELETED"
+      ],
+      "default": "UPLOAD_STATE_UNSPECIFIED",
+      "description": "UploadState is the durable lifecycle of one logical upload."
+    },
+    "v1UploadTransition": {
+      "type": "object",
+      "properties": {
+        "sequence": {
+          "type": "string",
+          "format": "int64"
+        },
+        "fromState": {
+          "$ref": "#/definitions/v1UploadState"
+        },
+        "toState": {
+          "$ref": "#/definitions/v1UploadState"
+        },
+        "reasonCode": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

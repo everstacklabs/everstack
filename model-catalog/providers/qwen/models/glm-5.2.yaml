@@ -1,0 +1,50 @@
+name: "glm-5.2"
+display_name: "GLM-5.2"
+family: "glm"
+status: "stable"
+release_date: "2026-06-13"
+
+cost:
+  input_per_1k: 0.0014
+  output_per_1k: 0.0044
+  cache_read_per_1k: 0.00028
+  cache_write_per_1k: 0
+
+limits:
+  max_tokens: 1000000
+  max_completion_tokens: 131072
+
+capabilities:
+  - chat
+  - function_calling
+  - reasoning
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+
+notes: "Open flagship GLM for long-horizon coding agents and million-token context work"
+
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 131072
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true

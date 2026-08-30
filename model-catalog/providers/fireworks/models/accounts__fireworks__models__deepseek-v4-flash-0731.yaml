@@ -1,0 +1,67 @@
+name: "accounts/fireworks/models/deepseek-v4-flash-0731"
+display_name: "DeepSeek V4 Flash 0731 (Fireworks)"
+family: "deepseek-flash"
+status: "stable"
+release_date: "2026-07-31"
+
+cost:
+  input_per_1k: 0.00014
+  output_per_1k: 0.00028
+  cache_read_per_1k: 0.000028
+
+limits:
+  max_tokens: 1000000
+  max_completion_tokens: 384000
+
+capabilities:
+  - chat
+  - function_calling
+  - reasoning
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+
+knowledge_cutoff: "2025-05"
+notes: "Official DeepSeek V4 Flash release with enhanced agentic capabilities and integrated DSpark speculative decoding"
+
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 384000
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+  - key: "frequency_penalty"
+    display_name: "Frequency penalty"
+    type: "number"
+    min_value: -2
+    has_min_value: true
+    max_value: 2
+    has_max_value: true
+  - key: "presence_penalty"
+    display_name: "Presence penalty"
+    type: "number"
+    min_value: -2
+    has_min_value: true
+    max_value: 2
+    has_max_value: true
+  - key: "seed"
+    display_name: "Seed"
+    type: "integer"

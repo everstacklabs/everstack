@@ -1,0 +1,82 @@
+---
+title: Volumes
+description: Persistent FUSE-backed storage shareable across sandboxes.
+---
+
+# Volumes
+
+Volumes are persistent storage units backed by S3-compatible object storage, independent of sandbox lifecycle. Multiple sandboxes can mount the same volume simultaneously.
+
+## Create Volume
+
+`POST /v1/volumes`
+
+```json
+{ "name": "pip-cache" }
+```
+
+**Response:**
+```json
+{
+  "id": "vol_abc123",
+  "tenant_id": "org_123",
+  "name": "pip-cache",
+  "size_bytes": 0,
+  "created_at": "2026-06-01T10:00:00Z"
+}
+```
+
+## List Volumes
+
+`GET /v1/volumes`
+
+## Delete Volume
+
+`DELETE /v1/volumes/{volumeId}` → `204 No Content`
+
+## Attach to a sandbox
+
+Volumes are mounted at sandbox creation time via the `mounts` field:
+
+```json
+POST /v1/sandbox
+{
+  "mounts": [
+    {
+      "type": "s3",
+      "bucket": "vol_pip_cache_id",
+      "mountPath": "/cache/pip"
+    }
+  ]
+}
+```
+
+### Subpath isolation
+
+Give each sandbox access to only a prefix of the volume:
+
+```json
+{
+  "type": "s3",
+  "bucket": "shared-data",
+  "mountPath": "/data",
+  "subpath": "user-42"
+}
+```
+
+### Options
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | `"s3"`, `"r2"`, `"gcs"`, `"azure"` |
+| `bucket` | string | Bucket or container name |
+| `mountPath` | string | Absolute path inside the sandbox |
+| `subpath` | string | Prefix within the bucket (optional, for isolation) |
+| `endpoint` | string | Custom endpoint for R2 or MinIO (optional) |
+| `readOnly` | boolean | Mount as read-only (default: false) |
+
+## Limits
+
+- Maximum 100 volumes per organization
+- FUSE mounts are slower than local disk -- suitable for sequential reads (model weights, datasets), not for databases
+- Volume data does not count toward sandbox storage quota

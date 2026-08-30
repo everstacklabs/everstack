@@ -1,0 +1,325 @@
+syntax = "proto3";
+
+package everstack.traces.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/traces/v1;traces";
+
+// ============================================================================
+// Metrics Dashboard
+// ============================================================================
+
+// MetricsDashboard contains top-level KPIs for the observability dashboard
+message MetricsDashboard {
+  int64 total_requests = 1;
+  double avg_latency_ms = 2;
+  double total_cost = 3;
+  double error_rate = 4; // 0.0-1.0
+  int64 total_tokens = 5;
+  int64 total_input_tokens = 6;
+  int64 total_output_tokens = 7;
+  int32 unique_models = 8;
+  int32 unique_providers = 9;
+  // Agent-loop metrics, separated from gateway request_count /
+  // avg_latency_ms so a 30s tool loop doesn't skew the user-facing
+  // chat-completion latency. See migration metrics_split_kinds.
+  int64 total_agent_turns = 10;
+  double avg_agent_turn_ms = 11;
+  // Latency percentiles in ms, computed across span durations in window.
+  double p50_latency_ms = 12;
+  double p95_latency_ms = 13;
+  double p99_latency_ms = 14;
+  int64 total_errors = 15;
+  // Streaming TTFT percentiles in ms, computed from root/provider spans that
+  // carry llm.stream.time_to_first_token_ms. Zero when no streaming traffic
+  // matched the window.
+  double ttft_p50_ms = 16;
+  double ttft_p95_ms = 17;
+}
+
+// MetricsDeltas contains previous-period percentage deltas. Values are
+// (current - previous) / previous, or 0 when the previous value is 0.
+message MetricsDeltas {
+  double requests = 1;
+  double errors = 2;
+  double error_rate = 3;
+  double cost = 4;
+  double tokens = 5;
+  double avg_latency = 6;
+  double p95_latency = 7;
+  double ttft_p50 = 8;
+  double ttft_p95 = 9;
+}
+
+// MetricsFilter defines time range and dimension filters for metrics queries
+message MetricsFilter {
+  google.protobuf.Timestamp start_time = 1;
+  google.protobuf.Timestamp end_time = 2;
+  repeated string models = 3;
+  repeated string providers = 4;
+  repeated string environments = 5;
+}
+
+// ============================================================================
+// Time Series
+// ============================================================================
+
+// TimeSeriesBucket represents a single data point in a time series
+message TimeSeriesBucket {
+  google.protobuf.Timestamp timestamp = 1;
+  double value = 2;
+  string label = 3; // Optional label for multi-series (e.g., model name)
+}
+
+// MetricsTimeSeries contains time-bucketed metric data
+message MetricsTimeSeries {
+  repeated TimeSeriesBucket buckets = 1;
+  string metric_name = 2; // e.g., "request_count", "avg_latency_ms", "total_cost"
+}
+
+// ============================================================================
+// Sessions
+// ============================================================================
+
+// TraceSession represents an aggregated user session
+message TraceSession {
+  string session_id = 1;
+  string user_id = 2;
+  google.protobuf.Timestamp first_trace_at = 3;
+  google.protobuf.Timestamp last_trace_at = 4;
+  int32 trace_count = 5;
+  int64 total_duration_ns = 6;
+  int64 total_input_tokens = 7;
+  int64 total_output_tokens = 8;
+  double total_cost = 9;
+  int32 error_count = 10;
+  repeated string models = 11;
+  repeated string tags = 12;
+  string environment = 13;
+  // Execution kinds present in the session, e.g. ["agent"], ["workflow", "llm"],
+  // ["sandbox"]. Derived from each trace's root span so the Sessions view can
+  // show what a session actually is instead of an opaque id.
+  repeated string kinds = 14;
+}
+
+// ============================================================================
+// Users
+// ============================================================================
+
+// TraceUser represents aggregated per-user metrics
+message TraceUser {
+  string user_id = 1;
+  google.protobuf.Timestamp first_seen = 2;
+  google.protobuf.Timestamp last_seen = 3;
+  int32 session_count = 4;
+  int32 trace_count = 5;
+  int64 total_tokens = 6;
+  double total_cost = 7;
+  double error_rate = 8; // 0.0-1.0
+  int64 avg_latency_ns = 9;
+}
+
+// ============================================================================
+// Request / Response Messages
+// ============================================================================
+
+// --- Metrics Dashboard ---
+
+message GetMetricsDashboardRequest {
+  MetricsFilter filter = 1;
+  bool compare = 2;
+}
+
+message GetMetricsDashboardResponse {
+  MetricsDashboard dashboard = 1;
+  MetricsDashboard previous = 2;
+  MetricsDeltas deltas = 3;
+}
+
+// --- Metrics Time Series ---
+
+message GetMetricsTimeSeriesRequest {
+  MetricsFilter filter = 1;
+  // Supported values: "request_count", "error_count", "avg_latency_ms",
+  // "total_cost", "error_rate", "total_tokens", "tokens", "input_tokens",
+  // "output_tokens", "agent_turn_count", "avg_agent_turn_ms", "ttft_p50",
+  // "ttft_p95".
+  string metric = 2;
+  string group_by = 3; // "model", "provider", "" (no grouping)
+  string granularity = 4; // "hour", "6hour", "day"; minute falls back to hourly
+  bool compare = 5;
+}
+
+message GetMetricsTimeSeriesResponse {
+  repeated MetricsTimeSeries series = 1;
+  // Previous-period data. Buckets keep their original timestamps; clients may
+  // shift them for visual overlay while retaining true times in tooltips.
+  repeated MetricsTimeSeries previous_series = 2;
+}
+
+// --- Metrics Breakdown ---
+
+message GetMetricsBreakdownRequest {
+  MetricsFilter filter = 1;
+  string metric = 2;   // "requests" | "errors" | "cost" | "tokens"
+  // "model" | "provider" | "environment" | "trace_name".
+  // Future extension point: "prompt_name". For "trace_name", model/provider
+  // filters are ignored in v1 because root spans do not always carry those
+  // dimensions; use trace search for deeper slicing.
+  string group_by = 3;
+  int32 limit = 4;     // default 5, max 50
+  bool compare = 5;    // populate previous_value from preceding window
+}
+
+message BreakdownRow {
+  string key = 1;
+  double value = 2;
+  int64 request_count = 3;
+  double previous_value = 4;
+  // Dominant provider for the row, set only for group_by = "model" (the
+  // provider that served the most requests for this model). Empty otherwise.
+  string provider = 5;
+}
+
+message GetMetricsBreakdownResponse {
+  repeated BreakdownRow rows = 1;
+  int64 total_groups = 2;
+}
+
+// --- Sessions ---
+
+message ListTraceSessionsRequest {
+  MetricsFilter filter = 1;
+  optional string user_id = 2;
+  optional string search = 3; // Search session_id
+  int32 limit = 4;
+  int32 offset = 5;
+  string order_by = 6; // "last_trace_at", "trace_count", "total_cost"
+}
+
+message ListTraceSessionsResponse {
+  repeated TraceSession sessions = 1;
+  int32 total_count = 2;
+}
+
+message GetTraceSessionRequest {
+  string session_id = 1;
+}
+
+message GetTraceSessionResponse {
+  TraceSession session = 1;
+}
+
+// --- Users ---
+
+message ListTraceUsersRequest {
+  MetricsFilter filter = 1;
+  optional string search = 2; // Search user_id
+  int32 limit = 3;
+  int32 offset = 4;
+  string order_by = 5; // "last_seen", "trace_count", "total_cost"
+}
+
+message ListTraceUsersResponse {
+  repeated TraceUser users = 1;
+  int32 total_count = 2;
+}
+
+message GetTraceUserRequest {
+  string user_id = 1;
+}
+
+message GetTraceUserResponse {
+  TraceUser user = 1;
+}
+
+// ============================================================================
+// Outcome Dashboard (scores-backed)
+// ============================================================================
+
+// OutcomeDashboard contains aggregated KPIs computed from otel_trace_scores.
+message OutcomeDashboard {
+  double task_completion_rate = 1;     // rate_true(task_completion.finished)
+  double tool_success_rate = 2;        // avg(tool_quality.success_rate)
+  double policy_compliance_rate = 3;   // rate_true(policy.compliant)
+  double loop_health_rate = 4;         // 1 - rate_true(loop_health.looping)
+  double iteration_efficiency = 5;     // avg(task_completion.efficiency)
+  double sandbox_success_rate = 6;     // avg(sandbox_hygiene.exit_code_rate)
+  int64  total_evaluations = 7;        // total score records in window
+  int64  unique_sessions = 8;          // distinct session count
+}
+
+// OutcomeScoreSummary provides stats for a single score name.
+message OutcomeScoreSummary {
+  string score_name = 1;
+  string data_type = 2;      // "numeric", "boolean", "categorical"
+  int64  count = 3;
+  double mean = 4;            // avg(NumericValue) or rate_true for boolean
+  double min = 5;
+  double max = 6;
+  double p50 = 7;
+  double p95 = 8;
+  double pass_rate = 9;       // for boolean scores: rate of true
+}
+
+// VerdictRates breaks down fix_attempt_verdict categorical scores into the
+// canonical four buckets. Used for per-model/per-prompt outcome comparison.
+// sample_size is the row count over which the rates were computed.
+message VerdictRates {
+  double win_rate = 1;
+  double fail_rate = 2;
+  double draw_rate = 3;
+  double no_change_rate = 4;
+  int64  sample_size = 5;
+}
+
+// VerdictBreakdownEntry is one row in a faceted verdict breakdown — for
+// example "model=claude-opus-4-7 → {win:0.62, fail:0.31, draw:0.05, no_change:0.02}".
+message VerdictBreakdownEntry {
+  string group_key = 1;        // e.g. "claude-opus-4-7"
+  VerdictRates rates = 2;
+}
+
+// VerdictBreakdown groups VerdictBreakdownEntries by the dimension they were
+// sliced on (model, provider, prompt_template_id, prompt_version, tool_name).
+message VerdictBreakdown {
+  string dimension = 1;                          // the group_by dimension
+  repeated VerdictBreakdownEntry entries = 2;
+}
+
+// ── Outcome Dashboard Request/Response ──
+
+message GetOutcomeDashboardRequest {
+  MetricsFilter filter = 1;
+  string agent_id = 2;        // optional: scope to specific agent
+  // group_by accepts: "model", "provider", "prompt_template_id",
+  // "prompt_version", "tool_name". Empty list = overall only.
+  repeated string group_by = 3;
+}
+
+message GetOutcomeDashboardResponse {
+  OutcomeDashboard dashboard = 1;
+  repeated OutcomeScoreSummary scores = 2;
+  // Overall fix_attempt_verdict rates across the filter window.
+  VerdictRates verdict_rates = 3;
+  // Faceted verdict rates per dimension requested via group_by.
+  repeated VerdictBreakdown verdict_breakdowns = 4;
+}
+
+// ── Outcome Time Series Request/Response ──
+
+message GetOutcomeTimeSeriesRequest {
+  MetricsFilter filter = 1;
+  string score_name = 2;       // e.g. "task_completion.finished", "tool_quality.success_rate"
+  string aggregation = 3;      // "avg", "rate_true", "rate_false", "count"
+  string granularity = 4;      // "minute", "hour", "day"
+  string agent_id = 5;         // optional
+  // group_by accepts: "model", "provider", "prompt_template_id",
+  // "prompt_version", "tool_name". Empty = single series.
+  string group_by = 6;
+}
+
+message GetOutcomeTimeSeriesResponse {
+  repeated MetricsTimeSeries series = 1;
+}

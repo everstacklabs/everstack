@@ -1,0 +1,116 @@
+---
+title: Querying
+description: Semantic search, filtering, and retrieval from vector collections.
+icon: Search
+---
+
+Querying is how you get information back out of a collection. Instead of matching keywords, Everstack converts your query text into an embedding and finds the documents whose vectors are closest in meaning. This is semantic search: "how do I get a refund?" matches a document about return policies even if the word "refund" never appears in it.
+
+## How semantic search works
+
+When you send a query:
+
+1. Everstack embeds your query text using the same embedding model the collection was created with
+2. The vector backend performs a nearest-neighbor search across all stored chunk embeddings
+3. The top-K most similar chunks are returned, ranked by relevance score
+
+This all happens in a single API call. You provide the query text and optionally specify how many results you want and what filters to apply.
+
+## Query parameters
+
+| Parameter | Description | Default |
+| --- | --- | --- |
+| `query` | The natural language text to search for | Required |
+| `top_k` | Maximum number of results to return | 10 |
+| `filters` | Metadata key-value pairs to narrow the search | None |
+| `min_score` | Minimum relevance score threshold (0.0 to 1.0) | None |
+
+### Top-K retrieval
+
+The `top_k` parameter controls how many chunks are returned. A higher value gives you more results but may include less relevant matches. For RAG pipelines feeding into an LLM, 3-5 chunks is usually a good starting point. You can increase this if the LLM needs more context or decrease it to reduce token usage.
+
+### Relevance scores
+
+Each result includes a relevance score between 0.0 and 1.0, where higher means more similar to the query. Scores are cosine similarity values (or equivalent, depending on the backend). What counts as a "good" score depends on your embedding model and domain, but as a rough guide:
+
+- **0.8+** -- strong match, highly relevant
+- **0.6-0.8** -- moderate match, likely relevant
+- **Below 0.6** -- weak match, may not be useful
+
+Use the `min_score` parameter to filter out low-confidence results automatically.
+
+## Metadata filtering
+
+Filters let you narrow the search to documents matching specific metadata criteria before the similarity search runs. This is useful when you have a mixed collection and want to restrict results to a subset.
+
+```yaml
+# Only search support articles from the billing category
+query: "how do I update my payment method"
+top_k: 5
+filters:
+  category: "billing"
+  source: "support-docs"
+```
+
+Filters are exact-match. They reduce the candidate set before the vector search executes, which means they also improve query performance on large collections.
+
+## How agents use memory
+
+When memory is enabled for an agent, Everstack handles retrieval automatically at two points in the conversation lifecycle.
+
+### Auto-retrieve (turn start)
+
+At the beginning of each turn, before the LLM generates a response, Everstack runs a semantic query using the user's latest message against the agent's memory stores. The top-K most relevant memories are injected into the system prompt as additional context. The agent sees these memories as part of its instructions, not as a separate retrieval step.
+
+This means the agent always has access to the most relevant facts, instructions, and past conversation context without any custom retrieval logic in your application.
+
+### Auto-extract (turn end)
+
+After the agent responds, an asynchronous extraction process scans the conversation for new facts, instructions, and other memorable content. Extracted items are embedded and stored in the appropriate memory scope (agent, user, or global). This keeps the agent's memory up to date without explicit save calls.
+
+<Callout type="info">
+  Auto-retrieve and auto-extract are both configurable. You can disable either one if you prefer to manage memory retrieval or storage manually through the API.
+</Callout>
+
+## Querying via the API
+
+The QueryCollection endpoint accepts a collection ID, query text, and optional parameters. Results include the matched text, metadata, and relevance score for each chunk.
+
+```yaml
+# Example query request
+collection_id: "col_abc123"
+query: "What is the return window for electronics?"
+top_k: 5
+filters:
+  category: "returns"
+```
+
+The response contains an ordered list of matches:
+
+```yaml
+results:
+  - text: "Electronics can be returned within 15 days of delivery..."
+    score: 0.87
+    metadata:
+      category: "returns"
+      source: "policy-v3"
+  - text: "All other items have a 30-day return window..."
+    score: 0.72
+    metadata:
+      category: "returns"
+      source: "policy-v3"
+```
+
+See the [Memory API Reference](/api-reference/memory) for complete request and response schemas.
+
+## Performance considerations
+
+- **Collection size** -- vector search is sublinear, so doubling your documents does not double query time. Most backends handle millions of vectors comfortably.
+- **Metadata filters** -- applying filters before vector search reduces the candidate set and speeds up queries. Use them when you can.
+- **Top-K** -- requesting fewer results is faster. Only ask for what you need.
+- **Embedding model** -- smaller models embed and search faster. If latency is critical, benchmark your model choice.
+
+## Next steps
+
+- [Collections](/getting-started/memory/collections) -- How to create and manage the vector stores you query against.
+- [Memory API Reference](/api-reference/memory) -- Full API documentation for QueryCollection and related endpoints.

@@ -1,0 +1,111 @@
+---
+title: API Keys
+description: Key creation, rotation, types, and access controls.
+icon: Key
+---
+
+## Overview
+
+API keys authenticate programmatic and external access to the Everstack API. They are required when making requests from outside the admin dashboard — for example, from scripts, CI/CD pipelines, reverse-proxied deployments, or third-party integrations.
+
+### When You Need an API Key
+
+- **Programmatic access**: calling the API from scripts, SDKs, or external services
+- **Reverse proxy setups**: when the admin UI is served through nginx, Caddy, or another proxy
+- **Cross-origin requests**: when the client origin differs from the Everstack server origin
+
+### When You Don't Need an API Key
+
+- **Same-origin access**: when the admin dashboard is served directly by the Everstack instance (e.g., accessing `http://localhost:8080` where Everstack is running), the same-origin bypass automatically authenticates requests
+- **Session-based auth**: when logged in via the built-in authentication system, session cookies authenticate requests — even behind a reverse proxy
+
+## Creating an API Key
+
+1. Open the Everstack dashboard
+2. Navigate to **Settings > Vault > API Keys**
+3. Click **Create API Key**
+4. Give the key a descriptive name (e.g., "CI/CD Pipeline" or "Production Integration")
+5. Copy the key immediately — it will only be shown once
+
+## Using API Keys
+
+Include the API key in the `x-evs-api-key` header:
+
+```bash
+curl -X POST https://your-instance.example.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "x-evs-api-key: evs_your_api_key_here" \
+  -d '{
+    "model": "gpt-4",
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
+```
+
+### Python
+
+```python
+import requests
+
+response = requests.post(
+    "https://your-instance.example.com/v1/chat/completions",
+    headers={
+        "Content-Type": "application/json",
+        "x-evs-api-key": "evs_your_api_key_here",
+    },
+    json={
+        "model": "gpt-4",
+        "messages": [{"role": "user", "content": "Hello"}],
+    },
+)
+```
+
+### OpenAI SDK
+
+Everstack is compatible with the OpenAI SDK. Point the base URL to your instance and use your API key:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://your-instance.example.com/v1",
+    api_key="evs_your_api_key_here",  # passed via x-evs-api-key internally
+)
+```
+
+## Production: Reverse Proxy Configuration
+
+When running behind a reverse proxy, ensure the proxy forwards the `x-evs-api-key` header and session cookies to Everstack.
+
+### Nginx
+
+```nginx
+location / {
+    proxy_pass http://localhost:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # Forward API key header and session cookies
+    proxy_pass_header x-evs-api-key;
+    proxy_pass_header Cookie;
+}
+```
+
+### Caddy
+
+```txt
+your-instance.example.com {
+    reverse_proxy localhost:8080
+}
+```
+
+Caddy forwards all headers (including `x-evs-api-key` and cookies) by default.
+
+## Security Best Practices
+
+- **Rotate keys regularly**: revoke old keys and create new ones on a schedule
+- **Use descriptive names**: name keys after their purpose so you know which to revoke
+- **Revoke unused keys**: delete API keys that are no longer in use from the dashboard
+- **Don't commit keys to source control**: use environment variables or secret management tools
+- **One key per integration**: avoid sharing a single key across multiple services — use separate keys for easier auditing and revocation

@@ -1,0 +1,79 @@
+---
+title: Computer Use
+description: Screenshot, mouse, keyboard, and screen recording for GUI automation.
+---
+
+# Computer Use
+
+Full desktop automation for vision-capable agents. Requires `computerUse: true` on `CreateSandbox`, which launches Xvfb + XFCE4 at boot.
+
+## Capability Info
+
+`GET /v1/sandbox/{sandboxId}/computer`
+
+Returns available operations and whether Computer Use is active.
+
+## Screenshot
+
+`POST /v1/sandbox/{sandboxId}/computer/screenshot`
+
+```json
+{ "format": "jpeg", "quality": 85 }
+```
+
+Response: `Content-Type: image/jpeg` binary body (~50-100KB for JPEG).
+
+Formats: `jpeg` (default, smallest), `png` (lossless).
+
+## Displays and Windows
+
+```
+GET /v1/sandbox/{sandboxId}/computer/displays
+GET /v1/sandbox/{sandboxId}/computer/windows
+```
+
+## Mouse
+
+| Endpoint | Body | Description |
+|----------|------|-------------|
+| `POST .../mouse/click` | `{ x, y, button, double? }` | Click (`left`, `right`, `middle`) |
+| `POST .../mouse/move` | `{ x, y }` | Move cursor |
+| `POST .../mouse/scroll` | `{ x, y, direction, amount }` | Scroll (`up`/`down`) |
+| `POST .../mouse/drag` | `{ from: {x,y}, to: {x,y} }` | Click-and-drag |
+
+## Keyboard
+
+| Endpoint | Body | Description |
+|----------|------|-------------|
+| `POST .../keyboard/type` | `{ text }` | Type text (handles uppercase, symbols) |
+| `POST .../keyboard/key` | `{ key }` | Key combo e.g. `"ctrl+c"`, `"Return"`, `"F5"` |
+
+## Screen Recording
+
+| Endpoint | Body / Response | Description |
+|----------|-----------------|-------------|
+| `POST .../recording/start` | `{ label, fps? }` → `{ recording_id }` | Start recording |
+| `POST .../recording/stop` | `{ recording_id }` | Stop and finalize MP4 |
+| `GET .../recordings` | — | List recordings |
+| `GET .../recordings/{id}/download` | — | Download MP4 |
+| `DELETE .../recordings/{id}` | — | Delete recording |
+
+## As agent tool calls
+
+The screenshot operation is available as an MCP/agent tool call:
+
+```
+sandbox_screenshot(sandbox_id, format?)  → base64 image
+```
+
+## Image requirements
+
+| Tool | Purpose |
+|------|---------|
+| `Xvfb`, `xfce4` | Virtual display + desktop |
+| `xdotool` | Mouse and keyboard control |
+| `scrot` or `imagemagick` | Screenshot capture |
+| `ffmpeg` | Screen recording |
+| `wmctrl` | Window enumeration (optional) |
+
+Install: `apt-get install xvfb xfce4 xdotool scrot ffmpeg`

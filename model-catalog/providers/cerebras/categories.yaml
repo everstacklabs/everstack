@@ -1,0 +1,14 @@
+chat:
+  - gpt-oss-120b
+  - qwen-3-235b-a22b-instruct-2507
+  - zai-glm-4.7
+  - llama3.1-8b
+
+function_calling:
+  - gpt-oss-120b
+  - qwen-3-235b-a22b-instruct-2507
+  - zai-glm-4.7
+  - llama3.1-8b
+
+reasoning:
+  - gpt-oss-120b

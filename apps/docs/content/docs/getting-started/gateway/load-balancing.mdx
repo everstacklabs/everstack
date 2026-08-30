@@ -1,0 +1,89 @@
+---
+title: Load Balancing
+description: Distribute requests across providers with round-robin, weighted, or priority strategies.
+icon: Scale
+---
+
+Load balancing distributes LLM requests across multiple providers or provider endpoints. This helps you spread cost, avoid hitting a single provider's rate limits, and take advantage of different providers' strengths for the same model class.
+
+## When to use load balancing
+
+Enable load balancing when you:
+
+- have API keys for multiple providers that serve comparable models
+- want to distribute cost across providers with different pricing tiers
+- need to reduce the blast radius of a single provider outage
+- want to gradually shift traffic between providers during a migration
+
+If you only use one provider, load balancing has no effect.
+
+## Strategies
+
+The gateway supports three load balancing strategies:
+
+### Priority
+
+Priority is the default strategy. It always sends requests to the first provider in the list. If that provider fails, it moves to the next one.
+
+Use priority when you have a clear first choice and only want alternatives as a safety net. This is the most predictable strategy because traffic patterns do not change unless a provider is unhealthy.
+
+### Round robin
+
+Round robin rotates the starting provider using a hash of the request. Over many requests, traffic distributes roughly evenly across all configured providers.
+
+Use round robin when your providers have similar capabilities and pricing, and you want to spread load without manual weight tuning.
+
+### Weighted
+
+Weighted selection lets you assign a numeric weight to each provider. The gateway uses cumulative weight selection to route requests proportionally.
+
+Use weighted when you want precise control over traffic distribution. For example, you might send 75% of traffic to OpenAI and 25% to Anthropic:
+
+```yaml
+gateway:
+  load_balancer:
+    enabled: true
+    strategy: "weighted"
+    weights:
+      openai: 3
+      anthropic: 1
+```
+
+In this configuration, OpenAI receives roughly three out of every four requests.
+
+## Configuration
+
+```yaml
+gateway:
+  load_balancer:
+    enabled: true
+    strategy: "round_robin"
+```
+
+Key settings:
+
+- `enabled` -- turns load balancing on or off
+- `strategy` -- one of `"priority"`, `"round_robin"`, or `"weighted"`
+- `weights` -- a map of provider names to integer weights (only used with the `"weighted"` strategy)
+
+## Health checks
+
+The gateway tracks provider health using rate limit headers returned by each provider. It understands the header patterns used by major providers like OpenAI and Anthropic.
+
+When a provider's rate limit headers indicate it is near or at capacity, the load balancer can deprioritize it in favor of healthier alternatives. This happens automatically and does not require manual intervention.
+
+Health check state is maintained in memory and resets when the gateway restarts.
+
+## Relationship to routing and fallback
+
+Load balancing and routing serve different purposes:
+
+- **Routing** resolves which model and provider handle a request based on the `model` field, aliases, and the catalog.
+- **Load balancing** distributes requests across providers after routing has determined the eligible set.
+- **Fallback chains** handle failures by trying alternative providers in sequence, parallel, or round-robin order.
+
+Load balancing operates on the happy path, distributing traffic across healthy providers. Fallback chains operate on the error path, recovering from individual provider failures. Both can be active at the same time.
+
+See [Routing](/getting-started/gateway/routing) for details on provider selection and fallback chains.
+
+For endpoint details, see the [Gateway API Reference](/api-reference/gateway).

@@ -1,0 +1,196 @@
+syntax = "proto3";
+
+package everstack.gateway.v1;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/gateway/v1;gateway";
+
+// =============================================================================
+// Moderations API Messages
+// =============================================================================
+
+// Input content for moderation - can be text or image
+message ModerationInput {
+  // Type of input: "text" or "image_url"
+  string type = 1;
+
+  // Text content (when type is "text")
+  string text = 2;
+
+  // Image URL or base64 data (when type is "image_url")
+  ModerationImageUrl image_url = 3;
+}
+
+message ModerationImageUrl {
+  // URL of the image or base64 data URL
+  string url = 1;
+}
+
+message ModerationRequest {
+  // The input text or content to classify
+  // Can be a single string or multiple content items
+  string input = 1;
+
+  // Alternative: array of content items for multi-modal moderation
+  repeated ModerationInput inputs = 2;
+
+  // The model to use for classification
+  // Options: "omni-moderation-latest", "omni-moderation-2024-09-26", "text-moderation-latest", "text-moderation-stable"
+  string model = 3;
+
+  // Optional per-call metadata
+  google.protobuf.Struct metadata = 4;
+}
+
+// Category flags for moderation results
+message ModerationCategories {
+  // Content that expresses, incites, or promotes hate based on protected characteristics
+  bool hate = 1;
+
+  // Hateful content that also includes violence or threat of violence
+  bool hate_threatening = 2;
+
+  // Content that expresses, incites, or promotes harassing language
+  bool harassment = 3;
+
+  // Harassment content that also includes violence or threat of violence
+  bool harassment_threatening = 4;
+
+  // Content that depicts death, violence, or physical injury in graphic detail
+  bool illicit = 5;
+
+  // Content giving advice or instructions on how to commit illicit acts
+  bool illicit_violent = 6;
+
+  // Content that promotes, encourages, or depicts acts of self-harm
+  bool self_harm = 7;
+
+  // Content giving advice or instructions on how to commit self-harm
+  bool self_harm_intent = 8;
+
+  // Content giving advice or instructions on how to plan or commit self-harm
+  bool self_harm_instructions = 9;
+
+  // Sexual content (arousing or explicit)
+  bool sexual = 10;
+
+  // Sexual content involving minors
+  bool sexual_minors = 11;
+
+  // Content that depicts violence
+  bool violence = 12;
+
+  // Violence content with graphic detail
+  bool violence_graphic = 13;
+}
+
+// Category scores for moderation results
+message ModerationCategoryScores {
+  // Score for hate category (0.0 to 1.0)
+  double hate = 1;
+
+  // Score for hate/threatening category
+  double hate_threatening = 2;
+
+  // Score for harassment category
+  double harassment = 3;
+
+  // Score for harassment/threatening category
+  double harassment_threatening = 4;
+
+  // Score for illicit category
+  double illicit = 5;
+
+  // Score for illicit/violent category
+  double illicit_violent = 6;
+
+  // Score for self-harm category
+  double self_harm = 7;
+
+  // Score for self-harm/intent category
+  double self_harm_intent = 8;
+
+  // Score for self-harm/instructions category
+  double self_harm_instructions = 9;
+
+  // Score for sexual category
+  double sexual = 10;
+
+  // Score for sexual/minors category
+  double sexual_minors = 11;
+
+  // Score for violence category
+  double violence = 12;
+
+  // Score for violence/graphic category
+  double violence_graphic = 13;
+}
+
+// Applied input types for multi-modal content
+message ModerationCategoryAppliedInputTypes {
+  // Input types that were analyzed for hate
+  repeated string hate = 1;
+
+  // Input types that were analyzed for hate/threatening
+  repeated string hate_threatening = 2;
+
+  // Input types that were analyzed for harassment
+  repeated string harassment = 3;
+
+  // Input types that were analyzed for harassment/threatening
+  repeated string harassment_threatening = 4;
+
+  // Input types that were analyzed for illicit
+  repeated string illicit = 5;
+
+  // Input types that were analyzed for illicit/violent
+  repeated string illicit_violent = 6;
+
+  // Input types that were analyzed for self-harm
+  repeated string self_harm = 7;
+
+  // Input types that were analyzed for self-harm/intent
+  repeated string self_harm_intent = 8;
+
+  // Input types that were analyzed for self-harm/instructions
+  repeated string self_harm_instructions = 9;
+
+  // Input types that were analyzed for sexual
+  repeated string sexual = 10;
+
+  // Input types that were analyzed for sexual/minors
+  repeated string sexual_minors = 11;
+
+  // Input types that were analyzed for violence
+  repeated string violence = 12;
+
+  // Input types that were analyzed for violence/graphic
+  repeated string violence_graphic = 13;
+}
+
+// Individual moderation result
+message ModerationResult {
+  // Whether any content was flagged as violating policies
+  bool flagged = 1;
+
+  // Category flags (true if category was triggered)
+  ModerationCategories categories = 2;
+
+  // Category scores (confidence levels 0.0 to 1.0)
+  ModerationCategoryScores category_scores = 3;
+
+  // Applied input types (for multi-modal content)
+  ModerationCategoryAppliedInputTypes category_applied_input_types = 4;
+}
+
+message ModerationResponse {
+  // Unique identifier for this moderation request
+  string id = 1;
+
+  // The model used for moderation
+  string model = 2;
+
+  // List of moderation results (one per input)
+  repeated ModerationResult results = 3;
+}

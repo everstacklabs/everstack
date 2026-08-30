@@ -1,0 +1,75 @@
+---
+title: CLI Reference
+description: Everstack command-line interface reference.
+icon: TerminalSquare
+---
+
+The Everstack CLI (`evs`) is a cloud-provider-style tool for managing your Everstack resources from the terminal. Install it, authenticate once, and control agents, sandboxes, deployments, and more.
+
+```bash
+evs --help
+```
+
+## Commands
+
+<Cards>
+  <Card title="evs login" href="/cli/login">
+    Authenticate, log out, and check your current identity.
+  </Card>
+  <Card title="evs config" href="/cli/config">
+    Manage named profiles, contexts, and configuration values.
+  </Card>
+  <Card title="evs sandbox" href="/cli/sandbox">
+    Create, inspect, exec into, and manage sandbox environments.
+  </Card>
+</Cards>
+
+### Self-hosted operator commands
+
+<Cards>
+  <Card title="evs serve" href="/cli/serve">
+    Start the Everstack server with all platform services.
+  </Card>
+  <Card title="evs migrate" href="/cli/migrate">
+    Run database migrations for PostgreSQL and ClickHouse.
+  </Card>
+</Cards>
+
+## Installation
+
+```bash
+curl -fsSL https://get.everstack.ai/install.sh | bash
+```
+
+Or with Homebrew:
+
+```bash
+brew install everstacklabs/tap/evs
+```
+
+See [installation](/getting-started/installation) for options and manual install steps.
+
+## Global flags
+
+These flags are available on every command:
+
+| Flag | Description |
+|---|---|
+| `--no-update-check` | Disable automatic update checks (env: `EVS_NO_UPDATE_CHECK`) |
+| `--config` | Path to a server config YAML file (repeatable; self-hosted operator use) |
+| `--help` / `-h` | Help for any command |
+| `--version` / `-v` | Print version and exit |
+
+## Authentication
+
+Run `evs login --api-url <instance-url>` once. The `sandbox` and `memory` commands then use the endpoint and credential saved for the active context automatically.
+
+The `sandbox` and `memory` commands also accept per-command connection overrides:
+
+| Flag | Description |
+|---|---|
+| `--api-key` | API key (env: `EVS_API_KEY`) |
+| `--api-url` | API server URL (env: `EVS_API_URL`) |
+| `--tenant-id` | Tenant ID override |
+
+See [evs login](/cli/login) for browser and API-key authentication.

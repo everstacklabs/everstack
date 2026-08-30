@@ -1,0 +1,195 @@
+---
+title: "POST Import Agent From Opencode"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Import Agent From Opencode</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400">POST</span>
+    <code className="text-sm text-fd-muted-foreground">/v1/agents/import/opencode</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="post"
+  path="/v1/agents/import/opencode"
+  parameters={[]}
+  defaultBody={`{
+  "tenantId": "string",
+  "opencodeAgentJson": "string",
+  "dryRun": true
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X POST "http://localhost:8089/v1/agents/import/opencode" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"tenantId":"string","opencodeAgentJson":"string","dryRun":true}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/agents/import/opencode", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "tenantId": "string",
+  "opencodeAgentJson": "string",
+  "dryRun": true
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8089/v1/agents/import/opencode",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "tenantId": "string",
+  "opencodeAgentJson": "string",
+  "dryRun": true
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "valid": true,
+  "warnings": [
+    "string"
+  ],
+  "agent": {
+    "id": "string",
+    "tenantId": "string",
+    "name": "string",
+    "description": "string",
+    "model": "string",
+    "systemPrompt": "string",
+    "tools": [
+      "string"
+    ],
+    "maxTurns": 0,
+    "maxToolCallsPerTurn": 0,
+    "enabled": true,
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-01T00:00:00Z",
+    "mode": "AGENT_MODE_UNSPECIFIED",
+    "maxSteps": 0,
+    "taskPermissionMode": "TASK_PERMISSION_MODE_UNSPECIFIED",
+    "hidden": true,
+    "color": "string",
+    "workingDirectory": "string",
+    "mentionAlias": "string",
+    "executionPolicy": {
+      "taskPermissionMode": "TASK_PERMISSION_MODE_UNSPECIFIED",
+      "maxSteps": 0,
+      "workingDirectory": "string"
+    },
+    "memoryConfig": {
+      "enabled": true,
+      "scope": "string",
+      "autoRetrieve": true,
+      "autoRetrieveTopK": 0,
+      "autoExtract": true
+    }
+  }
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `tenantId` | `string` | No |  |
+| `opencodeAgentJson` | `string` | No |  |
+| `dryRun` | `boolean` | No |  |
+
+
+### Responses
+
+#### 200 Import an Opencode-compatible agent payload
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `valid` | `boolean` |  |
+| `warnings` | `string[]` |  |
+| `agent` | `object` | AgentDefinition is the blueprint/config for an agent. |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

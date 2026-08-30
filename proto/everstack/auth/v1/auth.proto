@@ -1,0 +1,393 @@
+syntax = "proto3";
+
+package everstack.auth.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/auth/v1;auth";
+
+// ============================================
+// Core types
+// ============================================
+
+// User represents an authenticated user
+message User {
+  string id = 1;
+  string email = 2;
+  optional string name = 3;
+  optional string avatar_url = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+// Organization represents a user's organization membership
+message Organization {
+  string id = 1;
+  string slug = 2;
+  string name = 3;
+  OrganizationRole role = 4;
+}
+
+// OrganizationRole represents a user's role in an organization
+enum OrganizationRole {
+  ORGANIZATION_ROLE_UNSPECIFIED = 0;
+  ORGANIZATION_ROLE_OWNER = 1;
+  ORGANIZATION_ROLE_ADMIN = 2;
+  ORGANIZATION_ROLE_MEMBER = 3;
+  ORGANIZATION_ROLE_VIEWER = 4;
+}
+
+// Session represents an active user session
+message Session {
+  string id = 1;
+  string user_id = 2;
+  google.protobuf.Timestamp expires_at = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+// UserWithOrganizations includes user data with their org memberships
+message UserWithOrganizations {
+  User user = 1;
+  repeated Organization organizations = 2;
+}
+
+// AuthMode represents the authentication mode for the instance
+enum AuthMode {
+  AUTH_MODE_UNSPECIFIED = 0;
+  AUTH_MODE_CLOUD = 1;       // WorkOS SSO (Cloud edition)
+  AUTH_MODE_SELF_HOSTED = 2; // Email/password + magic link (Self-hosted)
+}
+
+// ============================================
+// Cloud SSO messages (existing)
+// ============================================
+
+// GetSessionRequest - Get current session info
+message GetSessionRequest {}
+
+message GetSessionResponse {
+  bool authenticated = 1;
+  optional UserWithOrganizations user = 2;
+}
+
+// GetAuthURLRequest - Get SSO auth URL for sign-in redirect
+message GetAuthURLRequest {
+  optional string provider = 1;      // SSO provider (google, microsoft, etc.)
+  optional string connection_id = 2; // WorkOS connection ID for enterprise SSO
+  string redirect_uri = 3;           // Where to redirect after auth
+  optional string state = 4;         // State to preserve through OAuth flow (e.g., return URL)
+}
+
+message GetAuthURLResponse {
+  string auth_url = 1;
+}
+
+// AuthenticateRequest - Exchange auth code for session
+message AuthenticateRequest {
+  string code = 1;         // OAuth code from callback
+  optional string state = 2;
+}
+
+message AuthenticateResponse {
+  bool success = 1;
+  UserWithOrganizations user = 2;
+  string session_token = 3;  // Used for cookie
+}
+
+// SignOutRequest - Sign out current session
+message SignOutRequest {}
+
+message SignOutResponse {
+  bool success = 1;
+}
+
+// RefreshSessionRequest - Refresh current session
+message RefreshSessionRequest {}
+
+message RefreshSessionResponse {
+  bool success = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+// ============================================
+// Instance connection messages
+// ============================================
+
+message CreateInstanceConnectSessionRequest {
+  string instance_name = 1;
+  string instance_url = 2;
+  optional string instance_id = 3;
+  optional string owner_email = 4;
+  optional string fingerprint = 5;
+}
+
+message CreateInstanceConnectSessionResponse {
+  string session_id = 1;
+  google.protobuf.Timestamp expires_at = 2;
+  int64 expires_in_seconds = 3;
+}
+
+message GetInstanceConnectSessionRequest {
+  string session_id = 1;
+}
+
+message GetInstanceConnectSessionResponse {
+  bool valid = 1;
+  bool expired = 2;
+  bool not_found = 3;
+  string instance_name = 4;
+  string instance_url = 5;
+  optional string instance_id = 6;
+  optional string owner_email = 7;
+  optional string fingerprint = 8;
+  optional google.protobuf.Timestamp expires_at = 9;
+}
+
+message CompleteInstanceConnectRequest {
+  string session_id = 1;
+  string organization_id = 2;
+}
+
+message CompleteInstanceConnectResponse {
+  bool success = 1;
+  string redirect_url = 2;
+  optional string organization_slug = 3;
+  optional string workspace_id = 4;
+  optional string workspace_slug = 5;
+}
+
+// ============================================
+// Device Authorization Grant messages (RFC 8628)
+// ============================================
+
+// CreateDeviceAuthorizationRequest initiates a device flow.
+message CreateDeviceAuthorizationRequest {
+  string client_id = 1;  // "evs-cli" or another public client identifier
+  string scope = 2;      // e.g., "cli:full"
+}
+
+message CreateDeviceAuthorizationResponse {
+  string device_code = 1;       // opaque token for polling
+  string user_code = 2;         // short human-readable code (e.g., "ABCD-EFGH")
+  string verification_uri = 3;  // browser URL (e.g., "https://platform.everstack.ai/device")
+  int32 expires_in = 4;         // seconds until expiry (900 = 15 min)
+  int32 interval = 5;           // polling interval in seconds (5)
+}
+
+// ExchangeDeviceCodeRequest polls for device authorization result.
+message ExchangeDeviceCodeRequest {
+  string device_code = 1;
+  string client_id = 2;
+}
+
+message ExchangeDeviceCodeResponse {
+  // Backward-compatible state: "pending" (or legacy "authorization_pending"
+  // in self-hosted mode), "authorized", "expired", or "denied".
+  string status = 1;
+  // Only populated when status == "authorized":
+  string access_token = 2;   // M2M signed JWT (long-lived)
+  string token_type = 3;     // "Bearer"
+  string org_id = 4;
+  string org_slug = 5;
+  string user_email = 6;
+  string user_id = 7;
+  // RFC 8628 token error when status is not authorized: "authorization_pending",
+  // "slow_down", "expired_token", or "access_denied".
+  string oauth_error = 8;
+}
+
+// ApproveDeviceAuthorizationRequest is called by the browser to approve.
+message ApproveDeviceAuthorizationRequest {
+  string user_code = 1;
+  string organization_id = 2;
+}
+
+message ApproveDeviceAuthorizationResponse {
+  bool success = 1;
+}
+
+// GetDeviceAuthorizationStatusRequest validates a user code from the browser.
+message GetDeviceAuthorizationStatusRequest {
+  string user_code = 1;
+}
+
+message GetDeviceAuthorizationStatusResponse {
+  bool valid = 1;
+  bool expired = 2;
+  string client_id = 3;
+  string scope = 4;
+  // Browser-facing status: "pending", "authorized", "expired", or "denied".
+  string status = 5;
+}
+
+// ============================================
+// Self-hosted authentication messages
+// ============================================
+
+// GetAuthModeRequest - Get the authentication mode
+message GetAuthModeRequest {}
+
+message GetAuthModeResponse {
+  AuthMode mode = 1;
+  bool has_users = 2;  // True if any users exist (determines if registration is allowed)
+}
+
+// RegisterRequest - Register the first admin user (becomes instance owner)
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+  optional string name = 3;
+}
+
+message RegisterResponse {
+  bool success = 1;
+  UserWithOrganizations user = 2;
+  string session_token = 3;
+  bool requires_email_verification = 4;
+}
+
+// LoginRequest - Login with email and password
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  bool success = 1;
+  UserWithOrganizations user = 2;
+  string session_token = 3;
+}
+
+// RequestMagicLinkRequest - Request a magic link for passwordless login
+message RequestMagicLinkRequest {
+  string email = 1;
+}
+
+message RequestMagicLinkResponse {
+  bool success = 1;
+  string message = 2;  // User-facing message (e.g., "Check your email")
+}
+
+// VerifyMagicLinkRequest - Verify a magic link token
+message VerifyMagicLinkRequest {
+  string token = 1;
+  string email = 2;
+}
+
+message VerifyMagicLinkResponse {
+  bool success = 1;
+  UserWithOrganizations user = 2;
+  string session_token = 3;
+}
+
+// RequestPasswordResetRequest - Initiate a password reset for the given email.
+// Anti-enumeration: the response is identical for known + unknown emails.
+message RequestPasswordResetRequest {
+  string email = 1;
+}
+
+message RequestPasswordResetResponse {
+  bool success = 1;
+  string message = 2;  // User-facing message (always generic for anti-enumeration)
+}
+
+// CompletePasswordResetRequest - Set a new password using a reset token from the email.
+message CompletePasswordResetRequest {
+  string token = 1;
+  string new_password = 2;
+}
+
+message CompletePasswordResetResponse {
+  bool success = 1;
+  UserWithOrganizations user = 2;
+  string session_token = 3;
+}
+
+// CompleteEmailVerificationRequest - Verify an email address using the
+// pending_authentication_token returned from a prior auth attempt and the
+// 6-digit code emailed to the user.
+message CompleteEmailVerificationRequest {
+  string pending_authentication_token = 1;
+  string code = 2;
+}
+
+message CompleteEmailVerificationResponse {
+  bool success = 1;
+  UserWithOrganizations user = 2;
+  string session_token = 3;
+}
+
+// ============================================
+// Team management messages
+// ============================================
+
+// Invitation represents a pending team invitation
+message Invitation {
+  string id = 1;
+  string email = 2;
+  OrganizationRole role = 3;
+  string invited_by_email = 4;
+  google.protobuf.Timestamp expires_at = 5;
+  google.protobuf.Timestamp created_at = 6;
+  bool accepted = 7;
+}
+
+// TeamMember represents a user in the team
+message TeamMember {
+  User user = 1;
+  OrganizationRole role = 2;
+  google.protobuf.Timestamp joined_at = 3;
+}
+
+// InviteTeamMemberRequest - Invite a new team member
+message InviteTeamMemberRequest {
+  string email = 1;
+  OrganizationRole role = 2;
+}
+
+message InviteTeamMemberResponse {
+  bool success = 1;
+  Invitation invitation = 2;
+  optional string upgrade_message = 3;  // Set if seat limit reached
+}
+
+// AcceptInvitationRequest - Accept a team invitation
+message AcceptInvitationRequest {
+  string token = 1;
+  string password = 2;
+  optional string name = 3;
+}
+
+message AcceptInvitationResponse {
+  bool success = 1;
+  UserWithOrganizations user = 2;
+  string session_token = 3;
+}
+
+// ListTeamMembersRequest - List all team members
+message ListTeamMembersRequest {}
+
+message ListTeamMembersResponse {
+  repeated TeamMember members = 1;
+  repeated Invitation pending_invitations = 2;
+  int32 seat_limit = 3;
+  int32 seats_used = 4;
+}
+
+// RemoveTeamMemberRequest - Remove a team member
+message RemoveTeamMemberRequest {
+  string user_id = 1;
+}
+
+message RemoveTeamMemberResponse {
+  bool success = 1;
+}
+
+// RevokeInvitationRequest - Revoke a pending invitation
+message RevokeInvitationRequest {
+  string invitation_id = 1;
+}
+
+message RevokeInvitationResponse {
+  bool success = 1;
+}

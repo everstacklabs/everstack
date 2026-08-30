@@ -1,0 +1,44 @@
+name: "qwen3-max"
+display_name: "Qwen3 Max"
+family: "qwen3-commercial"
+status: "stable"
+release_date: "2025-09-23"
+
+cost:
+  input_per_1k: 0.0012
+  output_per_1k: 0.006
+
+limits:
+  max_tokens: 262144
+  max_completion_tokens: 65536
+
+capabilities:
+  - chat
+  - function_calling
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 65536
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true

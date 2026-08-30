@@ -1,0 +1,304 @@
+---
+title: "POST Chat Completion"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Chat Completion</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400">POST</span>
+    <code className="text-sm text-fd-muted-foreground">/v1/chat/completions</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="post"
+  path="/v1/chat/completions"
+  parameters={[]}
+  defaultBody={`{
+  "model": "string",
+  "messages": [
+    {
+      "role": "ROLE_UNSPECIFIED",
+      "content": [],
+      "toolCalls": [],
+      "toolCallId": "string",
+      "name": "string"
+    }
+  ],
+  "sampling": {
+    "temperature": 0,
+    "topP": 0,
+    "maxTokens": 0,
+    "stop": [
+      "string"
+    ],
+    "maxCompletionTokens": 0
+  },
+  "stream": true,
+  "tools": [
+    {
+      "type": "string",
+      "function": {
+        "name": "string",
+        "description": "string"
+      }
+    }
+  ],
+  "toolChoice": {
+    "mode": "string",
+    "specificTool": {
+      "type": "string",
+      "function": {
+        "name": "string",
+        "description": "string"
+      }
+    }
+  },
+  "parallelToolCalls": true
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X POST "http://localhost:8089/v1/chat/completions" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"string","messages":[{"role":"ROLE_UNSPECIFIED","content":[],"toolCalls":[],"toolCallId":"string","name":"string"}],"sampling":{"temperature":0,"topP":0,"maxTokens":0,"stop":["string"],"maxCompletionTokens":0},"stream":true,"tools":[{"type":"string","function":{"name":"string","description":"string"}}],"toolChoice":{"mode":"string","specificTool":{"type":"string","function":{"name":"string","description":"string"}}},"parallelToolCalls":true}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/chat/completions", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "model": "string",
+  "messages": [
+    {
+      "role": "ROLE_UNSPECIFIED",
+      "content": [],
+      "toolCalls": [],
+      "toolCallId": "string",
+      "name": "string"
+    }
+  ],
+  "sampling": {
+    "temperature": 0,
+    "topP": 0,
+    "maxTokens": 0,
+    "stop": [
+      "string"
+    ],
+    "maxCompletionTokens": 0
+  },
+  "stream": true,
+  "tools": [
+    {
+      "type": "string",
+      "function": {
+        "name": "string",
+        "description": "string"
+      }
+    }
+  ],
+  "toolChoice": {
+    "mode": "string",
+    "specificTool": {
+      "type": "string",
+      "function": {
+        "name": "string",
+        "description": "string"
+      }
+    }
+  },
+  "parallelToolCalls": true
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8089/v1/chat/completions",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "model": "string",
+  "messages": [
+    {
+      "role": "ROLE_UNSPECIFIED",
+      "content": [],
+      "toolCalls": [],
+      "toolCallId": "string",
+      "name": "string"
+    }
+  ],
+  "sampling": {
+    "temperature": 0,
+    "topP": 0,
+    "maxTokens": 0,
+    "stop": [
+      "string"
+    ],
+    "maxCompletionTokens": 0
+  },
+  "stream": true,
+  "tools": [
+    {
+      "type": "string",
+      "function": {
+        "name": "string",
+        "description": "string"
+      }
+    }
+  ],
+  "toolChoice": {
+    "mode": "string",
+    "specificTool": {
+      "type": "string",
+      "function": {
+        "name": "string",
+        "description": "string"
+      }
+    }
+  },
+  "parallelToolCalls": true
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "result": {
+    "id": "string",
+    "created": "string",
+    "model": "string",
+    "choices": [
+      {
+        "index": 0,
+        "finishReason": "string"
+      }
+    ],
+    "usage": {
+      "promptTokens": 0,
+      "completionTokens": 0,
+      "totalTokens": 0
+    },
+    "fallbackInfo": {
+      "fallbackUsed": true,
+      "requestedModel": "string",
+      "actualModel": "string",
+      "fallbackReason": "string",
+      "fallbackAttempts": 0
+    }
+  },
+  "error": {
+    "code": 0,
+    "message": "string",
+    "details": [
+      {
+        "@type": "string"
+      }
+    ]
+  }
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `model` | `string` | No |  |
+| `messages` | `object[]` | No |  |
+| `sampling` | `object` | No |  |
+| `responseFormat` | `object` | No |  |
+| `stream` | `boolean` | No | Streaming hint; use ChatStream for true streaming. Optional to allow presence detection. |
+| `metadata` | `object` | No |  |
+| `tools` | `object[]` | No |  |
+| `toolChoice` | `object` | No |  |
+| `parallelToolCalls` | `boolean` | No |  |
+
+
+### Responses
+
+#### 200 The chat completion
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `result` | `object` |  |
+| `error` | `object` |  |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

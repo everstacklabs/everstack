@@ -1,0 +1,94 @@
+---
+title: Functions Overview
+description: Reusable tools that connect agents and workflows to APIs, services, and custom logic.
+icon: Zap
+---
+
+Functions are Everstack's reusable tool layer.
+
+They let you turn APIs, services, and small units of custom logic into named tools that agents and workflows can call when they need to take action.
+
+The important framing is this: functions are not just for running code. They are how you connect AI systems to real business operations.
+
+## What a function is
+
+A function is a registered tool with:
+
+- a `name`
+- a `description`
+- a parameter schema
+- an execution mode
+- controls like timeout, memory, retries, and enabled state
+
+Once registered, a function can be attached to agents, troopers, and workflow nodes.
+
+## Why functions exist
+
+Functions solve a very specific problem: an LLM can reason, but it still needs a safe and structured way to do useful work.
+
+Functions provide that structure.
+
+Use them when you want AI to:
+
+- look up customers, orders, or tickets
+- trigger backend actions
+- call internal tools or external APIs
+- run small transforms or calculations
+- reuse the same action across many agents and workflows
+
+## Where functions fit in Everstack
+
+Functions sit between reasoning and execution.
+
+1. an agent or workflow receives a task
+2. the model decides it needs a tool
+3. Everstack exposes matching function definitions to the model
+4. the selected function runs in its configured mode
+5. the result comes back into the agent or workflow
+
+That makes functions the action layer for production AI systems.
+
+## Common use cases
+
+### Business system lookups
+
+Expose tools like `search_customers`, `get_order_history`, or `lookup_incident` so an assistant can answer questions with live data.
+
+### Operational actions
+
+Expose tools like `create_jira_ticket`, `refund_order`, `page_oncall`, or `send_approval_request` so agents can do real work instead of only generating text.
+
+### Lightweight custom logic
+
+Use isolated functions for tax calculation, payload validation, field normalization, scoring, and data shaping.
+
+### Shared tool catalogs
+
+Define a function once and reuse it across multiple agents and workflows instead of rebuilding the same integration repeatedly.
+
+## Why users value functions
+
+Functions are often one of the most production-useful features in Everstack because they are:
+
+- narrower than a sandbox
+- easier to reason about than broad compute access
+- highly reusable
+- close to existing APIs and services teams already own
+
+In many organizations, functions are configured occasionally but invoked constantly.
+
+## Functions and sandboxes
+
+Functions and sandboxes are complementary.
+
+Use functions for repeatable actions with a clear contract. Use sandboxes for shell access, files, long-running processes, or interactive execution.
+
+Read [Functions vs Sandboxes](/getting-started/functions-vs-sandboxes) for the full decision guide.
+
+## Next steps
+
+- Read [Execution Modes](/getting-started/functions/execution-modes) to choose between webhook, proxy, and isolated execution.
+- Read [Examples](/getting-started/functions/examples) for common function patterns.
+- Read [Attaching Functions To Agents And Workflows](/getting-started/functions/attaching-to-agents-and-workflows) to connect functions to runtime behavior.
+- Read [Functions vs Sandboxes](/getting-started/functions-vs-sandboxes) to decide which primitive fits your use case.
+- Use the [Functions API](/api-reference/functions) to create and manage functions programmatically.

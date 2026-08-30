@@ -1,0 +1,20 @@
+name: deepseek-v3-0324
+display_name: DeepSeek V3 0324
+family: deepseek
+status: deprecated
+
+cost:
+  input_per_1k: 0.0014
+  output_per_1k: 0.0028
+
+limits:
+  max_tokens: 64000
+  max_completion_tokens: 8192
+
+capabilities:
+  - chat
+  - function_calling
+
+modalities:
+  input: [text]
+  output: [text]

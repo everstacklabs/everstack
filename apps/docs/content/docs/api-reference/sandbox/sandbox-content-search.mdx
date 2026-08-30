@@ -1,0 +1,43 @@
+---
+title: Content Search
+description: Search file contents inside a sandbox using ripgrep or grep.
+---
+
+# Content Search
+
+Search file contents recursively inside a sandbox. Uses ripgrep (`rg`) when available, falls back to `grep -rn`.
+
+`GET /v1/sandbox/{sandboxId}/files/content-search`
+
+## Parameters
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `pattern` | Yes | Regex or literal string to search for |
+| `path` | No | Directory to search in (default: `.`) |
+
+## Response
+
+```json
+{
+  "matches": [
+    { "path": "/repo/main.py", "line": 42, "match_text": "def process_data(input):" },
+    { "path": "/repo/utils.py", "line": 8, "match_text": "import process_data" }
+  ],
+  "total": 2,
+  "pattern": "process_data",
+  "path": "/repo"
+}
+```
+
+Up to 500 matches are returned. Results are capped at 8MB.
+
+## Examples
+
+```bash
+# Find all TODO comments
+GET /v1/sandbox/{id}/files/content-search?pattern=TODO&path=/repo
+
+# Find Python function definitions
+GET /v1/sandbox/{id}/files/content-search?pattern=^def%20&path=/src
+```

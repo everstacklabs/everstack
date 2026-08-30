@@ -1,0 +1,58 @@
+name: "mistral-medium-2604"
+display_name: "Mistral Medium 3.5"
+family: "mistral-medium"
+status: "stable"
+release_date: "2026-04-29"
+
+cost:
+  input_per_1k: 0.0015
+  output_per_1k: 0.0075
+
+limits:
+  max_tokens: 262144
+  max_completion_tokens: 262144
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image"]
+  output: ["text"]
+
+notes: "Balanced Mistral model for enterprise assistants, multilingual work, and tools"
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 262144
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "reasoning_effort"
+    display_name: "Reasoning effort"
+    type: "enum"
+    options: ["none","high"]
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+variants:
+  - id: "none"
+    display_name: "No reasoning"
+    description: "Fastest response with reasoning disabled when the model permits it."
+    parameters:
+      reasoning_effort: "none"
+  - id: "high"
+    display_name: "High reasoning"
+    description: "Deeper reasoning for complex analysis and coding."
+    parameters:
+      reasoning_effort: "high"

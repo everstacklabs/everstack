@@ -1,0 +1,60 @@
+# Multi-language sandbox base image for agent code execution.
+# Provides Python 3.12, Node.js 24, Ruby, Go, and common utilities.
+# Agents can install additional tools (Rust, numpy, etc.) at runtime.
+# Designed to run as a long-lived container with read-only rootfs
+# and writable tmpfs at /workspace and /tmp.
+
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Core system packages + Python 3.12 (native on 24.04)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    git \
+    jq \
+    unzip \
+    wget \
+    build-essential \
+    python3 \
+    python3-venv \
+    python3-dev \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Common Python packages (lightweight only — agents can pip install heavier libs on demand)
+RUN python3 -m pip install --no-cache-dir --break-system-packages \
+    requests \
+    httpx \
+    pydantic \
+    rich
+
+# Node.js 24
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && npm install -g tsx typescript \
+    && rm -rf /var/lib/apt/lists/*
+
+# Ruby
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ruby \
+    ruby-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Go (latest stable)
+RUN ARCH=$(dpkg --print-architecture) \
+    && curl -fsSL "https://go.dev/dl/go1.22.5.linux-${ARCH}.tar.gz" | tar -C /usr/local -xzf -
+ENV PATH="/usr/local/go/bin:${PATH}"
+
+# Rust — not pre-installed (agents can install on demand via rustup)
+
+# Use the existing ubuntu user (UID/GID 1000) for sandbox execution
+# Workspace directory (will be tmpfs in production)
+RUN mkdir -p /workspace && chown ubuntu:ubuntu /workspace
+
+WORKDIR /workspace
+USER ubuntu
+
+# Keep container alive for exec operations
+CMD ["sleep", "infinity"]

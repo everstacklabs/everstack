@@ -1,0 +1,120 @@
+---
+title: Gateway Overview
+description: The AI Gateway -- a unified, OpenAI-compatible proxy for 200+ LLM models.
+icon: Router
+---
+
+The AI Gateway is a unified proxy that sits between your application and every LLM provider you use. It exposes a single OpenAI-compatible API, so your code talks to one endpoint regardless of whether the request ends up at OpenAI, Anthropic, Google, Mistral, Cohere, or any of the 200+ models in the catalog.
+
+## What the gateway is
+
+The gateway is a middleware pipeline that processes every LLM request through a series of stages:
+
+- **CORS** handles preflight and cross-origin headers for browser-based clients
+- **Rate limiting** enforces per-key and per-tenant request budgets using a token bucket algorithm
+- **Authentication** validates API keys and resolves tenant context
+- **Provider routing** selects the right backend based on model aliases, explicit routes, and catalog lookups
+- **Cache lookup** checks exact and semantic caches before making a provider call
+- **Context compaction** trims conversation history when it exceeds the target model's context window
+- **Provider call** sends the request to the resolved provider with appropriate credential injection
+- **Response caching** stores the result for future cache hits
+
+Each stage is optional and configurable. You can run the gateway with nothing but routing enabled, or turn on every feature for full control.
+
+## Why the gateway exists
+
+Without a gateway, every LLM integration is a direct dependency on a specific provider's SDK, auth format, rate limit behavior, and error shape. That creates problems:
+
+- switching providers means rewriting integration code
+- handling rate limits and outages requires custom retry logic per provider
+- caching, observability, and access control are bolted on per-service
+- multi-tenant isolation becomes an application-level concern
+
+The gateway centralizes all of that. Your application sends OpenAI-shaped requests. The gateway handles provider translation, failover, caching, rate limiting, and tenant isolation.
+
+## Multi-tenant isolation
+
+Every tenant gets its own isolated provider registry. That means:
+
+- tenant A's API keys, model aliases, and provider configurations are invisible to tenant B
+- rate limits are enforced per-tenant (and optionally per-key within a tenant)
+- cache entries are scoped to the tenant that created them
+- CORS settings can be overridden per-tenant for runtime requests
+
+This isolation is automatic. If you are running Everstack in multi-tenant mode, the gateway inherits tenant boundaries from authentication.
+
+## Provider abstraction
+
+The gateway translates between the OpenAI chat completions format and each provider's native API. This means:
+
+- you send `model: "claude-sonnet-4-20250514"` and the gateway routes to Anthropic's Messages API
+- you send `model: "gemini-2.0-flash"` and the gateway routes to Google's Generative Language API
+- streaming, tool calls, and structured output work across providers through format translation
+
+Custom model mappings let you define aliases like `model: "fast"` that resolve to any provider and model combination, with optional parameter overrides.
+
+### Replaying provider-native reasoning
+
+Some providers require their native reasoning chunks to be sent back unchanged on the next turn. For those models, Everstack adds an optional `provider_content` field to the assistant message while keeping the standard OpenAI-compatible `content` string:
+
+```json
+{
+  "role": "assistant",
+  "content": "The user-facing answer",
+  "provider_content": [
+    { "type": "thinking", "thinking": [] },
+    { "type": "text", "text": "The user-facing answer" }
+  ]
+}
+```
+
+Treat `provider_content` as opaque. Store it with the assistant message and include it unchanged on the next `/v1/chat/completions` request. For streaming responses, each `delta.provider_content` array contains the native chunks for that event; concatenate those arrays in arrival order. Providers that do not require native replay omit the field. This extension preserves [Mistral reasoning content across conversation turns](https://docs.mistral.ai/studio-api/conversations/reasoning) without changing the normal `content` field used for display.
+
+## When to use the gateway
+
+Use the gateway when you want:
+
+- a single API surface for multiple LLM providers
+- automatic failover when a provider is down or rate-limited
+- response caching to reduce latency and cost on repeated queries
+- centralized rate limiting and access control
+- tenant-scoped provider isolation in a multi-tenant product
+- observability across all LLM traffic from one place
+
+## Configuration
+
+The gateway is configured through the Everstack configuration file, environment variables with the `EVS_` prefix, or the admin dashboard.
+
+Core settings live under the `gateway` key:
+
+```yaml
+gateway:
+  rate_limit:
+    enabled: true
+    requests_per_minute: 500
+    burst: 100
+  load_balancer:
+    enabled: true
+    strategy: "round_robin"
+cache:
+  enabled: true
+  type: "memory"
+  memory:
+    ttl: "10m"
+    max_size: 50000
+server:
+  cors:
+    enabled: true
+    allowed_origins: ["*"]
+```
+
+Every configuration key can also be set via environment variable. For example, `EVS_CACHE_TYPE=redis` or `EVS_SERVER_PORT=8080`.
+
+## Next steps
+
+- [Routing](/getting-started/gateway/routing) covers provider selection, model aliases, and fallback chains.
+- [Caching](/getting-started/gateway/caching) explains exact and semantic response caching.
+- [Rate Limiting](/getting-started/gateway/rate-limiting) walks through request budgets and key sources.
+- [Load Balancing](/getting-started/gateway/load-balancing) describes how to distribute traffic across providers.
+- [CORS](/getting-started/gateway/cors) covers cross-origin configuration for browser clients.
+- [Gateway API Reference](/api-reference/gateway) documents the endpoint contracts.

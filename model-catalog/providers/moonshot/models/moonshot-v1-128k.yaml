@@ -1,0 +1,20 @@
+name: "moonshot-v1-128k"
+display_name: "Moonshot V1 128K"
+family: "moonshot-v1"
+status: "deprecated"
+
+cost:
+  input_per_1k: 0.002
+  output_per_1k: 0.005
+
+limits:
+  max_tokens: 131072
+  max_completion_tokens: 8192
+
+capabilities:
+  - chat
+  - function_calling
+
+modalities:
+  input: ["text"]
+  output: ["text"]

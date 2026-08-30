@@ -1,0 +1,110 @@
+---
+title: Running Evaluations
+description: Eval runs, scheduling, regression detection, and CI/CD integration.
+icon: Play
+---
+
+An eval run executes one or more scorers against a dataset or a set of production traces and produces scored results. Runs are the core unit of measurement in the evaluations system.
+
+## Creating an eval run
+
+To start a run, you select:
+
+- a dataset or a trace filter to score against
+- one or more scorers (built-in metrics, custom LLM judges, or code scorers)
+- optionally, a baseline run to compare against for regression detection
+
+Runs can be triggered manually from the UI, on a schedule, or from your CI/CD pipeline via the CLI.
+
+## What happens during a run
+
+1. The runner loads items from the selected dataset or samples matching traces.
+2. Each item is sent to every selected scorer.
+3. Scorers execute in parallel where possible. LLM-judge scorers make inference calls, code scorers run in sandboxes.
+4. Results are collected, aggregated, and stored.
+5. If a baseline is set, regression detection compares the new scores against baseline thresholds.
+6. The run completes with a summary showing per-scorer averages, distributions, and pass/fail status.
+
+## Scheduling eval runs
+
+Use cron-based scheduling to run evaluations automatically. This is valuable for catching regressions early, especially after model updates, prompt changes, or upstream data shifts.
+
+Navigate to an eval configuration and set a cron expression. The scheduler creates runs at the specified interval and retains results for trend analysis.
+
+Common schedules:
+
+- **Daily** for production quality monitoring
+- **On every deploy** via CI/CD integration (see below)
+- **Weekly** for comprehensive regression sweeps against larger datasets
+
+## Comparing runs and baselines
+
+Every eval run produces a set of scores. To detect regression, you designate one run as the baseline. Future runs are compared against the baseline automatically.
+
+The comparison shows:
+
+- per-scorer score deltas (improvement or regression)
+- statistical significance of changes
+- individual items that crossed threshold boundaries
+
+When you ship a new version and are satisfied with its eval scores, promote that run to become the new baseline.
+
+## Regression detection
+
+Regression detection compares each scorer's aggregate score against the baseline. You configure a threshold per scorer, and a run is flagged as regressed if any scorer drops below its threshold relative to the baseline.
+
+This is intentionally strict by default. A regression in any single scorer fails the run, because quality regressions tend to compound. You can adjust thresholds per scorer if certain dimensions are more or less critical for your use case.
+
+## CI/CD integration
+
+The `everstack-eval` CLI tool integrates evaluations into your deployment pipeline.
+
+### Running evals in CI
+
+```bash
+everstack-eval run --config <config-id> --dataset <dataset-id>
+```
+
+This triggers an eval run and waits for completion. The process exits with:
+
+- **Exit code 0** when all scorers pass their thresholds
+- **Exit code 2** when one or more scorers fall below their threshold
+- **Exit code 3** when a regression is detected compared to the baseline
+
+Use these exit codes to gate your deployment. A typical CI step runs `everstack-eval run` after tests pass but before deploy, and fails the pipeline on exit code 2 or 3.
+
+### Simulating runs
+
+```bash
+everstack-eval simulate --config <config-id> --dataset <dataset-id>
+```
+
+Simulate runs a dry evaluation without persisting results. Use this during development to test scorer configurations and dataset coverage before committing to a formal run.
+
+## Sampling eval on production traces
+
+Instead of scoring a static dataset, you can evaluate a sample of live production traces. Configure a sampling rate (for example, 5% of traces) and select which scorers to apply.
+
+**When to use sampling:**
+
+- You want continuous quality visibility without maintaining a separate dataset
+- Your traffic patterns are diverse enough that static datasets miss real-world edge cases
+- You need to detect model drift or quality degradation between scheduled eval runs
+
+Sampling runs produce the same scored results as dataset runs and feed into the same regression detection and trending views.
+
+## Operational guidance
+
+- Start with built-in metrics and a small dataset to establish a baseline quickly.
+- Add custom scorers incrementally as you identify domain-specific quality dimensions.
+- Schedule daily runs against your core dataset and use sampling for real-time coverage.
+- Promote baselines deliberately. A baseline represents your quality bar, so update it only when a run reflects the standard you want to hold.
+- In CI, prefer exit code checks over score parsing. The CLI encodes pass/fail/regress into exit codes so your pipeline logic stays simple.
+
+## Related pages
+
+- [Evaluations Overview](/getting-started/evaluations/overview)
+- [Datasets](/getting-started/evaluations/datasets)
+- [Scorers](/getting-started/evaluations/scorers)
+- [Annotations](/getting-started/evaluations/annotations)
+- [Evaluations API](/getting-started/evaluations/overview)

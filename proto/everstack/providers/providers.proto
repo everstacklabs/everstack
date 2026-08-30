@@ -1,0 +1,302 @@
+syntax = "proto3";
+
+package everstack.providers.v1;
+
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/providers/v1;providers";
+
+// ModelParameter describes a request parameter supported by one model.
+message ModelParameter {
+  string key = 1;
+  string display_name = 2;
+  string type = 3; // "integer", "number", "enum", or "boolean"
+  repeated string options = 4;
+  double min_value = 5;
+  double max_value = 6;
+  bool has_min_value = 7;
+  bool has_max_value = 8;
+  bool requires_streaming = 9;
+}
+
+// ModelVariant is a named preset such as low, medium, high, or xhigh effort.
+message ModelVariant {
+  string id = 1;
+  string display_name = 2;
+  string description = 3;
+  map<string, string> parameters = 4;
+}
+
+// ModelMetadata represents metadata about a specific model from the catalog
+message ModelMetadata {
+  string name = 1;
+  string display_name = 2;
+  int64 max_tokens = 3;
+  repeated string capabilities = 4; // e.g., ["chat", "function_calling", "vision"]
+  double input_cost_per_1k = 5;
+  double output_cost_per_1k = 6;
+  string status = 7; // e.g., "stable", "beta", "deprecated"
+  string freshness = 8; // "new" when added in the latest catalog release
+  string added_in_version = 9;
+  int64 max_output_tokens = 10;
+  repeated string input_modalities = 11;
+  repeated string output_modalities = 12;
+  bool structured_output = 13;
+  repeated ModelParameter parameters = 14;
+  repeated ModelVariant variants = 15;
+}
+
+// ModelFamily represents a family of models with common characteristics
+message ModelFamily {
+  string name = 1;
+  string description = 2;
+  repeated string capabilities = 3;
+  int64 max_tokens = 4;
+}
+
+// RateLimits represents rate limiting configuration for a provider
+message RateLimits {
+  int32 requests_per_minute = 1;
+  int32 tokens_per_minute = 2;
+  int32 concurrent_requests = 3;
+}
+
+// ProviderCapabilities represents what features a provider supports
+message ProviderCapabilities {
+  bool chat = 1;
+  bool completions = 2;
+  bool embeddings = 3;
+  bool function_calling = 4;
+  bool vision = 5;
+  bool streaming = 6;
+  bool fine_tuning = 7;
+  bool assistants = 8;
+}
+
+// ProviderCatalogEntry represents a provider's metadata from defaults
+message ProviderCatalogEntry {
+  string name = 1;
+  string display_name = 2;
+  string base_url = 3;
+  string api_version = 4;
+  ProviderCapabilities capabilities = 5;
+  repeated ModelFamily model_families = 6;
+  repeated ModelMetadata models = 7;
+  RateLimits rate_limits = 8;
+  string description = 9;
+  string provider_type = 10; // "static" or "meta"
+  bool supports_model_discovery = 11;
+  string discovery_api_endpoint = 12;
+}
+
+// ProviderConfiguration represents a user's configuration for a provider
+message ProviderConfiguration {
+  string id = 1; // UUID
+  string provider_name = 2;
+  string api_key = 3; // Will be encrypted in storage
+  repeated string enabled_models = 4;
+  string custom_base_url = 5; // Optional override
+  map<string, string> custom_settings = 6; // Additional provider-specific settings
+  bool is_active = 7;
+  string created_at = 8;
+  string updated_at = 9;
+  string synced_to_yaml_at = 10;
+  string last_used_at = 11;
+}
+
+// ProviderStatus represents the merged view of catalog + configuration
+message ProviderStatus {
+  ProviderCatalogEntry catalog = 1;
+  ProviderConfiguration configuration = 2;
+  bool is_configured = 3; // Has API key and enabled models
+  bool is_active = 4; // Configuration is active
+  int32 configured_models_count = 5;
+  int32 available_models_count = 6;
+  string catalog_status = 7; // "available", "configured", "active", "deprecated"
+  bool is_from_catalog = 8; // True if synced from catalog
+}
+
+// ListProviderCatalogRequest - request to list all available providers from defaults
+message ListProviderCatalogRequest {
+  // Empty for now, can add filtering later
+}
+
+// ListProviderCatalogResponse - response with all providers from catalog
+message ListProviderCatalogResponse {
+  repeated ProviderCatalogEntry providers = 1;
+}
+
+// ListConfiguredProvidersRequest - request to list user's configured providers
+message ListConfiguredProvidersRequest {
+  bool active_only = 1; // Filter to only active providers
+}
+
+// ListConfiguredProvidersResponse - response with configured providers
+message ListConfiguredProvidersResponse {
+  repeated ProviderStatus providers = 1;
+}
+
+// GetProviderRequest - request to get a specific provider
+message GetProviderRequest {
+  string provider_name = 1;
+}
+
+// GetProviderResponse - response with provider details
+message GetProviderResponse {
+  ProviderStatus provider = 1;
+}
+
+// ConfigureProviderRequest - request to configure a provider
+message ConfigureProviderRequest {
+  string provider_name = 1;
+  string api_key = 2;
+  repeated string enabled_models = 3;
+  string custom_base_url = 4; // Optional
+  map<string, string> custom_settings = 5; // Optional
+  string api_key_name = 6; // Optional name for an initial UI-managed key
+  int32 api_key_weight = 7; // Defaults to 1
+}
+
+// ConfigureProviderResponse - response after configuring provider
+message ConfigureProviderResponse {
+  ProviderStatus provider = 1;
+  bool sync_triggered = 2; // Whether YAML sync was triggered
+}
+
+// ToggleProviderRequest - request to activate/deactivate a provider
+message ToggleProviderRequest {
+  string provider_name = 1;
+  bool is_active = 2;
+}
+
+// ToggleProviderResponse - response after toggling provider
+message ToggleProviderResponse {
+  ProviderStatus provider = 1;
+}
+
+// DeleteProviderConfigurationRequest - request to delete provider config
+message DeleteProviderConfigurationRequest {
+  string provider_name = 1;
+}
+
+// DeleteProviderConfigurationResponse - response after deleting config
+message DeleteProviderConfigurationResponse {
+  bool success = 1;
+  string message = 2;
+  bool sync_triggered = 3;
+}
+
+// ProviderAPIKey represents a single API key for a provider with weight for load balancing
+message ProviderAPIKey {
+  string id = 1; // UUID
+  string provider_config_id = 2;
+  string key_name = 3;
+  string key_masked = 4; // e.g., "sk-...abc123"
+  int32 weight = 5;
+  bool is_active = 6;
+  string created_at = 7;
+  string updated_at = 8;
+  string source = 9; // "manual" or "config"
+}
+
+// AddProviderAPIKeyRequest - request to add a new API key to a provider
+message AddProviderAPIKeyRequest {
+  string provider_config_id = 1;
+  string key_name = 2;
+  string api_key = 3; // Full key (will be encrypted)
+  int32 weight = 4; // Default: 1
+}
+
+// AddProviderAPIKeyResponse - response after adding API key
+message AddProviderAPIKeyResponse {
+  ProviderAPIKey key = 1;
+}
+
+// UpdateAPIKeyWeightRequest - request to update API key weight
+message UpdateAPIKeyWeightRequest {
+  string key_id = 1;
+  int32 weight = 2;
+}
+
+// UpdateAPIKeyWeightResponse - response after updating weight
+message UpdateAPIKeyWeightResponse {
+  ProviderAPIKey key = 1;
+}
+
+// ToggleAPIKeyRequest - request to activate/deactivate an API key
+message ToggleAPIKeyRequest {
+  string key_id = 1;
+  bool is_active = 2;
+}
+
+// ToggleAPIKeyResponse - response after toggling key
+message ToggleAPIKeyResponse {
+  ProviderAPIKey key = 1;
+}
+
+// DeleteProviderAPIKeyRequest - request to delete an API key
+message DeleteProviderAPIKeyRequest {
+  string key_id = 1;
+}
+
+// DeleteProviderAPIKeyResponse - response after deleting API key
+message DeleteProviderAPIKeyResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ListProviderAPIKeysRequest - request to list all API keys for a provider
+message ListProviderAPIKeysRequest {
+  string provider_config_id = 1;
+}
+
+// ListProviderAPIKeysResponse - response with list of API keys
+message ListProviderAPIKeysResponse {
+  repeated ProviderAPIKey keys = 1;
+}
+
+// GetSyncStatusRequest - request to check YAML vs DB sync status
+message GetSyncStatusRequest {
+  // Empty request
+}
+
+// GetSyncStatusResponse - response with sync status information
+message GetSyncStatusResponse {
+  bool in_sync = 1; // Whether YAML and DB are in sync
+  string yaml_mod_time = 2; // YAML file modification time
+  string last_sync_time = 3; // Last time DB was synced to YAML
+}
+
+// GetConfigYAMLRequest - request to get current YAML config
+message GetConfigYAMLRequest {
+  // Empty request
+}
+
+// GetConfigYAMLResponse - response with YAML config content
+message GetConfigYAMLResponse {
+  string yaml_content = 1; // The YAML config as string
+}
+
+// SaveConfigYAMLRequest - request to save YAML config
+message SaveConfigYAMLRequest {
+  string yaml_content = 1; // The YAML config to save
+}
+
+// SaveConfigYAMLResponse - response after saving config
+message SaveConfigYAMLResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ReloadConfigRequest - request to reload config from YAML
+message ReloadConfigRequest {
+  // Empty request
+}
+
+// ReloadConfigResponse - response after reloading config
+message ReloadConfigResponse {
+  bool success = 1;
+  string message = 2;
+  int32 providers_synced = 3;
+}

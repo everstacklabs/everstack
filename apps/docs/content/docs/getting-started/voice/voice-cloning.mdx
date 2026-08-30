@@ -1,0 +1,92 @@
+---
+title: Voice Cloning
+description: Create custom voice profiles from reference audio for personalized synthesis.
+icon: Copy
+---
+
+Voice cloning lets you create a reusable voice profile from a short reference audio sample. Once a profile is enrolled with a provider, any TTS request can use it to generate speech that sounds like the reference voice instead of a default model voice.
+
+## How it works
+
+The cloning workflow has three steps:
+
+1. **Create a profile** with a name, reference audio file, and reference text (the transcript of what is spoken in the audio).
+2. **Enrollment** happens automatically when the profile is created. Everstack sends the reference audio to the provider, which analyzes the voice characteristics and returns a `provider_voice_id`.
+3. **Use the profile** by setting `voice_clone_profile_id` in any TTS request along with the clone-capable model (`qwen3-tts-vc-2026-01-22`).
+
+After enrollment, the provider retains the voice embedding. You do not need to send the reference audio again on each TTS request.
+
+## Provider support
+
+| Provider | Cloning supported | Clone model |
+|----------|-------------------|-------------|
+| **Qwen / DashScope** | Yes | `qwen3-tts-vc-2026-01-22` |
+| **OpenAI** | No | N/A |
+
+Qwen is currently the only provider that supports voice cloning. Profiles are always enrolled with Qwen regardless of which provider you use for standard TTS.
+
+## Profile structure
+
+A voice clone profile stores:
+
+| Field | Description |
+|-------|-------------|
+| `name` | Human-readable identifier. Must be unique within your organization. |
+| `description` | Optional notes about the voice, its source, or intended use. |
+| `provider` | The cloning provider (currently `dashscope`). |
+| `model` | The clone model used for enrollment. |
+| `reference_audio_object_id` | Reference to the uploaded audio file in Everstack storage. |
+| `provider_voice_id` | The ID returned by the provider after enrollment. Used internally for TTS requests. |
+
+Profiles are scoped to your organization. The uniqueness constraint is `(org_id, name)`, so two different organizations can have profiles with the same name without conflict.
+
+## Creating a profile
+
+### From the dashboard
+
+Navigate to `/deployments/voice` in the Everstack dashboard. Click "Create Profile" and provide:
+
+- a name for the profile
+- an optional description
+- the reference audio file (a short recording of the target voice)
+- the reference text (an accurate transcript of what is spoken in the recording)
+
+The dashboard handles the upload, enrollment, and status tracking.
+
+### From the API
+
+Use the voice clone profile CRUD endpoints to create, list, update, and delete profiles programmatically. See the [Gateway API Reference](/api-reference/gateway) for the full schema.
+
+## Reference audio guidelines
+
+The quality of the cloned voice depends on the reference audio. For best results:
+
+- **Duration**: 5 to 15 seconds of clear speech. Too short gives the model insufficient signal. Too long introduces noise and variation without improving quality.
+- **Content**: Choose a sentence or two that covers a range of phonemes. Avoid single words or very repetitive phrases.
+- **Quality**: Record in a quiet environment with minimal background noise. A decent microphone matters more than expensive studio gear.
+- **Format**: Standard audio formats (WAV, MP3, FLAC) are accepted. Uncompressed formats preserve more detail for enrollment.
+- **Reference text**: Must accurately match what is spoken in the audio. Mismatches between the audio and text degrade enrollment quality.
+
+## Using a cloned voice in TTS
+
+Once a profile is enrolled, reference it in TTS requests:
+
+- Set the `model` to `qwen3-tts-vc-2026-01-22`
+- Set `voice_clone_profile_id` to the profile's ID
+
+The gateway resolves the profile, injects the `provider_voice_id`, and routes the request to Qwen. All other TTS parameters (format, speed, stability, and so on) work the same as with standard TTS.
+
+## Workflow studio
+
+The **VoiceCloneExecutor** node wraps this flow for use inside workflows. It accepts a text input and a voice clone profile reference, then produces audio using the cloned voice. Wire it after any node that produces text, such as an LLM call or a template renderer.
+
+## Tenant isolation
+
+Voice clone profiles follow the same tenant isolation model as the rest of Everstack. Profiles belong to one organization, are invisible to other organizations, and cannot be accessed across tenant boundaries. This applies to both the dashboard and the API.
+
+## Next steps
+
+- [Text-to-Speech](/getting-started/voice/text-to-speech) covers all TTS parameters and output formats.
+- [Speech-to-Text](/getting-started/voice/speech-to-text) explains transcription, translation, and timing data.
+- [Voice Overview](/getting-started/voice/overview) has the full feature summary and provider matrix.
+- [Gateway API Reference](/api-reference/gateway) documents the profile CRUD and TTS endpoints.

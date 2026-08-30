@@ -1,0 +1,20 @@
+name: "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo"
+display_name: "Llama 3.2 11B Vision Instruct Turbo"
+family: "llama"
+status: "deprecated"
+
+cost:
+  input_per_1k: 0.0009
+  output_per_1k: 0.0009
+
+limits:
+  max_tokens: 131072
+  max_completion_tokens: 8192
+
+capabilities:
+  - chat
+  - vision
+
+modalities:
+  input: ["text", "image"]
+  output: ["text"]

@@ -1,0 +1,175 @@
+---
+title: Computer Use
+description: Screenshot, mouse, keyboard, and screen recording for GUI automation inside sandboxes.
+icon: Monitor
+---
+
+Computer Use gives vision-capable agents a full desktop environment to work with. When enabled, the sandbox boots Xvfb (virtual display) and XFCE4, exposing HTTP endpoints for screenshot capture, mouse and keyboard control, and screen recording.
+
+## Enable Computer Use
+
+Set `computerUse: true` on `CreateSandbox`:
+
+```bash
+POST /v1/sandbox
+{
+  "computerUse": true,
+  "image": "ghcr.io/everstacklabs/sandbox:base"
+}
+```
+
+The sandbox installs and starts `Xvfb :99` + `startxfce4` at boot. Your image needs `xdotool`, `scrot` or ImageMagick, and `ffmpeg` for the full feature set.
+
+## The GUI agent loop
+
+The canonical loop for a vision-capable agent:
+
+1. **Screenshot** -- capture current screen state
+2. **Send to Claude vision** -- describe what to do next
+3. **Mouse/keyboard action** -- execute the decision
+4. **Screenshot** -- verify the result
+5. Repeat
+
+All three steps are single API calls.
+
+## Screenshot
+
+```bash
+POST /v1/sandbox/{sandboxId}/computer/screenshot
+{
+  "format": "jpeg",
+  "quality": 85
+}
+```
+
+Response: `Content-Type: image/jpeg` binary body. JPEG is typically 50-100KB -- small enough to include in every agent turn without significant token cost.
+
+Also available:
+```bash
+GET /v1/sandbox/{sandboxId}/computer/displays   # list available displays
+GET /v1/sandbox/{sandboxId}/computer/windows    # list open windows with position and size
+```
+
+## Mouse control
+
+```bash
+# Click at position
+POST /v1/sandbox/{sandboxId}/computer/mouse/click
+{ "x": 640, "y": 400, "button": "left" }
+
+# Double click
+{ "x": 640, "y": 400, "button": "left", "double": true }
+
+# Right-click (context menu)
+{ "x": 640, "y": 400, "button": "right" }
+
+# Move without clicking
+POST /v1/sandbox/{sandboxId}/computer/mouse/move
+{ "x": 640, "y": 400 }
+
+# Scroll
+POST /v1/sandbox/{sandboxId}/computer/mouse/scroll
+{ "x": 640, "y": 400, "direction": "down", "amount": 3 }
+
+# Drag
+POST /v1/sandbox/{sandboxId}/computer/mouse/drag
+{ "from": { "x": 100, "y": 100 }, "to": { "x": 500, "y": 300 } }
+```
+
+## Keyboard control
+
+```bash
+# Type text (handles uppercase, symbols, non-ASCII)
+POST /v1/sandbox/{sandboxId}/computer/keyboard/type
+{ "text": "Hello, world!" }
+
+# Key combination
+POST /v1/sandbox/{sandboxId}/computer/keyboard/key
+{ "key": "ctrl+c" }
+
+# Other key examples
+{ "key": "Return" }          # Enter
+{ "key": "ctrl+shift+t" }    # New tab in browser
+{ "key": "F5" }              # Refresh
+{ "key": "alt+F4" }          # Close window
+```
+
+Key syntax follows xdotool conventions.
+
+## Screen recording
+
+Record a session for audit trails, debugging, or visual regression testing:
+
+```bash
+# Start recording
+POST /v1/sandbox/{sandboxId}/computer/recording/start
+{ "label": "agent-run-42", "fps": 15 }
+# → { "recording_id": "rec_..." }
+
+# Stop recording
+POST /v1/sandbox/{sandboxId}/computer/recording/stop
+{ "recording_id": "rec_..." }
+
+# List recordings
+GET /v1/sandbox/{sandboxId}/computer/recordings
+
+# Download as MP4
+GET /v1/sandbox/{sandboxId}/computer/recordings/{id}/download
+
+# Delete
+DELETE /v1/sandbox/{sandboxId}/computer/recordings/{id}
+```
+
+## VNC browser access
+
+For human-in-the-loop observation -- watching what an agent does in real time or intervening manually:
+
+Deploy `x11vnc` and NoVNC in your sandbox image:
+```bash
+apt-get install x11vnc novnc
+```
+
+NoVNC is then served on port 6080. Access via signed preview URL:
+```bash
+POST /v1/sandbox/instances/{sandboxId}/preview-url
+{ "port": 6080, "expires_in_seconds": 3600 }
+```
+
+This lets you watch the agent's screen in a browser without installing any VNC client.
+
+## Capability info
+
+```bash
+GET /v1/sandbox/{sandboxId}/computer
+```
+
+Returns the available operations for this sandbox and whether Computer Use is enabled.
+
+## Image requirements
+
+Your sandbox image needs these tools:
+
+| Tool | Purpose | Install |
+|------|---------|---------|
+| `Xvfb` | Virtual display | `apt-get install xvfb` |
+| `xfce4` | Desktop environment | `apt-get install xfce4` |
+| `xdotool` | Mouse and keyboard | `apt-get install xdotool` |
+| `scrot` or `imagemagick` | Screenshot | `apt-get install scrot` |
+| `ffmpeg` | Screen recording | `apt-get install ffmpeg` |
+| `x11vnc` + `novnc` | VNC access (optional) | `apt-get install x11vnc novnc` |
+| `wmctrl` | Window listing (optional) | `apt-get install wmctrl` |
+
+## Use cases
+
+- **Browser testing** -- open Chromium, navigate, click, verify
+- **Form automation** -- fill forms in apps that don't have APIs
+- **GUI debugging** -- see exactly what the agent saw when something went wrong (recording)
+- **Visual regression** -- compare screenshots before and after a change
+- **Desktop app testing** -- anything that runs in a window
+
+## Recommendations
+
+- Use JPEG format for screenshots (smaller, adequate for vision models)
+- Take a screenshot after every action to verify the result
+- Use recordings for debugging -- store and review when something unexpected happens
+- Set `autoDeleteAfterDays: 1` on Computer Use sandboxes to prevent recording storage buildup

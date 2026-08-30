@@ -1,0 +1,128 @@
+---
+title: Approvals Center
+description: How the Approvals tab works for human review of sensitive agent actions.
+icon: ClipboardCheck
+---
+
+The admin app includes a dedicated `Approvals` tab under `Deployments -> Agents` for human-in-the-loop review.
+
+Use it when an agent is allowed to plan or propose a sensitive action, but a human still needs to decide whether the action should actually run.
+
+## What the Approvals tab does
+
+The `Approvals` tab is the operator inbox for agent actions that were paused by a human approval gate.
+
+It lets reviewers:
+
+- see all pending and resolved approval reviews in one place
+- inspect the exact tool call payload before anything executes
+- view the triggering session, turn, and nearby transcript context
+- approve or deny the action with an optional reviewer note
+- keep an audit trail of who resolved the review and why
+
+## Where it lives
+
+In the admin UI, approvals are a top-level tab alongside:
+
+- `Agents`
+- `Sessions`
+- `Approvals`
+
+That means approval handling is no longer buried inside a session detail view. Operators can go straight to the queue and work through pending reviews.
+
+## What reviewers see
+
+The page is split into two main areas.
+
+### Review queue
+
+The left side shows a list of approval reviews with:
+
+- status
+- agent name
+- turn number
+- a short summary of the action the agent wants to take
+- request and expiry timing
+- inferred risk badges such as destructive, production, external, billing, or sensitive
+
+Pending reviews are sorted by expiry so urgent actions surface first.
+
+### Review detail panel
+
+The right side shows the full context for the selected review, including:
+
+- agent and session identifiers
+- turn number and iteration
+- requested time, expiry, and default timeout action
+- the user request that led to the action
+- the assistant response before the run paused
+- nearby transcript turns for context
+- the exact tool calls and arguments awaiting approval
+- decision metadata after resolution
+
+## Typical lifecycle
+
+The full flow looks like this:
+
+1. A user message reaches the agent.
+2. The model decides to call one or more tools.
+3. Everstack checks those tool calls against the configured HITL approval rules.
+4. If a tool call requires approval, the session moves into `waiting_for_approval`.
+5. A review is created and appears in the `Approvals` tab.
+6. A human reviewer opens the review and either approves or denies it.
+7. The runtime resumes with that decision.
+
+## What happens after a decision
+
+### Approve
+
+If the reviewer approves the action:
+
+- the review is marked resolved
+- the session leaves `waiting_for_approval`
+- the blocked tool call is allowed to execute
+- the agent continues its turn normally
+
+### Deny
+
+If the reviewer denies the action:
+
+- the review is marked denied
+- the blocked tool call is not executed
+- the runtime injects a denial result back into the conversation
+- the model can continue with that denial as context
+
+This gives the agent a chance to explain the denial, ask for a safer alternative, or choose a different action.
+
+### Timeout
+
+If nobody resolves the review before the timeout expires, Everstack applies the configured default action.
+
+Depending on configuration, that default is usually either:
+
+- approve on timeout
+- deny on timeout
+
+## Why this matters
+
+The Approvals Center is useful for actions where autonomy is helpful but fully automatic execution would be risky.
+
+Common examples:
+
+- deployment or production changes
+- destructive file or infrastructure operations
+- billing or customer-impacting actions
+- sending external communications
+- anything involving secrets, credentials, or admin access
+
+## Good mental model
+
+Think of the Approvals tab as the point where the agent hands control to a human.
+
+The model can still reason, plan, and prepare the exact action. The human stays in charge of whether that action is allowed to cross the line into execution.
+
+## Related pages
+
+- [Human-in-the-Loop](/getting-started/agents/human-in-the-loop)
+- [Sessions](/getting-started/agents/sessions)
+- [Tools](/getting-started/agents/tools)

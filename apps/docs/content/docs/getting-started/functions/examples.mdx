@@ -1,0 +1,227 @@
+---
+title: Examples
+description: Practical function examples for business actions, API integrations, and lightweight code execution.
+icon: Blocks
+---
+
+The fastest way to understand functions is to look at real patterns.
+
+These examples show how teams typically use functions in production.
+
+## Example 1: Customer lookup with webhook mode
+
+Use webhook mode when you already have a backend endpoint.
+
+```bash
+curl -X POST https://{instance}.{region}.everstack.ai/v1/functions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "search_customers",
+    "description": "Search customers by name, email, or account ID",
+    "mode": "webhook",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": { "type": "string", "description": "Customer name, email, or ID" },
+        "limit": { "type": "integer", "default": 5 }
+      },
+      "required": ["query"]
+    },
+    "webhook": {
+      "url": "https://api.example.com/internal/search-customers",
+      "method": "POST",
+      "timeout_ms": 10000
+    }
+  }'
+```
+
+Best for:
+
+- support assistants
+- account lookup flows
+- CRM copilots
+
+## Example 2: Order history tool
+
+This pattern works well when an agent needs to chain multiple functions together.
+
+```bash
+curl -X POST https://{instance}.{region}.everstack.ai/v1/functions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "get_order_history",
+    "description": "Get recent orders for a customer account",
+    "mode": "webhook",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "account_id": { "type": "string" },
+        "limit": { "type": "integer", "default": 10 }
+      },
+      "required": ["account_id"]
+    },
+    "webhook": {
+      "url": "https://api.example.com/internal/orders",
+      "method": "POST",
+      "timeout_ms": 15000
+    }
+  }'
+```
+
+Pair this with `search_customers` so an agent can:
+
+1. find the customer
+2. extract the account ID
+3. fetch recent orders
+4. answer the user with live data
+
+## Example 3: Ticket creation for operations
+
+Functions are often the cleanest way to turn operational actions into tools.
+
+```bash
+curl -X POST https://{instance}.{region}.everstack.ai/v1/functions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "create_jira_ticket",
+    "description": "Create a Jira issue for an operational incident",
+    "mode": "webhook",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "summary": { "type": "string" },
+        "description": { "type": "string" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] }
+      },
+      "required": ["summary", "description"]
+    },
+    "webhook": {
+      "url": "https://ops.example.com/internal/create-jira-ticket",
+      "method": "POST",
+      "timeout_ms": 10000
+    }
+  }'
+```
+
+Best for:
+
+- incident response assistants
+- IT operations copilots
+- support escalation workflows
+
+## Example 4: Wrap an upstream API with proxy mode
+
+Proxy mode works well when you want to put a cleaner contract in front of an API.
+
+```bash
+curl -X POST https://{instance}.{region}.everstack.ai/v1/functions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "github_issue_lookup",
+    "description": "Look up a GitHub issue by owner, repo, and issue number",
+    "mode": "proxy",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "owner": { "type": "string" },
+        "repo": { "type": "string" },
+        "issue_number": { "type": "integer" }
+      },
+      "required": ["owner", "repo", "issue_number"]
+    },
+    "proxy": {
+      "base_url": "https://api.github.com",
+      "path": "/repos/{owner}/{repo}/issues/{issue_number}",
+      "method": "GET"
+    }
+  }'
+```
+
+Best for:
+
+- standardizing external integrations
+- reducing custom integration glue
+- exposing limited parts of a large API
+
+## Example 5: Tax calculation with isolated mode
+
+Use isolated mode when you need a small, bounded unit of custom logic.
+
+```bash
+curl -X POST https://{instance}.{region}.everstack.ai/v1/functions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "calculate_tax",
+    "description": "Calculate tax and total for an amount and rate",
+    "mode": "isolated",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "amount": { "type": "number" },
+        "rate": { "type": "number" }
+      },
+      "required": ["amount", "rate"]
+    },
+    "isolated": {
+      "runtime": "nodejs20",
+      "code": "export default async ({ amount, rate }) => ({ tax: amount * rate, total: amount * (1 + rate) })"
+    },
+    "timeout_ms": 30000,
+    "memory_mb": 256
+  }'
+```
+
+Best for:
+
+- pricing utilities
+- scoring logic
+- validation and formatting
+- custom transforms
+
+## Example 6: Normalize incoming data
+
+Isolated functions are also good for cleanup or shaping work.
+
+```bash
+curl -X POST https://{instance}.{region}.everstack.ai/v1/functions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "normalize_csv_row",
+    "description": "Normalize a CSV row into a consistent record shape",
+    "mode": "isolated",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "row": { "type": "object" }
+      },
+      "required": ["row"]
+    },
+    "isolated": {
+      "runtime": "nodejs20",
+      "code": "export default async ({ row }) => ({ email: String(row.email || '').trim().toLowerCase(), company: String(row.company || '').trim(), spend: Number(row.spend || 0) })"
+    },
+    "timeout_ms": 30000,
+    "memory_mb": 256
+  }'
+```
+
+## Attach functions to an agent
+
+Once functions are registered, add their names to an agent's tool list.
+
+```json
+{
+  "name": "support-assistant",
+  "model": "claude-sonnet-4-20250514",
+  "system_prompt": "Use the available tools to look up customer and order data before answering.",
+  "tools": ["search_customers", "get_order_history", "create_jira_ticket"]
+}
+```
+
+## Example selection guide
+
+- start with `webhook` if you already own the backend
+- use `proxy` when you want a cleaner contract over an upstream API
+- use `isolated` when you need bounded custom logic without a full service
+
+If you need a shell, files, or a long-running process, use a sandbox instead.

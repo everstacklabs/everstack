@@ -1,0 +1,205 @@
+syntax = "proto3";
+
+package everstack.channels.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/channels/v1;channels";
+
+// Platform identifies the messaging platform.
+enum Platform {
+  PLATFORM_UNSPECIFIED = 0;
+  PLATFORM_DISCORD = 1;
+  PLATFORM_SLACK = 2;
+  PLATFORM_TELEGRAM = 3;
+}
+
+// SessionMode controls how platform messages map to agent sessions.
+enum SessionMode {
+  SESSION_MODE_UNSPECIFIED = 0;
+  SESSION_MODE_SHARED = 1;      // One session per channel, all users contribute
+  SESSION_MODE_PER_USER = 2;    // Each user gets own session
+  SESSION_MODE_THREAD = 3;      // Shared in main, per-user in threads
+}
+
+// ChannelStatus represents the runtime connection status.
+enum ChannelStatus {
+  CHANNEL_STATUS_UNSPECIFIED = 0;
+  CHANNEL_STATUS_CONNECTED = 1;
+  CHANNEL_STATUS_DISCONNECTED = 2;
+  CHANNEL_STATUS_ERROR = 3;
+  CHANNEL_STATUS_CONNECTING = 4;
+}
+
+// ChannelConfig defines a messaging platform binding to an agent.
+// When agent_id is empty, the channel operates in dispatcher mode —
+// messages are auto-routed to agents via mention or HITL confirmation.
+message ChannelConfig {
+  string id = 1;
+  string tenant_id = 2;
+  optional string agent_id = 3;
+  Platform platform = 4;
+  string name = 5;
+  bool enabled = 6;
+  SessionMode session_mode = 7;
+  google.protobuf.Struct credentials = 8;       // Encrypted bot token etc.
+  google.protobuf.Struct platform_config = 9;   // Allowed channels, prefixes, etc.
+  int32 max_messages_per_minute = 10;
+  int32 max_sessions_per_user = 11;
+  string response_format = 12;                   // auto, plain, rich
+  int32 max_response_length = 13;
+  int64 max_tokens_per_day = 14;                 // Per-channel budget cap
+  int32 idle_session_ttl_seconds = 15;           // Auto-close after idle (default: 3600)
+  int32 coalesce_window_ms = 16;                 // Batch rapid messages (default: 3000)
+  string instance_affinity = 17;                 // Config-based instance pinning
+  google.protobuf.Timestamp created_at = 18;
+  google.protobuf.Timestamp updated_at = 19;
+}
+
+// ChannelStatusInfo is runtime status for a channel connector.
+message ChannelStatusInfo {
+  string channel_id = 1;
+  ChannelStatus status = 2;
+  string error_message = 3;
+  google.protobuf.Timestamp connected_since = 4;
+  int64 messages_received = 5;
+  int64 messages_sent = 6;
+  int32 active_sessions = 7;
+}
+
+// ChannelSessionMapping maps platform references to agent sessions.
+message ChannelSessionMapping {
+  string id = 1;
+  string channel_config_id = 2;
+  string platform_channel_ref = 3;   // Discord channel ID, Slack channel ID, etc.
+  string platform_user_id = 4;
+  string platform_user_name = 5;
+  string platform_thread_ref = 6;    // Thread ID if applicable
+  string agent_session_id = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp last_message_at = 9;
+}
+
+// ─── Request/Response Messages ──────────────────────────────────────
+
+message CreateChannelRequest {
+  string tenant_id = 1;
+  optional string agent_id = 2;
+  Platform platform = 3;
+  string name = 4;
+  SessionMode session_mode = 5;
+  google.protobuf.Struct credentials = 6;
+  google.protobuf.Struct platform_config = 7;
+  int32 max_messages_per_minute = 8;
+  int32 max_sessions_per_user = 9;
+  string response_format = 10;
+  int32 max_response_length = 11;
+  int64 max_tokens_per_day = 12;
+  int32 idle_session_ttl_seconds = 13;
+  int32 coalesce_window_ms = 14;
+  string instance_affinity = 15;
+}
+
+message CreateChannelResponse {
+  ChannelConfig channel = 1;
+}
+
+message GetChannelRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message GetChannelResponse {
+  ChannelConfig channel = 1;
+}
+
+message UpdateChannelRequest {
+  string id = 1;
+  string tenant_id = 2;
+  optional string name = 3;
+  optional string agent_id = 4;
+  optional bool enabled = 5;
+  optional SessionMode session_mode = 6;
+  google.protobuf.Struct credentials = 7;
+  google.protobuf.Struct platform_config = 8;
+  optional int32 max_messages_per_minute = 9;
+  optional int32 max_sessions_per_user = 10;
+  optional string response_format = 11;
+  optional int32 max_response_length = 12;
+  optional int64 max_tokens_per_day = 13;
+  optional int32 idle_session_ttl_seconds = 14;
+  optional int32 coalesce_window_ms = 15;
+  optional string instance_affinity = 16;
+}
+
+message UpdateChannelResponse {
+  ChannelConfig channel = 1;
+}
+
+message DeleteChannelRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message DeleteChannelResponse {}
+
+message ListChannelsRequest {
+  string tenant_id = 1;
+  optional Platform platform = 2;
+  optional string agent_id = 3;
+  optional bool enabled = 4;
+  int32 limit = 5;
+  int32 offset = 6;
+}
+
+message ListChannelsResponse {
+  repeated ChannelConfig channels = 1;
+  int32 total = 2;
+}
+
+message TestChannelRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message TestChannelResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListChannelStatusesRequest {
+  string tenant_id = 1;
+}
+
+message ListChannelStatusesResponse {
+  repeated ChannelStatusInfo statuses = 1;
+}
+
+message ListChannelSessionsRequest {
+  string channel_id = 1;
+  string tenant_id = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message ListChannelSessionsResponse {
+  repeated ChannelSessionMapping sessions = 1;
+  int32 total = 2;
+}
+
+// PlatformChannelInfo represents a channel/room from the connected platform.
+message PlatformChannelInfo {
+  string id = 1;
+  string name = 2;
+  string type = 3;  // "text", "public", "private"
+}
+
+message ListPlatformChannelsRequest {
+  string channel_config_id = 1;
+  string tenant_id = 2;
+}
+
+message ListPlatformChannelsResponse {
+  repeated PlatformChannelInfo channels = 1;
+}

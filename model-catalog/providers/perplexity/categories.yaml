@@ -1,0 +1,15 @@
+chat:
+  - sonar
+  - sonar-pro
+  - sonar-reasoning-pro
+  - sonar-deep-research
+
+reasoning:
+  - sonar-reasoning-pro
+  - sonar-deep-research
+
+search:
+  - sonar
+  - sonar-pro
+  - sonar-reasoning-pro
+  - sonar-deep-research

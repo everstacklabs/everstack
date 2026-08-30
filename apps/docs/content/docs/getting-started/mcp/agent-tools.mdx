@@ -1,0 +1,152 @@
+---
+title: MCP Tools in Agents
+description: How registered MCP server tools are named, attached, and executed inside Everstack agents.
+icon: Wrench
+---
+
+Registering an MCP server puts its tools in your tenant's catalog. It does not give any agent access to them. This page covers the step in between: how a catalog tool becomes a tool an agent can actually call.
+
+If you have not registered a server yet, start with [Server Management](/getting-started/mcp/server-management).
+
+## Tool naming
+
+Federated MCP tools are exposed to agents under a namespaced name so they cannot collide with built-in tools:
+
+```
+mcp__<server>__<tool>
+```
+
+The server segment is the name you gave the server at registration, with every character outside `[A-Za-z0-9_]` replaced by an underscore. A server named `GitHub Cloud` exposing `list_repos` becomes:
+
+```
+mcp__GitHub_Cloud__list_repos
+```
+
+This is the exact string you put in an agent's tool list, and the exact string the model sees when it decides to call the tool.
+
+<Callout type="info">
+  Renaming a server changes the generated tool names. Agents that referenced the old names lose those tools until their tool lists are updated.
+</Callout>
+
+## Attaching tools to an agent
+
+MCP tools are explicit opt-in. At session start, the runtime builds the list of federated tools available to your tenant, then registers only the ones whose name appears in the agent definition's `tools` array. Everything else is skipped, even if the server is healthy and enabled.
+
+There is no wildcard. Each tool is granted by name.
+
+### From the admin UI
+
+Open the agent editor, go to the **Tools** section, and select the **MCP** tab. Tools are grouped by the server that provides them, with search across server names, tool names, and descriptions. Checking a tool adds its namespaced name to the agent's tool list.
+
+If the tab is empty, no MCP servers are registered for the tenant yet. Register one under **Gateway → MCP → Servers**.
+
+### From the API
+
+MCP tool names go in the same `tools` array as built-in tools:
+
+```json
+{
+  "name": "release-bot",
+  "model": "gpt-4o-mini",
+  "tools": [
+    "sandbox_read_file",
+    "mcp__GitHub_Cloud__list_repos",
+    "mcp__GitHub_Cloud__create_issue"
+  ]
+}
+```
+
+Use [`GET /v1/mcp/tools`](/api-reference/mcp/list-federated-tools) to list the federated tools available to your tenant before writing the array. The response gives you the server and tool names you need to build the namespaced identifier.
+
+## What the model sees
+
+Each attached MCP tool is presented to the model as a normal function tool:
+
+- **Name**: the namespaced `mcp__<server>__<tool>` string
+- **Description**: the server's own description, prefixed with `[MCP:<server>]` so the model knows where it came from. Servers that supply no description get a generated one.
+- **Parameters**: the server's `inputSchema`, passed through unchanged. Servers that supply no schema get an empty object schema.
+
+The agent has no idea a network hop is involved. It calls the tool by name like any other.
+
+## Where MCP tools work
+
+Federated MCP tools are available in both agent execution paths:
+
+| Path | Notes |
+| --- | --- |
+| Interactive sessions (chat, Studio, streaming API) | Tools resolved per session against the session's tenant |
+| Deployment invoke (`/v1/deploy/{id}/invoke`) | Same resolution, using the deployment's tenant and its agent config |
+
+Both paths refresh the tenant's server connections before resolving tools, so a gateway restart does not silently strip MCP access from a running deployment.
+
+Resolution keys off whether a server is **enabled**, not whether it is healthy. A server that is failing its health checks still contributes its tools, and calls to them fail at the transport. Disable the server to remove its tools from every agent at once.
+
+## Execution and results
+
+When the model calls an MCP tool:
+
+1. The runtime checks the tool against the agent's allowed tool list.
+2. If the tool matches a [HITL approval rule](/getting-started/agents/human-in-the-loop), the session pauses for approval first.
+3. The call is routed to the owning server, with the tenant verified against the server's owner before the request goes out.
+4. The response content blocks are flattened to text and returned to the model.
+
+Content block handling:
+
+| Block type | Returned to the model as |
+| --- | --- |
+| `text` | The text verbatim |
+| `image` | A placeholder, `[image: <mime type>]` |
+| `resource` | A placeholder, `[resource: <uri>]` |
+| Anything else | The raw JSON of the block |
+
+Multiple blocks are joined with newlines.
+
+<Callout type="warn">
+  Image and resource payloads are not passed through to the model today. A tool that returns a screenshot gives the agent a placeholder, not the picture. Prefer MCP tools that return text or structured JSON.
+</Callout>
+
+When a tool reports a failure, the error text is returned to the model as a normal tool result prefixed with `Error from MCP tool:` rather than aborting the turn. The agent can read the error and adapt, which is usually what you want for a recoverable failure like a bad argument.
+
+## Approval rules
+
+MCP tool names match HITL patterns exactly like built-in tools. Because every federated tool shares the `mcp__` prefix, a single prefix rule gates all external tool calls:
+
+```
+mcp__*
+```
+
+Narrower rules work too. `mcp__GitHub_Cloud__*` gates one server, and a full name gates one tool. See [Human-in-the-Loop](/getting-started/agents/human-in-the-loop) for match modes.
+
+## Tenant isolation
+
+Tool resolution is scoped to the tenant that owns the session or deployment, and it fails closed:
+
+- A request with no resolved tenant gets no MCP tools at all.
+- A tool call is refused if the target server is not owned by the calling tenant, with the same "not found" error as a server that does not exist.
+- Disabled servers contribute no tools and reject calls.
+
+Servers registered by one tenant are never visible or callable from another.
+
+## Troubleshooting
+
+### The agent says it does not have access to MCP servers
+
+The tool name is not in the agent's `tools` array. Registering a server is not enough. Check the exact namespaced name, including the sanitized server segment, against what the agent config lists.
+
+### A tool disappeared from an agent
+
+Either the server was disabled, deleted, or renamed, or the tool is no longer advertised by the server. Check the server's status under **Gateway → MCP → Servers** and re-run tool discovery.
+
+### A tool call fails with "server not found"
+
+The server is not registered for this tenant, or it is disabled. The error text is deliberately identical for both cases so it cannot be used to probe other tenants' servers.
+
+### The tool works in chat but not from a deployment
+
+Deployments resolve tools from the agent config snapshot taken when the deployment was created, not from the live agent definition. Adding an MCP tool to the agent afterwards does not reach an existing deployment. Redeploy to pick up the new tool list.
+
+## Next steps
+
+- [Server Management](/getting-started/mcp/server-management) for registering and monitoring servers.
+- [Everstack MCP Server](/getting-started/mcp/everstack-mcp-server) for the other direction, exposing Everstack's own tools to external MCP clients.
+- [Agent Tools](/getting-started/agents/tools) for built-in tools and custom functions.

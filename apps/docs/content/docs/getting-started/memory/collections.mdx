@@ -1,0 +1,105 @@
+---
+title: Collections
+description: Creating and managing vector collections for document storage.
+icon: FolderOpen
+---
+
+A collection is a tenant-scoped vector store that holds documents as embeddings. You create a collection, add documents to it, and query it with natural language to retrieve the most relevant results. Collections are the foundation of both RAG pipelines and agent memory in Everstack.
+
+## What a collection contains
+
+Each collection stores:
+
+- **Documents** -- text content split into chunks and converted to vector embeddings
+- **Metadata** -- key-value pairs attached to each document for filtering
+- **Embedding model reference** -- the model used to vectorize content, fixed at creation time
+
+Collections are isolated by tenant. A collection in one tenant is invisible to every other tenant, regardless of the underlying vector backend.
+
+## Creating a collection
+
+You create a collection through the admin UI or the API. At creation time, you specify:
+
+- **Name** -- a human-readable identifier, unique within the tenant
+- **Embedding model** -- which model to use for vectorizing documents (e.g., `text-embedding-3-small`)
+- **Description** (optional) -- notes about what this collection contains
+
+```yaml
+# Example: creating a collection via the API
+name: "support-docs"
+embedding_model: "text-embedding-3-small"
+description: "Customer support knowledge base articles"
+```
+
+The embedding model cannot be changed after creation. If you need a different model, create a new collection and re-ingest your documents. This constraint exists because mixing embeddings from different models in the same vector space produces meaningless similarity scores.
+
+## Adding documents
+
+Documents are the content you want to make searchable. When you add a document, Everstack:
+
+1. Splits the text into chunks based on the configured chunking strategy
+2. Generates vector embeddings for each chunk using the collection's embedding model
+3. Stores the chunks, embeddings, and metadata in the vector backend
+
+### Text content
+
+The simplest case is raw text. You provide the content and Everstack handles the rest.
+
+```yaml
+content: "Our refund policy allows returns within 30 days of purchase..."
+metadata:
+  source: "policy-docs"
+  category: "refund"
+  updated_at: "2026-05-01"
+```
+
+### Metadata
+
+Metadata is a flat key-value map attached to each document. It is stored alongside the embeddings and can be used as filters during queries. Common metadata fields include `source`, `category`, `author`, `created_at`, and any domain-specific labels.
+
+Metadata is not embedded. It exists purely for filtering and does not affect similarity scores.
+
+### Chunking
+
+Long documents are split into smaller chunks before embedding. Chunking matters because embedding models have token limits, and shorter, focused chunks produce better retrieval results than large, diluted ones.
+
+Everstack handles chunking automatically. The default strategy splits on paragraph boundaries with overlap to preserve context across chunk edges. You do not need to pre-chunk your documents unless you have specific requirements.
+
+## Embedding model selection
+
+The choice of embedding model affects both the quality and cost of your retrieval pipeline.
+
+| Consideration | Guidance |
+| --- | --- |
+| **Accuracy** | Larger models produce better embeddings but cost more per document |
+| **Speed** | Smaller models embed faster, which matters during bulk ingestion |
+| **Dimensions** | Higher-dimensional embeddings capture more nuance but use more storage |
+| **Consistency** | All documents in a collection must use the same model |
+
+Configure available models in your gateway config under `features.memory.embedding_models`. Only models listed there can be selected when creating a collection.
+
+## Collection lifecycle
+
+Collections support standard CRUD operations:
+
+- **Create** -- provision a new collection with a name and embedding model
+- **List** -- enumerate all collections in the current tenant
+- **Delete** -- permanently remove a collection and all its documents
+
+Deleting a collection is irreversible. All documents, chunks, embeddings, and metadata are permanently removed from the vector backend.
+
+## When to use multiple collections
+
+A single collection works well for a unified knowledge base. Multiple collections make sense when:
+
+- **Different embedding models** -- you want to experiment with model quality or use specialized models for different content types
+- **Access boundaries** -- you need to restrict which agents or workflows can query which data (each agent can be pointed at specific collections)
+- **Lifecycle independence** -- you want to rebuild or delete one corpus without affecting others
+- **Domain separation** -- support docs, product specs, and legal documents have different retrieval characteristics and benefit from separate vector spaces
+
+As a general rule, start with one collection and split when you have a concrete reason to.
+
+## Next steps
+
+- [Querying](/getting-started/memory/querying) -- How to search collections with semantic queries and metadata filters.
+- [Collections API Reference](/api-reference/memory) -- Full API documentation for CreateCollection, ListCollections, DeleteCollection, and AddDocuments.

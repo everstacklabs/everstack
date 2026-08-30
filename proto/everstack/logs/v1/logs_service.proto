@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package everstack.logs.v1;
+
+import "google/protobuf/timestamp.proto";
+import "everstack/logs/v1/logs.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/logs/v1;logs";
+
+
+// LogsService provides real-time streaming of gateway request logs
+service LogsService {
+    // ListLogs streams request logs from ClickHouse OTEL logs
+    // Server-streaming: initial backfill + real-time tail
+    rpc ListLogs(ListLogsRequest) returns (stream ListLogsResponse);
+
+    // Custom column RPCs: user-defined log columns so the logs view surfaces
+    // the LogAttributes fields a tenant cares about, not only our fixed set.
+
+    // ListLogCustomColumns returns the tenant's registered log columns.
+    rpc ListLogCustomColumns(ListLogCustomColumnsRequest) returns (ListLogCustomColumnsResponse);
+
+    // UpsertLogCustomColumn creates or updates a log column definition.
+    rpc UpsertLogCustomColumn(UpsertLogCustomColumnRequest) returns (UpsertLogCustomColumnResponse);
+
+    // DeleteLogCustomColumn removes a log column definition by key.
+    rpc DeleteLogCustomColumn(DeleteLogCustomColumnRequest) returns (DeleteLogCustomColumnResponse);
+}
+
+// LogCustomColumnDef is a user-defined log column. attr_key is the
+// LogAttributes key whose value the column surfaces (attribute-source only;
+// logs carry a flat string attribute bag, so there is no value_type or
+// alternate source like traces).
+message LogCustomColumnDef {
+    string key = 1;
+    string label = 2;
+    string attr_key = 3;
+    int32 position = 4;
+}
+
+message ListLogCustomColumnsRequest {}
+
+message ListLogCustomColumnsResponse {
+    repeated LogCustomColumnDef columns = 1;
+}
+
+message UpsertLogCustomColumnRequest {
+    LogCustomColumnDef column = 1;
+}
+
+message UpsertLogCustomColumnResponse {
+    LogCustomColumnDef column = 1;
+}
+
+message DeleteLogCustomColumnRequest {
+    string key = 1;
+}
+
+message DeleteLogCustomColumnResponse {}
+

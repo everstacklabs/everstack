@@ -1,0 +1,569 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/issues/v1/issues_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "IssuesService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/issues": {
+      "get": {
+        "summary": "ListIssues returns failure groups ranked by occurrence count.",
+        "operationId": "IssuesService_ListIssues",
+        "responses": {
+          "200": {
+            "description": "List issues (grouped failures)",
+            "schema": {
+              "$ref": "#/definitions/v1ListIssuesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "statusFilter",
+            "description": "Filter by lifecycle status; UNSPECIFIED returns all.\n\n - ISSUE_STATUS_REGRESSED: REGRESSED: a previously resolved issue that recurred after resolution.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ISSUE_STATUS_UNSPECIFIED",
+              "ISSUE_STATUS_UNRESOLVED",
+              "ISSUE_STATUS_RESOLVED",
+              "ISSUE_STATUS_IGNORED",
+              "ISSUE_STATUS_REGRESSED"
+            ],
+            "default": "ISSUE_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "query",
+            "description": "Optional case-insensitive substring match against the signature/title.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "IssuesService"
+        ]
+      }
+    },
+    "/v1/issues/{fingerprint}": {
+      "get": {
+        "summary": "GetIssue returns one issue with its recent occurrences and trend.",
+        "operationId": "IssuesService_GetIssue",
+        "responses": {
+          "200": {
+            "description": "Get an issue with occurrences and trend",
+            "schema": {
+              "$ref": "#/definitions/v1GetIssueResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "fingerprint",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "interval",
+            "description": "Trend bucket size, e.g. \"hour\" or \"day\"; empty lets the server choose.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "IssuesService"
+        ]
+      }
+    },
+    "/v1/issues/{fingerprint}/status": {
+      "post": {
+        "summary": "UpdateIssueStatus changes an issue's triage state (resolve/ignore/reopen).",
+        "operationId": "IssuesService_UpdateIssueStatus",
+        "responses": {
+          "200": {
+            "description": "Update an issue's triage status",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateIssueStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "fingerprint",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/IssuesServiceUpdateIssueStatusBody"
+            }
+          }
+        ],
+        "tags": [
+          "IssuesService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "IssuesServiceUpdateIssueStatusBody": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/v1IssueStatus"
+        },
+        "assignee": {
+          "type": "string"
+        },
+        "snoozeUntil": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "signature": {
+          "type": "string",
+          "description": "Carried so the state row can persist a human-readable title/signature\neven if the issue has aged out of the active query window."
+        },
+        "title": {
+          "type": "string"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1EventDetail": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        },
+        "spanId": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "message": {
+          "type": "string"
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "All span attributes for this event (powers the highlights grid)."
+        }
+      },
+      "description": "EventDetail is a single representative event (latest occurrence) with its\nfull captured attributes, so the issue can be debugged inline without\nleaving for the raw trace."
+    },
+    "v1GetIssueResponse": {
+      "type": "object",
+      "properties": {
+        "issue": {
+          "$ref": "#/definitions/v1Issue"
+        },
+        "occurrences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Occurrence"
+          }
+        },
+        "trend": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TrendPoint"
+          }
+        },
+        "latestEvent": {
+          "$ref": "#/definitions/v1EventDetail",
+          "description": "Representative (latest) event with full attributes."
+        },
+        "breadcrumbs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SpanCrumb"
+          },
+          "description": "The failing occurrence's span chain (breadcrumb timeline)."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TagDistribution"
+          },
+          "description": "Attribute distributions across the issue's events."
+        },
+        "users": {
+          "type": "string",
+          "format": "int64",
+          "description": "Distinct sessions affected (our \"users affected\" proxy)."
+        },
+        "activity": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1IssueActivity"
+          },
+          "description": "Triage history (status changes / assignments), newest first."
+        }
+      }
+    },
+    "v1Issue": {
+      "type": "object",
+      "properties": {
+        "fingerprint": {
+          "type": "string",
+          "description": "Stable fingerprint (hash of the normalized signature); the cluster key."
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "description": "Representative raw error message for display."
+        },
+        "signature": {
+          "type": "string",
+          "description": "Normalized signature (volatile bits stripped) the fingerprint derives from."
+        },
+        "category": {
+          "$ref": "#/definitions/v1IssueCategory"
+        },
+        "status": {
+          "$ref": "#/definitions/v1IssueStatus"
+        },
+        "count": {
+          "type": "string",
+          "format": "int64",
+          "description": "Occurrence count within the queried time window."
+        },
+        "firstSeen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastSeen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "sampleTraceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Up to a handful of example trace ids to drill into."
+        },
+        "assignee": {
+          "type": "string"
+        },
+        "resolvedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "snoozeUntil": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sparkline": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": "Fixed-width occurrence histogram across the queried window (oldest to\nnewest), for an inline list sparkline. Empty when no buckets computed."
+        }
+      },
+      "description": "Issue is a group of recurring failures sharing one normalized signature."
+    },
+    "v1IssueActivity": {
+      "type": "object",
+      "properties": {
+        "actor": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string",
+          "description": "resolved / ignored / reopened / assigned / unassigned."
+        },
+        "fromStatus": {
+          "type": "string"
+        },
+        "toStatus": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "IssueActivity is one entry in the triage history (status change / assignment)."
+    },
+    "v1IssueCategory": {
+      "type": "string",
+      "enum": [
+        "ISSUE_CATEGORY_UNSPECIFIED",
+        "ISSUE_CATEGORY_RATE_LIMIT",
+        "ISSUE_CATEGORY_CONTEXT_LENGTH",
+        "ISSUE_CATEGORY_PROVIDER_5XX",
+        "ISSUE_CATEGORY_GUARDRAIL_BLOCK",
+        "ISSUE_CATEGORY_TOOL_ERROR",
+        "ISSUE_CATEGORY_TIMEOUT",
+        "ISSUE_CATEGORY_AUTH",
+        "ISSUE_CATEGORY_PARSE_ERROR",
+        "ISSUE_CATEGORY_OTHER"
+      ],
+      "default": "ISSUE_CATEGORY_UNSPECIFIED",
+      "description": "IssueCategory is an LLM-aware classification of the failure mode."
+    },
+    "v1IssueStatus": {
+      "type": "string",
+      "enum": [
+        "ISSUE_STATUS_UNSPECIFIED",
+        "ISSUE_STATUS_UNRESOLVED",
+        "ISSUE_STATUS_RESOLVED",
+        "ISSUE_STATUS_IGNORED",
+        "ISSUE_STATUS_REGRESSED"
+      ],
+      "default": "ISSUE_STATUS_UNSPECIFIED",
+      "description": "IssueStatus tracks the triage lifecycle of a recurring failure.\n\n - ISSUE_STATUS_REGRESSED: REGRESSED: a previously resolved issue that recurred after resolution."
+    },
+    "v1ListIssuesResponse": {
+      "type": "object",
+      "properties": {
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Issue"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1Occurrence": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        },
+        "spanId": {
+          "type": "string"
+        },
+        "spanName": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "description": "Occurrence is a single failure instance belonging to an issue."
+    },
+    "v1SpanCrumb": {
+      "type": "object",
+      "properties": {
+        "spanId": {
+          "type": "string"
+        },
+        "parentSpanId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "Ok / Error / Unset."
+        },
+        "statusMessage": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "durationMs": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "description": "SpanCrumb is one span in the failing occurrence's trace, rendered as a\nbreadcrumb timeline (the call chain into the failure)."
+    },
+    "v1TagDistribution": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "total": {
+          "type": "string",
+          "format": "int64"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TagValue"
+          }
+        }
+      },
+      "description": "TagDistribution is the breakdown of one attribute across the issue's events\n(e.g. which models / status codes / routes it spans)."
+    },
+    "v1TagValue": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "count": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "TagValue is one observed value of a tag and how many of the issue's events\ncarried it."
+    },
+    "v1TrendPoint": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "count": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "TrendPoint is one bucket of the issue's occurrence sparkline."
+    },
+    "v1UpdateIssueStatusResponse": {
+      "type": "object",
+      "properties": {
+        "issue": {
+          "$ref": "#/definitions/v1Issue"
+        }
+      }
+    }
+  }
+}

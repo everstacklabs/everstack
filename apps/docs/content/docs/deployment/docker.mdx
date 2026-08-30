@@ -1,0 +1,167 @@
+---
+title: Docker
+description: Deploy Everstack with Docker Compose for local and small-scale environments.
+icon: Container
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+## When to use Docker
+
+Docker Compose is the fastest way to get Everstack running. It works well for local development, evaluation, and small production deployments serving a single team. If you need horizontal scaling, high availability, or multi-node redundancy, use [Kubernetes](/deployment/kubernetes) instead.
+
+## Prerequisites
+
+- Docker Engine 24+ and Docker Compose v2
+- At least 4 GB of available RAM (8 GB recommended)
+- 20 GB of free disk space for persistent volumes
+
+## Services overview
+
+The Compose stack includes the following services:
+
+| Service | Description | Default port |
+| --- | --- | --- |
+| `everstack` | Main server (gateway, API, agent runtime) | `8089` |
+| `postgres` | Metadata store (users, agents, configs) | `5432` |
+| `clickhouse` | Analytics, traces, and log storage | `9000` / `8123` |
+| `redis` | Optional caching and rate limiting | `6379` |
+
+## Getting started
+
+Create a `docker-compose.yml` in your project directory:
+
+```yaml title="docker-compose.yml"
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: everstack
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: everstack
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3
+    volumes:
+      - chdata:/var/lib/clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  everstack:
+    image: ghcr.io/everstacklabs/everstack:latest
+    ports:
+      - "8089:8089"
+    environment:
+      EVS_DATABASE_URL: "postgres://everstack:changeme@postgres:5432/everstack?sslmode=disable"
+      EVS_CLICKHOUSE_URL: "clickhouse://clickhouse:9000/everstack"
+      EVS_REDIS_URL: "redis://redis:6379"
+    depends_on:
+      - postgres
+      - clickhouse
+      - redis
+
+volumes:
+  pgdata:
+  chdata:
+```
+
+## Configuration
+
+All Everstack settings can be set through environment variables with the `EVS_` prefix. Add them to the `environment` block of the `everstack` service.
+
+```yaml
+environment:
+  EVS_DATABASE_URL: "postgres://everstack:changeme@postgres:5432/everstack?sslmode=disable"
+  EVS_CLICKHOUSE_URL: "clickhouse://clickhouse:9000/everstack"
+  EVS_REDIS_URL: "redis://redis:6379"
+  EVS_AUTH_SECRET: "your-secret-key"
+  EVS_LOG_LEVEL: "info"
+```
+
+You can also mount a YAML config file:
+
+```yaml
+volumes:
+  - ./everstack.yaml:/etc/everstack/config.yaml
+```
+
+See [everstack serve](/cli/serve) for the full list of configuration options.
+
+## Persistent volumes
+
+Both Postgres and ClickHouse use named volumes (`pgdata`, `chdata`) so data survives container restarts. Back up these volumes regularly in production. You can inspect volume locations with `docker volume inspect`.
+
+<Callout type="warn">
+  Never use `docker compose down -v` in production. The `-v` flag deletes all named volumes and permanently removes your data.
+</Callout>
+
+## Running migrations
+
+Before starting Everstack for the first time, run migrations to set up the database schema:
+
+```bash
+docker compose run --rm everstack migrate up
+```
+
+See [everstack migrate](/cli/migrate) for more details on migration commands.
+
+## Starting and stopping
+
+```bash
+# Start all services in the background
+docker compose up -d
+
+# View logs
+docker compose logs -f everstack
+
+# Stop all services (data is preserved)
+docker compose down
+```
+
+## Health checks
+
+The Everstack server exposes a health endpoint at `/healthz`. You can verify the server is running:
+
+```bash
+curl http://localhost:8089/healthz
+```
+
+To add a Docker health check to the Compose file:
+
+```yaml
+everstack:
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:8089/healthz"]
+    interval: 10s
+    timeout: 5s
+    retries: 3
+```
+
+## Upgrading
+
+To upgrade to a new version:
+
+```bash
+# Pull the latest image
+docker compose pull everstack
+
+# Run any new migrations
+docker compose run --rm everstack migrate up
+
+# Restart with the new image
+docker compose up -d
+```
+
+Always run migrations before restarting the server. Everstack migrations are idempotent, so running them on an already up-to-date database is safe.

@@ -1,0 +1,1191 @@
+providers:
+    anthropic:
+        api_version: "2023-06-01"
+        auth:
+            type: api_key
+            header_name: x-api-key
+            header_format: '{api_key}'
+            env_var: ANTHROPIC_API_KEY
+        base_url: https://api.anthropic.com/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: false
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: true
+        defaults:
+            max_tokens: 1000
+            retry_attempts: 3
+            retry_delay: 1s
+            temperature: 0.7
+            timeout: 60s
+            top_k: 40
+            top_p: 1
+        display_name: Anthropic
+        error_mapping:
+            invalid_api_key: authentication_failed
+            model_not_found: model_unavailable
+            payment_required: payment_required
+            rate_limit_exceeded: rate_limit_exceeded
+        model_families:
+            claude-3:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Claude 3 family models
+                max_tokens: 200000
+            claude-3.5:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Claude 3.5 family models
+                max_tokens: 200000
+            claude-4:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Claude 4 family models
+                max_tokens: 200000
+        name: anthropic
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 1000
+            tokens_per_minute: 50000
+            concurrent_requests: 25
+    aws-bedrock:
+        api_version: "2024-01-01"
+        auth:
+            type: aws_sigv4
+            header_name: Authorization
+            header_format: AWS4-HMAC-SHA256 ...
+            env_var: AWS_REGION
+        base_url: https://bedrock-runtime.{region}.amazonaws.com
+        capabilities:
+            assistants: false
+            chat: true
+            completions: true
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: true
+        defaults:
+            max_tokens: 1000
+            retry_attempts: 3
+            retry_delay: 1s
+            temperature: 0.7
+            timeout: 60s
+            top_p: 1
+        display_name: AWS Bedrock
+        error_mapping:
+            AccessDeniedException: authentication_failed
+            ResourceNotFoundException: model_unavailable
+            ThrottlingException: rate_limit_exceeded
+        model_families:
+            claude:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Anthropic Claude via Bedrock
+                max_tokens: 200000
+            llama:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Meta Llama via Bedrock
+                max_tokens: 128000
+            mistral:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Mistral via Bedrock
+                max_tokens: 128000
+            nova:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Amazon Nova family
+                max_tokens: 300000
+        name: aws-bedrock
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 1200
+            tokens_per_minute: 240000
+            concurrent_requests: 30
+    azure-openai:
+        api_version: "2024-10-21"
+        auth:
+            type: api_key
+            header_name: api-key
+            header_format: '{api_key}'
+            env_var: AZURE_OPENAI_API_KEY
+        base_url: https://{resource}.openai.azure.com
+        capabilities:
+            assistants: false
+            chat: true
+            completions: true
+            embeddings: true
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: true
+        defaults:
+            max_tokens: 1000
+            retry_attempts: 3
+            retry_delay: 1s
+            temperature: 0.7
+            timeout: 60s
+            top_p: 1
+        display_name: Azure OpenAI
+        error_mapping:
+            DeploymentNotFound: model_unavailable
+            OperationNotSupported: model_unavailable
+            TooManyRequests: rate_limit_exceeded
+            Unauthorized: authentication_failed
+        model_families:
+            embedding:
+                capabilities:
+                    - embeddings
+                description: Azure-hosted embedding models
+                max_tokens: 8191
+            gpt-4o:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Azure-hosted GPT-4o family
+                max_tokens: 128000
+            gpt-4.1:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Azure-hosted GPT-4.1 family
+                max_tokens: 1047576
+            o-series:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Azure-hosted reasoning models
+                max_tokens: 200000
+        name: azure-openai
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 1800
+            tokens_per_minute: 120000
+            concurrent_requests: 40
+    cerebras:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: CEREBRAS_API_KEY
+        base_url: https://api.cerebras.ai/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: true
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: false
+        display_name: Cerebras
+        model_families:
+            deepseek:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: DeepSeek distill models via Cerebras
+            llama:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Llama family via Cerebras
+            qwen:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Qwen family via Cerebras
+        name: cerebras
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 1500
+            tokens_per_minute: 400000
+            concurrent_requests: 40
+    cohere:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: COHERE_API_KEY
+        base_url: https://api.cohere.com
+        capabilities:
+            assistants: false
+            chat: true
+            completions: true
+            embeddings: true
+            fine_tuning: true
+            function_calling: false
+            streaming: true
+            vision: false
+        defaults:
+            max_tokens: 1000
+            retry_attempts: 3
+            retry_delay: 1s
+            temperature: 0.7
+            timeout: 60s
+            top_k: 40
+            top_p: 1
+        display_name: Cohere
+        error_mapping:
+            billing_not_active: payment_required
+            invalid_api_key: authentication_failed
+            model_not_found: model_unavailable
+            rate_limit_exceeded: rate_limit_exceeded
+        model_families:
+            command:
+                capabilities:
+                    - chat
+                    - completions
+                description: Command family models
+                max_tokens: 4096
+            embed:
+                capabilities:
+                    - embeddings
+                description: Embedding models
+                max_tokens: 512
+        name: cohere
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 1000
+            tokens_per_minute: 30000
+            concurrent_requests: 20
+    deepseek:
+        api_version: v1
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: DEEPSEEK_API_KEY
+        base_url: https://api.deepseek.com
+        capabilities:
+            assistants: false
+            chat: true
+            completions: false
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: false
+        defaults:
+            max_tokens: 1000
+            retry_attempts: 3
+            retry_delay: 1s
+            temperature: 0.7
+            timeout: 60s
+            top_p: 1
+        display_name: DeepSeek
+        error_mapping:
+            invalid_api_key: authentication_failed
+            model_not_found: model_unavailable
+            payment_required: payment_required
+            rate_limit_exceeded: rate_limit_exceeded
+        model_families:
+            deepseek-v3:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: DeepSeek V3 family models
+                max_tokens: 128000
+        name: deepseek
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 500
+            tokens_per_minute: 1000000
+            concurrent_requests: 50
+    fireworks:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: FIREWORKS_API_KEY
+        base_url: https://api.fireworks.ai/inference/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: true
+            embeddings: true
+            fine_tuning: true
+            function_calling: true
+            streaming: true
+            vision: true
+        display_name: Fireworks AI
+        model_families:
+            deepseek:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: DeepSeek family via Fireworks
+            embedding:
+                capabilities:
+                    - embeddings
+                description: Embedding models via Fireworks
+            llama:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Llama family via Fireworks
+            qwen:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Qwen family via Fireworks
+        name: fireworks
+        provider_type: meta
+        rate_limits:
+            requests_per_minute: 1500
+            tokens_per_minute: 300000
+            concurrent_requests: 40
+    google:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: x-goog-api-key
+            header_format: '{api_key}'
+            env_var: GOOGLE_API_KEY
+        base_url: https://generativelanguage.googleapis.com/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: false
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: true
+        defaults:
+            max_tokens: 1000
+            retry_attempts: 3
+            retry_delay: 1s
+            temperature: 0.7
+            timeout: 60s
+            top_k: 40
+            top_p: 1
+        display_name: Google
+        error_mapping:
+            billing_not_active: payment_required
+            invalid_api_key: authentication_failed
+            model_not_found: model_unavailable
+            quota_exceeded: rate_limit_exceeded
+        model_families:
+            gemini:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Gemini family models
+                max_tokens: 1048576
+        name: google
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 1500
+            tokens_per_minute: 60000
+            concurrent_requests: 30
+    groq:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: GROQ_API_KEY
+        base_url: https://api.groq.com/openai/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: true
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: true
+        display_name: Groq
+        model_families:
+            deepseek:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: DeepSeek family via Groq
+            llama:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Llama family via Groq
+            qwen:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Qwen family via Groq
+        name: groq
+        provider_type: meta
+        rate_limits:
+            requests_per_minute: 1800
+            tokens_per_minute: 300000
+            concurrent_requests: 40
+    huggingface:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: HUGGINGFACE_API_KEY
+        base_url: https://router.huggingface.co/v1
+        capabilities:
+            assistants: true
+            chat: true
+            completions: true
+            embeddings: true
+            fine_tuning: true
+            function_calling: true
+            streaming: true
+            vision: true
+            web_search: true
+        defaults:
+            max_tokens: 1000
+            retry_attempts: 3
+            retry_delay: 1s
+            temperature: 0.7
+            timeout: 60s
+            top_k: 40
+            top_p: 1
+        discovery_api_endpoint: https://huggingface.co/api/models
+        display_name: Hugging Face
+        error_mapping:
+            invalid_api_key: authentication_failed
+            model_not_found: model_unavailable
+            quota_exceeded: payment_required
+            rate_limit_exceeded: rate_limit_exceeded
+        model_families:
+            huggingface:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Hugging Face models
+                max_tokens: 32768
+        name: huggingface
+        provider_type: meta
+        rate_limits:
+            requests_per_minute: 1000
+            tokens_per_minute: 30000
+            concurrent_requests: 20
+        supports_model_discovery: true
+    minimax:
+        api_version: v1
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: MINIMAX_API_KEY
+        base_url: https://api.minimax.io/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: false
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: false
+        defaults:
+            max_tokens: 2048
+            retry_attempts: 3
+            retry_delay: 1s
+            temperature: 0.7
+            timeout: 60s
+            top_p: 1
+        display_name: MiniMax
+        error_mapping:
+            invalid_api_key: authentication_failed
+            model_not_found: model_unavailable
+            payment_required: payment_required
+            rate_limit_exceeded: rate_limit_exceeded
+        model_families:
+            minimax-m1:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: MiniMax M1 — legacy model with function calling
+                max_tokens: 128000
+            minimax-m2:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: MiniMax M2 — 200K context with agentic capabilities
+                max_tokens: 200000
+            minimax-m2.1:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: MiniMax M2.1 family — 230B MoE models with polyglot coding
+                max_tokens: 200000
+            minimax-m2.5:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: MiniMax M2.5 family — peak performance coding and agentic models
+                max_tokens: 200000
+        name: minimax
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 120
+            tokens_per_minute: 720000
+            concurrent_requests: 50
+    mistral:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: MISTRAL_API_KEY
+        base_url: https://api.mistral.ai/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: false
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: true
+        defaults:
+            max_tokens: 1000
+            retry_attempts: 3
+            retry_delay: 1s
+            temperature: 0.7
+            timeout: 60s
+            top_k: 40
+            top_p: 1
+        display_name: Mistral AI
+        error_mapping:
+            invalid_api_key: authentication_failed
+            model_not_found: model_unavailable
+            quota_exceeded: payment_required
+            rate_limit_exceeded: rate_limit_exceeded
+        model_families:
+            magistral:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Magistral family models
+                max_tokens: 128000
+            voxtral:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Voxtral family models
+                max_tokens: 128000
+        name: mistral
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 800
+            tokens_per_minute: 40000
+            concurrent_requests: 15
+    moonshot:
+        api_version: v1
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: MOONSHOT_API_KEY
+        base_url: https://api.moonshot.ai/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: false
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: true
+        defaults:
+            max_tokens: 2048
+            retry_attempts: 3
+            retry_delay: 1s
+            temperature: 0.7
+            timeout: 60s
+            top_p: 1
+        display_name: Moonshot AI
+        error_mapping:
+            invalid_api_key: authentication_failed
+            model_not_found: model_unavailable
+            payment_required: payment_required
+            rate_limit_exceeded: rate_limit_exceeded
+        model_families:
+            kimi-k2:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Kimi K2 — reasoning and general-purpose models
+                max_tokens: 262144
+            kimi-k2.5:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Kimi K2.5 — 1T param flagship with native multimodal and thinking
+                max_tokens: 262144
+            moonshot-v1:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Moonshot V1 legacy models — various context lengths
+                max_tokens: 131072
+        name: moonshot
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 500
+            tokens_per_minute: 1000000
+            concurrent_requests: 50
+    nvidia-nim:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: NVIDIA_API_KEY
+        base_url: https://integrate.api.nvidia.com/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: true
+            embeddings: true
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: false
+        display_name: NVIDIA NIM
+        model_families:
+            embedding:
+                capabilities:
+                    - embeddings
+                description: Embedding models via NIM
+            llama:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Meta Llama via NVIDIA NIM
+            nemotron:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: NVIDIA Nemotron via NIM
+        name: nvidia-nim
+        provider_type: meta
+        rate_limits:
+            requests_per_minute: 1500
+            tokens_per_minute: 300000
+            concurrent_requests: 40
+    ollama:
+        api_version: "2024-01-01"
+        auth:
+            type: none
+            header_name: ""
+            header_format: ""
+            env_var: ""
+        base_url: http://localhost:11434
+        capabilities:
+            assistants: false
+            chat: true
+            completions: true
+            embeddings: true
+            fine_tuning: false
+            function_calling: false
+            streaming: true
+            vision: false
+        defaults:
+            max_tokens: 1000
+            retry_attempts: 3
+            retry_delay: 1s
+            temperature: 0.7
+            timeout: 120s
+            top_k: 40
+            top_p: 1
+        discovery_api_endpoint: http://localhost:11434/api/tags
+        display_name: Ollama
+        error_mapping:
+            connection_failed: server_error
+            model_not_found: model_unavailable
+        model_families:
+            ollama:
+                capabilities:
+                    - chat
+                    - completions
+                    - embeddings
+                description: Local Ollama models
+                max_tokens: 32768
+        name: ollama
+        provider_type: meta
+        rate_limits:
+            requests_per_minute: 10000
+            tokens_per_minute: 1000000
+            concurrent_requests: 100
+        supports_model_discovery: true
+    openai:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: OPENAI_API_KEY
+        base_url: https://api.openai.com/v1
+        capabilities:
+            assistants: true
+            chat: true
+            completions: true
+            embeddings: true
+            fine_tuning: true
+            function_calling: true
+            streaming: true
+            vision: true
+        defaults:
+            frequency_penalty: 0
+            max_tokens: 1000
+            presence_penalty: 0
+            retry_attempts: 3
+            retry_delay: 1s
+            temperature: 0.7
+            timeout: 60s
+            top_p: 1
+        display_name: OpenAI
+        error_mapping:
+            billing_not_active: payment_required
+            insufficient_quota: rate_limit_exceeded
+            invalid_api_key: authentication_failed
+            model_not_found: model_unavailable
+        model_families:
+            embedding:
+                capabilities:
+                    - embeddings
+                description: Embedding models
+                max_tokens: 8191
+            gpt-3.5:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: GPT-3.5 family models
+                max_tokens: 16385
+            gpt-4:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: GPT-4 family models
+                max_tokens: 128000
+            gpt-5:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: GPT-5 family models
+                max_tokens: 128000
+        name: openai
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 3500
+            tokens_per_minute: 90000
+            concurrent_requests: 50
+    openrouter:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: OPENROUTER_API_KEY
+        base_url: https://openrouter.ai/api/v1
+        capabilities:
+            assistants: true
+            chat: true
+            completions: true
+            embeddings: true
+            fine_tuning: true
+            function_calling: true
+            streaming: true
+            vision: true
+            web_search: true
+        defaults:
+            max_tokens: 1000
+            retry_attempts: 3
+            retry_delay: 1s
+            temperature: 0.7
+            timeout: 60s
+            top_p: 1
+        discovery_api_endpoint: https://openrouter.ai/api/v1/models
+        display_name: OpenRouter
+        error_mapping:
+            invalid_api_key: authentication_failed
+            model_not_found: model_unavailable
+            quota_exceeded: payment_required
+            rate_limit_exceeded: rate_limit_exceeded
+        model_families:
+            anthropic:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Anthropic models via OpenRouter
+            google:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Google models via OpenRouter
+            openai:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: OpenAI models via OpenRouter
+        name: openrouter
+        provider_type: meta
+        rate_limits:
+            requests_per_minute: 1000
+            tokens_per_minute: 30000
+            concurrent_requests: 20
+        supports_model_discovery: true
+    perplexity:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: PERPLEXITY_API_KEY
+        base_url: https://api.perplexity.ai
+        capabilities:
+            assistants: false
+            chat: true
+            completions: true
+            embeddings: false
+            fine_tuning: false
+            function_calling: false
+            streaming: true
+            vision: false
+        display_name: Perplexity
+        model_families:
+            sonar:
+                capabilities:
+                    - chat
+                description: Perplexity search-grounded Sonar models
+                max_tokens: 127000
+        name: perplexity
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 600
+            tokens_per_minute: 120000
+            concurrent_requests: 20
+    qwen:
+        api_version: v1
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: DASHSCOPE_API_KEY
+        base_url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+        capabilities:
+            assistants: false
+            audio: true
+            chat: true
+            completions: false
+            embeddings: true
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: true
+        defaults:
+            max_tokens: 2048
+            retry_attempts: 3
+            retry_delay: 1s
+            temperature: 0.7
+            timeout: 60s
+            top_p: 1
+        display_name: Qwen
+        error_mapping:
+            invalid_api_key: authentication_failed
+            model_not_found: model_unavailable
+            payment_required: payment_required
+            rate_limit_exceeded: rate_limit_exceeded
+        model_families:
+            qwen-embedding:
+                capabilities:
+                    - embeddings
+                description: Qwen text embedding models
+            qwen-tts:
+                capabilities:
+                    - audio
+                description: Qwen3 TTS models — speech synthesis and voice cloning
+            qwen-vl:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Qwen vision-language models — multimodal understanding
+                max_tokens: 131072
+            qwen2.5:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Qwen2.5 family — instruction-tuned models
+                max_tokens: 131072
+            qwen3:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Qwen3 family — dense and MoE models with hybrid thinking
+                max_tokens: 131072
+            qwen3-commercial:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Qwen3 commercial models — max performance API models
+                max_tokens: 262144
+            qwen3.5:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Qwen3.5 family — commercial models with up to 1M context
+                max_tokens: 1000000
+            qwq:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: QwQ reasoning models — extended thinking for complex tasks
+                max_tokens: 131072
+        name: qwen
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 500
+            tokens_per_minute: 1000000
+            concurrent_requests: 50
+    together:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: TOGETHER_API_KEY
+        base_url: https://api.together.xyz/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: true
+            embeddings: true
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: true
+        display_name: Together AI
+        model_families:
+            deepseek:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: DeepSeek family via Together
+            flux:
+                capabilities:
+                    - vision
+                description: Image generation models via Together
+            llama:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Llama family via Together
+            qwen:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Qwen family via Together
+        name: together
+        provider_type: meta
+        rate_limits:
+            requests_per_minute: 1200
+            tokens_per_minute: 240000
+            concurrent_requests: 30
+    vertex-ai:
+        api_version: v1
+        auth:
+            type: oauth2
+            header_name: Authorization
+            header_format: Bearer {access_token}
+            env_var: GOOGLE_APPLICATION_CREDENTIALS
+        base_url: https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}
+        capabilities:
+            assistants: false
+            chat: true
+            completions: true
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: true
+        defaults:
+            max_tokens: 1000
+            retry_attempts: 3
+            retry_delay: 1s
+            temperature: 0.7
+            timeout: 60s
+            top_p: 1
+        display_name: Vertex AI
+        error_mapping:
+            NOT_FOUND: model_unavailable
+            PERMISSION_DENIED: authentication_failed
+            RESOURCE_EXHAUSTED: rate_limit_exceeded
+        model_families:
+            claude:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Claude via Vertex AI
+                max_tokens: 200000
+            gemini:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Gemini via Vertex AI
+                max_tokens: 1048576
+            llama:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Meta Llama via Vertex AI
+                max_tokens: 131072
+            mistral:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Mistral via Vertex AI
+                max_tokens: 128000
+        name: vertex-ai
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 1500
+            tokens_per_minute: 300000
+            concurrent_requests: 40
+    voyage:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: VOYAGE_API_KEY
+        base_url: https://api.voyageai.com/v1
+        capabilities:
+            assistants: false
+            chat: false
+            completions: false
+            embeddings: true
+            fine_tuning: false
+            function_calling: false
+            streaming: false
+            vision: false
+        display_name: Voyage AI
+        model_families:
+            voyage-4:
+                capabilities:
+                    - embeddings
+                description: General-purpose retrieval embeddings
+            voyage-domain:
+                capabilities:
+                    - embeddings
+                description: Domain-tuned embeddings for code, finance and law
+        name: voyage
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 300
+            tokens_per_minute: 1000000
+            concurrent_requests: 20
+    xai:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: XAI_API_KEY
+        base_url: https://api.x.ai/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: true
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: true
+        display_name: xAI
+        model_families:
+            grok:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: Grok reasoning and chat models
+                max_tokens: 131072
+        name: xai
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 1200
+            tokens_per_minute: 240000
+            concurrent_requests: 30
+    zai:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: ZHIPU_API_KEY
+        base_url: https://api.z.ai/api/paas/v4
+        capabilities:
+            assistants: false
+            chat: true
+            completions: true
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: true
+        display_name: Z.AI
+        model_families:
+            glm:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: GLM text models, including the GLM-5 line
+            glm-vision:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - vision
+                description: GLM multimodal models accepting image and video input
+        name: zai
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 1000
+            tokens_per_minute: 400000
+            concurrent_requests: 30

@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package everstack.identity.v1;
+
+import "everstack/identity/v1/identity.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/identity/v1;identity";
+
+// IdentityInternalService is the private Connect RPC boundary between the
+// Better Auth authority and Everstack's Go control-plane services.
+service IdentityInternalService {
+  rpc GetStatus(GetIdentityStatusRequest) returns (GetIdentityStatusResponse);
+  rpc ResolveSession(ResolveIdentitySessionRequest) returns (ResolveIdentitySessionResponse);
+  rpc ListUsers(ListIdentityUsersRequest) returns (ListIdentityUsersResponse);
+  rpc ListSessions(ListIdentitySessionsRequest) returns (ListIdentitySessionsResponse);
+  rpc RevokeSession(RevokeIdentitySessionRequest) returns (RevokeIdentitySessionResponse);
+  rpc ListConnections(ListIdentityConnectionsRequest) returns (ListIdentityConnectionsResponse);
+  rpc ListOrganizationConnections(ListOrganizationIdentityConnectionsRequest) returns (ListOrganizationIdentityConnectionsResponse);
+  rpc UpsertConnection(UpsertIdentityConnectionRequest) returns (UpsertIdentityConnectionResponse);
+  rpc DeleteConnection(DeleteIdentityConnectionRequest) returns (DeleteIdentityConnectionResponse);
+}

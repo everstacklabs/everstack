@@ -1,0 +1,22 @@
+name: "huggingface/gpt-4o-mini"
+display_name: "GPT-4o Mini"
+family: "gpt-4"
+status: "deprecated"
+
+cost:
+  input_per_1k: 0.00015
+  output_per_1k: 0.0006
+
+limits:
+  max_tokens: 128000
+  max_completion_tokens: 16384
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+
+modalities:
+  input: ["text", "image"]
+  output: ["text"]
+

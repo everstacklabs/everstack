@@ -1,0 +1,36 @@
+# Model categories for Cohere
+# Groups models by their primary capabilities
+
+chat:
+  - command-a-03-2025
+  - command-a-reasoning-08-2025
+  - command-a-vision-07-2025
+  - command-a-translate-08-2025
+  - command-r-plus-08-2024
+  - command-r-08-2024
+  - command-r7b-12-2024
+
+function_calling:
+  - command-a-03-2025
+  - command-a-reasoning-08-2025
+  - command-a-vision-07-2025
+  - command-r-plus-08-2024
+  - command-r-08-2024
+  - command-r7b-12-2024
+
+vision:
+  - command-a-vision-07-2025
+  - embed-v4.0
+
+reasoning:
+  - command-a-reasoning-08-2025
+
+embeddings:
+  - embed-v4.0
+  - embed-english-v3.0
+  - embed-english-light-v3.0
+  - embed-multilingual-v3.0
+  - embed-multilingual-light-v3.0
+
+rerank:
+  - rerank-v3.5

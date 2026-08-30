@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package everstack.functions.v1;
+
+import "google/api/annotations.proto";
+import "everstack/functions/v1/functions.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/functions/v1;functions";
+
+service FunctionsService {
+  rpc CreateFunction(CreateFunctionRequest) returns (CreateFunctionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a new serverless function"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/functions"
+      body: "*"
+    };
+  }
+
+  rpc GetFunction(GetFunctionRequest) returns (GetFunctionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get function by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/functions/{id}"};
+  }
+
+  rpc GetFunctionByName(GetFunctionByNameRequest) returns (GetFunctionByNameResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get function by name"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/functions/by-name/{name}"};
+  }
+
+  rpc ListFunctions(ListFunctionsRequest) returns (ListFunctionsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List all functions for tenant"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/functions"};
+  }
+
+  rpc UpdateFunction(UpdateFunctionRequest) returns (UpdateFunctionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update function"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/functions/{id}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteFunction(DeleteFunctionRequest) returns (DeleteFunctionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete function"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/functions/{id}"};
+  }
+
+  rpc GetIsolationStatus(GetIsolationStatusRequest) returns (GetIsolationStatusResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get isolation backend status"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/functions/isolation-status"};
+  }
+}

@@ -1,0 +1,114 @@
+---
+title: Trace Coding Agents
+description: Stream OpenTelemetry traces from Claude Code, Gemini CLI, Codex, GitHub Copilot, Cursor, and other coding agents into your Everstack instance — no SDK required.
+icon: Bot
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+## Overview
+
+Everstack ingests OpenTelemetry directly, so any coding agent that can export
+OTLP streams its sessions straight into your [Traces](/docs/getting-started/observability/traces)
+view — LLM requests, tool calls, sub-agents, token usage, and cost — with **no
+Everstack-specific SDK or instrumentation**. Everstack normalizes each agent's
+attribute conventions into one schema, so they all render the same way.
+
+## Pick your agent
+
+<Cards>
+  <Card icon={<ClaudeIcon />} title="Claude Code" href="/docs/getting-started/observability/coding-agents/claude-code">
+    Anthropic's CLI. Native OTel; full trace tree in beta.
+  </Card>
+  <Card icon={<GeminiIcon />} title="Gemini CLI" href="/docs/getting-started/observability/coding-agents/gemini-cli">
+    Google's CLI. Uses its own telemetry settings; traces off by default.
+  </Card>
+  <Card icon={<OpenAIIcon />} title="Codex" href="/docs/getting-started/observability/coding-agents/codex">
+    OpenAI's CLI. OTel configured via <code>config.toml</code>.
+  </Card>
+  <Card icon={<ZhipuIcon />} title="GLM" href="/docs/getting-started/observability/coding-agents/glm">
+    GLM (Zhipu) via Claude Code.
+  </Card>
+  <Card icon={<MoonshotIcon />} title="Kimi" href="/docs/getting-started/observability/coding-agents/kimi">
+    Kimi (Moonshot) via Claude Code.
+  </Card>
+  <Card icon={<CursorIcon />} title="Cursor" href="/docs/getting-started/observability/coding-agents/cursor">
+    Routed through the Everstack gateway (no native OTel).
+  </Card>
+  <Card icon={<GitHubCopilotIcon />} title="GitHub Copilot" href="/docs/getting-started/observability/coding-agents/github-copilot">
+    Native OTel from Copilot Chat and the Copilot SDK/CLI.
+  </Card>
+</Cards>
+
+## How it works
+
+Your agent exports OTLP/HTTP to your instance. Three signals map to three
+endpoints, all authenticated with an Everstack API key as a Bearer token:
+
+| Signal | Endpoint |
+|--------|----------|
+| Traces | `POST https://<your-instance>/v1/traces` |
+| Logs | `POST https://<your-instance>/v1/logs` |
+| Metrics | `POST https://<your-instance>/v1/metrics` |
+
+The Langfuse-compatible aliases `/api/public/otel/v1/{traces,logs,metrics}` are
+also accepted. The API key is resolved to your tenant and stamped onto every
+span — clients cannot write into another tenant's data.
+
+### Create an API key
+
+Open your dashboard → **Settings → Vault → [API Keys](/docs/getting-started/vault/api-keys)**,
+create a key, and copy it (shown once). The key must be created on the **same
+instance** you send telemetry to.
+
+### Point your agent at the instance
+
+Most OTLP exporters take a base endpoint and append the signal path
+automatically:
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT=https://<your-instance>
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <your-api-key>"
+```
+
+Then follow the page for your agent above.
+
+## What you get
+
+Once telemetry is flowing, every agent session renders in **Traces** with a
+unified schema, regardless of which agent produced it:
+
+- **Model & provider** — normalized across agents; provider is inferred from the model name when it isn't reported (e.g. `glm-*` → Zhipu, `kimi-*` → Moonshot).
+- **Token usage** — input, output, and cached tokens, coalesced across each agent's attribute names.
+- **Cost** — reported where available; otherwise computed from your model-catalog pricing.
+- **Tool calls & sub-agents** — tool spans and nested sub-agent runs, rendered in the trace tree.
+
+<Callout type="info">
+  **Cost for token-only agents.** Only some agents (e.g. Claude Code) report a
+  dollar cost. For agents that emit only token counts (Gemini CLI, Codex, GLM,
+  Kimi), Everstack computes cost from the same model-catalog pricing used for
+  billing — so trace cost matches what you are billed. A reported cost is never
+  overwritten.
+</Callout>
+
+## Verify
+
+Send a prompt through your agent, then open **Traces**. Traces appear within a
+few seconds (metrics aggregate more slowly). Filter by service name or
+`session.id` to find a specific run; the root span expands into LLM requests,
+tool calls, and sub-agents.
+
+<Callout type="warn">
+  Telemetry initializes when the agent process starts, so only sessions started
+  **after** you add the config will emit. Restart the agent — a new prompt in an
+  existing session is not enough.
+</Callout>
+
+## Notes
+
+- The API key is sent as a **Bearer token** and must belong to the instance you
+  point at — a key from another instance will not authenticate.
+- To expose your deployed agents as callable tools to an IDE or another agent,
+  see the [MCP](/docs/getting-started/mcp) server — that's the inbound direction
+  (others calling your instance), complementary to tracing.

@@ -1,0 +1,92 @@
+---
+title: Language Server (LSP)
+description: Structured code diagnostics and symbols inside sandboxes.
+---
+
+# Language Server Protocol (LSP)
+
+Get structured code intelligence inside sandboxes: diagnostics (errors and warnings), document symbols, and cross-file symbol search. Works with Python and TypeScript.
+
+Requires the relevant tools in the sandbox image. The `everstack-python` and `everstack-node` catalog images include these pre-installed.
+
+## Capability Info
+
+`GET /v1/sandbox/{sandboxId}/lsp`
+
+Returns available languages and operations for this sandbox.
+
+## Diagnostics
+
+Get compiler/linter errors and warnings for a file.
+
+`GET /v1/sandbox/{sandboxId}/lsp/{lang}/diagnostics?path={path}`
+
+**Parameters:**
+- `lang`: `python` or `typescript`
+- `path`: absolute path to the file inside the sandbox
+
+**Python** -- uses `pylint` or `flake8`. Requires `pylint` or `flake8` in the sandbox.
+
+**TypeScript** -- uses `tsc --noEmit`. Requires `typescript` in the sandbox.
+
+**Response:**
+```json
+[
+  { "line": 12, "severity": "error", "message": "undefined variable 'foo'", "code": "E1101" },
+  { "line": 34, "severity": "warning", "message": "unused import 'os'" }
+]
+```
+
+## Document Symbols
+
+List functions, classes, and variables defined in a file.
+
+`GET /v1/sandbox/{sandboxId}/lsp/{lang}/symbols?path={path}`
+
+**Python** -- parses via `ast`. Covers `def`, `async def`, and `class`.
+
+**TypeScript** -- grep-based. Covers `function`, `class`, `const`, `interface`, `type`, `enum`.
+
+**Response:**
+```json
+[
+  { "name": "process_data", "kind": "FunctionDef", "line": 42 },
+  { "name": "DataProcessor", "kind": "ClassDef", "line": 10 }
+]
+```
+
+## Workspace Symbols
+
+Search for functions or classes by name across all files under a path.
+
+`GET /v1/sandbox/{sandboxId}/lsp/{lang}/workspace-symbols?query={query}&path={path}`
+
+**Response:**
+```json
+[
+  { "name": "process_data", "file": "/repo/processor.py", "line": 42 },
+  { "name": "process_event", "file": "/repo/handlers.py", "line": 8 }
+]
+```
+
+## As agent tool calls
+
+All three operations are available as MCP/agent tool calls via the Everstack MCP server:
+
+```
+sandbox_lsp_diagnostics(sandbox_id, path, language)
+sandbox_lsp_symbols(sandbox_id, path, language)
+```
+
+This means coding agents can call them directly without constructing HTTP requests.
+
+## Requirements
+
+| Language | Tool | Install |
+|----------|------|---------|
+| Python diagnostics | `pylint` or `flake8` | `pip install pylint` |
+| Python symbols | `python3` | Built-in |
+| TypeScript diagnostics | `tsc` | `npm install -g typescript` |
+| TypeScript symbols | `grep` | Built-in |
+
+The `everstack-python` and `everstack-node` catalog snapshots include these pre-installed.

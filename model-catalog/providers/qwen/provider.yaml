@@ -1,0 +1,75 @@
+name: "qwen"
+display_name: "Qwen"
+base_url: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+api_version: "v1"
+
+provider_type: "static"
+supports_model_discovery: false
+
+auth:
+  type: "api_key"
+  header_name: "Authorization"
+  header_format: "Bearer {api_key}"
+  env_var: "DASHSCOPE_API_KEY"
+
+rate_limits:
+  requests_per_minute: 500
+  tokens_per_minute: 1000000
+  concurrent_requests: 50
+
+capabilities:
+  chat: true
+  completions: false
+  embeddings: true
+  function_calling: true
+  vision: true
+  streaming: true
+  fine_tuning: false
+  assistants: false
+  audio: true
+
+model_families:
+  qwen3:
+    description: "Qwen3 family — dense and MoE models with hybrid thinking"
+    capabilities: ["chat", "function_calling"]
+    max_tokens: 131072
+  qwen3.5:
+    description: "Qwen3.5 family — commercial models with up to 1M context"
+    capabilities: ["chat", "function_calling", "vision"]
+    max_tokens: 1000000
+  qwen3-commercial:
+    description: "Qwen3 commercial models — max performance API models"
+    capabilities: ["chat", "function_calling"]
+    max_tokens: 262144
+  qwq:
+    description: "QwQ reasoning models — extended thinking for complex tasks"
+    capabilities: ["chat", "function_calling"]
+    max_tokens: 131072
+  qwen-vl:
+    description: "Qwen vision-language models — multimodal understanding"
+    capabilities: ["chat", "function_calling", "vision"]
+    max_tokens: 131072
+  qwen2.5:
+    description: "Qwen2.5 family — instruction-tuned models"
+    capabilities: ["chat", "function_calling"]
+    max_tokens: 131072
+  qwen-embedding:
+    description: "Qwen text embedding models"
+    capabilities: ["embeddings"]
+  qwen-tts:
+    description: "Qwen3 TTS models — speech synthesis and voice cloning"
+    capabilities: ["audio"]
+
+defaults:
+  temperature: 0.7
+  max_tokens: 2048
+  top_p: 1.0
+  timeout: 60s
+  retry_attempts: 3
+  retry_delay: 1s
+
+error_mapping:
+  "rate_limit_exceeded": "rate_limit_exceeded"
+  "payment_required": "payment_required"
+  "model_not_found": "model_unavailable"
+  "invalid_api_key": "authentication_failed"

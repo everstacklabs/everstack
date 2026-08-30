@@ -1,0 +1,11 @@
+chat:
+  - gemini-1.5-pro
+  - gemini-1.5-flash
+  - claude-3-7-sonnet@20250219
+  - llama-3.1-70b-instruct-maas
+  - mistral-large-2411
+
+vision:
+  - gemini-1.5-pro
+  - gemini-1.5-flash
+  - claude-3-7-sonnet@20250219

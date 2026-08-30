@@ -1,0 +1,549 @@
+syntax = "proto3";
+
+package everstack.billing.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/billing/v1;billing";
+
+// SubscriptionStatus represents the current state of a subscription
+enum SubscriptionStatus {
+  SUBSCRIPTION_STATUS_UNSPECIFIED = 0;
+  SUBSCRIPTION_STATUS_ACTIVE = 1;
+  SUBSCRIPTION_STATUS_PAST_DUE = 2;
+  SUBSCRIPTION_STATUS_CANCELED = 3;
+  SUBSCRIPTION_STATUS_TRIALING = 4;
+  SUBSCRIPTION_STATUS_INCOMPLETE = 5;
+}
+
+// BillingPeriod represents the billing cycle
+enum BillingPeriod {
+  BILLING_PERIOD_UNSPECIFIED = 0;
+  BILLING_PERIOD_MONTHLY = 1;
+  BILLING_PERIOD_YEARLY = 2;
+}
+
+// Subscription represents an organization's subscription
+message Subscription {
+  string id = 1;
+  string organization_id = 2;
+  string plan_tier = 3;             // free, basic, pro, enterprise
+  BillingPeriod billing_period = 4;
+  SubscriptionStatus status = 5;
+  google.protobuf.Timestamp current_period_start = 6;
+  google.protobuf.Timestamp current_period_end = 7;
+  bool cancel_at_period_end = 8;
+  optional google.protobuf.Timestamp canceled_at = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+// Invoice represents a billing invoice
+message Invoice {
+  string id = 1;
+  string organization_id = 2;
+  int64 amount_due = 3;
+  int64 amount_paid = 4;
+  string currency = 5;
+  string status = 6;
+  optional string invoice_pdf_url = 7;
+  optional string hosted_invoice_url = 8;
+  google.protobuf.Timestamp period_start = 9;
+  google.protobuf.Timestamp period_end = 10;
+  optional google.protobuf.Timestamp paid_at = 11;
+  google.protobuf.Timestamp created_at = 12;
+}
+
+// GetSubscriptionRequest - Get subscription for an organization
+message GetSubscriptionRequest {
+  string organization_id = 1;
+}
+
+message GetSubscriptionResponse {
+  optional Subscription subscription = 1;
+}
+
+// CreateCheckoutSessionRequest - Create Stripe checkout for plan upgrade
+message CreateCheckoutSessionRequest {
+  string organization_id = 1;
+  string plan_tier = 2;
+  BillingPeriod billing_period = 3;
+  string success_url = 4;
+  string cancel_url = 5;
+  
+  // Gateway callback info for automatic activation after payment
+  optional string instance_id = 6;
+  optional string gateway_url = 7;
+  // For session-based flow: backend looks up callback_secret from session store
+  optional string upgrade_session_id = 8;
+  // For legacy flow: callback_secret from URL (gateway is trusted source)
+  optional string callback_secret = 9;
+  
+  // User info for reconciliation
+  optional string user_id = 10;
+  optional string user_email = 11;
+  optional string user_name = 12;
+  
+  // Organization info for reconciliation
+  optional string org_name = 13;
+  optional string org_slug = 14;
+  
+  // Acquisition/attribution data
+  optional string source = 15;
+  optional string referrer = 16;
+  optional string utm_source = 17;
+  optional string utm_medium = 18;
+  optional string utm_campaign = 19;
+  optional string utm_term = 20;
+  optional string utm_content = 21;
+}
+
+message CreateCheckoutSessionResponse {
+  string checkout_url = 1;
+  string session_id = 2;
+}
+
+// CreateBillingPortalSessionRequest - Create Stripe billing portal session
+message CreateBillingPortalSessionRequest {
+  string organization_id = 1;
+  string return_url = 2;
+}
+
+message CreateBillingPortalSessionResponse {
+  string portal_url = 1;
+}
+
+// CancelSubscriptionRequest - Cancel subscription at period end
+message CancelSubscriptionRequest {
+  string organization_id = 1;
+}
+
+message CancelSubscriptionResponse {
+  bool success = 1;
+  Subscription subscription = 2;
+}
+
+// ResumeSubscriptionRequest - Resume a cancelled subscription
+message ResumeSubscriptionRequest {
+  string organization_id = 1;
+}
+
+message ResumeSubscriptionResponse {
+  bool success = 1;
+  Subscription subscription = 2;
+}
+
+// ListInvoicesRequest - List invoices for an organization
+message ListInvoicesRequest {
+  string organization_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListInvoicesResponse {
+  repeated Invoice invoices = 1;
+  int32 total = 2;
+}
+
+// GetUsageRequest - Get current usage for an organization
+message GetUsageRequest {
+  string organization_id = 1;
+  // Optional instance filter. Empty = aggregate across all instances.
+  optional string instance_id = 2;
+}
+
+message UsageMetric {
+  string name = 1;
+  int64 used = 2;
+  int64 limit = 3;  // -1 for unlimited
+  string unit = 4;  // "requests", "tokens", etc.
+}
+
+message GetUsageResponse {
+  repeated UsageMetric metrics = 1;
+  google.protobuf.Timestamp period_start = 2;
+  google.protobuf.Timestamp period_end = 3;
+
+  // Cost & cache breakdown for the current period (not quota-shaped).
+  // Costs are in micro-dollars (USD * 1_000_000) to preserve sub-cent precision.
+  int64 estimated_cost_micros = 4;
+  int64 cache_savings_micros = 5;
+  int64 cache_hits = 6;
+  int64 cache_misses = 7;
+  int64 input_tokens = 8;
+  int64 output_tokens = 9;
+  // Sandbox network data transfer this period (bytes).
+  int64 network_rx_bytes = 10;
+  int64 network_tx_bytes = 11;
+  // Sandbox compute charged in this billing period. Compute accrues per
+  // second while the VM is allocated, including idle time; sleeping and
+  // stopped sandboxes do not accrue compute.
+  int64 sandbox_compute_seconds = 12;
+  int64 sandbox_compute_cost_micros = 13;
+  // Hosted-browser time charged in this billing period. Idle pool capacity is
+  // excluded; the one-minute minimum and per-second increments are finalized
+  // by the browser serving plane before this cumulative meter is reported.
+  int64 browser_runtime_seconds = 14;
+  int64 browser_runtime_cost_micros = 15;
+  // One-time organization starter credit for managed sandbox compute. These
+  // values are lifetime scoped and do not reset with the billing period.
+  int64 sandbox_starter_credit_micros = 16;
+  int64 sandbox_starter_credit_used_micros = 17;
+  int64 sandbox_starter_credit_remaining_micros = 18;
+  // False once the starter credit is exhausted unless active billing (or an
+  // Enterprise contract) authorizes continued compute.
+  bool sandbox_compute_allowed = 19;
+  bool sandbox_billing_active = 20;
+}
+
+// GetUsageHistoryRequest - Get time-series usage data for charts
+message GetUsageHistoryRequest {
+  string organization_id = 1;
+  // Optional instance filter. Empty = aggregate across all instances.
+  optional string instance_id = 2;
+  google.protobuf.Timestamp from_date = 3;
+  google.protobuf.Timestamp to_date = 4;
+  // Optional metric type filter. Empty = return all metric types.
+  repeated string metric_types = 5;
+}
+
+// UsageHistoryPoint - One daily data point for a metric
+message UsageHistoryPoint {
+  google.protobuf.Timestamp date = 1;
+  string metric_type = 2;
+  string instance_id = 3; // empty when aggregated
+  int64 value = 4;
+}
+
+message GetUsageHistoryResponse {
+  repeated UsageHistoryPoint points = 1;
+}
+
+// ReportUsageRequest - Report usage for metered billing
+message ReportUsageRequest {
+  string organization_id = 1;
+  int64 token_count = 2;
+  int64 request_count = 3;
+}
+
+message ReportUsageResponse {
+  bool success = 1;
+  int64 token_count = 2;
+  int64 request_count = 3;
+}
+
+// ReportOverageUsageRequest - Report overage usage to Stripe Meters
+message ReportOverageUsageRequest {
+  string organization_id = 1;
+  int64 total_tokens = 2;   // Cumulative tokens for the billing period
+  int64 total_requests = 3; // Cumulative requests for the billing period
+}
+
+message ReportOverageUsageResponse {
+  bool success = 1;
+  int64 total_tokens = 2;
+  int64 total_requests = 3;
+}
+
+// ReportInstanceSnapshotRequest records a per-instance resource snapshot.
+// Called by the license service when a gateway reports its usage.
+message ReportInstanceSnapshotRequest {
+  string organization_id = 1;
+  string instance_id = 2;
+  // Counts at the time of this snapshot (absolute gauges)
+  int64 agents_count = 3;
+  int64 persistent_agents_count = 4;
+  int64 concurrent_running_count = 5;
+  int64 dataset_items_count = 6;
+  int64 eval_runs_monthly_count = 7;
+  int64 annotation_queues_count = 8;
+  int64 channel_bindings_count = 9;
+  int64 messages_monthly_count = 10;
+  int64 storage_bytes = 11;
+
+  // Cumulative flow metrics for the current period (since the gateway's
+  // last reset). Stored in usage_totals with replace semantics, summed
+  // across instances on read. Costs are micro-dollars.
+  int64 cumulative_total_tokens = 12;
+  int64 cumulative_total_requests = 13;
+  int64 cumulative_input_tokens = 14;
+  int64 cumulative_output_tokens = 15;
+  int64 cumulative_cost_micros = 16;
+  int64 cumulative_cache_savings_micros = 17;
+  int64 cumulative_cache_hits = 18;
+  int64 cumulative_cache_misses = 19;
+  int64 cumulative_network_rx_bytes = 20;
+  int64 cumulative_network_tx_bytes = 21;
+
+  // Lifetime-monotonic meters. Billing applies only positive deltas against
+  // a durable per-instance watermark; these are deliberately not ordinary
+  // replace-on-write period flows.
+  int64 cumulative_sandbox_compute_seconds = 22;
+  int64 cumulative_sandbox_compute_cost_micros = 23;
+
+  // Current per-instance allocated sandbox gauge.
+  int64 concurrent_sandboxes_count = 24;
+
+  // Lifetime-monotonic hosted-browser lease meters. Billing applies only
+  // positive deltas against the source watermark.
+  int64 cumulative_browser_runtime_seconds = 25;
+  int64 cumulative_browser_runtime_cost_micros = 26;
+}
+
+message ReportInstanceSnapshotResponse {
+  bool success = 1;
+}
+
+// SyncPlansRequest - Sync plans from config to Stripe
+message SyncPlansRequest {
+  optional string path = 1; // Plans config path, defaults to "pkg/plans/plans.json"
+}
+
+message SyncPlansResponse {
+  bool success = 1;
+  SyncedPlans plans = 2;
+}
+
+// SyncedPlans contains the synced plan price IDs from Stripe
+message SyncedPlans {
+  SyncedPlan basic = 1;
+  SyncedPlan pro = 2;
+  SyncedPlan enterprise = 3;
+  // Free has no license price; its synced plan contains the usage-only
+  // sandbox meter product managed by the billing service.
+  SyncedPlan free = 4;
+}
+
+message SyncedPlan {
+  string product_id = 1;
+  string license_monthly_id = 2;
+  string license_yearly_id = 3;
+}
+
+// GetPlansRequest - Get current synced plan IDs
+message GetPlansRequest {}
+
+message GetPlansResponse {
+  bool synced = 1;
+  SyncedPlans plans = 2;
+  repeated PlanConfig plans_config = 3;
+}
+
+// PlanConfig contains the full plan definition
+message PlanConfig {
+  string name = 1;
+  string display_name = 2;
+  int64 monthly_price_cents = 3;
+  int64 yearly_price_cents = 4;
+  PlanLimits limits = 5;
+}
+
+message PlanLimits {
+  int64 requests_per_month = 1;
+  int64 tokens_per_month = 2;
+  int32 max_keys = 3;
+  int32 max_providers = 4;
+}
+
+// GetPendingActivationRequest - Get pending activation tokens
+message GetPendingActivationRequest {
+  string organization_id = 1;
+  optional string instance_id = 2; // If provided, return specific activation
+}
+
+message GetPendingActivationResponse {
+  bool found = 1;
+  optional string instance_id = 2;
+  optional string activation_token = 3;
+  optional string gateway_url = 4;
+  optional string plan_tier = 5;
+  optional string status = 6;
+  optional google.protobuf.Timestamp expires_at = 7;
+  repeated PendingActivation activations = 8; // All activations when instance_id not provided
+}
+
+message PendingActivation {
+  string instance_id = 1;
+  string activation_token = 2;
+  string gateway_url = 3;
+  string plan_tier = 4;
+  string status = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp expires_at = 7;
+}
+
+// RetryActivationRequest - Retry gateway activation callback
+message RetryActivationRequest {
+  string organization_id = 1;
+  string instance_id = 2;
+}
+
+message RetryActivationResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// RegenerateActivationRequest - Regenerate an activation token
+message RegenerateActivationRequest {
+  string organization_id = 1;
+  optional string instance_id = 2;
+  optional string gateway_url = 3;
+}
+
+message RegenerateActivationResponse {
+  string activation_token = 1;
+  string plan_tier = 2;
+  int32 expires_in = 3; // Seconds until expiration
+}
+
+// GetActivationStatusRequest - Check activation status
+message GetActivationStatusRequest {
+  string organization_id = 1;
+  optional string instance_id = 2;
+}
+
+message GetActivationStatusResponse {
+  string status = 1; // "pending", "processing", "activated", "unknown"
+  optional string message = 2;
+  optional bool has_token = 3;
+  optional string activation_token = 4;
+  optional string gateway_url = 5;
+  optional google.protobuf.Timestamp created_at = 6;
+  optional int32 attempt_count = 7;
+  optional google.protobuf.Timestamp last_attempt_at = 8;
+}
+
+// GetInstanceOrganizationRequest - Look up org for a gateway instance
+message GetInstanceOrganizationRequest {
+  string instance_id = 1;
+  optional string return_url = 2; // For generating billing portal URL
+}
+
+message GetInstanceOrganizationResponse {
+  bool found = 1;
+  optional string organization_id = 2;
+  optional string organization_slug = 3;
+  optional string organization_name = 4;
+  optional string plan_tier = 5;
+  optional bool has_subscription = 6;
+  optional string billing_portal_url = 7;
+  optional string gateway_url = 8;
+}
+
+// CreateInstanceMappingRequest - Create instance -> org mapping
+message CreateInstanceMappingRequest {
+  string instance_id = 1;
+  string organization_id = 2;
+  optional string gateway_url = 3;
+}
+
+message CreateInstanceMappingResponse {
+  bool success = 1;
+}
+
+// SpendLimitType represents the type of spend limit
+enum SpendLimitType {
+  SPEND_LIMIT_TYPE_UNSPECIFIED = 0;
+  SPEND_LIMIT_TYPE_ESTIMATED_COST = 1;
+  SPEND_LIMIT_TYPE_ACTUAL_BILLING = 2;
+}
+
+// SpendLimitPeriod represents the period for spend limits
+enum SpendLimitPeriod {
+  SPEND_LIMIT_PERIOD_UNSPECIFIED = 0;
+  SPEND_LIMIT_PERIOD_DAILY = 1;
+  SPEND_LIMIT_PERIOD_MONTHLY = 2;
+}
+
+// SpendLimitAction represents the action to take when limit is exceeded
+enum SpendLimitAction {
+  SPEND_LIMIT_ACTION_UNSPECIFIED = 0;
+  SPEND_LIMIT_ACTION_BLOCK = 1;
+  SPEND_LIMIT_ACTION_WARN = 2;
+  SPEND_LIMIT_ACTION_NOTIFY = 3;
+}
+
+// SpendLimit represents a spending limit configuration
+message SpendLimit {
+  string id = 1;
+  string organization_id = 2;
+  optional string instance_id = 3;
+  SpendLimitType limit_type = 4;
+  double limit_amount = 5; // USD amount
+  SpendLimitPeriod period = 6;
+  SpendLimitAction action_on_exceed = 7;
+  bool enabled = 8;
+  double current_spend = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+// GetSpendLimitsRequest - Get spend limits for an organization
+message GetSpendLimitsRequest {
+  string organization_id = 1;
+}
+
+message GetSpendLimitsResponse {
+  repeated SpendLimit spend_limits = 1;
+  double total_estimated_spend = 2;
+  double total_actual_spend = 3;
+}
+
+// SetSpendLimitRequest - Create or update a spend limit
+message SetSpendLimitRequest {
+  string organization_id = 1;
+  optional string instance_id = 2;
+  SpendLimitType limit_type = 3;
+  double limit_amount = 4;
+  SpendLimitPeriod period = 5;
+  SpendLimitAction action_on_exceed = 6;
+  bool enabled = 7;
+}
+
+message SetSpendLimitResponse {
+  SpendLimit spend_limit = 1;
+}
+
+// DeleteSpendLimitRequest - Delete a spend limit
+message DeleteSpendLimitRequest {
+  string id = 1;
+  string organization_id = 2;
+}
+
+message DeleteSpendLimitResponse {
+  bool success = 1;
+}
+
+// MigrateSubscriptionRequest - Migrate subscription to single-item (admin)
+message MigrateSubscriptionRequest {
+  string organization_id = 1;
+}
+
+message MigrateSubscriptionResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// AdjustSeatsRequest changes the paid-seat count on an org's
+// subscription by `delta`. Positive adds; negative removes (clamped
+// at zero). Frontend uses this from the InviteMember "buy a seat"
+// modal when the cap is hit.
+message AdjustSeatsRequest {
+  string organization_id = 1;
+  // Use a signed 32-bit because the magnitudes are tiny (rarely > 100).
+  // delta = +1 is the dominant case (one seat at a time as people are invited).
+  int32 delta = 2;
+}
+
+message AdjustSeatsResponse {
+  // Total paid seats after adjustment. Effective cap on the org is
+  // plan.seat_limit + paid_seats (auth service reads paid_seats from
+  // the local cache so this value matches what InviteMember will see
+  // immediately after).
+  int32 paid_seats = 1;
+  // Per-seat unit price in cents (e.g. 1500 = \$15.00). Frontend uses
+  // this for "Charged \$X today, prorated" copy.
+  int64 unit_price_cents = 2;
+  // ISO 4217 currency code (e.g. "usd").
+  string currency = 3;
+}

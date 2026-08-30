@@ -1,0 +1,65 @@
+name: "gpt-realtime-2.1"
+display_name: "GPT-Realtime-2.1"
+family: "gpt"
+status: "stable"
+release_date: "2026-07-06"
+
+cost:
+  input_per_1k: 0.004
+  output_per_1k: 0.024
+  cache_read_per_1k: 0.0004
+
+limits:
+  max_tokens: 128000
+  max_completion_tokens: 32000
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","audio","image"]
+  output: ["text","audio"]
+
+knowledge_cutoff: "2024-09-30"
+notes: "Realtime speech-to-speech model with configurable reasoning, tool use, and robust voice-agent behavior"
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 32000
+    has_max_value: true
+  - key: "reasoning_effort"
+    display_name: "Reasoning effort"
+    type: "enum"
+    options: ["minimal","low","medium","high","xhigh"]
+variants:
+  - id: "minimal"
+    display_name: "Minimal reasoning"
+    description: "Minimal reasoning for low-latency, high-throughput work."
+    parameters:
+      reasoning_effort: "minimal"
+  - id: "low"
+    display_name: "Low reasoning"
+    description: "Lower latency and cost for straightforward tasks."
+    parameters:
+      reasoning_effort: "low"
+  - id: "medium"
+    display_name: "Medium reasoning"
+    description: "Balanced reasoning for general-purpose work."
+    parameters:
+      reasoning_effort: "medium"
+  - id: "high"
+    display_name: "High reasoning"
+    description: "Deeper reasoning for complex analysis and coding."
+    parameters:
+      reasoning_effort: "high"
+  - id: "xhigh"
+    display_name: "Extra-high reasoning"
+    description: "Extended reasoning for long-horizon agentic work."
+    parameters:
+      reasoning_effort: "xhigh"

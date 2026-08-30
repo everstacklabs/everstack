@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package everstack.onboarding.v1;
+
+import "everstack/onboarding/v1/onboarding.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/onboarding/v1;onboardingpb";
+
+// OnboardingService persists the tenant-scoped launch-center state so it
+// survives a cleared browser cache or a fresh device. Connect-only: the admin
+// SPA talks to it over ConnectRPC, so no grpc-gateway REST mapping is wired.
+service OnboardingService {
+  // GetOnboardingState returns the stored state for the caller's tenant, or a
+  // zero-value state if nothing has been persisted yet.
+  rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateResponse) {}
+  // UpdateOnboardingState upserts the full state for the caller's tenant. The
+  // client always sends a complete snapshot, so this is a wholesale replace.
+  rpc UpdateOnboardingState(UpdateOnboardingStateRequest) returns (UpdateOnboardingStateResponse) {}
+}
+
+message GetOnboardingStateRequest {}
+
+message GetOnboardingStateResponse {
+  OnboardingState state = 1;
+}
+
+message UpdateOnboardingStateRequest {
+  bool dismissed = 1;
+  bool celebration_shown = 2;
+  string selected_path = 3;
+  bool sandbox_skipped = 4;
+}
+
+message UpdateOnboardingStateResponse {
+  OnboardingState state = 1;
+}

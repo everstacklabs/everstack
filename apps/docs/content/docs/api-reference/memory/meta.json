@@ -1,0 +1,13 @@
+{
+  "pages": [
+    "get-memory-analytics",
+    "list-collections",
+    "create-collection",
+    "add-documents",
+    "delete-document",
+    "query-collection",
+    "get-collection",
+    "delete-collection",
+    "setup-pg-vector"
+  ]
+}

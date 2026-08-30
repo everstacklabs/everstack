@@ -1,0 +1,14 @@
+# Model categories for Ollama
+# Note: Ollama is a meta-provider - models are discovered dynamically from local installation
+# Categories are determined at runtime based on discovered models
+
+# Example categories (actual models depend on local installation):
+chat: []
+  # Populated dynamically from local models
+
+embeddings: []
+  # Populated dynamically from local models
+
+coding: []
+  # Populated dynamically from local models
+

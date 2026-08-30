@@ -1,0 +1,104 @@
+---
+title: Uploads and Downloads
+description: Presigned URLs, direct uploads, and object management.
+icon: Upload
+---
+
+Everstack provides two ways to upload files and one way to download them. Both paths handle metadata tracking, quota enforcement, and checksum validation automatically.
+
+## Presigned uploads
+
+Presigned uploads are the recommended path for large files and browser-based uploads. The flow has three steps:
+
+1. **Request a presigned URL**: call `GetPresignedUploadURL` with the filename, content type, expected size, and an idempotency key. The platform reserves quota before returning a time-limited PUT URL.
+2. **Upload directly**: send the file to the presigned URL using an HTTP PUT. The request goes straight to the bucket, not through the Everstack server.
+3. **Complete the upload**: call `CompleteUpload` with the returned object ID. Everstack streams the provider object, verifies its exact size, computes SHA-256, and only then publishes it and commits the reservation as usage.
+
+This pattern keeps large file transfers off the application server and lets you upload from browsers, CLIs, or agent runtimes without proxying bytes through the platform.
+
+### When to use presigned uploads
+
+- Files larger than a few megabytes
+- Browser-based uploads where you want progress indicators
+- Environments where the client can make direct HTTP requests to the bucket endpoint
+
+## Direct upload proxy
+
+For smaller files or environments where direct bucket access is inconvenient, the platform provides a proxy endpoint:
+
+```
+POST /api/v1/storage/upload
+```
+
+This accepts multipart form data with a maximum file size of 100 MB. The platform reserves quota, streams the file to the configured bucket, reads it back for size and SHA-256 verification, and publishes it in one request. Send `Idempotency-Key` as an HTTP header when you need safe request replay. Older clients remain compatible and receive a generated `idempotencyKey` in the JSON response.
+
+### When to use the direct proxy
+
+- Files under 100 MB where simplicity matters more than throughput
+- Environments behind restrictive firewalls that cannot reach bucket endpoints directly
+- Quick uploads from scripts or internal tools
+
+## Downloads
+
+All downloads go through presigned GET URLs. Call `GetPresignedDownloadURL` with the object key, and the platform returns a time-limited URL that the client can use to fetch the file directly from the bucket.
+
+Presigned download URLs have a configurable expiry. Agent artifact downloads default to 15 minutes. Once expired, the URL stops working and you need to request a new one.
+
+This approach keeps download traffic off the application server and gives you fine-grained control over access duration.
+
+## Object metadata
+
+Every stored object tracks:
+
+- **Key**: the full path in the bucket, typically prefixed with tenant and purpose segments
+- **Filename**: the original filename provided at upload time
+- **Content type**: the MIME type (e.g. `application/pdf`, `text/csv`)
+- **Size**: the file size in bytes
+- **SHA256 checksum**: computed at upload time for integrity verification
+- **Purpose**: one of `DATASET`, `ARTIFACT`, `UPLOAD`, `EVAL_RESULT`, or `VOICE_AUDIO`
+
+Metadata is stored in the platform database alongside a reference to the bucket object. This lets you query, filter, and browse objects without listing the bucket directly.
+
+## Quota enforcement
+
+Every upload reserves the expected bytes against the tenant's resolved plan limit before exposing an upload capability or writing through the proxy. Current usage reports committed and reserved bytes separately, plus committed and reserved object counts.
+
+If an upload would exceed either limit, the request is rejected with a quota error. You can check current usage through the admin UI's Usage tab or the `GetStorageUsage` RPC.
+
+## Object management
+
+### Listing objects
+
+Use `ListObjects` to query stored objects. You can filter by prefix (for folder-style browsing), purpose, or other metadata fields. The admin UI's Objects tab uses this under the hood to render the hierarchical folder browser.
+
+### Deleting objects
+
+Use `DeleteObject` to remove a stored object. Everstack records `deleting` before contacting the provider. Provider failures keep usage charged and schedule a visible retry. Only a confirmed delete or provider `not_found` result moves the object to `deleted` and releases its accounting.
+
+The platform also tracks back-references from objects to the resources that use them (datasets, agent sessions, evaluation runs). This lets you understand dependencies before deleting.
+
+### Browsing in the admin UI
+
+The Objects tab provides a folder-style browser built on key prefixes. You can:
+
+- navigate the folder hierarchy
+- inspect metadata for any object
+- copy a presigned download URL
+- delete individual objects
+
+## Error handling
+
+Common errors you may encounter:
+
+- **Quota exceeded**: the tenant's committed and reserved bytes leave insufficient capacity. Delete unused objects or request a quota increase.
+- **Object not found**: the object ID is not ready or no longer exists. Check `GetUploadStatus` for its lifecycle state.
+- **Presigned URL expired**: the time window has passed. Initiate a new upload request.
+- **Upload too large**: the direct proxy rejects files over 100 MB. Use presigned uploads for larger files.
+
+## Recommendations
+
+- Use presigned uploads for anything over a few megabytes.
+- Call `CompleteUpload` promptly after the presigned PUT succeeds. Until verification completes, the provider bytes are reserved but not visible as a ready object.
+- Set sensible expiry windows for download URLs. Shorter windows reduce the risk of URL sharing.
+- Monitor quota usage in the admin UI and set alerts before limits are reached.
+- Use the `purpose` field consistently so filtering and retention policies work as expected.

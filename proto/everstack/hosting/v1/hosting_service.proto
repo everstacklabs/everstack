@@ -1,0 +1,165 @@
+syntax = "proto3";
+
+package everstack.hosting.v1;
+
+import "everstack/hosting/v1/hosting.proto";
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/hosting/v1;hosting";
+
+// SitesService backs the evs.run instant static hosting product.
+// Public-route eligibility is enforced inside each handler. Anonymous
+// publishing is deployment-gated and disabled by default; abuse reports are
+// public and rate limited; tenant reads remain authenticated. Cross-tenant
+// inventory and moderation live exclusively on OperationsService.
+service SitesService {
+  rpc PublishSite(PublishSiteRequest) returns (PublishSiteResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Register a publish and receive presigned upload URLs"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/publish"
+      body: "*"
+    };
+  }
+
+  rpc FinalizeSite(FinalizeSiteRequest) returns (FinalizeSiteResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Verify uploads and make the version live"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/publish/{slug}/finalize"
+      body: "*"
+    };
+  }
+
+  rpc GetSite(GetSiteRequest) returns (GetSiteResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get site by slug"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sites/{slug}"};
+  }
+
+  rpc ListSites(ListSitesRequest) returns (ListSitesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List sites owned by the caller"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sites"};
+  }
+
+  rpc UpdateSite(UpdateSiteRequest) returns (UpdateSiteResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update site settings"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/sites/{slug}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteSite(DeleteSiteRequest) returns (DeleteSiteResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete a site and its content"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/sites/{slug}"};
+  }
+
+  rpc ReportSite(ReportSiteRequest) returns (ReportSiteResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Accept an abuse report without revealing whether the site exists"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/sites/{slug}/report"
+      body: "*"
+    };
+  }
+
+  // Retained as a customer-safe capability probe. Cross-tenant operator
+  // authorization is intentionally always false on this service.
+  rpc GetHostingCapabilities(HostingCapabilitiesRequest) returns (HostingCapabilitiesResponse) {
+    option (google.api.http) = {get: "/v1/hosting/capabilities"};
+  }
+
+  // Deprecated wire-compatibility stubs. Operator functionality moved to the
+  // private OperationsService; these methods have no public HTTP bindings and
+  // return UNIMPLEMENTED from customer gateways.
+  rpc TakedownSite(TakedownSiteRequest) returns (TakedownSiteResponse) {
+    option deprecated = true;
+  }
+  rpc RestoreSite(RestoreSiteRequest) returns (RestoreSiteResponse) {
+    option deprecated = true;
+  }
+  rpc GetHostingOverview(HostingOverviewRequest) returns (HostingOverviewResponse) {
+    option deprecated = true;
+  }
+  rpc ListOperatorSites(ListOperatorSitesRequest) returns (ListOperatorSitesResponse) {
+    option deprecated = true;
+  }
+  rpc ListAbuseReports(ListAbuseReportsRequest) returns (ListAbuseReportsResponse) {
+    option deprecated = true;
+  }
+  rpc ReviewAbuseReport(ReviewAbuseReportRequest) returns (ReviewAbuseReportResponse) {
+    option deprecated = true;
+  }
+
+  rpc ClaimSite(ClaimSiteRequest) returns (ClaimSiteResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Start claiming an anonymous site"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/sites/{slug}/claim"
+      body: "*"
+    };
+  }
+
+  rpc RequestCode(RequestCodeRequest) returns (RequestCodeResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Request a sign-in code by email"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/hosting/request-code"
+      body: "*"
+    };
+  }
+
+  rpc VerifyCode(VerifyCodeRequest) returns (VerifyCodeResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Verify an emailed code and receive an API key"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/hosting/verify-code"
+      body: "*"
+    };
+  }
+}

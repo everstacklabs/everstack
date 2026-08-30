@@ -1,0 +1,83 @@
+---
+title: Output Guardrails
+description: Jailbreak detection, toxicity filtering, and output safety enforcement.
+icon: ShieldCheck
+---
+
+Output guardrails inspect the model's response after generation but before it reaches the user. They exist because you cannot trust a model to police its own output. Even well-configured system prompts can be bypassed, and model behavior drifts across versions. Output guardrails give you a deterministic enforcement layer on the response path.
+
+## How output guards differ from input guards
+
+Input guardrails protect the model from bad inputs. Output guardrails protect the user from bad outputs.
+
+This distinction matters because the threat model is different. On the input side, the adversary is a user trying to manipulate the model. On the output side, the problem is a model that has been successfully manipulated, has hallucinated, or has generated content that violates your policies regardless of the input.
+
+Output guardrails also serve a compliance function. Even if the input was clean, the model might generate content that your application is not allowed to surface. Output guards are your last line of defense before content reaches the end user.
+
+## Jailbreak detection
+
+Jailbreak detection scans model output for markers that indicate the model's safety measures have been bypassed. This covers both explicit jailbreak indicators and patterns that suggest the model is operating outside its intended boundaries.
+
+### What it catches
+
+| Pattern type | Examples |
+| --- | --- |
+| **Explicit markers** | `[jailbreak]`, `[developer mode]`, refusal bypass strings |
+| **Safety refusal phrases** | "I apologize, but I cannot", "I'm not able to", "I'm not programmed to" |
+| **Role-breaking indicators** | "My purpose is to", "I'm designed to" -- phrases that suggest the model is narrating its own constraints |
+
+The default action is **flag** rather than block. This is intentional. Safety refusal phrases in particular can appear in legitimate responses where the model correctly declines a request. Flagging records the event for review without disrupting the user experience.
+
+If your application has stricter requirements, you can change the action to **block** in the guardrails configuration.
+
+### When to enable jailbreak detection
+
+Enable it for any application where prompt injection is a realistic threat -- consumer chat interfaces, applications with public-facing APIs, or any system where the model has access to tools or sensitive data that a jailbroken response could expose.
+
+## Toxicity detection
+
+Toxicity detection applies the same moderation API used by input content filtering, but on the output side. It classifies the model's response across the same five harm categories: hate, harassment, self-harm, sexual, and violence.
+
+### Why filter outputs separately
+
+A clean input does not guarantee a clean output. Models can generate toxic content in response to benign prompts, especially when they are reasoning about sensitive topics, generating creative content, or following complex multi-turn conversations. Output toxicity filtering catches these cases.
+
+Each category uses a configurable threshold (default 0.7) and can be individually toggled. The default action is **block**, which prevents the toxic response from reaching the user.
+
+## Code execution prevention
+
+Code execution prevention scans model output for dangerous function calls and shell commands. This is relevant when model output is executed programmatically, for example in code generation workflows or agent tool calls.
+
+### What it catches
+
+Patterns include `exec()`, `eval()`, `system()`, `subprocess.`, `os.system`, `shell_exec`, `passthru`, and `proc_open`. The default action is **block**.
+
+This guard is most important when your application pipes model output into a code execution environment. If your application only displays output as text, the risk is lower, but enabling this guard still prevents the model from suggesting dangerous patterns that a user might copy and run.
+
+## Hallucination detection
+
+Hallucination detection infrastructure is present in the guardrails system but is currently reserved for future use. The indicators it watches for include:
+
+- Specific dates cited without sources
+- Specific numbers provided without context
+- Claims about current events
+- Technical details stated without references
+
+The default action is **flag**. This check is not yet active in production, but the configuration exists so that it can be enabled as the detection methodology matures.
+
+## The pass/block flow
+
+Every output guardrail produces one of two results: **pass** or **block** (with **flag** as a non-blocking variant that records the event without stopping the response).
+
+In **Workflow Studio**, the OutputGuardrailsExecutor node has two output handles. Wire the **pass** handle to your response delivery logic and the **block** handle to your error or fallback logic. This gives you explicit control over what happens when a guardrail fires.
+
+In the **gateway**, a blocked output returns an error response to the caller with violation details. A flagged output passes through to the caller but the flag is recorded in the trace for later review.
+
+### Violation tracking
+
+All output guardrail violations are recorded in the `ExecutionContext`. This means they appear in traces, workflow execution logs, and observability dashboards. Use this data to:
+
+- Audit how often output guardrails intervene
+- Identify models or prompts that frequently trigger violations
+- Tune thresholds to balance safety with user experience
+- Build reports for compliance requirements

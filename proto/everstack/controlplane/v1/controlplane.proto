@@ -1,0 +1,217 @@
+syntax = "proto3";
+
+package everstack.controlplane.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/controlplane/v1;controlplane";
+
+// InstanceStatus represents the lifecycle state of a managed gateway instance.
+enum InstanceStatus {
+  INSTANCE_STATUS_UNSPECIFIED = 0;
+  INSTANCE_STATUS_PROVISIONING = 1;
+  INSTANCE_STATUS_STARTING = 2;
+  INSTANCE_STATUS_RUNNING = 3;
+  INSTANCE_STATUS_STOPPING = 4;
+  INSTANCE_STATUS_STOPPED = 5;
+  INSTANCE_STATUS_DEGRADED = 6;
+  INSTANCE_STATUS_FAILED = 7;
+  INSTANCE_STATUS_DELETING = 8;
+}
+
+// InstanceResources describes the resource allocation and usage for an instance.
+message InstanceResources {
+  double cpu_limit = 1;
+  int64 memory_mb = 2;
+  int64 disk_mb = 3;
+  double cpu_usage = 4;
+  int64 memory_usage_mb = 5;
+  int64 active_connections = 6;
+}
+
+// InstanceHealth describes the health status of an instance.
+message InstanceHealth {
+  bool healthy = 1;
+  google.protobuf.Timestamp last_check = 2;
+  int32 consecutive_failures = 3;
+  string last_error = 4;
+  int64 uptime_seconds = 5;
+}
+
+// GatewayInstance represents a managed gateway instance.
+message GatewayInstance {
+  string id = 1;
+  string workspace_id = 2;
+  string organization_id = 3;
+  string slug = 4;
+  string gateway_url = 5;
+  string internal_url = 6;
+  InstanceStatus status = 7;
+  string version = 8;
+  string environment = 9;
+  InstanceResources resources = 10;
+  InstanceHealth health = 11;
+  string container_id = 12;
+  string m2m_instance_id = 13;
+  string backend_type = 14;
+  string error_reason = 15;
+  google.protobuf.Timestamp created_at = 16;
+  google.protobuf.Timestamp updated_at = 17;
+  google.protobuf.Timestamp stopped_at = 18;
+  string schema_name = 19;
+  string custom_domain = 20;
+  string custom_domain_status = 21; // "" | "pending_dns" | "verifying" | "active" | "failed"
+  string region = 22;               // "eu", "americas", ...
+}
+
+// ========== Provision ==========
+
+message ProvisionInstanceRequest {
+  string workspace_id = 1;
+  string organization_id = 2;
+  string slug = 3;
+  string environment = 4;
+  string version = 5;
+  double cpu_limit = 6;
+  int64 memory_mb = 7;
+  string org_slug = 8;
+  // Region to provision into. Empty = controlplane default. Rejected
+  // with InvalidArgument if not in the controlplane's allow-list.
+  string region = 9;
+}
+
+// ========== Regions ==========
+
+message ListRegionsRequest {}
+
+message Region {
+  string id = 1;          // city-level slug ("eu-fra-1", "us-pdx-1")
+  string display_name = 2; // "Frankfurt (eu-fra-1)", "Oregon (us-pdx-1)"
+  string flag_emoji = 3;   // "🇩🇪", "🇺🇸"
+  bool available = 4;      // false for greyed-out options
+}
+
+message ListRegionsResponse {
+  repeated Region regions = 1;
+  string default_region = 2;
+}
+
+message ProvisionInstanceResponse {
+  GatewayInstance instance = 1;
+}
+
+// ========== Get ==========
+
+message GetInstanceRequest {
+  oneof identifier {
+    string instance_id = 1;
+    string workspace_id = 2;
+  }
+}
+
+message GetInstanceResponse {
+  GatewayInstance instance = 1;
+}
+
+// ========== List ==========
+
+message ListInstancesRequest {
+  string organization_id = 1;
+}
+
+message ListInstancesResponse {
+  repeated GatewayInstance instances = 1;
+  int32 instance_count = 2;  // Number of active instances
+  int32 instance_limit = 3;  // Max allowed instances for the org's plan (0 = unlimited)
+}
+
+// ========== Lifecycle ==========
+
+message StartInstanceRequest {
+  string instance_id = 1;
+}
+
+message StartInstanceResponse {
+  GatewayInstance instance = 1;
+}
+
+message StopInstanceRequest {
+  string instance_id = 1;
+  bool graceful = 2;
+}
+
+message StopInstanceResponse {
+  GatewayInstance instance = 1;
+}
+
+message RestartInstanceRequest {
+  string instance_id = 1;
+}
+
+message RestartInstanceResponse {
+  GatewayInstance instance = 1;
+}
+
+message DeleteInstanceRequest {
+  string instance_id = 1;
+}
+
+message DeleteInstanceResponse {
+  bool success = 1;
+}
+
+// ========== Logs ==========
+
+message GetInstanceLogsRequest {
+  string instance_id = 1;
+  int32 tail = 2;
+  bool follow = 3;
+}
+
+message GetInstanceLogsResponse {
+  repeated string lines = 1;
+}
+
+// ========== Config Push ==========
+
+message PushConfigRequest {
+  string instance_id = 1;
+  string section = 2;
+  bytes config_json = 3;
+}
+
+message PushConfigResponse {
+  bool success = 1;
+}
+
+// ========== Custom Domain ==========
+
+message SetCustomDomainRequest {
+  string instance_id = 1;
+  string domain = 2;
+}
+
+message SetCustomDomainResponse {
+  string domain = 1;
+  string status = 2;                 // "pending_dns"
+  string verification_txt_name = 3;  // e.g. "_everstack-verify.acme.com"
+  string verification_txt_value = 4; // random token tenant must publish
+  string cname_target = 5;           // where the tenant should point CNAME
+}
+
+message VerifyCustomDomainRequest {
+  string instance_id = 1;
+}
+
+message VerifyCustomDomainResponse {
+  string status = 1; // "pending_dns" | "verifying" | "active" | "failed"
+  string message = 2;
+}
+
+message RemoveCustomDomainRequest {
+  string instance_id = 1;
+}
+
+message RemoveCustomDomainResponse {
+  bool success = 1;
+}

@@ -1,0 +1,74 @@
+---
+title: Datasets
+description: Creating and managing evaluation datasets for scoring.
+icon: Database
+---
+
+A dataset is a collection of test cases that you run scorers against. Each item in a dataset represents one input-output pair, optionally with reference context or expected answers. Datasets give your evaluations a stable, reproducible foundation.
+
+## What a dataset contains
+
+A dataset is a named collection of items. Each item typically includes:
+
+- **Input** - the prompt or query sent to your AI system
+- **Output** - the generated response (can be pre-filled or generated at eval time)
+- **Expected output** - the reference or gold-standard answer, if one exists
+- **Context** - supporting documents, retrieval results, or other material the model had access to
+- **Metadata** - arbitrary key-value pairs for filtering and grouping results
+
+Not every field is required for every scorer. Answer Relevancy only needs input and output, while Faithfulness also needs context. The fields you populate depend on what you plan to measure.
+
+## Creating datasets
+
+### In the UI
+
+Navigate to **Evaluations > Datasets** and create a new dataset. You can add items one at a time through the interface, which works well for small, hand-curated test sets.
+
+### Importing CSV
+
+Upload a CSV file where each row becomes a dataset item. Map columns to the standard fields (input, output, expected_output, context) during import. This is the fastest path when you already have test cases in a spreadsheet or exported from another tool.
+
+### Importing JSON
+
+Upload a JSON file containing an array of objects. Each object maps directly to a dataset item. JSON import preserves nested structures in context and metadata fields, which CSV cannot represent cleanly.
+
+### From the API
+
+Use the [Datasets API](/getting-started/evaluations/datasets) to create datasets and add items programmatically. This is the right approach when generating test cases from production data, building datasets in CI pipelines, or syncing from external systems.
+
+## When to use datasets vs production traces
+
+Datasets and production traces serve different evaluation needs.
+
+**Use datasets when you want:**
+
+- repeatable, deterministic test suites
+- controlled comparisons across prompt versions or models
+- pre-deploy quality gates in CI/CD
+- coverage of known edge cases and failure modes
+
+**Use production traces when you want:**
+
+- real-world quality monitoring on live traffic
+- detection of issues that curated test cases miss
+- continuous scoring without maintaining a separate dataset
+- sampling-based evaluation that scales with traffic
+
+In practice, most teams use both. Datasets catch known regressions before deploy. Production trace sampling catches unknown regressions after deploy.
+
+## Dataset lifecycle
+
+Datasets are versioned implicitly through their items. When you add, update, or remove items, future eval runs use the current state of the dataset. Past eval runs retain their results against the items that existed at the time.
+
+This means you can grow and refine a dataset over time without invalidating historical comparisons. If you need a clean break, create a new dataset version with a descriptive name.
+
+### Sizing guidance
+
+Small, focused datasets (50-200 items) work well for targeted regression testing. Larger datasets (500+) are better for broad quality assessment and statistical confidence. Start small, observe which failure modes matter, and expand coverage where it counts.
+
+## Related pages
+
+- [Evaluations Overview](/getting-started/evaluations/overview)
+- [Scorers](/getting-started/evaluations/scorers)
+- [Running Evaluations](/getting-started/evaluations/running-evals)
+- [Datasets API](/getting-started/evaluations/datasets)

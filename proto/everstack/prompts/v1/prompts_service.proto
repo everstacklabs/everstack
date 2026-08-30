@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package everstack.prompts.v1;
+
+import "google/api/annotations.proto";
+import "everstack/prompts/v1/prompts.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/prompts/v1;prompts";
+
+// PromptService manages versioned prompt templates for the prompt library
+// and playground. Tenant scoping is enforced server-side from the request
+// context; client-supplied tenant ids are never accepted.
+service PromptService {
+  // --- Prompts ---
+
+  rpc CreatePrompt(CreatePromptRequest) returns (CreatePromptResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a new prompt (optionally with version 1)"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/prompts"
+      body: "*"
+    };
+  }
+
+  rpc GetPrompt(GetPromptRequest) returns (GetPromptResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get prompt by id or name"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/prompts/{id}"};
+  }
+
+  rpc ListPrompts(ListPromptsRequest) returns (ListPromptsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List prompts for the tenant"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/prompts"};
+  }
+
+  rpc UpdatePrompt(UpdatePromptRequest) returns (UpdatePromptResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update prompt metadata (name, description, tags)"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/prompts/{id}"
+      body: "*"
+    };
+  }
+
+  rpc DeletePrompt(DeletePromptRequest) returns (DeletePromptResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Archive a prompt"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/prompts/{id}"};
+  }
+
+  // --- Versions ---
+
+  rpc CreatePromptVersion(CreatePromptVersionRequest) returns (CreatePromptVersionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a new immutable version of a prompt"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/prompts/{prompt_id}/versions"
+      body: "*"
+    };
+  }
+
+  rpc ListPromptVersions(ListPromptVersionsRequest) returns (ListPromptVersionsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List versions of a prompt, newest first"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/prompts/{prompt_id}/versions"};
+  }
+
+  rpc GetPromptVersion(GetPromptVersionRequest) returns (GetPromptVersionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get a prompt version by number, label, or latest"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/prompts/{prompt_id}/version"};
+  }
+
+  rpc SetPromptLabels(SetPromptLabelsRequest) returns (SetPromptLabelsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Assign deployment labels to a version"}
+      }
+    };
+    option (google.api.http) = {
+      put: "/v1/prompts/{prompt_id}/versions/{version}/labels"
+      body: "*"
+    };
+  }
+}

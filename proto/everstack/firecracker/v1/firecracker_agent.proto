@@ -1,0 +1,512 @@
+// Firecracker Agent gRPC Service Definition
+//
+// This proto defines the gRPC API for the standalone Firecracker agent service.
+// The gateway calls this service to manage Firecracker VMs on remote hosts,
+// decoupling gateway scaling from Firecracker capacity.
+
+syntax = "proto3";
+
+package everstack.firecracker.v1;
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/firecracker/v1;firecrackerv1";
+
+// FirecrackerAgent manages Firecracker microVMs on a single host.
+// One agent runs per KVM-enabled worker node.
+service FirecrackerAgent {
+  // CreateSandbox provisions a new Firecracker microVM.
+  rpc CreateSandbox(CreateSandboxRequest) returns (SandboxInstance);
+
+  // Exec runs a command inside a running microVM.
+  rpc Exec(ExecRequest) returns (ExecResult);
+
+  // WriteFile writes content to a file inside the microVM.
+  rpc WriteFile(WriteFileRequest) returns (Empty);
+
+  // ReadFile reads content from a file inside the microVM.
+  rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
+
+  // ListFiles lists directory contents inside the microVM.
+  rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
+
+  // DestroySandbox tears down a microVM and cleans up all resources.
+  rpc DestroySandbox(DestroySandboxRequest) returns (Empty);
+
+  // Status returns the current state of a microVM.
+  rpc Status(StatusRequest) returns (SandboxInstance);
+
+  // Stats returns resource usage for a running microVM.
+  rpc Stats(StatsRequest) returns (SandboxStats);
+
+  // ListSandboxes returns all VMs managed by this agent.
+  rpc ListSandboxes(Empty) returns (ListSandboxesResponse);
+
+  // NodeInfo returns metadata about this agent's host node.
+  rpc NodeInfo(Empty) returns (NodeInfoResponse);
+
+  // GetNodeHealth returns the current host pressure signal. Polled by
+  // the gateway-side load balancer every ~10s to gate placement: an
+  // unhealthy node is skipped for new sandbox creates until pressure
+  // recovers. Cheap to call — no disk I/O, just /proc + statfs reads.
+  rpc GetNodeHealth(Empty) returns (NodeHealth);
+
+  // Logs streams sandbox logs to the caller.
+  rpc Logs(LogsRequest) returns (stream LogChunk);
+
+  // Shell opens a bidirectional interactive shell session.
+  // The first client message MUST be a ShellInit; subsequent messages carry
+  // stdin bytes or window resize events. The server streams stdout/stderr
+  // bytes and a terminal ShellExit frame.
+  rpc Shell(stream ShellClientMessage) returns (stream ShellServerMessage);
+
+  // Snapshot streams a tar.gz of a directory inside the microVM. The agent
+  // pipes `tar -czf - <path>` directly into the gRPC stream — the full
+  // archive never lives in memory on either side. The non-streaming
+  // ReadFile/WriteFile path used to ReadFile a 200MB+ tarball as one
+  // []byte, which capped at 1 GB on the gateway and OOM-killed under
+  // concurrent stops.
+  rpc Snapshot(SnapshotRequest) returns (stream SnapshotChunk);
+
+  // Restore extracts a streamed tar.gz into a path inside the microVM.
+  // The first client frame MUST set sandbox_id and dest_path; subsequent
+  // frames carry only data. Server pipes the bytes into `tar -xzf -` and
+  // returns a single response with the tar exit code.
+  rpc Restore(stream RestoreChunk) returns (RestoreResponse);
+
+  // ListSessions enumerates persistent shell sessions inside a microVM.
+  // Used by the admin UI to render "sessions for this sandbox" and by
+  // fcagent itself on startup to repopulate its in-memory registry by
+  // walking each known VM.
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+
+  // KillSession terminates a persistent shell session. The underlying
+  // VM and other sessions are unaffected. Idempotent — killing a
+  // non-existent session is not an error.
+  rpc KillSession(KillSessionRequest) returns (Empty);
+
+  // ExposePort makes a TCP port inside the microVM reachable from the
+  // firecracker-agent pod network namespace and returns the bound host port.
+  rpc ExposePort(ExposePortRequest) returns (ExposePortResponse);
+
+  // UnexposePort removes a previously exposed microVM port mapping.
+  rpc UnexposePort(UnexposePortRequest) returns (Empty);
+
+  // InvokeFunction runs an isolated function inside a persistent, per-
+  // function execution environment (a reused microVM). The agent keeps
+  // the environment warm across invocations keyed by env_key, health-
+  // checks it before each dispatch, and transparently recreates it if
+  // the guest has died. This is the FaaS execution path — distinct from
+  // the sandbox lifecycle RPCs above, which manage user-facing sandboxes.
+  rpc InvokeFunction(InvokeFunctionRequest) returns (InvokeFunctionResult);
+}
+
+message Empty {}
+
+// --- Sandbox Lifecycle ---
+
+message CreateSandboxRequest {
+  string id = 1;
+  SandboxConfig config = 2;
+}
+
+message SandboxConfig {
+  string image = 1;
+  double cpu_limit = 2;
+  int64 memory_mb = 3;
+  int64 disk_mb = 4;
+  int32 timeout_seconds = 5;
+  string network_mode = 6;       // "deny", "whitelist", "allow"
+  repeated string allowed_hosts = 7;
+  map<string, string> env_vars = 8;
+  string work_dir = 9;
+  string tenant_id = 10;
+  string session_id = 11;
+  repeated string dns_servers = 12;
+  string name = 13;
+  string agent_id = 14;
+  bool ssh_enabled = 15;
+}
+
+message SandboxInstance {
+  string id = 1;
+  string container_id = 2;
+  string status = 3;             // "pending", "running", "stopped", "failed"
+  string backend = 4;
+  int64 created_at_unix = 5;
+  int64 expires_at_unix = 6;
+  string node_name = 7;
+  string name = 8;
+
+  // agent_healthy reflects the in-guest agent's HTTP /health probe
+  // result at the time this response was assembled. true means the
+  // host-side HealthMonitor saw a 204 on its most recent tick (default
+  // every 20s). false means the agent has stopped answering. Distinct
+  // from `status` above, which tracks the VM's lifecycle ("running",
+  // "stopped") and doesn't observe in-guest liveness.
+  //
+  // For backends that don't run an in-guest agent (Docker, Kubernetes,
+  // Deny-mode Firecracker) the field is always true — those code paths
+  // have their own health stories that don't map onto this signal.
+  bool agent_healthy = 9;
+}
+
+message DestroySandboxRequest {
+  string id = 1;
+}
+
+message StatusRequest {
+  string id = 1;
+}
+
+message ListSandboxesResponse {
+  repeated SandboxInstance instances = 1;
+}
+
+// --- Exec ---
+
+message ExecRequest {
+  string sandbox_id = 1;
+  repeated string command = 2;
+  string work_dir = 3;
+  map<string, string> env = 4;
+  int32 timeout_ms = 5;
+}
+
+message ExecResult {
+  int32 exit_code = 1;
+  string stdout = 2;
+  string stderr = 3;
+  int64 duration_ms = 4;
+  bool timed_out = 5;
+}
+
+// --- File Operations ---
+
+message WriteFileRequest {
+  string sandbox_id = 1;
+  string path = 2;
+  bytes content = 3;
+}
+
+message ReadFileRequest {
+  string sandbox_id = 1;
+  string path = 2;
+}
+
+message ReadFileResponse {
+  bytes content = 1;
+  int64 size = 2;
+}
+
+message ListFilesRequest {
+  string sandbox_id = 1;
+  string path = 2;
+}
+
+message ListFilesResponse {
+  repeated FileInfo files = 1;
+}
+
+message FileInfo {
+  string name = 1;
+  string path = 2;
+  int64 size = 3;
+  bool is_dir = 4;
+}
+
+// --- Stats ---
+
+message StatsRequest {
+  string sandbox_id = 1;
+}
+
+message SandboxStats {
+  double cpu_percent = 1;
+  int64 memory_usage = 2;
+  int64 memory_limit = 3;
+  double memory_percent = 4;
+  int64 network_rx_bytes = 5;
+  int64 network_tx_bytes = 6;
+  int64 block_read = 7;
+  int64 block_write = 8;
+  int32 pids = 9;
+  int64 timestamp_unix = 10;
+}
+
+// --- Port exposure ---
+
+message ExposePortRequest {
+  string sandbox_id = 1;
+  int32 port = 2;
+  string protocol = 3;
+}
+
+message ExposePortResponse {
+  int32 host_port = 1;
+}
+
+message UnexposePortRequest {
+  string sandbox_id = 1;
+  int32 port = 2;
+}
+
+// --- Isolated function execution ---
+//
+// InvokeFunction targets a *persistent execution environment*, not a
+// one-shot VM. The agent reuses a warm microVM across invocations,
+// keyed by env_key, and recreates it transparently if the guest dies.
+// This contract is intentionally decoupled from the retention policy:
+// phase 1 tears the env down on a short idle TTL; later phases keep it
+// warm and add snapshot restore — all behind this same wire shape.
+
+message InvokeFunctionRequest {
+  // Stable identity of the deployed function (UUID). Combined with
+  // env_key to route to (or create) the persistent execution env.
+  string function_id = 1;
+  string tenant_id = 2;
+  // Per-invocation correlation id (maps to the execution request id).
+  string request_id = 3;
+
+  // env_key fully determines the environment: the agent reuses an
+  // existing env iff its key matches, else creates a fresh one. The
+  // gateway computes it as a hash over (runtime, code, packages,
+  // resource limits) so any change to the function or its sizing spins
+  // a new env and lets the old one idle out. Immutable per code revision.
+  string env_key = 4;
+
+  string runtime = 5;               // "nodejs20" | "python3" | "deno"
+  string code = 6;
+  repeated string packages = 7;
+  // JSON-encoded argument object passed to the handler.
+  string args_json = 8;
+
+  // Per-invocation execution timeout — applies to the handler process,
+  // NOT the environment lifetime.
+  int32 timeout_ms = 9;
+
+  // Environment sizing. Applied once when the env's VM is created and
+  // baked into env_key so differing sizes never share a VM.
+  int64 memory_mb = 10;
+  double vcpus = 11;
+
+  string network_mode = 12;         // "deny" | "whitelist" | "allow"
+  repeated string allowed_hosts = 13;
+}
+
+message InvokeFunctionResult {
+  bool success = 1;
+  // JSON-encoded return value from the handler.
+  string result_json = 2;
+  string stdout = 3;
+  string stderr = 4;
+  string error = 5;
+  string error_type = 6;            // "timeout"|"oom"|"syntax"|"runtime"|"network"|""
+  int64 duration_ms = 7;
+  // cold_start is true when this invocation created the environment
+  // rather than reusing a warm one — for cold-start metrics.
+  bool cold_start = 8;
+}
+
+// --- Logs ---
+
+message LogsRequest {
+  string sandbox_id = 1;
+  bool follow = 2;
+  int32 tail = 3;
+  int64 since_unix = 4;
+  bool timestamps = 5;
+}
+
+message LogChunk {
+  bytes data = 1;
+}
+
+// --- Shell ---
+
+message ShellClientMessage {
+  oneof msg {
+    ShellInit init = 1;
+    ShellStdin stdin = 2;
+    ShellResize resize = 3;
+    ShellClose close = 4;
+  }
+}
+
+message ShellInit {
+  string sandbox_id = 1;
+  repeated string command = 2;
+  // SessionID reattaches to an existing persistent shell session.
+  // Empty creates a new session and the server sends the assigned ID
+  // back in the first ShellServerMessage. Clients should remember the
+  // ID across reconnects so a brief network drop or fcagent restart
+  // doesn't lose the user's working shell. An unknown SessionID is a
+  // hard error (returned as ShellExit with session_terminated=true and
+  // an "session_gone" error string) so the host never silently swaps
+  // in a fresh shell when the user thought they were resuming.
+  string session_id = 3;
+}
+
+message ShellStdin {
+  bytes data = 1;
+}
+
+message ShellResize {
+  uint32 rows = 1;
+  uint32 cols = 2;
+}
+
+message ShellClose {}
+
+message ShellServerMessage {
+  oneof msg {
+    ShellStdout stdout = 1;
+    ShellExit exit = 2;
+    // ShellSession is sent as the first server message on a new
+    // shell stream so the client knows which session_id it landed
+    // on. Empty on reattach (the client already knows). Optional —
+    // older clients that ignore it still work, they just can't
+    // reconnect.
+    ShellSession session = 3;
+  }
+}
+
+message ShellSession {
+  // Server-assigned session ID. Stable across attach/detach cycles.
+  string session_id = 1;
+  // True when this stream attached to a pre-existing session (rather
+  // than created a fresh one). Informational only.
+  bool reattached = 2;
+  // Host↔guest transport actually used for this shell ("vsock" or "ws").
+  // Set by the Firecracker backend based on selectShellTransport. Empty
+  // for non-FC backends or older fcagent versions that pre-date the
+  // Phase 5b flag. UI surfaces this in the Shell tab so operators
+  // rolling out the new transport can see at a glance which path
+  // each session landed on.
+  string transport = 3;
+}
+
+message ShellStdout {
+  bytes data = 1;
+}
+
+message ShellExit {
+  int32 code = 1;
+  string error = 2;
+  // SessionTerminated is true when the underlying persistent session
+  // is gone (e.g. session_kill, shell exited cleanly, VM rebooted).
+  // When false, the client can retry-attach with the same session_id
+  // and land back in the same shell. When true, the client should
+  // surface "your session ended" and start fresh.
+  bool session_terminated = 3;
+}
+
+// --- Session management ---
+
+message ListSessionsRequest {
+  string sandbox_id = 1;
+}
+
+message ListSessionsResponse {
+  repeated SessionInfo sessions = 1;
+  // NowUnix is the guest's wall-clock time at the moment the agent
+  // assembled this response. Pair with each session's
+  // last_activity_unix to compute idle duration in guest-clock terms
+  // — avoids host/guest clock-drift bugs that accumulate on
+  // long-running Firecracker VMs.
+  int64 now_unix = 2;
+}
+
+message SessionInfo {
+  string session_id = 1;
+  // Number of clients currently attached. >1 means multiple browsers
+  // or an SSH client + UI client are sharing the session.
+  uint32 attached_clients = 2;
+  // Session creation time as a Unix timestamp.
+  int64 created_unix = 3;
+  // tmux's record of the last time any pane in the session received
+  // input or wrote output. Zero means "guest tmux didn't report a
+  // value" — the reaper treats that as unknown and leaves the
+  // session alone (fail-safe).
+  int64 last_activity_unix = 4;
+}
+
+message KillSessionRequest {
+  string sandbox_id = 1;
+  string session_id = 2;
+}
+
+// --- Snapshot / Restore (streaming) ---
+
+message SnapshotRequest {
+  string sandbox_id = 1;
+  // Absolute directory inside the VM to archive (e.g. "/workspace").
+  string source_path = 2;
+  // Optional cap, in bytes. The server enforces this against the
+  // running tar size and aborts the stream if exceeded so a runaway
+  // workspace can't fill the receiver's disk. 0 = no cap.
+  int64 max_bytes = 3;
+}
+
+message SnapshotChunk {
+  bytes data = 1;
+}
+
+message RestoreChunk {
+  // First frame: sandbox_id + dest_path are required. Subsequent
+  // frames may leave them empty; the server reads them only from the
+  // first frame and pipes data straight into the in-VM tar process.
+  string sandbox_id = 1;
+  // Absolute directory inside the VM to extract into (e.g. "/workspace").
+  string dest_path = 2;
+  bytes data = 3;
+}
+
+message RestoreResponse {
+  int32 exit_code = 1;
+  string stderr = 2;
+  int64 bytes_received = 3;
+}
+
+// --- Node Info ---
+
+message NodeInfoResponse {
+  string node_name = 1;
+  string backend = 2;
+  int32 warm_vms = 3;
+  int32 active_vms = 4;
+  int32 max_total = 5;
+  int64 timestamp_unix = 6;
+}
+
+// NodeHealth is the host's self-reported pressure signal. Returned by
+// GetNodeHealth; cached by the gateway-side LoadBalancer and consulted
+// before every sandbox placement. healthy=false → skip this node for
+// new creates until the next refresh.
+//
+// Thresholds are evaluated host-side so the load balancer doesn't have
+// to know the policy — that keeps the gateway thin and lets per-host
+// overrides (e.g. tighter disk limits on small nodes) live with the
+// node config.
+message NodeHealth {
+  // Computed bool — true means safe to schedule new sandboxes here.
+  // When false, `reason` explains which threshold tripped.
+  bool healthy = 1;
+  string reason = 2;
+
+  // Pressure percentages (0..100). disk is the workdir filesystem
+  // (where rootfs overlays land); mem is /proc/meminfo Available
+  // against Total; cpu is the 1-minute load average normalized by
+  // logical CPUs; fd is open FDs against the soft rlimit.
+  double disk_pct = 3;
+  double mem_pct = 4;
+  double cpu_pct = 5;
+  double fd_pct = 6;
+
+  // Current VM count and configured maximum on this node. The
+  // scheduler may also choose to weight by remaining capacity.
+  int32 vm_count = 7;
+  int32 vm_max = 8;
+
+  // Wall-clock timestamp the snapshot was taken. The cache uses this
+  // to age stale entries; >30s old → re-probe before trusting.
+  int64 timestamp_unix = 9;
+}

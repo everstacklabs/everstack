@@ -1,0 +1,14 @@
+default:
+  name: "Default"
+  description: "Standard Z.AI gateway settings"
+  settings:
+    timeout: 60s
+    retry_attempts: 2
+
+cost_optimized:
+  name: "Cost Optimized"
+  description: "Cheapest GLM tiers for high-volume work"
+  recommended_models:
+    - glm-4.7-flash
+    - glm-4.7-flashx
+    - glm-4.5-air

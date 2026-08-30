@@ -1,0 +1,361 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/logs/v1/logs_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "LogsService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {},
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ChunkMetadata": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Chunk index (0-based)"
+        },
+        "timestampMs": {
+          "type": "string",
+          "format": "int64",
+          "title": "Unix timestamp when chunk was received"
+        },
+        "latencyMs": {
+          "type": "string",
+          "format": "int64",
+          "title": "Time since previous chunk (inter-chunk latency)"
+        },
+        "tokenCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Estimated tokens in this chunk"
+        },
+        "cumulativeTokens": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Running total of tokens received"
+        }
+      },
+      "title": "ChunkMetadata represents detailed timing information for a single streaming chunk"
+    },
+    "v1DeleteLogCustomColumnResponse": {
+      "type": "object"
+    },
+    "v1FunctionExecution": {
+      "type": "object",
+      "properties": {
+        "functionId": {
+          "type": "string",
+          "title": "Unique function identifier"
+        },
+        "functionName": {
+          "type": "string",
+          "title": "Human-readable function name"
+        },
+        "runtime": {
+          "type": "string",
+          "title": "Runtime (e.g., \"nodejs20\", \"deno\")"
+        },
+        "backend": {
+          "type": "string",
+          "title": "Isolation backend (e.g., \"docker\", \"isolated\")"
+        },
+        "executionMode": {
+          "type": "string",
+          "title": "\"warm\" or \"cold\""
+        },
+        "durationMs": {
+          "type": "string",
+          "format": "int64",
+          "title": "Execution duration in milliseconds"
+        },
+        "success": {
+          "type": "boolean",
+          "title": "Whether execution succeeded"
+        },
+        "error": {
+          "type": "string",
+          "title": "Error message if failed"
+        },
+        "errorType": {
+          "type": "string",
+          "title": "Error type (e.g., \"timeout\", \"oom\", \"runtime\")"
+        },
+        "stdout": {
+          "type": "string",
+          "title": "Standard output (truncated to 2KB)"
+        },
+        "stderr": {
+          "type": "string",
+          "title": "Standard error (truncated to 2KB)"
+        }
+      },
+      "title": "FunctionExecution represents a single function execution within a request"
+    },
+    "v1ListLogCustomColumnsResponse": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1LogCustomColumnDef"
+          }
+        }
+      }
+    },
+    "v1ListLogsResponse": {
+      "type": "object",
+      "properties": {
+        "logs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RequestLog"
+          }
+        }
+      }
+    },
+    "v1LogCustomColumnDef": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "attrKey": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "description": "LogCustomColumnDef is a user-defined log column. attr_key is the\nLogAttributes key whose value the column surfaces (attribute-source only;\nlogs carry a flat string attribute bag, so there is no value_type or\nalternate source like traces)."
+    },
+    "v1RequestLog": {
+      "type": "object",
+      "properties": {
+        "correlationId": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "firstTimestamp": {
+          "type": "string"
+        },
+        "commandType": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string",
+          "title": "Kept for backward compatibility - same as served_model"
+        },
+        "latencyMs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "promptTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "completionTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cost": {
+          "type": "number",
+          "format": "double"
+        },
+        "status": {
+          "type": "string",
+          "title": "\"success\", \"error\", \"pending\""
+        },
+        "severity": {
+          "type": "string"
+        },
+        "logEvent": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "string",
+          "title": "JSON string from LogAttributes['payload']"
+        },
+        "traceId": {
+          "type": "string"
+        },
+        "spanId": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "tenantType": {
+          "type": "string"
+        },
+        "requestText": {
+          "type": "string",
+          "title": "Extracted user input/request text"
+        },
+        "responseText": {
+          "type": "string",
+          "title": "Extracted chatbot response text"
+        },
+        "stream": {
+          "type": "boolean",
+          "title": "Whether this was a streaming request"
+        },
+        "requestedModel": {
+          "type": "string",
+          "description": "Originally requested model by user",
+          "title": "Multi-model fallback tracking"
+        },
+        "servedModel": {
+          "type": "string",
+          "title": "Model that actually responded/errored (same as model)"
+        },
+        "attemptedModels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "All models attempted in chronological order"
+        },
+        "fallbackOccurred": {
+          "type": "boolean",
+          "title": "Whether fallback routing was used"
+        },
+        "attemptCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Number of provider attempts made"
+        },
+        "streamingMetrics": {
+          "$ref": "#/definitions/v1StreamingMetrics",
+          "title": "Streaming performance metrics (only populated when stream = true)"
+        },
+        "functionExecutions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FunctionExecution"
+          },
+          "title": "Function executions (for requests that triggered serverless functions)"
+        },
+        "customColumns": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "User-defined custom columns: resolved LogAttributes values keyed by the\ntenant's column key. Populated only when the tenant has registered log\ncustom columns (see LogsService.ListLogCustomColumns)."
+        }
+      },
+      "title": "RequestLog represents a log entry for a single request (grouped by correlation_id)"
+    },
+    "v1StreamingMetrics": {
+      "type": "object",
+      "properties": {
+        "ttftMs": {
+          "type": "string",
+          "format": "int64",
+          "title": "Time to first token (ms)"
+        },
+        "chunkCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Total chunks received"
+        },
+        "avgChunkLatencyMs": {
+          "type": "number",
+          "format": "double",
+          "title": "Average inter-chunk latency"
+        },
+        "maxChunkLatencyMs": {
+          "type": "string",
+          "format": "int64",
+          "title": "Slowest chunk latency (identifies issues)"
+        },
+        "tokensPerSecond": {
+          "type": "number",
+          "format": "double",
+          "title": "Throughput: completion_tokens / stream_duration"
+        },
+        "streamDurationMs": {
+          "type": "string",
+          "format": "int64",
+          "title": "Total streaming time (first to last chunk)"
+        },
+        "partialResponseOnError": {
+          "type": "string",
+          "title": "Captured response text before error occurred"
+        },
+        "chunkTimeline": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChunkMetadata"
+          },
+          "title": "Optional detailed per-chunk timeline"
+        }
+      },
+      "title": "StreamingMetrics contains performance metrics for streaming responses"
+    },
+    "v1UpsertLogCustomColumnResponse": {
+      "type": "object",
+      "properties": {
+        "column": {
+          "$ref": "#/definitions/v1LogCustomColumnDef"
+        }
+      }
+    }
+  }
+}

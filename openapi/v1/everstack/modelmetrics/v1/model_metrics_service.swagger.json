@@ -1,0 +1,508 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/modelmetrics/v1/model_metrics_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "PublicModelMetricsService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/model-metrics/v1/compare": {
+      "get": {
+        "operationId": "PublicModelMetricsService_Compare",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ComparePublicModelMetricsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "kind",
+            "description": "model or provider.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "keys",
+            "description": "Between two and four canonical model IDs or provider slugs.",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          },
+          {
+            "name": "metric",
+            "description": "tokens, requests, ttft, throughput, or success_rate.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "PublicModelMetricsService"
+        ]
+      }
+    },
+    "/api/model-metrics/v1/provider-models": {
+      "get": {
+        "operationId": "PublicModelMetricsService_GetProviderModelBreakdown",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetPublicProviderModelBreakdownResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "metric",
+            "description": "tokens or requests.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "description": "Maximum displayed series, including the optional \"others\" series.\nZero selects the server default.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "PublicModelMetricsService"
+        ]
+      }
+    },
+    "/api/model-metrics/v1/report": {
+      "get": {
+        "operationId": "PublicModelMetricsService_GetReport",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetPublicModelMetricsReportResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "kind",
+            "description": "model, provider, or publisher.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "window",
+            "description": "7d, 30d, 90d, 6m, 1y, or all.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "interval",
+            "description": "hour, day, or month.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "PublicModelMetricsService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ComparePublicModelMetricsResponse": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "string"
+        },
+        "semanticVersion": {
+          "type": "string"
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "window": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "string"
+        },
+        "series": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PublicMetricComparisonSeries"
+          }
+        }
+      }
+    },
+    "v1GetPublicModelMetricsReportResponse": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "string"
+        },
+        "semanticVersion": {
+          "type": "string"
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "dataSince": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "dataThrough": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "available, insufficient_data, or stale."
+        },
+        "kind": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "window": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "string"
+        },
+        "summary": {
+          "$ref": "#/definitions/v1PublicMetricValues"
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PublicMetricPoint"
+          }
+        },
+        "coverage": {
+          "$ref": "#/definitions/v1PublicMetricsCoverage"
+        }
+      }
+    },
+    "v1GetPublicProviderModelBreakdownResponse": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "string"
+        },
+        "semanticVersion": {
+          "type": "string"
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "dataSince": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "dataThrough": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "available, insufficient_data, or stale."
+        },
+        "provider": {
+          "type": "string"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "window": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "string"
+        },
+        "series": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PublicMetricComparisonSeries"
+          }
+        },
+        "coverage": {
+          "$ref": "#/definitions/v1PublicMetricsCoverage"
+        }
+      }
+    },
+    "v1PublicMetricComparisonPoint": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "increment": {
+          "type": "number",
+          "format": "double"
+        },
+        "cumulative": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "v1PublicMetricComparisonSeries": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "total": {
+          "type": "number",
+          "format": "double"
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PublicMetricComparisonPoint"
+          }
+        },
+        "dataThrough": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1PublicMetricPoint": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "increment": {
+          "$ref": "#/definitions/v1PublicMetricValues"
+        },
+        "cumulative": {
+          "$ref": "#/definitions/v1PublicMetricValues"
+        }
+      }
+    },
+    "v1PublicMetricValues": {
+      "type": "object",
+      "properties": {
+        "requests": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "successes": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "errors": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "inputTokens": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "outputTokens": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "reasoningTokens": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "nonReasoningOutputTokens": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "cacheReadTokens": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "cacheWriteTokens": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "totalTokens": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "costUsd": {
+          "type": "number",
+          "format": "double"
+        },
+        "avgLatencyMs": {
+          "type": "number",
+          "format": "double"
+        },
+        "avgTtftMs": {
+          "type": "number",
+          "format": "double"
+        },
+        "avgThroughputTps": {
+          "type": "number",
+          "format": "double"
+        },
+        "successRate": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "description": "PublicMetricValues contains privacy-safe aggregate values. Counts are\nadditive; averages and rates are derived from additive samples."
+    },
+    "v1PublicMetricsCoverage": {
+      "type": "object",
+      "properties": {
+        "eligibleBuckets": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "suppressedBuckets": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "contributingTenants": {
+          "type": "string",
+          "format": "uint64",
+          "description": "Privacy-safe lower bound: the maximum distinct-tenant count among\neligible buckets, never a list of tenant identifiers."
+        },
+        "sampleRequests": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "minimumTenants": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "minimumRequests": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    }
+  }
+}

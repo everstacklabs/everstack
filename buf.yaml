@@ -1,0 +1,19 @@
+version: v2
+modules:
+  - path: proto
+    name: buf.build/everstacklabs/everstack
+    lint:
+      use:
+        - MINIMAL
+#  ignore:
+deps:
+  - buf.build/googleapis/googleapis
+  - buf.build/grpc-ecosystem/grpc-gateway
+  - buf.build/envoyproxy/protoc-gen-validate
+breaking:
+  use:
+    - FILE
+  # ignore_unstable_packages: true
+lint:
+  use:
+    - MINIMAL

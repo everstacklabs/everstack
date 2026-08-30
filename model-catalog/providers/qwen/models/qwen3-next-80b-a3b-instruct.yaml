@@ -1,0 +1,47 @@
+name: "qwen3-next-80b-a3b-instruct"
+display_name: "Qwen3-Next 80B-A3B Instruct"
+family: "qwen"
+status: "stable"
+release_date: "2025-09"
+
+cost:
+  input_per_1k: 0.0005
+  output_per_1k: 0.002
+
+limits:
+  max_tokens: 131072
+  max_completion_tokens: 32768
+
+capabilities:
+  - chat
+  - function_calling
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+
+knowledge_cutoff: "2025-04"
+notes: "Qwen instruction model for multilingual chat, reasoning, and tool use"
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 32768
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true

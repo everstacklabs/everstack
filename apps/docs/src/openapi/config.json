@@ -1,0 +1,952 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "everstack/config/v1/config_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "ConfigService"
+    }
+  ],
+  "paths": {
+    "/api/v1/config/runtime": {
+      "get": {
+        "summary": "GetRuntimeConfig returns the full runtime configuration",
+        "operationId": "ConfigService_GetRuntimeConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RuntimeConfig"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["ConfigService"]
+      },
+      "put": {
+        "summary": "UpdateRuntimeConfig updates the full runtime configuration",
+        "operationId": "ConfigService_UpdateRuntimeConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RuntimeConfig"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1UpdateRuntimeConfigRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["ConfigService"]
+      }
+    },
+    "/api/v1/config/runtime/{section}": {
+      "get": {
+        "summary": "GetRuntimeConfigSection returns a specific section of the runtime configuration",
+        "operationId": "ConfigService_GetRuntimeConfigSection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ConfigSection"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "section",
+            "description": "\"rate_limit\", \"load_balancer\", \"features\", \"cache\", \"telemetry\", \"cors\"",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["ConfigService"]
+      },
+      "put": {
+        "summary": "UpdateRuntimeConfigSection updates a specific section of the runtime configuration",
+        "operationId": "ConfigService_UpdateRuntimeConfigSection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ConfigSection"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "section",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigServiceUpdateRuntimeConfigSectionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["ConfigService"]
+      }
+    },
+    "/api/v1/config/runtime/{section}/reset": {
+      "post": {
+        "summary": "ResetRuntimeConfigSection resets a section to its default values",
+        "operationId": "ConfigService_ResetRuntimeConfigSection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ConfigSection"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "section",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigServiceResetRuntimeConfigSectionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["ConfigService"]
+      }
+    },
+    "/api/v1/config/schemas": {
+      "get": {
+        "summary": "ListSchemas returns available schemas",
+        "operationId": "ConfigService_ListSchemas",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListSchemasResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["ConfigService"]
+      }
+    },
+    "/api/v1/config/schemas/{name}": {
+      "get": {
+        "summary": "GetSchema returns a specific schema",
+        "operationId": "ConfigService_GetSchema",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1SchemaResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["ConfigService"]
+      }
+    },
+    "/api/v1/config/validate": {
+      "post": {
+        "summary": "ValidateYAML validates a YAML configuration string",
+        "operationId": "ConfigService_ValidateYAML",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ValidationResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ValidateYAMLRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["ConfigService"]
+      }
+    },
+    "/api/v1/config/validate-map": {
+      "post": {
+        "summary": "ValidateMap validates a configuration map",
+        "operationId": "ConfigService_ValidateMap",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ValidationResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ValidateMapRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["ConfigService"]
+      }
+    },
+    "/api/v1/config/validation-history": {
+      "get": {
+        "summary": "GetValidationHistory returns the validation history",
+        "operationId": "ConfigService_GetValidationHistory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ValidationHistory"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "section",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["ConfigService"]
+      }
+    },
+    "/api/v1/config/validation-status": {
+      "get": {
+        "summary": "GetValidationStatus returns the current validation status of the configuration",
+        "operationId": "ConfigService_GetValidationStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ValidationStatus"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "section",
+            "description": "Optional: specific section to get status for",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["ConfigService"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConfigServiceResetRuntimeConfigSectionBody": {
+        "type": "object",
+        "title": "ResetRuntimeConfigSectionRequest is the request for ResetRuntimeConfigSection"
+      },
+      "ConfigServiceUpdateRuntimeConfigSectionBody": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "type": "object",
+            "title": "Update via structured data (JSON)"
+          },
+          "yamlContent": {
+            "type": "string",
+            "title": "OR update via YAML string"
+          }
+        },
+        "title": "UpdateRuntimeConfigSectionRequest is the request for UpdateRuntimeConfigSection"
+      },
+      "protobufAny": {
+        "type": "object",
+        "properties": {
+          "@type": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": {}
+      },
+      "protobufNullValue": {
+        "type": "string",
+        "enum": ["NULL_VALUE"],
+        "default": "NULL_VALUE",
+        "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+      },
+      "rpcStatus": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/protobufAny"
+            }
+          }
+        }
+      },
+      "v1CORSConfig": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "allowedOrigins": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowedMethods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowedHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "exposedHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowCredentials": {
+            "type": "boolean"
+          },
+          "maxAge": {
+            "type": "string",
+            "title": "Duration string"
+          }
+        },
+        "title": "CORSConfig represents CORS configuration"
+      },
+      "v1CacheConfig": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "title": "\"memory\", \"redis\""
+          },
+          "ttl": {
+            "type": "string",
+            "title": "Duration string like \"10m\", \"1h\""
+          },
+          "memoryMaxSize": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Memory-specific settings"
+          },
+          "redisAddress": {
+            "type": "string",
+            "title": "Redis-specific settings"
+          },
+          "redisDb": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "redisPoolSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "title": "CacheConfig represents cache configuration"
+      },
+      "v1ConfigSection": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object",
+            "title": "Structured config as JSON"
+          },
+          "yamlContent": {
+            "type": "string",
+            "title": "YAML representation for editor"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "title": "ConfigSection represents a single configuration section with both structured and YAML views"
+      },
+      "v1FeaturesConfig": {
+        "type": "object",
+        "properties": {
+          "enableStreaming": {
+            "type": "boolean"
+          },
+          "enableEmbeddings": {
+            "type": "boolean"
+          },
+          "enableFunctionCalling": {
+            "type": "boolean"
+          },
+          "enableResponseCaching": {
+            "type": "boolean"
+          },
+          "enableSse": {
+            "type": "boolean"
+          },
+          "enableRequestLogging": {
+            "type": "boolean"
+          },
+          "enableHealthChecks": {
+            "type": "boolean"
+          },
+          "enableAgents": {
+            "type": "boolean"
+          }
+        },
+        "title": "FeaturesConfig represents feature flags for the gateway"
+      },
+      "v1ListSchemasResponse": {
+        "type": "object",
+        "properties": {
+          "schemaNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "title": "ListSchemasResponse represents a list of available schemas"
+      },
+      "v1LoadBalancerConfig": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "strategy": {
+            "type": "string",
+            "title": "\"round_robin\", \"weighted\", \"least_connections\""
+          },
+          "keySource": {
+            "type": "string"
+          }
+        },
+        "title": "LoadBalancerConfig represents load balancing configuration"
+      },
+      "v1RateLimitConfig": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "requestsPerMinute": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "burst": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "keySource": {
+            "type": "string",
+            "title": "\"correlation\", \"ip\", \"api_key\""
+          }
+        },
+        "title": "RateLimitConfig represents gateway-level rate limiting configuration"
+      },
+      "v1RuntimeConfig": {
+        "type": "object",
+        "properties": {
+          "rateLimit": {
+            "$ref": "#/components/schemas/v1RateLimitConfig"
+          },
+          "loadBalancer": {
+            "$ref": "#/components/schemas/v1LoadBalancerConfig"
+          },
+          "features": {
+            "$ref": "#/components/schemas/v1FeaturesConfig"
+          },
+          "cache": {
+            "$ref": "#/components/schemas/v1CacheConfig"
+          },
+          "telemetry": {
+            "$ref": "#/components/schemas/v1TelemetryConfig"
+          },
+          "cors": {
+            "$ref": "#/components/schemas/v1CORSConfig"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "title": "RuntimeConfig represents the full runtime configuration"
+      },
+      "v1SchemaResponse": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "schema": {
+            "type": "object"
+          }
+        },
+        "title": "SchemaResponse represents a schema response"
+      },
+      "v1TelemetryConfig": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "samplingRate": {
+            "type": "number",
+            "format": "double",
+            "title": "0.0 to 1.0"
+          },
+          "granularity": {
+            "type": "string",
+            "title": "\"minimal\", \"standard\", \"detailed\""
+          },
+          "traceProviderCalls": {
+            "type": "boolean"
+          },
+          "traceStreamChunks": {
+            "type": "boolean"
+          },
+          "traceFallbacks": {
+            "type": "boolean"
+          },
+          "collectorUrl": {
+            "type": "string"
+          },
+          "serviceName": {
+            "type": "string"
+          }
+        },
+        "title": "TelemetryConfig represents telemetry/OTEL configuration"
+      },
+      "v1UpdateRuntimeConfigRequest": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/v1RuntimeConfig"
+          }
+        },
+        "title": "UpdateRuntimeConfigRequest is the request for UpdateRuntimeConfig"
+      },
+      "v1ValidateMapRequest": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "type": "object"
+          }
+        },
+        "title": "ValidateMapRequest represents a request to validate a configuration map"
+      },
+      "v1ValidateYAMLRequest": {
+        "type": "object",
+        "properties": {
+          "yamlConfig": {
+            "type": "string"
+          }
+        },
+        "title": "ValidateYAMLRequest represents a request to validate YAML configuration"
+      },
+      "v1ValidationError": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/v1ValidationSeverity"
+          }
+        },
+        "title": "ValidationError represents a validation error"
+      },
+      "v1ValidationHistory": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ValidationHistoryEntry"
+            }
+          }
+        },
+        "title": "ValidationHistory represents validation history"
+      },
+      "v1ValidationHistoryEntry": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "$ref": "#/components/schemas/v1ValidationState"
+          },
+          "errorCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "warningCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "configHash": {
+            "type": "string"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "title": "ValidationHistoryEntry represents a single validation history entry"
+      },
+      "v1ValidationResult": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ValidationError"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ValidationWarning"
+            }
+          },
+          "status": {
+            "$ref": "#/components/schemas/v1ValidationStatus"
+          },
+          "validatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "title": "ValidationResult represents the result of a validation operation"
+      },
+      "v1ValidationSeverity": {
+        "type": "string",
+        "enum": [
+          "VALIDATION_SEVERITY_UNSPECIFIED",
+          "VALIDATION_SEVERITY_INFO",
+          "VALIDATION_SEVERITY_WARNING",
+          "VALIDATION_SEVERITY_ERROR",
+          "VALIDATION_SEVERITY_CRITICAL"
+        ],
+        "default": "VALIDATION_SEVERITY_UNSPECIFIED",
+        "title": "ValidationSeverity represents the severity level of validation issues"
+      },
+      "v1ValidationState": {
+        "type": "string",
+        "enum": [
+          "VALIDATION_STATE_UNSPECIFIED",
+          "VALIDATION_STATE_VALID",
+          "VALIDATION_STATE_INVALID",
+          "VALIDATION_STATE_WARNING",
+          "VALIDATION_STATE_PARTIAL",
+          "VALIDATION_STATE_PENDING",
+          "VALIDATION_STATE_ERROR"
+        ],
+        "default": "VALIDATION_STATE_UNSPECIFIED",
+        "title": "ValidationState represents the current validation state"
+      },
+      "v1ValidationStatus": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/v1ValidationState"
+          },
+          "message": {
+            "type": "string"
+          },
+          "errorCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "warningCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lastValidated": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "validatedSections": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "failedSections": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "title": "ValidationStatus represents the overall validation status"
+      },
+      "v1ValidationWarning": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "title": "ValidationWarning represents a validation warning"
+      }
+    }
+  }
+}

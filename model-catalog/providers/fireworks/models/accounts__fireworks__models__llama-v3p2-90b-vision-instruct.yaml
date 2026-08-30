@@ -1,0 +1,20 @@
+name: "accounts/fireworks/models/llama-v3p2-90b-vision-instruct"
+display_name: "Llama v3.2 90B Vision Instruct"
+family: "llama"
+status: "deprecated"
+
+cost:
+  input_per_1k: 0.00095
+  output_per_1k: 0.00095
+
+limits:
+  max_tokens: 131072
+  max_completion_tokens: 8192
+
+capabilities:
+  - chat
+  - vision
+
+modalities:
+  input: ["text", "image"]
+  output: ["text"]

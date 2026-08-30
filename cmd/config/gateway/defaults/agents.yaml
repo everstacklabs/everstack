@@ -1,0 +1,429 @@
+# Default agent definitions for the LLM Gateway
+# These are pre-configured agents that users can enable/disable
+
+builtin_agents:
+  # Research and information gathering agent
+  research_agent:
+    name: "Research Agent"
+    description: "Research and information gathering agent with web search capabilities"
+    enabled: false
+    model: "gpt-4o"
+    system_prompt: |
+      You are a research assistant specialized in gathering and analyzing information from various sources.
+      You can search the web, read documents, and synthesize information to provide comprehensive answers.
+
+      Your capabilities include:
+      - Web search for current information
+      - Document analysis and summarization
+      - Fact-checking and verification
+      - Citation and source tracking
+
+      Always provide accurate, well-sourced information and clearly indicate your sources.
+
+    tools:
+      - name: "web_search"
+        type: "function"
+        description: "Search the web for current information"
+        enabled: true
+        parameters:
+          - name: "query"
+            type: "string"
+            description: "Search query"
+            required: true
+          - name: "max_results"
+            type: "integer"
+            description: "Maximum number of results"
+            default: 5
+
+      - name: "document_reader"
+        type: "function"
+        description: "Read and analyze documents"
+        enabled: true
+        parameters:
+          - name: "url"
+            type: "string"
+            description: "Document URL"
+            required: true
+          - name: "extract_text"
+            type: "boolean"
+            description: "Extract text content"
+            default: true
+
+    memory:
+      enabled: true
+      type: "conversation"
+      max_tokens: 10000
+      ttl: "24h"
+
+    reasoning:
+      enabled: true
+      max_iterations: 10
+      strategy: "chain_of_thought"
+      tools_enabled: true
+
+    constraints:
+      max_tokens_per_response: 4000
+      max_tool_calls: 8
+      timeout: 120s
+      require_sources: true
+
+  # Code generation and analysis agent
+  code_agent:
+    name: "Code Agent"
+    description: "Code generation, analysis, and debugging agent"
+    enabled: false
+    model: "claude-3-5-sonnet-20241022"
+    system_prompt: |
+      You are a code assistant specialized in software development, debugging, and code analysis.
+      You can generate code, analyze existing code, debug issues, and provide best practices.
+
+      Your capabilities include:
+      - Code generation in multiple languages
+      - Code review and analysis
+      - Debugging and error resolution
+      - Best practices and optimization
+      - Documentation generation
+
+      Always write clean, well-documented, and maintainable code.
+
+    tools:
+      - name: "code_interpreter"
+        type: "function"
+        description: "Execute and test code snippets"
+        enabled: true
+        parameters:
+          - name: "code"
+            type: "string"
+            description: "Code to execute"
+            required: true
+          - name: "language"
+            type: "string"
+            description: "Programming language"
+            required: true
+          - name: "timeout"
+            type: "integer"
+            description: "Execution timeout in seconds"
+            default: 30
+
+      - name: "github_search"
+        type: "function"
+        description: "Search GitHub repositories and code"
+        enabled: true
+        parameters:
+          - name: "query"
+            type: "string"
+            description: "Search query"
+            required: true
+          - name: "language"
+            type: "string"
+            description: "Programming language filter"
+            required: false
+          - name: "max_results"
+            type: "integer"
+            description: "Maximum number of results"
+            default: 5
+
+      - name: "code_analyzer"
+        type: "function"
+        description: "Analyze code for issues and improvements"
+        enabled: true
+        parameters:
+          - name: "code"
+            type: "string"
+            description: "Code to analyze"
+            required: true
+          - name: "language"
+            type: "string"
+            description: "Programming language"
+            required: true
+          - name: "checks"
+            type: "array"
+            description: "Types of checks to perform"
+            items:
+              type: "string"
+            default: ["security", "performance", "style"]
+
+    memory:
+      enabled: true
+      type: "conversation"
+      max_tokens: 8000
+      ttl: "12h"
+
+    reasoning:
+      enabled: true
+      max_iterations: 15
+      strategy: "step_by_step"
+      tools_enabled: true
+
+    constraints:
+      max_tokens_per_response: 6000
+      max_tool_calls: 12
+      timeout: 180s
+      require_code_examples: true
+
+  # Data analysis and visualization agent
+  data_agent:
+    name: "Data Agent"
+    description: "Data analysis, processing, and visualization agent"
+    enabled: false
+    model: "gpt-4o"
+    system_prompt: |
+      You are a data analyst specialized in data processing, analysis, and visualization.
+      You can analyze datasets, create visualizations, and provide insights.
+
+      Your capabilities include:
+      - Data cleaning and preprocessing
+      - Statistical analysis
+      - Data visualization
+      - Pattern recognition
+      - Predictive modeling
+
+      Always provide clear explanations and actionable insights from data.
+
+    tools:
+      - name: "data_analyzer"
+        type: "function"
+        description: "Analyze datasets and provide statistics"
+        enabled: true
+        parameters:
+          - name: "data"
+            type: "string"
+            description: "Data in CSV, JSON, or other format"
+            required: true
+          - name: "analysis_type"
+            type: "string"
+            description: "Type of analysis to perform"
+            enum: ["descriptive", "correlation", "trend", "outlier"]
+            required: true
+
+      - name: "chart_generator"
+        type: "function"
+        description: "Generate data visualizations"
+        enabled: true
+        parameters:
+          - name: "data"
+            type: "string"
+            description: "Data to visualize"
+            required: true
+          - name: "chart_type"
+            type: "string"
+            description: "Type of chart"
+            enum: ["line", "bar", "scatter", "histogram", "pie"]
+            required: true
+          - name: "title"
+            type: "string"
+            description: "Chart title"
+            required: false
+
+      - name: "data_processor"
+        type: "function"
+        description: "Process and transform data"
+        enabled: true
+        parameters:
+          - name: "data"
+            type: "string"
+            description: "Input data"
+            required: true
+          - name: "operations"
+            type: "array"
+            description: "Data processing operations"
+            items:
+              type: "object"
+            required: true
+
+    memory:
+      enabled: true
+      type: "conversation"
+      max_tokens: 12000
+      ttl: "24h"
+
+    reasoning:
+      enabled: true
+      max_iterations: 12
+      strategy: "analytical"
+      tools_enabled: true
+
+    constraints:
+      max_tokens_per_response: 5000
+      max_tool_calls: 10
+      timeout: 150s
+      require_visualizations: true
+
+  # Content creation and editing agent
+  content_agent:
+    name: "Content Agent"
+    description: "Content creation, editing, and optimization agent"
+    enabled: false
+    model: "gpt-4o"
+    system_prompt: |
+      You are a content creator specialized in writing, editing, and optimizing various types of content.
+      You can create engaging content, improve existing text, and optimize for different audiences.
+
+      Your capabilities include:
+      - Content writing and editing
+      - SEO optimization
+      - Tone and style adjustment
+      - Grammar and clarity improvement
+      - Content strategy
+
+      Always create high-quality, engaging, and well-structured content.
+
+    tools:
+      - name: "seo_analyzer"
+        type: "function"
+        description: "Analyze content for SEO optimization"
+        enabled: true
+        parameters:
+          - name: "content"
+            type: "string"
+            description: "Content to analyze"
+            required: true
+          - name: "keywords"
+            type: "array"
+            description: "Target keywords"
+            items:
+              type: "string"
+            required: false
+
+      - name: "grammar_checker"
+        type: "function"
+        description: "Check and improve grammar and style"
+        enabled: true
+        parameters:
+          - name: "text"
+            type: "string"
+            description: "Text to check"
+            required: true
+          - name: "style"
+            type: "string"
+            description: "Writing style"
+            enum: ["formal", "casual", "academic", "creative"]
+            default: "formal"
+
+      - name: "tone_analyzer"
+        type: "function"
+        description: "Analyze and adjust content tone"
+        enabled: true
+        parameters:
+          - name: "content"
+            type: "string"
+            description: "Content to analyze"
+            required: true
+          - name: "target_tone"
+            type: "string"
+            description: "Desired tone"
+            enum:
+              ["professional", "friendly", "authoritative", "conversational"]
+            required: false
+
+    memory:
+      enabled: true
+      type: "conversation"
+      max_tokens: 8000
+      ttl: "12h"
+
+    reasoning:
+      enabled: true
+      max_iterations: 8
+      strategy: "creative"
+      tools_enabled: true
+
+    constraints:
+      max_tokens_per_response: 3000
+      max_tool_calls: 6
+      timeout: 90s
+      require_improvements: true
+
+# Agent templates for common use cases
+templates:
+  # Customer support agent
+  customer_support:
+    name: "Customer Support Agent"
+    description: "Template for customer support and help desk agents"
+    model: "gpt-4o"
+    system_prompt: |
+      You are a helpful customer support agent. Your goal is to assist customers with their questions and issues.
+      Be polite, patient, and provide accurate information.
+    tools:
+      - name: "knowledge_base_search"
+        type: "function"
+        description: "Search knowledge base for answers"
+      - name: "ticket_creator"
+        type: "function"
+        description: "Create support tickets"
+    memory:
+      enabled: true
+      type: "conversation"
+      max_tokens: 5000
+    constraints:
+      max_tokens_per_response: 2000
+      timeout: 60s
+
+  # Sales assistant
+  sales_assistant:
+    name: "Sales Assistant"
+    description: "Template for sales and lead qualification agents"
+    model: "claude-3-5-sonnet-20241022"
+    system_prompt: |
+      You are a sales assistant helping to qualify leads and provide product information.
+      Be professional, informative, and help guide prospects through the sales process.
+    tools:
+      - name: "product_catalog"
+        type: "function"
+        description: "Access product information"
+      - name: "lead_qualifier"
+        type: "function"
+        description: "Qualify leads based on criteria"
+    memory:
+      enabled: true
+      type: "conversation"
+      max_tokens: 6000
+    constraints:
+      max_tokens_per_response: 2500
+      timeout: 90s
+
+  # Technical consultant
+  technical_consultant:
+    name: "Technical Consultant"
+    description: "Template for technical consulting and architecture agents"
+    model: "gpt-4o"
+    system_prompt: |
+      You are a technical consultant helping with system design, architecture, and technical decisions.
+      Provide detailed, well-reasoned technical advice and recommendations.
+    tools:
+      - name: "architecture_analyzer"
+        type: "function"
+        description: "Analyze system architecture"
+      - name: "technology_recommender"
+        type: "function"
+        description: "Recommend technologies and tools"
+    memory:
+      enabled: true
+      type: "conversation"
+      max_tokens: 10000
+    constraints:
+      max_tokens_per_response: 4000
+      timeout: 120s
+
+# Agent categories for easy filtering
+categories:
+  research:
+    - "research_agent"
+
+  development:
+    - "code_agent"
+
+  data:
+    - "data_agent"
+
+  content:
+    - "content_agent"
+
+  support:
+    - "customer_support"
+
+  sales:
+    - "sales_assistant"
+
+  consulting:
+    - "technical_consultant"

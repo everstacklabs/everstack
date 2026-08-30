@@ -1,0 +1,111 @@
+---
+title: Integrations Overview
+description: Connect Everstack to GitHub, Slack, Discord, Telegram, and external webhooks.
+icon: Plug
+---
+
+Integrations connect Everstack to your existing development and communication tools. They let agents read repositories, respond in chat threads, react to webhook events, and participate in your team's existing workflows without requiring you to build custom glue code.
+
+## What integrations do
+
+At the core, integrations solve two problems:
+
+1. **Inbound triggers** -- external events (a GitHub push, a Slack message, an HTTP webhook) start or continue an agent session.
+2. **Outbound actions** -- agents read repos, post messages, create pull request reviews, and interact with users on the platforms they already use.
+
+Every integration is scoped to a single tenant. Credentials, webhook secrets, and installation metadata are never shared across organizations.
+
+## Available integrations
+
+| Integration | Status | Category | What it does |
+| --- | --- | --- | --- |
+| [GitHub](/getting-started/integrations/github) | **Beta** | Source control | Per-tenant GitHub App, repo/branch discovery, PR webhooks |
+| [Slack](/getting-started/integrations/channels) | **Beta** | Channel | Socket Mode connector for messages, threads, and interactions |
+| [Discord](/getting-started/integrations/channels) | **Beta** | Channel | Event listener with button interactions for HITL approval |
+| [Telegram](/getting-started/integrations/channels) | **Beta** | Channel | Polling-based message handler |
+| [Webhooks](/getting-started/integrations/webhooks) | **Beta** | Trigger | Generic HTTP webhooks that start agent sessions |
+| GitLab | Coming soon | Source control | -- |
+| Bitbucket | Coming soon | Source control | -- |
+| Linear | Coming soon | Project management | -- |
+| Jira | Coming soon | Project management | -- |
+
+Coming-soon integrations appear in the integration catalog UI as placeholders. They have no backend implementation yet.
+
+## How integrations are organized
+
+Integrations fall into three categories, each with a different role in the system:
+
+### Source control
+
+Source control integrations give agents access to repositories, branches, and code review workflows. The GitHub integration is the first of these. It creates a dedicated GitHub App per tenant using the manifest flow, so each organization gets its own isolated app installation rather than sharing a single OAuth application.
+
+### Channels
+
+Channel integrations connect agents to messaging platforms. Slack, Discord, and Telegram each use a platform-specific transport (Socket Mode, event listeners, polling), but all implement the same `Connector` interface. This means agents interact with channels through a unified API regardless of the underlying platform.
+
+Channels are bidirectional. Messages from users route to agent sessions, and agent responses route back to the correct thread or conversation.
+
+### Webhooks
+
+Webhook integrations are the simplest trigger mechanism. Any HTTP POST to a webhook endpoint can start an agent session or continue an existing one. This is useful for connecting to systems that Everstack does not have a native integration for, such as CI pipelines, monitoring alerts, or custom internal tools.
+
+## Feature gating
+
+Integrations require different plan tiers depending on the integration type:
+
+- **GitHub**: Available on the Basic tier and above (feature key: `GITHUB_INTEGRATION`)
+- **Channels**: Available on the Basic tier and above
+- **Webhooks**: Available on all tiers
+
+## Setting up an integration
+
+The general workflow for any integration is:
+
+1. Open **Settings > Integrations** in the admin dashboard.
+2. Find the integration in the catalog and click **Connect**.
+3. Complete the platform-specific authorization flow (OAuth, bot token, etc.).
+4. Configure which agents or workflows should respond to events from that integration.
+
+Each integration page in this section covers the specifics.
+
+## Tenant isolation
+
+Integration credentials and state are strictly tenant-scoped. This is a non-negotiable design constraint.
+
+- GitHub App installations belong to a single tenant. The webhook secret, private key, and installation tokens are never shared.
+- Channel connector bindings (Slack workspace, Discord guild, Telegram chat) are tied to the tenant that created them.
+- Webhook endpoints include tenant-scoped identifiers and verify signatures per tenant.
+
+If you are self-hosting, this isolation is enforced at the database level even when there is only one tenant.
+
+## Architecture
+
+Integrations connect to the rest of the system through two internal subsystems:
+
+- **ChannelManager** orchestrates all channel connectors. It handles lifecycle (connect, disconnect, health checks), message routing, and the mapping between platform-specific events and agent sessions.
+- **Webhook handler** sits at the HTTP layer and dispatches incoming webhook payloads to the appropriate agent trigger configuration.
+
+Both subsystems emit telemetry, so you can trace integration events through the same observability pipeline as LLM requests and agent turns.
+
+## API access
+
+All integration management is available through the API as well as the dashboard UI. See the [API Reference](/api-reference) for endpoint details on:
+
+- Creating and managing channel bindings
+- Listing GitHub installations and repositories
+- Configuring webhook triggers
+- Testing connection health
+
+## Next steps
+
+<Cards>
+  <Card title="GitHub" href="/getting-started/integrations/github">
+    Set up the per-tenant GitHub App, discover repos, and handle PR webhooks.
+  </Card>
+  <Card title="Channels" href="/getting-started/integrations/channels">
+    Connect Slack, Discord, or Telegram to your agents.
+  </Card>
+  <Card title="Webhooks" href="/getting-started/integrations/webhooks">
+    Trigger agent sessions from any HTTP source.
+  </Card>
+</Cards>

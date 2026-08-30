@@ -1,0 +1,106 @@
+---
+title: Workflow Studio Overview
+description: Visual builder for multi-step AI pipelines and DAG orchestration.
+icon: Workflow
+---
+
+Workflow Studio is a visual DAG builder for composing multi-step AI pipelines. You drag nodes onto a canvas, connect them with handles, and the execution engine runs the resulting directed acyclic graph. The admin UI lives at `/deployments/studio`.
+
+Studio exists because not every AI workload is a single LLM call or a single agent loop. When you need to chain multiple models, run safety checks, call external APIs, branch on conditions, and transform data between steps, a visual pipeline gives you a clearer picture of what is happening than nested code or YAML definitions.
+
+## What Studio is
+
+Studio is three things in one screen:
+
+- **Visual canvas** -- a drag-and-drop node editor where you compose the workflow graph. Nodes represent units of work (LLM calls, agent spawns, HTTP requests, guardrails, logic gates). Handles on each node define inputs and outputs. You connect handles with directed edges to describe data flow.
+- **Config panel** -- a sidebar that opens when you select a node. It exposes the node's configuration: model selection, prompt templates, function code, HTTP endpoints, condition expressions, retry policies, and more.
+- **Execution panel** -- a bottom panel that shows live execution state when you run or test the workflow. It streams events as each node completes, surfaces errors inline, and links to the full trace in observability.
+
+The underlying execution model is a DAG. Nodes are vertices, connections are directed edges, and the engine processes them in topological order. Where the graph allows it, independent branches run in parallel automatically.
+
+## When to use workflows
+
+Workflows solve a different problem than agents and functions. Here is when each fits.
+
+### Use workflows when
+
+- You need a multi-step pipeline with explicit control flow.
+- The steps involve different tools, models, or external systems.
+- You want conditional branching, loops, or parallel execution paths.
+- You need input and output guardrails at specific points in the pipeline.
+- You want a visual representation of the pipeline that non-engineers can read.
+- The pipeline should be versioned, deployed, and triggered by webhooks, crons, or API calls.
+
+### Use agents when
+
+- The task is open-ended and the number of steps is not known in advance.
+- The model should decide which tools to call and in what order.
+- You want autonomous reasoning with tool use, not a fixed pipeline.
+
+### Use functions when
+
+- You need a single, reusable action with a clear input/output contract.
+- The action does not need multi-step orchestration.
+- You want the function to be callable from workflows, agents, or the API independently.
+
+In practice, workflows often call agents and functions as nodes. Studio is the orchestration layer that ties them together.
+
+## Trigger types
+
+Workflows can be triggered three ways:
+
+- **Webhook** -- an HTTP endpoint that accepts a POST request and starts a workflow run. Good for event-driven pipelines triggered by external systems.
+- **Cron** -- a schedule expression that triggers the workflow on a recurring interval. Good for batch processing, periodic enrichment, or reporting.
+- **API call** -- a direct call through the Everstack SDK or REST API. Good for application-driven orchestration where your code decides when to start a run.
+
+All three trigger types support passing input variables that flow into the first nodes of the graph.
+
+## Execution model at a glance
+
+The execution engine processes nodes in topological order. Each node receives an `ExecutionContext` that carries variables from upstream nodes, resolved through named handles. When two or more nodes have no dependency between them, the engine runs them in parallel.
+
+Each node produces outputs on its handles. Downstream nodes read those outputs as input variables. This means data flows through the graph along the edges you draw, and the engine handles the scheduling.
+
+Error handling is configurable per node. You can set retry count, retry delay, and a fallback behavior. When a node fails and exhausts its retries, the execution can stop, skip the node, or route to an error-handling branch.
+
+Every execution produces a trace that is viewable in the observability tab. The trace includes timing, input/output payloads, token usage for LLM nodes, and any guardrail violations.
+
+## The admin UI
+
+The Studio interface is organized around a single workflow at a time.
+
+1. **Workflow list** -- browse, search, and create workflows. Each workflow shows its name, trigger type, version, and last execution status.
+2. **Canvas view** -- the main editor. Nodes are placed on an infinite canvas with zoom and pan. Edges snap to handles. The canvas validates connections in real time and prevents cycles.
+3. **Node palette** -- a sidebar with all available node types, grouped by category (AI, Code, Integration, Logic, Safety, Voice, Data). Drag from the palette onto the canvas.
+4. **Config panel** -- opens on node selection. Every node type has a specific config form.
+5. **Execution panel** -- run the workflow with test inputs, watch streaming events, and inspect results. Links to the full trace.
+6. **Version history** -- view previous versions, compare changes, and roll back.
+
+## Node categories
+
+Studio ships with nodes organized into seven categories:
+
+| Category | Nodes | Purpose |
+| --- | --- | --- |
+| **AI** | LLM, Agent | Model calls and autonomous agent spawns |
+| **Code** | Function | Execute registered functions |
+| **Integration** | HTTP, Webhook | Call external APIs, receive inbound events |
+| **Logic** | Condition, Loop, Transform | Branching, iteration, data transformation |
+| **Safety** | Input Guardrails, Output Guardrails | Runtime safety checks with pass/block routing |
+| **Voice** | TTS, STT, Voice Clone | Text-to-speech, speech-to-text, voice synthesis |
+| **Data** | Memory Query, Memory Store | Read from and write to the memory layer |
+
+Each node type is documented in detail on the [Node Reference](/getting-started/studio/node-reference) page.
+
+## Versioning and deployment
+
+Workflows are versioned. Every save creates a new version. You can inspect the version history, compare node layouts and configurations between versions, and deploy a specific version.
+
+Deployed workflows are the ones that triggers (webhooks, crons, API calls) execute. Draft changes do not affect running triggers until you explicitly deploy.
+
+## Next steps
+
+- [Node Reference](/getting-started/studio/node-reference) -- every node type, its configuration, and its handles.
+- [Building Workflows](/getting-started/studio/building-workflows) -- creating workflows, connecting nodes, and configuring logic.
+- [Execution](/getting-started/studio/execution) -- running, triggering, and monitoring workflow executions.
+- [Workflows API](/api-reference/workflows) -- programmatic workflow management and execution.

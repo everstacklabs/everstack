@@ -1,0 +1,14 @@
+name: omni-moderation-2024-09-26
+display_name: Omni Moderation 2024 09 26
+family: other
+status: stable
+limits:
+    max_tokens: 128000
+capabilities:
+    - chat
+    - function_calling
+modalities:
+    input:
+        - text
+    output:
+        - text

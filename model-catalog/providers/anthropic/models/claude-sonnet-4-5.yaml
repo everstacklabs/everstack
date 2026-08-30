@@ -1,0 +1,57 @@
+name: "claude-sonnet-4-5"
+display_name: "Claude Sonnet 4.5 (latest)"
+family: "claude-sonnet"
+status: "stable"
+release_date: "2025-09-29"
+
+cost:
+  input_per_1k: 0.003
+  output_per_1k: 0.015
+  cache_read_per_1k: 0.0003
+  cache_write_per_1k: 0.00375
+
+limits:
+  max_tokens: 1000000
+  max_completion_tokens: 64000
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - extended_thinking
+  - computer_use
+
+modalities:
+  input: ["text","image","pdf"]
+  output: ["text"]
+
+knowledge_cutoff: "2025-07-31"
+notes: "Balanced Claude model for coding, analysis, agent workflows, and cost control"
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 64000
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "reasoning_budget_tokens"
+    display_name: "Reasoning token budget"
+    type: "integer"
+    min_value: 1024
+    has_min_value: true
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true

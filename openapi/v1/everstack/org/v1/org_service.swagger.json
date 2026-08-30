@@ -1,0 +1,507 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/org/v1/org_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "OrganizationService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {},
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AddWorkspaceMemberResponse": {
+      "type": "object",
+      "properties": {
+        "member": {
+          "$ref": "#/definitions/v1WorkspaceMember"
+        }
+      }
+    },
+    "v1CheckOrganizationAccessResponse": {
+      "type": "object",
+      "properties": {
+        "decision": {
+          "$ref": "#/definitions/v1OrganizationAccessDecision"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
+        },
+        "organizationSlug": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateOrganizationResponse": {
+      "type": "object",
+      "properties": {
+        "organization": {
+          "$ref": "#/definitions/v1Organization"
+        }
+      }
+    },
+    "v1CreateWorkspaceResponse": {
+      "type": "object",
+      "properties": {
+        "workspace": {
+          "$ref": "#/definitions/v1Workspace"
+        }
+      }
+    },
+    "v1DeleteOrganizationResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1DeleteWorkspaceResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1GetOrganizationIdentitySettingsResponse": {
+      "type": "object",
+      "properties": {
+        "policy": {
+          "$ref": "#/definitions/v1OrganizationIdentityPolicy"
+        },
+        "connections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrganizationIdentityConnection"
+          }
+        }
+      }
+    },
+    "v1GetOrganizationResponse": {
+      "type": "object",
+      "properties": {
+        "organization": {
+          "$ref": "#/definitions/v1Organization"
+        },
+        "currentUserRole": {
+          "$ref": "#/definitions/v1MemberRole"
+        }
+      }
+    },
+    "v1GetWorkspaceResponse": {
+      "type": "object",
+      "properties": {
+        "workspace": {
+          "$ref": "#/definitions/v1Workspace"
+        }
+      }
+    },
+    "v1InviteMemberResponse": {
+      "type": "object",
+      "properties": {
+        "invitationId": {
+          "type": "string"
+        },
+        "invitationUrl": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListAvailableWorkspaceMembersResponse": {
+      "type": "object",
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrganizationMember"
+          }
+        }
+      }
+    },
+    "v1ListMembersResponse": {
+      "type": "object",
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrganizationMember"
+          }
+        }
+      }
+    },
+    "v1ListOrganizationsResponse": {
+      "type": "object",
+      "properties": {
+        "organizations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrganizationWithRole"
+          }
+        }
+      }
+    },
+    "v1ListWorkspaceMembersResponse": {
+      "type": "object",
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorkspaceMember"
+          }
+        }
+      }
+    },
+    "v1ListWorkspacesResponse": {
+      "type": "object",
+      "properties": {
+        "workspaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Workspace"
+          }
+        }
+      }
+    },
+    "v1MemberRole": {
+      "type": "string",
+      "enum": [
+        "MEMBER_ROLE_UNSPECIFIED",
+        "MEMBER_ROLE_OWNER",
+        "MEMBER_ROLE_ADMIN",
+        "MEMBER_ROLE_MEMBER",
+        "MEMBER_ROLE_VIEWER"
+      ],
+      "default": "MEMBER_ROLE_UNSPECIFIED",
+      "title": "MemberRole represents a user's role in an organization"
+    },
+    "v1Organization": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "planTier": {
+          "type": "string"
+        },
+        "billingEmail": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "Organization represents a tenant/organization"
+    },
+    "v1OrganizationAccessDecision": {
+      "type": "string",
+      "enum": [
+        "ORGANIZATION_ACCESS_DECISION_UNSPECIFIED",
+        "ORGANIZATION_ACCESS_DECISION_ALLOW",
+        "ORGANIZATION_ACCESS_DECISION_REQUIRE_SSO",
+        "ORGANIZATION_ACCESS_DECISION_DENY"
+      ],
+      "default": "ORGANIZATION_ACCESS_DECISION_UNSPECIFIED"
+    },
+    "v1OrganizationIdentityConnection": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "description": "This is intentionally a bounded organization-facing view. Issuer URLs,\nclient IDs, provider IDs, and secrets remain in the Operations control plane."
+    },
+    "v1OrganizationIdentityEnforcementMode": {
+      "type": "string",
+      "enum": [
+        "ORGANIZATION_IDENTITY_ENFORCEMENT_MODE_UNSPECIFIED",
+        "ORGANIZATION_IDENTITY_ENFORCEMENT_MODE_OPTIONAL",
+        "ORGANIZATION_IDENTITY_ENFORCEMENT_MODE_REQUIRED"
+      ],
+      "default": "ORGANIZATION_IDENTITY_ENFORCEMENT_MODE_UNSPECIFIED"
+    },
+    "v1OrganizationIdentityPolicy": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string"
+        },
+        "enforcementMode": {
+          "$ref": "#/definitions/v1OrganizationIdentityEnforcementMode"
+        },
+        "connectionId": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1OrganizationMember": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/v1MemberRole"
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "email": {
+          "type": "string",
+          "title": "User info"
+        },
+        "name": {
+          "type": "string"
+        },
+        "avatarUrl": {
+          "type": "string"
+        }
+      },
+      "title": "OrganizationMember represents a user's membership in an organization"
+    },
+    "v1OrganizationWithRole": {
+      "type": "object",
+      "properties": {
+        "organization": {
+          "$ref": "#/definitions/v1Organization"
+        },
+        "role": {
+          "$ref": "#/definitions/v1MemberRole"
+        }
+      }
+    },
+    "v1RemoveMemberResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1RemoveWorkspaceMemberResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1UpdateMemberRoleResponse": {
+      "type": "object",
+      "properties": {
+        "member": {
+          "$ref": "#/definitions/v1OrganizationMember"
+        }
+      }
+    },
+    "v1UpdateOrganizationIdentityPolicyResponse": {
+      "type": "object",
+      "properties": {
+        "policy": {
+          "$ref": "#/definitions/v1OrganizationIdentityPolicy"
+        }
+      }
+    },
+    "v1UpdateOrganizationResponse": {
+      "type": "object",
+      "properties": {
+        "organization": {
+          "$ref": "#/definitions/v1Organization"
+        }
+      }
+    },
+    "v1UpdateWorkspaceMemberRoleResponse": {
+      "type": "object",
+      "properties": {
+        "member": {
+          "$ref": "#/definitions/v1WorkspaceMember"
+        }
+      }
+    },
+    "v1UpdateWorkspaceResponse": {
+      "type": "object",
+      "properties": {
+        "workspace": {
+          "$ref": "#/definitions/v1Workspace"
+        }
+      }
+    },
+    "v1Workspace": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "environment": {
+          "$ref": "#/definitions/v1WorkspaceEnvironment"
+        },
+        "gatewayUrl": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "Workspace represents a workspace within an organization"
+    },
+    "v1WorkspaceEnvironment": {
+      "type": "string",
+      "enum": [
+        "WORKSPACE_ENVIRONMENT_UNSPECIFIED",
+        "WORKSPACE_ENVIRONMENT_DEVELOPMENT",
+        "WORKSPACE_ENVIRONMENT_STAGING",
+        "WORKSPACE_ENVIRONMENT_PRODUCTION"
+      ],
+      "default": "WORKSPACE_ENVIRONMENT_UNSPECIFIED",
+      "title": "WorkspaceEnvironment represents the environment type"
+    },
+    "v1WorkspaceMember": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "workspaceId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/v1WorkspaceMemberRole"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "email": {
+          "type": "string",
+          "title": "User info (populated via join)"
+        },
+        "name": {
+          "type": "string"
+        },
+        "avatarUrl": {
+          "type": "string"
+        },
+        "accessSource": {
+          "type": "string",
+          "title": "\"explicit\" (in workspace_members table) or \"implicit\" (org owner/admin)"
+        },
+        "orgRole": {
+          "$ref": "#/definitions/v1MemberRole",
+          "title": "Org-level role (populated for implicit members)"
+        }
+      },
+      "title": "WorkspaceMember represents a user's membership in a workspace"
+    },
+    "v1WorkspaceMemberRole": {
+      "type": "string",
+      "enum": [
+        "WORKSPACE_MEMBER_ROLE_UNSPECIFIED",
+        "WORKSPACE_MEMBER_ROLE_ADMIN",
+        "WORKSPACE_MEMBER_ROLE_MEMBER",
+        "WORKSPACE_MEMBER_ROLE_VIEWER"
+      ],
+      "default": "WORKSPACE_MEMBER_ROLE_UNSPECIFIED",
+      "title": "WorkspaceMemberRole represents a user's role within a workspace (no owner — ownership is at org level)"
+    }
+  }
+}

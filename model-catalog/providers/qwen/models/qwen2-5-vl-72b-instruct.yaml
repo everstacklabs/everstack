@@ -1,0 +1,48 @@
+name: "qwen2-5-vl-72b-instruct"
+display_name: "Qwen2.5-VL 72B Instruct"
+family: "qwen"
+status: "stable"
+release_date: "2024-09"
+
+cost:
+  input_per_1k: 0.0028
+  output_per_1k: 0.0084
+
+limits:
+  max_tokens: 131072
+  max_completion_tokens: 8192
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+
+modalities:
+  input: ["text","image"]
+  output: ["text"]
+
+knowledge_cutoff: "2024-04"
+notes: "Qwen vision-language model for visual reasoning, documents, and agent tasks"
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 8192
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true

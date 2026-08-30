@@ -1,0 +1,6 @@
+default:
+  name: "Default"
+  description: "Standard Together AI gateway settings"
+  settings:
+    timeout: 45s
+    retry_attempts: 2

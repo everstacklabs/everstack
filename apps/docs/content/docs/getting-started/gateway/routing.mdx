@@ -1,0 +1,74 @@
+---
+title: Routing
+description: Provider selection, model aliases, and fallback chains.
+icon: GitBranch
+---
+
+Routing determines which provider and model handle each request. The gateway resolves every incoming `model` field through a fixed resolution order, supports custom aliases, and can fall back through multiple providers when one is unavailable.
+
+## Resolution order
+
+When a request arrives, the gateway resolves the model field in this order:
+
+1. **Router cache** -- if this model was recently resolved, return the cached result immediately
+2. **Custom models** -- tenant-scoped model mappings stored in the database (aliases like `fast` or `default`)
+3. **Explicit routes** -- static routes defined in the gateway configuration file
+4. **Catalog lookup** -- the built-in catalog of 200+ models with their provider mappings
+5. **Error** -- if none of the above match, the request fails with a model-not-found error
+
+The first match wins. This means a custom model alias always takes priority over a catalog entry with the same name, which lets you override default routing per tenant.
+
+## Custom model mappings
+
+Custom models let you define aliases that map to a specific provider, model, and optional parameter overrides.
+
+For example, you could create an alias called `fast` that routes to `gpt-4o-mini` on OpenAI with a lower `max_tokens` ceiling, or an alias called `smart` that routes to `claude-sonnet-4-20250514` on Anthropic with a specific `temperature`.
+
+These mappings are tenant-scoped. Each tenant can define their own aliases without affecting other tenants.
+
+## Fallback chains
+
+Fallback chains let you define a sequence of providers to try when the primary choice fails. This is useful for handling rate limits, outages, and transient errors without application-level retry logic.
+
+### Strategies
+
+Each fallback chain uses one of three strategies:
+
+- **priority** (default) -- tries providers in the order you list them, top to bottom. The first provider that succeeds handles the request. Use this when you have a clear preference and want the cheapest or fastest provider to handle most traffic.
+- **round_robin** -- rotates the starting provider using a hash of the request. Over many requests, traffic distributes roughly evenly across the chain. Use this when providers have similar capabilities and you want to spread load.
+- **parallel** -- sends the request to all providers concurrently and returns the first successful response. The other in-flight requests are cancelled. Use this when latency matters more than cost.
+
+### What triggers a fallback
+
+A fallback is triggered when the current provider returns:
+
+- a rate limit error (HTTP 429)
+- a timeout
+- a server error (HTTP 5xx)
+
+Model-not-found errors do **not** trigger fallback. If a model does not exist on a provider, that is a configuration problem, not a transient failure.
+
+### Metadata overrides
+
+Each entry in a fallback chain can override request parameters for that specific provider. This is useful because different providers have different limits and defaults.
+
+For example, a chain might use `claude-sonnet-4-20250514` as the primary with `max_tokens: 8192`, then fall back to `gpt-4o` with `max_tokens: 4096` and a lower `temperature`. Each fallback entry carries its own provider, model, and parameter overrides.
+
+## Events
+
+The gateway emits routing events that appear in the observability pipeline. These include:
+
+- which model was requested
+- how the model was resolved (cache, custom, explicit, catalog)
+- whether fallback was triggered and which providers were attempted
+- the final provider that handled the request
+
+These events are useful for understanding routing patterns, diagnosing fallback frequency, and tuning your provider configuration.
+
+## Relationship to load balancing
+
+Routing and load balancing are separate concerns. Routing decides which provider handles a request. Load balancing distributes requests across multiple instances of the same provider or across providers with similar capabilities.
+
+When both are enabled, routing resolves the model first, then load balancing selects the specific provider endpoint. See [Load Balancing](/getting-started/gateway/load-balancing) for details.
+
+For full endpoint documentation, see the [Gateway API Reference](/api-reference/gateway).

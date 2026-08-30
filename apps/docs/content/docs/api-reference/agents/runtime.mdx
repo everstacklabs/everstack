@@ -1,0 +1,175 @@
+---
+title: "POST Runtime"
+description: "Runtime"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Runtime</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400">POST</span>
+    <code className="text-sm text-fd-muted-foreground">{"/v1/agents/sessions/{sessionId}/turns"}</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="post"
+  path="/v1/agents/sessions/{sessionId}/turns"
+  parameters={[{"name":"sessionId","in":"path","required":true,"schema":{"type":"string"}}]}
+  defaultBody={`{
+  "tenantId": "string",
+  "userInput": "string"
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X POST "http://localhost:8089/v1/agents/sessions/{sessionId}/turns" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"tenantId":"string","userInput":"string"}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/agents/sessions/{sessionId}/turns", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "tenantId": "string",
+  "userInput": "string"
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8089/v1/agents/sessions/{sessionId}/turns",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "tenantId": "string",
+  "userInput": "string"
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "turn": {
+    "id": "string",
+    "sessionId": "string",
+    "turnNumber": 0,
+    "status": "TURN_STATUS_UNSPECIFIED",
+    "userInput": "string",
+    "assistantOutput": "string",
+    "toolCalls": "string",
+    "promptTokens": 0,
+    "completionTokens": 0,
+    "totalTokens": 0,
+    "latencyMs": "string",
+    "error": "string",
+    "createdAt": "2024-01-01T00:00:00Z",
+    "completedAt": "2024-01-01T00:00:00Z"
+  },
+  "sessionStatus": "SESSION_STATUS_UNSPECIFIED"
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+### Parameters
+
+| Name | In | Type | Required | Description |
+|------|-----|------|----------|-------------|
+| `sessionId` | path | `string` | **Yes** |  |
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `tenantId` | `string` | No |  |
+| `userInput` | `string` | No |  |
+
+
+### Responses
+
+#### 200 Run a single turn in an agent session
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `turn` | `object` | AgentSessionTurn is a single conversation turn within a session. |
+| `sessionStatus` | `"SESSION_STATUS_UNSPECIFIED" \| "SESSION_STATUS_CREATED" \| "SESSION_STATUS_RUNNING" \| "SESSION_STATUS_WAITING_FOR_INPUT" \| "SESSION_STATUS_WAITING_FOR_APPROVAL" \| "SESSION_STATUS_COMPLETED" \| "SESSION_STATUS_FAILED" \| "SESSION_STATUS_CANCELLED"` | SessionStatus tracks the lifecycle of an agent session. |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

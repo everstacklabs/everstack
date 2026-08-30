@@ -1,0 +1,18 @@
+{
+  "pages": [
+    "add-provider-apikey-adds-a-new-api-key-to-a-provider-configuration",
+    "delete-provider-apikey-deletes-an-api-key",
+    "toggle-apikey-activates-or-deactivates-an-api-key",
+    "update-apikey-weight-updates-the-weight-of-an-api-key-for-load-balancing",
+    "list-provider-apikeys-lists-all-api-keys-for-a-provider-configuration",
+    "list-provider-catalog-returns-all-available-providers-from-the-catalog-defaults",
+    "get-config-yaml-gets-the-current-yaml-config-content",
+    "save-config-yaml-saves-yaml-config-and-syncs-to-database",
+    "list-configured-providers-returns-all-providers-with-their-status-configured-and-unconfigured",
+    "reload-config-syncs-yaml-to-db-and-triggers-gateway-reload",
+    "get-sync-status-checks-if-yaml-and-db-are-in-sync",
+    "get-provider-returns-detailed-information-about-a-specific-provider",
+    "delete-provider-configuration-removes-a-provider-configuration",
+    "configure-provider-creates-or-updates-a-provider-configuration"
+  ]
+}

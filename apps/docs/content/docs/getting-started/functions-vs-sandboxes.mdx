@@ -1,0 +1,109 @@
+---
+title: Functions vs Sandboxes
+description: Decide whether your use case needs a reusable tool or a full execution workspace.
+icon: Scale
+---
+
+Functions and sandboxes are complementary, but they solve different jobs.
+
+The simplest distinction is:
+
+- functions are reusable tools
+- sandboxes are execution workspaces
+
+## Use functions when
+
+Choose functions if your use case is mostly about a known action with a stable contract.
+
+Good fits:
+
+- call an internal API
+- look up records
+- trigger a backend action
+- wrap an external API
+- run a small transform or calculation
+- reuse the same capability across many agents and workflows
+
+## Use sandboxes when
+
+Choose sandboxes if your use case needs a live environment.
+
+Good fits:
+
+- shell commands
+- files and directories
+- package installation
+- long-running processes
+- temporary service hosting
+- interactive debugging
+- stateful multi-step execution
+
+## Practical difference
+
+### Functions
+
+- narrow
+- schema-driven
+- production-friendly
+- easier to govern
+- best for repeatable actions
+
+### Sandboxes
+
+- broad
+- interactive
+- stateful within a session
+- better for exploration and debugging
+- best for open-ended execution
+
+## Decision matrix
+
+| If you need to...                       | Use         |
+| --------------------------------------- | ----------- |
+| fetch customer or order data            | `functions` |
+| create tickets or trigger approvals     | `functions` |
+| wrap an API as a tool                   | `functions` |
+| run a small calculation or transform    | `functions` |
+| edit files or run shell commands        | `sandboxes` |
+| debug code in a live environment        | `sandboxes` |
+| start a temporary app or service        | `sandboxes` |
+| work through an exploratory coding task | `sandboxes` |
+
+## Typical maturity path
+
+Many teams use both over time.
+
+A common pattern is:
+
+1. explore or prototype in a sandbox
+2. identify repeated behavior
+3. operationalize that behavior as a function
+4. attach the function to agents and workflows
+
+## Why functions are often the better production default
+
+For many business use cases, functions are the cleaner primitive because they expose only the capability you intend to give the model.
+
+That usually means:
+
+- less surface area
+- clearer contracts
+- easier governance
+- better reuse
+
+## Why sandboxes are still essential
+
+Sandboxes are the right choice when the work is not easily reduced to a single tool call.
+
+If the agent needs to inspect files, iterate on code, install dependencies, or run a process over time, a sandbox is the better fit.
+
+## Rule of thumb
+
+- if you can describe the job as a named action, use a function
+- if you can describe the job as a live environment, use a sandbox
+
+## Next steps
+
+- Read [Functions Overview](/getting-started/functions/overview) for the product framing.
+- Read [Attaching Functions To Agents And Workflows](/getting-started/functions/attaching-to-agents-and-workflows) to wire functions into runtime behavior.
+- Read [Sandboxes Overview](/getting-started/sandboxes/overview) if your use case needs a full environment.

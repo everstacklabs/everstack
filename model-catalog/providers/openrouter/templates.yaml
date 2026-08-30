@@ -1,0 +1,45 @@
+# Configuration templates for OpenRouter
+# Pre-configured settings for common use cases
+
+high_performance:
+  name: "High Performance"
+  description: "Optimized for high throughput and low latency"
+  settings:
+    timeout: 30s
+    retry_attempts: 2
+    retry_delay: 500ms
+    connection_pool_size: 50
+    max_concurrent_requests: 20
+
+cost_optimized:
+  name: "Cost Optimized"
+  description: "Optimized for cost efficiency - routes to cheapest providers"
+  settings:
+    timeout: 120s
+    retry_attempts: 1
+    retry_delay: 2s
+    connection_pool_size: 10
+    max_concurrent_requests: 5
+    route_strategy: "cost"
+
+reliability:
+  name: "High Reliability"
+  description: "Optimized for maximum reliability with fallbacks"
+  settings:
+    timeout: 180s
+    retry_attempts: 5
+    retry_delay: 2s
+    connection_pool_size: 25
+    max_concurrent_requests: 10
+    circuit_breaker_enabled: true
+    route_strategy: "fallback"
+
+multi_provider:
+  name: "Multi-Provider"
+  description: "Leverages multiple providers for redundancy"
+  settings:
+    timeout: 60s
+    retry_attempts: 3
+    retry_delay: 1s
+    enable_fallback: true
+

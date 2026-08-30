@@ -1,0 +1,181 @@
+syntax = "proto3";
+
+package everstack.workflows.v1;
+
+import "google/api/annotations.proto";
+import "everstack/workflows/v1/workflows.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/workflows/v1;workflows";
+
+service WorkflowsService {
+  rpc CreateWorkflow(CreateWorkflowRequest) returns (CreateWorkflowResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a new workflow"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/workflows"
+      body: "*"
+    };
+  }
+
+  rpc GetWorkflow(GetWorkflowRequest) returns (GetWorkflowResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get workflow by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/workflows/{id}"};
+  }
+
+  rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List all workflows for tenant"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/workflows"};
+  }
+
+  rpc UpdateWorkflow(UpdateWorkflowRequest) returns (UpdateWorkflowResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update workflow"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/workflows/{id}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteWorkflow(DeleteWorkflowRequest) returns (DeleteWorkflowResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete workflow"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/workflows/{id}"};
+  }
+
+  // Execute a workflow with streaming events
+  rpc ExecuteWorkflow(ExecuteWorkflowRequest) returns (stream ExecuteWorkflowEvent) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Execute a workflow and stream execution events"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/workflows/{workflow_id}/execute"
+      body: "*"
+    };
+  }
+
+  // Get version history for a workflow
+  rpc GetWorkflowVersionHistory(GetWorkflowVersionHistoryRequest) returns (GetWorkflowVersionHistoryResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get version history"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/workflows/{id}/versions"};
+  }
+
+  // Get reconstructed workflow state at a specific version
+  rpc GetWorkflowAtVersion(GetWorkflowAtVersionRequest) returns (GetWorkflowAtVersionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get workflow state at a specific version"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/workflows/{id}/versions/{version}"};
+  }
+
+  // Save workflow draft without creating a version event
+  rpc SaveWorkflowDraft(SaveWorkflowDraftRequest) returns (SaveWorkflowDraftResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Save workflow draft"}
+      }
+    };
+    option (google.api.http) = {
+      put: "/v1/workflows/{id}/draft"
+      body: "*"
+    };
+  }
+
+  // Publish workflow, creating a version snapshot
+  rpc PublishWorkflow(PublishWorkflowRequest) returns (PublishWorkflowResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Publish workflow"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/workflows/{id}/publish"
+      body: "*"
+    };
+  }
+
+  // Unpublish workflow (move back to draft)
+  rpc UnpublishWorkflow(UnpublishWorkflowRequest) returns (UnpublishWorkflowResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Unpublish workflow"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/workflows/{id}/unpublish"
+      body: "*"
+    };
+  }
+
+  // List execution history for a workflow
+  rpc ListWorkflowExecutions(ListWorkflowExecutionsRequest) returns (ListWorkflowExecutionsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List workflow executions"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/workflows/{workflow_id}/executions"};
+  }
+
+  // Get a single workflow execution by ID
+  rpc GetWorkflowExecution(GetWorkflowExecutionRequest) returns (GetWorkflowExecutionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get workflow execution details"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/workflows/executions/{execution_id}"};
+  }
+
+  // Replay a past workflow execution with the same inputs
+  rpc ReplayWorkflowExecution(ReplayWorkflowExecutionRequest) returns (stream ExecuteWorkflowEvent) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Replay a workflow execution"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/workflows/executions/{execution_id}/replay"
+      body: "*"
+    };
+  }
+}

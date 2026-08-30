@@ -1,0 +1,12 @@
+enterprise_default:
+  name: "Enterprise Default"
+  description: "Balanced Azure OpenAI deployment defaults"
+  settings:
+    timeout: 60s
+    retry_attempts: 3
+
+cost_optimized:
+  name: "Cost Optimized"
+  recommended_models:
+    - gpt-4o-mini
+    - text-embedding-3-small

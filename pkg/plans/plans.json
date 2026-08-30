@@ -1,0 +1,714 @@
+{
+  "plans": {
+    "free": {
+      "tier": "free",
+      "credit_grant_usd": 0,
+      "inference_cap_usd": 5,
+      "credit_rollover": false,
+      "name": "Starter",
+      "description": "Self-hosted Community Edition",
+      "pricing": {
+        "monthly": "$0",
+        "yearly": "$0"
+      },
+      "highlight": false,
+      "seat_limit": 1,
+      "instance_limit": 1,
+      "features": [
+        {
+          "name": "core_api",
+          "enabled": true
+        },
+        {
+          "name": "persistent_agents",
+          "enabled": true
+        },
+        {
+          "name": "channel_bindings",
+          "enabled": true
+        },
+        {
+          "name": "browser_headed",
+          "enabled": false
+        },
+        {
+          "name": "evaluations",
+          "enabled": true
+        },
+        {
+          "name": "alerts",
+          "enabled": false
+        },
+        {
+          "name": "sandbox_firecracker",
+          "enabled": true
+        },
+        {
+          "name": "sandbox_kubernetes",
+          "enabled": true
+        },
+        {
+          "name": "memory_external",
+          "enabled": false
+        }
+      ],
+      "usage_limits": [
+        {
+          "type": "RPM",
+          "value": 60
+        },
+        {
+          "type": "TOKENS",
+          "value": 1000000
+        },
+        {
+          "type": "REQUESTS",
+          "value": 10000
+        },
+        {
+          "type": "STORAGE_BYTES",
+          "value": 524288000
+        },
+        {
+          "type": "HOSTED_SITES",
+          "value": 3
+        },
+        {
+          "type": "HOSTING_STORAGE_BYTES",
+          "value": 524288000
+        },
+        {
+          "type": "DATASET_ITEMS",
+          "value": 1000
+        },
+        {
+          "type": "EVAL_RUNS_MONTHLY",
+          "value": 5
+        },
+        {
+          "type": "ANNOTATION_QUEUES",
+          "value": 1
+        },
+        {
+          "type": "AGENTS",
+          "value": 3
+        },
+        {
+          "type": "PERSISTENT_AGENTS",
+          "value": 1
+        },
+        {
+          "type": "CONCURRENT_RUNNING",
+          "value": 1
+        },
+        {
+          "type": "CONCURRENT_SANDBOXES",
+          "value": 10
+        },
+        {
+          "type": "CONCURRENT_BROWSERS",
+          "value": 2
+        },
+        {
+          "type": "BROWSER_SESSION_MAX_SECONDS",
+          "value": 900
+        },
+        {
+          "type": "SANDBOX_MEMORY_MB",
+          "value": 512
+        },
+        {
+          "type": "MESSAGES_MONTHLY",
+          "value": 1000
+        },
+        {
+          "type": "CHANNELS",
+          "value": 3
+        },
+        {
+          "type": "CHANNEL_BINDINGS",
+          "value": 3
+        },
+        {
+          "type": "SPAWN_DEPTH",
+          "value": 1
+        },
+        {
+          "type": "SESSION_RETENTION_DAYS",
+          "value": 7
+        }
+      ]
+    },
+    "basic": {
+      "tier": "basic",
+      "credit_grant_usd": 20,
+      "inference_cap_usd": 10,
+      "credit_rollover": false,
+      "name": "Build",
+      "description": "Design-partner deployments with onboarding and support",
+      "pricing": {
+        "monthly": "Custom",
+        "yearly": "Custom"
+      },
+      "highlight": false,
+      "seat_limit": 3,
+      "instance_limit": 3,
+      "features": [
+        {
+          "name": "core_api",
+          "enabled": true
+        },
+        {
+          "name": "persistent_agents",
+          "enabled": true
+        },
+        {
+          "name": "channel_bindings",
+          "enabled": true
+        },
+        {
+          "name": "browser_headed",
+          "enabled": true
+        },
+        {
+          "name": "evaluations",
+          "enabled": true
+        },
+        {
+          "name": "alerts",
+          "enabled": false
+        },
+        {
+          "name": "sandbox_firecracker",
+          "enabled": true
+        },
+        {
+          "name": "sandbox_kubernetes",
+          "enabled": true
+        },
+        {
+          "name": "memory_external",
+          "enabled": false
+        }
+      ],
+      "usage_limits": [
+        {
+          "type": "RPM",
+          "value": 600
+        },
+        {
+          "type": "TOKENS",
+          "value": 10000000,
+          "subText": "+$0.50 per 1M tokens over 10M"
+        },
+        {
+          "type": "REQUESTS",
+          "value": 100000,
+          "subText": "+$0.01 per 1k requests over 100k"
+        },
+        {
+          "type": "STORAGE_BYTES",
+          "value": 5368709120,
+          "subText": "+$0.03 per GB-month over 5 GB"
+        },
+        {
+          "type": "HOSTED_SITES",
+          "value": 10
+        },
+        {
+          "type": "HOSTING_STORAGE_BYTES",
+          "value": 5368709120
+        },
+        {
+          "type": "DATASET_ITEMS",
+          "value": 50000
+        },
+        {
+          "type": "EVAL_RUNS_MONTHLY",
+          "value": 50
+        },
+        {
+          "type": "ANNOTATION_QUEUES",
+          "value": 5
+        },
+        {
+          "type": "PERSISTENT_TROOPERS",
+          "value": 3
+        },
+        {
+          "type": "AGENTS",
+          "value": 10
+        },
+        {
+          "type": "PERSISTENT_AGENTS",
+          "value": 3
+        },
+        {
+          "type": "CONCURRENT_RUNNING",
+          "value": 3
+        },
+        {
+          "type": "CONCURRENT_SANDBOXES",
+          "value": 50
+        },
+        {
+          "type": "CONCURRENT_BROWSERS",
+          "value": 10
+        },
+        {
+          "type": "BROWSER_SESSION_MAX_SECONDS",
+          "value": 3600
+        },
+        {
+          "type": "SANDBOX_MEMORY_MB",
+          "value": 1024
+        },
+        {
+          "type": "MESSAGES_MONTHLY",
+          "value": 15000
+        },
+        {
+          "type": "CHANNELS",
+          "value": -1
+        },
+        {
+          "type": "CHANNEL_BINDINGS",
+          "value": -1
+        },
+        {
+          "type": "SPAWN_DEPTH",
+          "value": 2
+        },
+        {
+          "type": "SESSION_RETENTION_DAYS",
+          "value": 30
+        }
+      ]
+    },
+    "pro": {
+      "tier": "pro",
+      "credit_grant_usd": 50,
+      "inference_cap_usd": 25,
+      "credit_rollover": false,
+      "name": "Scale",
+      "description": "Managed production deployments with premium support",
+      "pricing": {
+        "monthly": "Custom",
+        "yearly": "Custom"
+      },
+      "highlight": true,
+      "seat_limit": 10,
+      "instance_limit": 10,
+      "features": [
+        {
+          "name": "core_api",
+          "enabled": true
+        },
+        {
+          "name": "advanced_analytics",
+          "enabled": true
+        },
+        {
+          "name": "custom_integrations",
+          "enabled": true
+        },
+        {
+          "name": "persistent_troopers",
+          "enabled": true
+        },
+        {
+          "name": "persistent_agents",
+          "enabled": true
+        },
+        {
+          "name": "channel_bindings",
+          "enabled": true
+        },
+        {
+          "name": "agent_spawning",
+          "enabled": true
+        },
+        {
+          "name": "browser_headed",
+          "enabled": true
+        },
+        {
+          "name": "evaluations",
+          "enabled": true
+        },
+        {
+          "name": "alerts",
+          "enabled": true
+        },
+        {
+          "name": "sandbox_firecracker",
+          "enabled": true
+        },
+        {
+          "name": "sandbox_kubernetes",
+          "enabled": true
+        },
+        {
+          "name": "memory_external",
+          "enabled": true
+        }
+      ],
+      "usage_limits": [
+        {
+          "type": "RPM",
+          "value": 6000
+        },
+        {
+          "type": "TOKENS",
+          "value": 100000000,
+          "subText": "+$0.50 per 1M tokens over 100M"
+        },
+        {
+          "type": "REQUESTS",
+          "value": 1000000,
+          "subText": "+$0.01 per 1k requests over 1M"
+        },
+        {
+          "type": "STORAGE_BYTES",
+          "value": 53687091200,
+          "subText": "+$0.03 per GB-month over 50 GB"
+        },
+        {
+          "type": "HOSTED_SITES",
+          "value": 30
+        },
+        {
+          "type": "HOSTING_STORAGE_BYTES",
+          "value": 53687091200
+        },
+        {
+          "type": "DATASET_ITEMS",
+          "value": 500000
+        },
+        {
+          "type": "EVAL_RUNS_MONTHLY",
+          "value": 500
+        },
+        {
+          "type": "ANNOTATION_QUEUES",
+          "value": 25
+        },
+        {
+          "type": "PERSISTENT_TROOPERS",
+          "value": 10
+        },
+        {
+          "type": "AGENTS",
+          "value": 30
+        },
+        {
+          "type": "PERSISTENT_AGENTS",
+          "value": 10
+        },
+        {
+          "type": "CONCURRENT_RUNNING",
+          "value": 10
+        },
+        {
+          "type": "CONCURRENT_SANDBOXES",
+          "value": 50
+        },
+        {
+          "type": "CONCURRENT_BROWSERS",
+          "value": 25
+        },
+        {
+          "type": "BROWSER_SESSION_MAX_SECONDS",
+          "value": 14400
+        },
+        {
+          "type": "SANDBOX_MEMORY_MB",
+          "value": 4096
+        },
+        {
+          "type": "MESSAGES_MONTHLY",
+          "value": 100000
+        },
+        {
+          "type": "CHANNELS",
+          "value": -1
+        },
+        {
+          "type": "CHANNEL_BINDINGS",
+          "value": -1
+        },
+        {
+          "type": "SPAWN_DEPTH",
+          "value": 5
+        },
+        {
+          "type": "SESSION_RETENTION_DAYS",
+          "value": 90
+        }
+      ]
+    },
+    "enterprise": {
+      "tier": "enterprise",
+      "credit_grant_usd": 0,
+      "inference_cap_usd": 0,
+      "credit_rollover": false,
+      "name": "Enterprise",
+      "description": "Custom infrastructure, governance, and support",
+      "pricing": {
+        "monthly": "Custom",
+        "yearly": "Custom"
+      },
+      "highlight": false,
+      "seat_limit": 0,
+      "instance_limit": 0,
+      "features": [
+        {
+          "name": "core_api",
+          "enabled": true
+        },
+        {
+          "name": "advanced_analytics",
+          "enabled": true
+        },
+        {
+          "name": "custom_integrations",
+          "enabled": true
+        },
+        {
+          "name": "sso",
+          "enabled": true
+        },
+        {
+          "name": "audit_logs",
+          "enabled": true
+        },
+        {
+          "name": "persistent_troopers",
+          "enabled": true
+        },
+        {
+          "name": "persistent_agents",
+          "enabled": true
+        },
+        {
+          "name": "channel_bindings",
+          "enabled": true
+        },
+        {
+          "name": "agent_spawning",
+          "enabled": true
+        },
+        {
+          "name": "browser_headed",
+          "enabled": true
+        },
+        {
+          "name": "evaluations",
+          "enabled": true
+        },
+        {
+          "name": "alerts",
+          "enabled": true
+        },
+        {
+          "name": "sandbox_firecracker",
+          "enabled": true
+        },
+        {
+          "name": "sandbox_kubernetes",
+          "enabled": true
+        },
+        {
+          "name": "memory_external",
+          "enabled": true
+        }
+      ],
+      "usage_limits": [
+        {
+          "type": "RPM",
+          "value": -1
+        },
+        {
+          "type": "TOKENS",
+          "value": -1
+        },
+        {
+          "type": "REQUESTS",
+          "value": -1
+        },
+        {
+          "type": "STORAGE_BYTES",
+          "value": -1
+        },
+        {
+          "type": "HOSTED_SITES",
+          "value": -1
+        },
+        {
+          "type": "HOSTING_STORAGE_BYTES",
+          "value": -1
+        },
+        {
+          "type": "DATASET_ITEMS",
+          "value": -1
+        },
+        {
+          "type": "EVAL_RUNS_MONTHLY",
+          "value": -1
+        },
+        {
+          "type": "ANNOTATION_QUEUES",
+          "value": -1
+        },
+        {
+          "type": "PERSISTENT_TROOPERS",
+          "value": -1
+        },
+        {
+          "type": "AGENTS",
+          "value": -1
+        },
+        {
+          "type": "PERSISTENT_AGENTS",
+          "value": -1
+        },
+        {
+          "type": "CONCURRENT_RUNNING",
+          "value": -1
+        },
+        {
+          "type": "CONCURRENT_SANDBOXES",
+          "value": -1
+        },
+        {
+          "type": "CONCURRENT_BROWSERS",
+          "value": -1
+        },
+        {
+          "type": "BROWSER_SESSION_MAX_SECONDS",
+          "value": -1
+        },
+        {
+          "type": "SANDBOX_MEMORY_MB",
+          "value": -1
+        },
+        {
+          "type": "MESSAGES_MONTHLY",
+          "value": -1
+        },
+        {
+          "type": "CHANNELS",
+          "value": -1
+        },
+        {
+          "type": "CHANNEL_BINDINGS",
+          "value": -1
+        },
+        {
+          "type": "SPAWN_DEPTH",
+          "value": -1
+        },
+        {
+          "type": "SESSION_RETENTION_DAYS",
+          "value": -1
+        }
+      ]
+    }
+  },
+  "credit_pricing": {
+    "currency": "USD",
+    "inference_markup": 1.0,
+    "processed_data_per_gib": 3.0,
+    "processed_data_per_gib_free": 4.0,
+    "retention_per_gib_month": 0.5,
+    "scores_per_1k": 1.5,
+    "scores_per_1k_free": 2.5
+  },
+  "site_delivery_pricing": {
+    "currency": "USD",
+    "edge_requests_per_million": 2,
+    "transfer_per_gb": 0.1,
+    "storage_per_gb_month": 0.03,
+    "plans": {
+      "free": {
+        "edge_requests": 100000,
+        "transfer_bytes": 10000000000,
+        "storage_bytes": 500000000,
+        "overage_enabled": false
+      },
+      "basic": {
+        "edge_requests": 1000000,
+        "transfer_bytes": 100000000000,
+        "storage_bytes": 5000000000,
+        "overage_enabled": true
+      },
+      "pro": {
+        "edge_requests": 5000000,
+        "transfer_bytes": 500000000000,
+        "storage_bytes": 25000000000,
+        "overage_enabled": true
+      },
+      "enterprise": {
+        "custom": true,
+        "overage_enabled": true
+      }
+    }
+  },
+  "browser_runtime_pricing": {
+    "currency": "USD",
+    "browser_hour": 0.01,
+    "billing_increment_seconds": 1,
+    "minimum_session_seconds": 60,
+    "idle_pool_billing": false
+  },
+  "sandbox_compute_pricing": {
+    "currency": "USD",
+    "starter_credit_usd": 5,
+    "cpu_per_vcpu_hour": 0.0504,
+    "memory_per_gib_second": 4.5e-06,
+    "memory_per_gib_hour": 0.0162,
+    "disk_per_gib_second": 4.629e-08,
+    "disk_per_gib_hour": 0.000166644,
+    "platform_per_sandbox_hour": 0,
+    "included_disk_gib": 20,
+    "disk_tier2_threshold_gib": 50,
+    "disk_tier2_multiplier": 1.25,
+    "sizes": [
+      {
+        "id": "nano",
+        "label": "Nano",
+        "vcpu": 0.5,
+        "memory_gib": 0.5,
+        "disk_gib": 20
+      },
+      {
+        "id": "small",
+        "label": "Small",
+        "vcpu": 1,
+        "memory_gib": 1,
+        "disk_gib": 20
+      },
+      {
+        "id": "medium",
+        "label": "Medium",
+        "vcpu": 2,
+        "memory_gib": 2,
+        "disk_gib": 20
+      },
+      {
+        "id": "large",
+        "label": "Large",
+        "vcpu": 4,
+        "memory_gib": 4,
+        "disk_gib": 20
+      },
+      {
+        "id": "xlarge",
+        "label": "XL",
+        "vcpu": 8,
+        "memory_gib": 8,
+        "disk_gib": 20
+      }
+    ]
+  }
+}

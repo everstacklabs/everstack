@@ -1,0 +1,39 @@
+name: "cerebras"
+display_name: "Cerebras"
+base_url: "https://api.cerebras.ai/v1"
+api_version: "2024-01-01"
+
+provider_type: "static"
+supports_model_discovery: false
+
+auth:
+  type: "api_key"
+  header_name: "Authorization"
+  header_format: "Bearer {api_key}"
+  env_var: "CEREBRAS_API_KEY"
+
+rate_limits:
+  requests_per_minute: 1500
+  tokens_per_minute: 400000
+  concurrent_requests: 40
+
+capabilities:
+  chat: true
+  completions: true
+  embeddings: false
+  function_calling: true
+  vision: false
+  streaming: true
+  fine_tuning: false
+  assistants: false
+
+model_families:
+  llama:
+    description: "Llama family via Cerebras"
+    capabilities: ["chat", "function_calling"]
+  qwen:
+    description: "Qwen family via Cerebras"
+    capabilities: ["chat", "function_calling"]
+  deepseek:
+    description: "DeepSeek distill models via Cerebras"
+    capabilities: ["chat", "function_calling"]

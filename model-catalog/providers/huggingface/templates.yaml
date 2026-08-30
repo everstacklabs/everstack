@@ -1,0 +1,42 @@
+# Configuration templates for Hugging Face
+# Pre-configured settings for common use cases
+
+high_performance:
+  name: "High Performance"
+  description: "Optimized for high throughput and low latency"
+  settings:
+    timeout: 30s
+    retry_attempts: 2
+    retry_delay: 500ms
+    connection_pool_size: 50
+    max_concurrent_requests: 20
+
+cost_optimized:
+  name: "Cost Optimized"
+  description: "Optimized for cost efficiency"
+  settings:
+    timeout: 120s
+    retry_attempts: 1
+    retry_delay: 2s
+    connection_pool_size: 10
+    max_concurrent_requests: 5
+
+reliability:
+  name: "High Reliability"
+  description: "Optimized for maximum reliability"
+  settings:
+    timeout: 180s
+    retry_attempts: 5
+    retry_delay: 2s
+    connection_pool_size: 25
+    max_concurrent_requests: 10
+    circuit_breaker_enabled: true
+
+inference_endpoints:
+  name: "Inference Endpoints"
+  description: "Optimized for dedicated inference endpoints"
+  settings:
+    timeout: 60s
+    retry_attempts: 3
+    use_dedicated_endpoint: true
+

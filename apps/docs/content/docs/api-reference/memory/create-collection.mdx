@@ -1,0 +1,179 @@
+---
+title: "POST Create Collection"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Create Collection</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400">POST</span>
+    <code className="text-sm text-fd-muted-foreground">/v1/memory/collections</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="post"
+  path="/v1/memory/collections"
+  parameters={[]}
+  defaultBody={`{
+  "tenantId": "string",
+  "name": "string",
+  "description": "string",
+  "embeddingModel": "string",
+  "embeddingDimension": 0,
+  "distanceMetric": "string"
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X POST "http://localhost:8089/v1/memory/collections" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"tenantId":"string","name":"string","description":"string","embeddingModel":"string","embeddingDimension":0,"distanceMetric":"string"}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/memory/collections", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "tenantId": "string",
+  "name": "string",
+  "description": "string",
+  "embeddingModel": "string",
+  "embeddingDimension": 0,
+  "distanceMetric": "string"
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8089/v1/memory/collections",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "tenantId": "string",
+  "name": "string",
+  "description": "string",
+  "embeddingModel": "string",
+  "embeddingDimension": 0,
+  "distanceMetric": "string"
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "collection": {
+    "id": "string",
+    "tenantId": "string",
+    "name": "string",
+    "description": "string",
+    "embeddingModel": "string",
+    "embeddingDimension": 0,
+    "distanceMetric": "string",
+    "documentCount": 0,
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `tenantId` | `string` | No |  |
+| `name` | `string` | No |  |
+| `description` | `string` | No |  |
+| `embeddingModel` | `string` | No |  |
+| `embeddingDimension` | `integer` | No |  |
+| `distanceMetric` | `string` | No |  |
+| `metadata` | `object` | No |  |
+
+
+### Responses
+
+#### 200 A successful response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `collection` | `object` | Collection represents a vector memory collection. |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

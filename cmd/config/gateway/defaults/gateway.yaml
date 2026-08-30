@@ -1,0 +1,9 @@
+sse:
+  # Default SSE chunk format when not overridden per-route
+  default_format: openai
+  # Routes to wrap with exact-path SSE negotiation by default
+  routes:
+    - path: "/v1/chat/completions"
+      format: openai
+    - path: "/v1/embeddings"
+      format: proto

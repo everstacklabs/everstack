@@ -1,0 +1,89 @@
+{
+  "name": "@everstack/proto",
+  "version": "1.2.1",
+  "license": "MIT",
+  "type": "module",
+  "main": "./cjs/index.js",
+  "types": "./types/index.d.ts",
+  "files": [
+    "cjs/**",
+    "es/**",
+    "types/**",
+    "everstack/**",
+    "google/**",
+    "validate/**",
+    "protoc-gen-openapiv2/**",
+    "esquery/**"
+  ],
+  "exports": {
+    "./everstack/*": {
+      "types": "./types/everstack/*.d.ts",
+      "import": "./es/everstack/*.js",
+      "require": "./cjs/everstack/*.js"
+    },
+    "./everstack/*.js": {
+      "types": "./types/everstack/*.d.ts",
+      "import": "./es/everstack/*.js",
+      "require": "./cjs/everstack/*.js"
+    },
+    "./validate/*": {
+      "types": "./types/validate/*.d.ts",
+      "import": "./es/validate/*.js",
+      "require": "./cjs/validate/*.js"
+    },
+    "./validate/*.js": {
+      "types": "./types/validate/*.d.ts",
+      "import": "./es/validate/*.js",
+      "require": "./cjs/validate/*.js"
+    },
+    "./google/*": {
+      "types": "./types/google/*.d.ts",
+      "import": "./es/google/*.js",
+      "require": "./cjs/google/*.js"
+    },
+    "./google/*.js": {
+      "types": "./types/google/*.d.ts",
+      "import": "./es/google/*.js",
+      "require": "./cjs/google/*.js"
+    },
+    "./protoc-gen-openapiv2/*": {
+      "types": "./types/protoc-gen-openapiv2/*.d.ts",
+      "import": "./es/protoc-gen-openapiv2/*.js",
+      "require": "./cjs/protoc-gen-openapiv2/*.js"
+    },
+    "./protoc-gen-openapiv2/*.js": {
+      "types": "./types/protoc-gen-openapiv2/*.d.ts",
+      "import": "./es/protoc-gen-openapiv2/*.js",
+      "require": "./cjs/protoc-gen-openapiv2/*.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "everstack/*": [
+        "./types/everstack/*"
+      ],
+      "validate/*": [
+        "./types/validate/*"
+      ],
+      "google/*": [
+        "./types/google/*"
+      ],
+      "protoc-gen-openapiv2/*": [
+        "./types/protoc-gen-openapiv2/*"
+      ]
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "buf generate ../../proto --exclude-path everstack/firecracker",
+    "generate": "buf generate ../../proto --exclude-path everstack/firecracker",
+    "clean": "rm -rf everstack .turbo node_modules google protoc-gen-openapiv2 validate cjs types es esquery"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.6.1"
+  },
+  "devDependencies": {
+    "@bufbuild/buf": "^1.55.1",
+    "glob": "^11.0.0"
+  }
+}

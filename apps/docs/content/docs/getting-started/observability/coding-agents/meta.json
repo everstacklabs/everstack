@@ -1,0 +1,13 @@
+{
+  "title": "Coding Agents",
+  "pages": [
+    "index",
+    "claude-code",
+    "gemini-cli",
+    "codex",
+    "github-copilot",
+    "cursor",
+    "glm",
+    "kimi"
+  ]
+}

@@ -1,0 +1,99 @@
+---
+title: evs serve
+description: Start the Everstack server with all platform services.
+icon: Play
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+## What it does
+
+`evs serve` starts the Everstack server process. This single command boots the gateway, API server, and agent runtime — everything needed to run the platform. It reads configuration from a YAML file and environment variables, opens the configured port, and begins serving requests.
+
+<Callout type="info">
+This command is for self-hosted deployments. If you are using Everstack Cloud, you do not run `evs serve`.
+</Callout>
+
+## Basic usage
+
+```bash
+# Start with default settings
+evs serve
+
+# Start with a specific config file
+evs serve --config /etc/everstack/config.yaml
+
+# Start on a custom port
+evs serve --port 9090
+```
+
+The server listens on port `8089` by default and serves both gRPC and HTTP traffic.
+
+## Flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `--port` | `8089` | Port to listen on |
+| `--customDomain` | | Custom domain for this instance (e.g. `https://mydomain.com`) |
+| `--customPort` | | Custom port override |
+| `--info` | | Print instance information and exit |
+| `--config` | | Path to config YAML file (repeatable) |
+
+## Configuration
+
+Everstack loads configuration in the following order (later sources override earlier ones):
+
+1. Built-in defaults
+2. Config file (`--config` flag)
+3. Environment variables with the `EVS_` prefix
+
+### Config file
+
+```yaml title="everstack.yaml"
+server:
+  port: 8089
+
+database:
+  url: "postgres://everstack:changeme@localhost:5432/everstack?sslmode=disable"
+
+clickhouse:
+  url: "clickhouse://localhost:9000/everstack"
+
+redis:
+  url: "redis://localhost:6379"
+
+auth:
+  secret: "your-auth-secret"
+
+log:
+  level: info
+  format: json
+```
+
+### Environment variables
+
+Every config field can be set via an environment variable. The mapping uses the `EVS_` prefix with underscores for nested keys:
+
+| Variable | Config equivalent | Description |
+|---|---|---|
+| `EVS_SERVER_PORT` | `server.port` | Port to listen on |
+| `EVS_DATABASE_URL` | `database.url` | Postgres connection string |
+| `EVS_CLICKHOUSE_URL` | `clickhouse.url` | ClickHouse connection string |
+| `EVS_REDIS_URL` | `redis.url` | Redis connection string |
+| `EVS_AUTH_SECRET` | `auth.secret` | Secret for signing tokens |
+| `EVS_LOG_LEVEL` | `log.level` | Log verbosity: `debug`, `info`, `warn`, `error` |
+| `EVS_LOG_FORMAT` | `log.format` | Log format: `json` or `text` |
+
+Environment variables take precedence over config file values.
+
+## Signals
+
+The server handles SIGTERM and SIGINT gracefully: it stops accepting new connections, drains in-flight requests, then exits. `Ctrl+C` and `docker stop` both trigger a clean shutdown.
+
+## Verifying the server is running
+
+```bash
+curl http://localhost:8089/healthz
+```
+
+A `200 OK` response means all services are ready.

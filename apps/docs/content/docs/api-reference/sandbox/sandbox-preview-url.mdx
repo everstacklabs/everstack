@@ -1,0 +1,57 @@
+---
+title: Signed Preview URL
+description: Generate a shareable URL for a sandbox port with embedded auth.
+---
+
+# Generate Signed Preview URL
+
+`POST /v1/sandbox/instances/{sandboxId}/preview-url`
+
+Generates an HMAC-SHA256 signed URL for a sandbox port. The auth token is embedded in the URL itself, so it can be shared directly without requiring custom HTTP headers -- suitable for iframe embeds, chat/email links, and third-party tools.
+
+## Request
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `port` | integer | Yes | Port to generate a URL for (1–65535) |
+| `expiresInSeconds` | integer | No | Token validity window. Range: 1–86400. Default: 3600 (1 hour) |
+
+```bash
+POST /v1/sandbox/instances/{sandboxId}/preview-url
+{
+  "port": 3000,
+  "expiresInSeconds": 7200
+}
+```
+
+## Response
+
+```json
+{
+  "url": "https://xK3p9q2A-3000.preview.everstack.ai?_preview_token=<signed-token>",
+  "expiresAt": "2026-06-01T14:00:00Z"
+}
+```
+
+## How it works
+
+1. The gateway signs a claims payload (`sandbox_id`, `port`, `tenant_id`, `expires_at`) with HMAC-SHA256
+2. The token is appended as `?_preview_token=<token>` to the preview URL
+3. When a browser hits the URL, the gateway validates the token and sets a short-lived cookie so subsequent same-session requests (JS imports, images, XHR) don't need to re-verify
+
+## Security
+
+- Token is HMAC-SHA256 signed -- tamper-proof
+- Bound to a specific sandbox ID and port -- a token for port 3000 does not grant access to port 8080
+- Auto-expires at the specified time
+- Standard preview access (via SDK or `x-everstack-preview-token` header) continues to work alongside signed URLs
+
+## SDK usage
+
+```typescript
+const { url, expiresAt } = await everstack.sandbox.getPreviewUrl(sandboxId, {
+  port: 3000,
+  expiresInSeconds: 3600,
+})
+// share url directly -- no headers needed
+```

@@ -1,0 +1,122 @@
+---
+title: Lifecycle Webhooks
+description: Receive outgoing notifications when sandbox state changes.
+icon: Webhook
+---
+
+Lifecycle webhooks notify your system when a sandbox's state changes -- started, stopped, archived, deleted, or error. This enables async agent orchestration patterns that don't require polling.
+
+> **Note:** These are **outgoing** lifecycle events from Everstack to your system. They are distinct from the incoming trigger webhooks (`/v1/sandbox/webhooks`) that invoke sandbox execution.
+
+## Why webhooks
+
+Without lifecycle webhooks, you must poll `GET /v1/sandbox/instances/{id}` to know when a sandbox is ready. With webhooks:
+
+1. Start a sandbox
+2. Your endpoint receives `sandbox.started` when it's ready
+3. Dispatch work immediately
+
+No polling loop. No race conditions.
+
+## Events
+
+| Event | When |
+|-------|------|
+| `sandbox.started` | Sandbox transitions to `running` |
+| `sandbox.stopped` | Sandbox transitions to `sleeping` |
+| `sandbox.archived` | Sandbox transitions to `archived` |
+| `sandbox.deleted` | Sandbox is terminated |
+| `sandbox.error` | Sandbox enters `failed` state |
+
+## Register an endpoint
+
+```bash
+POST /v1/sandbox-webhooks
+{
+  "url": "https://your-system.com/webhooks/sandbox",
+  "events": ["sandbox.started", "sandbox.stopped"],
+  "secret": "your-signing-secret"
+}
+```
+
+Omit `events` (or pass `["*"]`) to subscribe to all events.
+
+## Payload format
+
+```json
+{
+  "event": "sandbox.started",
+  "timestamp": "2026-06-01T12:00:00Z",
+  "sandbox_id": "sbx_abc123",
+  "tenant_id": "org_456",
+  "state": "running",
+  "status": "running"
+}
+```
+
+## Verifying the signature
+
+Every delivery includes an `X-Everstack-Signature` header:
+
+```
+X-Everstack-Signature: sha256=<hmac-sha256-hex>
+```
+
+Verify with your secret:
+
+```python
+import hmac, hashlib
+
+def verify(body: bytes, header: str, secret: str) -> bool:
+    expected = "sha256=" + hmac.new(
+        secret.encode(), body, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, header)
+```
+
+Always verify before trusting the payload.
+
+## Reliability
+
+- **At-least-once delivery** -- every event is delivered at least once
+- **3 retries** with backoff: 0s → 5s → 30s
+- **Delivery log** -- the last 100 attempts per endpoint are stored (timestamp, HTTP status, duration)
+- **Test endpoint** -- send a test payload without waiting for a real event
+
+## Managing endpoints
+
+```bash
+GET    /v1/sandbox-webhooks                          # list endpoints
+DELETE /v1/sandbox-webhooks/{id}                     # remove endpoint
+GET    /v1/sandbox-webhooks/{id}/deliveries          # delivery log (last 100)
+POST   /v1/sandbox-webhooks/{id}/test               # send test payload
+```
+
+## Async orchestration pattern
+
+The most common pattern when using webhooks with agents:
+
+```python
+# 1. Create sandbox and register a webhook (one-time setup)
+#    webhook fires when sandbox reaches "running"
+
+# 2. On sandbox.started webhook:
+def handle_webhook(payload):
+    if payload["event"] == "sandbox.started":
+        sandbox_id = payload["sandbox_id"]
+        # dispatch agent work into this sandbox
+        start_agent_run(sandbox_id)
+
+# 3. On sandbox.stopped webhook:
+    elif payload["event"] == "sandbox.stopped":
+        # sandbox went idle -- record completion
+        log_completion(payload["sandbox_id"])
+```
+
+## Recommendations
+
+- Subscribe to `sandbox.started` + `sandbox.error` at minimum
+- Always verify the signature before processing
+- Return `2xx` from your handler within 5 seconds -- webhooks time out
+- Use the test endpoint to verify your handler before deploying
+- Check the delivery log when events seem missing

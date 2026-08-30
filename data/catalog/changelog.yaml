@@ -1,0 +1,262 @@
+versions:
+  - version: "2.3.0"
+    date: "2026-05-10"
+    description: "Full resync to models.dev: 21 providers refreshed; flagship models added (Claude Opus 4.7, Sonnet 4.6; GPT-5/5.4/5.5 family; Gemini 3; Grok 4 family; DeepSeek V4; Kimi K2.6; MiniMax M2.7; Mistral Large 3); pricing/limits/capabilities corrected across the catalog; outdated SKUs marked deprecated."
+    changes:
+      new_models:
+        - { provider: anthropic, model: claude-opus-4-7, display_name: "Claude Opus 4.7" }
+        - { provider: anthropic, model: claude-sonnet-4-6, display_name: "Claude Sonnet 4.6" }
+        - { provider: openai, model: gpt-5, display_name: "GPT-5" }
+        - { provider: openai, model: gpt-5-mini, display_name: "GPT-5 Mini" }
+        - { provider: openai, model: gpt-5-nano, display_name: "GPT-5 Nano" }
+        - { provider: openai, model: gpt-5-pro, display_name: "GPT-5 Pro" }
+        - { provider: openai, model: gpt-5.4, display_name: "GPT-5.4" }
+        - { provider: openai, model: gpt-5.4-mini, display_name: "GPT-5.4 Mini" }
+        - { provider: openai, model: gpt-5.4-nano, display_name: "GPT-5.4 Nano" }
+        - { provider: openai, model: gpt-5.4-pro, display_name: "GPT-5.4 Pro" }
+        - { provider: openai, model: gpt-5.5, display_name: "GPT-5.5" }
+        - { provider: openai, model: gpt-5.5-pro, display_name: "GPT-5.5 Pro" }
+        - { provider: openai, model: gpt-5.2-pro, display_name: "GPT-5.2 Pro" }
+        - { provider: openai, model: o3-pro, display_name: "o3-pro" }
+        - { provider: openai, model: o3-deep-research, display_name: "o3 Deep Research" }
+        - { provider: google, model: gemini-3-pro-preview, display_name: "Gemini 3 Pro" }
+        - { provider: google, model: gemini-3-flash-preview, display_name: "Gemini 3 Flash" }
+        - { provider: google, model: gemini-3.1-pro-preview, display_name: "Gemini 3.1 Pro" }
+        - { provider: google, model: gemini-3.1-flash-lite, display_name: "Gemini 3.1 Flash Lite" }
+        - { provider: google, model: gemini-2.5-flash-lite, display_name: "Gemini 2.5 Flash Lite" }
+        - { provider: xai, model: grok-4, display_name: "Grok 4" }
+        - { provider: xai, model: grok-4.3, display_name: "Grok 4.3" }
+        - { provider: xai, model: grok-4-fast, display_name: "Grok 4 Fast" }
+        - { provider: xai, model: grok-code-fast-1, display_name: "Grok Code Fast" }
+        - { provider: deepseek, model: deepseek-v4-flash, display_name: "DeepSeek V4 Flash" }
+        - { provider: deepseek, model: deepseek-v4-pro, display_name: "DeepSeek V4 Pro" }
+        - { provider: moonshot, model: kimi-k2.6, display_name: "Kimi K2.6" }
+        - { provider: minimax, model: MiniMax-M2.7, display_name: "MiniMax M2.7" }
+        - { provider: mistral, model: mistral-large-latest, display_name: "Mistral Large (Latest)" }
+        - { provider: mistral, model: mistral-medium-latest, display_name: "Mistral Medium (Latest)" }
+        - { provider: mistral, model: mistral-small-latest, display_name: "Mistral Small (Latest)" }
+        - { provider: mistral, model: devstral-medium-latest, display_name: "Devstral Medium" }
+      pricing_changes:
+        - "OpenAI gpt-4o input: $0.005 → $0.0025 per 1k (Azure & main)"
+        - "Google gemini-1.5-pro: $0.0035/$0.0105 → $0.00125/$0.005 per 1k"
+        - "Google gemini-2.5-pro: $0.0035/$0.0105 → $0.00125/$0.01 per 1k"
+        - "Google gemini-2.5-flash: $0.00035/$0.00105 → $0.0003/$0.0025 per 1k (added reasoning)"
+        - "MiniMax M2/M2.1/M2.5: $0.0015/$0.005 → $0.0003/$0.0012 per 1k"
+        - "DeepSeek deepseek-chat/reasoner: switched to V4 pricing $0.00014/$0.00028 per 1k, 1M context"
+        - "Mistral Large 2411: $0.003/$0.009 → $0.002/$0.006 per 1k"
+      deprecated_models:
+        - { provider: cerebras, model: deepseek-r1-distill-llama-70b, description: "Removed from Cerebras lineup" }
+        - { provider: cerebras, model: llama-3.3-70b, description: "Removed from Cerebras lineup" }
+        - { provider: cerebras, model: llama-4-scout-17b-16e-instruct, description: "Removed from Cerebras lineup" }
+        - { provider: cerebras, model: qwen-3-32b, description: "Removed from Cerebras lineup" }
+        - { provider: deepseek, model: deepseek-r1, description: "Superseded by deepseek-reasoner (V4)" }
+        - { provider: deepseek, model: deepseek-v3, description: "Superseded by deepseek-chat (V4)" }
+        - { provider: deepseek, model: deepseek-v3-0324, description: "Superseded by deepseek-chat (V4)" }
+        - { provider: groq, model: llama-3.2-90b-vision-preview, description: "Removed from Groq lineup" }
+        - { provider: huggingface, model: huggingface-gpt-3.5-turbo, description: "Placeholder; HF Inference Providers serve open-weight models, not OpenAI" }
+        - { provider: huggingface, model: huggingface-gpt-4-turbo, description: "Placeholder" }
+        - { provider: huggingface, model: huggingface-gpt-4, description: "Placeholder" }
+        - { provider: huggingface, model: huggingface-gpt-4o-mini, description: "Placeholder" }
+        - { provider: huggingface, model: huggingface-gpt-4o, description: "Placeholder" }
+        - { provider: minimax, model: MiniMax-M1, description: "Superseded by M2.x family" }
+        - { provider: minimax, model: MiniMax-M2.1-highspeed, description: "Removed from MiniMax lineup" }
+        - { provider: moonshot, model: moonshot-v1-8k, description: "Superseded by Kimi K2 family" }
+        - { provider: moonshot, model: moonshot-v1-32k, description: "Superseded by Kimi K2 family" }
+        - { provider: moonshot, model: moonshot-v1-128k, description: "Superseded by Kimi K2 family" }
+        - { provider: aws-bedrock, model: "mistral.mistral-large-2407-v1:0", description: "Superseded by mistral-large-3" }
+        - { provider: xai, model: grok-3-beta, description: "Out of beta; use grok-3" }
+        - { provider: xai, model: grok-3-fast-beta, description: "Renamed to grok-3-fast" }
+        - { provider: xai, model: grok-3-mini-beta, description: "Renamed to grok-3-mini" }
+        - { provider: perplexity, model: sonar-reasoning, description: "Renamed to sonar-reasoning-pro" }
+        - { provider: together, model: deepseek-ai/DeepSeek-V3, description: "Superseded by V4-Pro" }
+        - { provider: together, model: "Qwen/Qwen2.5-72B-Instruct-Turbo", description: "Superseded by Qwen3" }
+        - { provider: together, model: "meta-llama/Llama-3.1-8B-Instruct-Turbo", description: "Superseded by Llama 3.3/4" }
+        - { provider: together, model: "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo", description: "Removed from Together lineup" }
+        - { provider: anthropic, model: claude-opus-4-0-20250514, description: "Renamed to claude-opus-4-20250514 (canonical id)" }
+      renames:
+        - { provider: anthropic, from: claude-opus-4-0-20250514, to: claude-opus-4-20250514 }
+      new_providers: []
+      updated_models: []
+
+  - version: "2.2.0"
+    date: "2026-02-14"
+    description: "Expand Cohere catalog with Command R family, Command A Vision/Translate, Embed v4, and Rerank v3.5"
+    changes:
+      new_models:
+        - provider: cohere
+          model: command-a-vision-07-2025
+          display_name: "Command A Vision"
+        - provider: cohere
+          model: command-a-translate-08-2025
+          display_name: "Command A Translate"
+        - provider: cohere
+          model: command-r-plus-08-2024
+          display_name: "Command R+"
+        - provider: cohere
+          model: command-r-08-2024
+          display_name: "Command R"
+        - provider: cohere
+          model: command-r7b-12-2024
+          display_name: "Command R 7B"
+        - provider: cohere
+          model: embed-v4.0
+          display_name: "Embed v4"
+        - provider: cohere
+          model: embed-english-light-v3.0
+          display_name: "Embed English Light v3"
+        - provider: cohere
+          model: embed-multilingual-light-v3.0
+          display_name: "Embed Multilingual Light v3"
+        - provider: cohere
+          model: rerank-v3.5
+          display_name: "Rerank v3.5"
+      new_providers: []
+      updated_models:
+        - provider: cohere
+          model: command-a-03-2025
+          description: "Fixed pricing, context window (256K), added function_calling"
+        - provider: cohere
+          model: command-a-reasoning-08-2025
+          description: "Fixed pricing, context window (256K), max output (32K), added reasoning capability"
+      deprecated_models:
+        - provider: cohere
+          model: command-light
+          description: "Deprecated by Cohere as of September 2025"
+      pricing_changes: []
+
+  - version: "2.1.0"
+    date: "2026-02-13"
+    description: "Add latest OpenAI models (GPT-4.1, o-series, Codex) and Anthropic models (Opus 4.6, Opus 4.5, Sonnet 4.5, Haiku 4.5)"
+    changes:
+      new_models:
+        - provider: openai
+          model: gpt-4.1
+          display_name: "GPT-4.1"
+        - provider: openai
+          model: gpt-4.1-mini
+          display_name: "GPT-4.1 Mini"
+        - provider: openai
+          model: gpt-4.1-nano
+          display_name: "GPT-4.1 Nano"
+        - provider: openai
+          model: o3
+          display_name: "o3"
+        - provider: openai
+          model: o4-mini
+          display_name: "o4-mini"
+        - provider: openai
+          model: o3-mini
+          display_name: "o3-mini"
+        - provider: openai
+          model: o1
+          display_name: "o1"
+        - provider: openai
+          model: gpt-5.3-codex
+          display_name: "GPT-5.3 Codex"
+        - provider: openai
+          model: gpt-5.3-codex-spark
+          display_name: "GPT-5.3 Codex Spark"
+        - provider: openai
+          model: gpt-5.2-codex
+          display_name: "GPT-5.2 Codex"
+        - provider: openai
+          model: gpt-5.1-codex
+          display_name: "GPT-5.1 Codex"
+        - provider: openai
+          model: gpt-5.1-codex-max
+          display_name: "GPT-5.1 Codex Max"
+        - provider: openai
+          model: gpt-5.1-codex-mini
+          display_name: "GPT-5.1 Codex Mini"
+        - provider: openai
+          model: gpt-5-codex
+          display_name: "GPT-5 Codex"
+        - provider: anthropic
+          model: claude-opus-4-6
+          display_name: "Claude Opus 4.6"
+        - provider: anthropic
+          model: claude-opus-4-5-20251101
+          display_name: "Claude Opus 4.5"
+        - provider: anthropic
+          model: claude-sonnet-4-5-20250929
+          display_name: "Claude Sonnet 4.5"
+        - provider: anthropic
+          model: claude-haiku-4-5-20251001
+          display_name: "Claude Haiku 4.5"
+      new_providers: []
+      updated_models: []
+      deprecated_models: []
+      pricing_changes: []
+
+  - version: "2.0.0"
+    date: "2025-12-26"
+    description: "Major restructure: hierarchical directory structure with individual model files"
+    changes:
+      breaking:
+        - Migrated from flat files (models.yaml, providers.yaml) to hierarchical structure
+        - Each provider now has its own directory under providers/
+        - Each model has its own YAML file under providers/{name}/models/
+        - Added manifest.yaml for remote sync
+        - Added per-provider categories.yaml and templates.yaml
+      new_features:
+        - Atomic model updates (one file per model)
+        - Better git history isolation
+        - Easier community contributions
+        - Manifest-based remote sync for efficiency
+      backward_compatibility:
+        - Legacy flat files still supported as fallback
+        - Loader automatically detects and uses appropriate format
+
+  - version: "1.0.2"
+    date: "2024-01-15"
+    description: "Added mistral models"
+    changes:
+      new_models:
+        - provider: mistral
+          model: magistral-small-2509
+          display_name: "Magistral Small 1.2"
+        - provider: mistral
+          model: voxtral-small-2507
+          display_name: "Voxtral Small" # capabilities: ["chat", "function_calling", "vision"]
+        - provider: cohere
+          model: command-a-reasoning-08-2025
+          display_name: "command-a-reasoning-08-2025"
+        - provider: cohere
+          model: command-a-03-2025
+          display_name: "command-a-03-2025"
+        - provider: anthropic
+          model: claude-sonnet-4-20250514
+          display_name: "Claude Sonnet 4"
+      new_providers:
+        - name: mistral
+          base_url: https://api.mistral.ai/v1
+          models:
+            - name: magistral-small-2509
+              display_name: "Magistral Small 1.2"
+            - name: voxtral-small-2507
+              display_name: "Voxtral Small"
+            - name: command-a-reasoning-08-2025
+              display_name: "command-a-reasoning-08-2025"
+            - name: claude-sonnet-4-20250514
+              display_name: "Claude Sonnet 4"
+      updated_models: []
+      deprecated_models: []
+      pricing_changes: []
+  - version: "1.0.1"
+    date: "2024-01-15"
+    description: "Removed mistral models"
+    changes:
+      new_models: []
+      new_providers: []
+      updated_models: []
+      deprecated_models: []
+      pricing_changes: []
+  - version: "1.0.0"
+    date: "2024-01-15"
+    description: "Initial catalog release"
+    changes:
+      new_models: []
+      new_providers: []
+      updated_models: []
+      deprecated_models: []
+      pricing_changes: []

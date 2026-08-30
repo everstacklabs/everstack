@@ -1,0 +1,68 @@
+name: "glm-5v-turbo"
+display_name: "GLM-5V-Turbo"
+family: "glm"
+status: "stable"
+release_date: "2026-04-01"
+
+cost:
+  input_per_1k: 0.0012
+  output_per_1k: 0.004
+  cache_read_per_1k: 0.00024
+  cache_write_per_1k: 0
+
+limits:
+  max_tokens: 200000
+  max_completion_tokens: 131072
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image","video","pdf"]
+  output: ["text"]
+
+notes: "Fast GLM vision model for screenshots, documents, and multimodal agent tasks"
+
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 131072
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+  - key: "frequency_penalty"
+    display_name: "Frequency penalty"
+    type: "number"
+    min_value: -2
+    has_min_value: true
+    max_value: 2
+    has_max_value: true
+  - key: "presence_penalty"
+    display_name: "Presence penalty"
+    type: "number"
+    min_value: -2
+    has_min_value: true
+    max_value: 2
+    has_max_value: true
+  - key: "seed"
+    display_name: "Seed"
+    type: "integer"

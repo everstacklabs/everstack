@@ -1,0 +1,320 @@
+syntax = "proto3";
+
+package everstack.traces.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/traces/v1;traces";
+
+// SpanEvent represents an event that occurred during a span's lifetime
+message SpanEvent {
+  google.protobuf.Timestamp timestamp = 1;
+  string name = 2;
+  map<string, string> attributes = 3;
+}
+
+// Span represents a single span in a distributed trace
+message Span {
+  string trace_id = 1;
+  string span_id = 2;
+  string parent_span_id = 3;
+  string span_name = 4;
+  string span_kind = 5;
+  google.protobuf.Timestamp timestamp = 6;
+  int64 duration = 7;
+  string status_code = 8;
+  string status_message = 9;
+  map<string, string> span_attributes = 10;
+  map<string, string> resource_attributes = 11;
+  string service_name = 12;
+  string type = 13; // LLM, TOOL, AGENT, etc.
+  
+  // Enhanced observability fields
+  optional uint32 step = 14; // Execution step number for ordering
+  optional string node = 15; // Workflow node name (e.g., "translator", "orchestrator")
+  optional string observation_type = 16; // SPAN, GENERATION, EVENT, CHAIN, TOOL
+  
+  // Events that occurred during the span
+  repeated SpanEvent events = 17;
+}
+
+// Trace represents a trace summary with aggregated data
+message Trace {
+  string trace_id = 1;
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp end_time = 3;
+  int64 total_duration = 4;
+  int32 error_count = 5;
+  string requested_model = 6;
+  string served_model = 7;
+  string llm_model = 8;
+  string tenant_id = 9;
+  int32 span_count = 10;
+  string provider = 11;
+  string status = 12; // "success" or "error"
+  
+  // Rich trace fields
+  string trace_input = 13;
+  string trace_output = 14;
+  string user_id = 15;
+  string session_id = 16;
+  double total_cost = 17;
+  string model_parameters = 18; // JSON string of model parameters
+  map<string, string> metadata = 19; // Additional metadata
+  
+  // Token breakdown
+  optional TokenBreakdown token_breakdown = 20; // Detailed token usage breakdown
+
+  // Conversational thread id, distinct from session_id. A session is a
+  // product-level grouping (often a user-visible chat session); a thread is
+  // the conversational continuation within or across sessions. Langfuse
+  // conflates these via sessionId; we keep them separate so users can
+  // observe multi-turn flows independently of session boundaries.
+  string thread_id = 21;
+
+  // Trace kinds present in the trace, e.g. ["agent"], ["workflow", "agent"],
+  // ["agent", "sandbox"]. Derived from the span taxonomy so the traces list can
+  // show what a trace actually is (agent run, workflow, sandbox work, a combo)
+  // instead of a coarse chat/embeddings method. Empty for a plain gateway call.
+  repeated string trace_kinds = 22;
+
+  // Resolved values for the tenant's user-defined custom columns, keyed by the
+  // column key. Lets the traces table render dimensions a tenant defined
+  // (e.g. a metadata field) instead of only our fixed columns.
+  map<string, string> custom_columns = 23;
+
+  // True for operational/noise traces: no model, no tokens, no cost, and no
+  // recognized execution kind (e.g. tenant health checks, external interaction
+  // wrappers). Hidden from the list by default; a toggle can show them.
+  bool is_operational = 24;
+}
+
+// SpanTreeNode represents a span with its children in a hierarchical tree
+message SpanTreeNode {
+  Span span = 1;
+  repeated SpanTreeNode children = 2;
+}
+
+// TokenDetails represents detailed breakdown of token usage per category
+message TokenDetails {
+  optional int64 cached_tokens = 1;    // Tokens served from prompt cache (OpenAI/Anthropic)
+  optional int64 reasoning_tokens = 2; // Reasoning tokens (o1/o3, Gemini Thinking)
+  optional int64 audio_tokens = 3;     // Audio tokens for multimodal
+  optional int64 image_tokens = 4;     // Image tokens for vision models
+  optional int64 text_tokens = 5;      // Text-only tokens
+}
+
+// TokenBreakdown represents comprehensive token usage breakdown
+message TokenBreakdown {
+  int64 input_tokens = 1;
+  int64 output_tokens = 2;
+  int64 total_tokens = 3;
+  optional TokenDetails prompt_details = 4;     // Detailed breakdown of prompt/input tokens
+  optional TokenDetails completion_details = 5; // Detailed breakdown of completion/output tokens
+  repeated int32 per_message_tokens = 6;        // Estimated tokens per message in request
+}
+
+// ObservationIO represents input/output data for an observation
+message ObservationIO {
+  optional string input_data = 1; // JSON string of input
+  optional string output_data = 2; // JSON string of output
+  optional int64 input_tokens = 3;
+  optional int64 output_tokens = 4;
+  optional int64 total_tokens = 5;
+  optional string input_mime_type = 6; // e.g., "application/json", "text/plain"
+  optional string output_mime_type = 7;
+  optional TokenBreakdown token_breakdown = 8; // Detailed token breakdown
+}
+
+// PerformanceMetrics represents detailed timing breakdown
+message PerformanceMetrics {
+  optional int64 queue_time_ns = 1; // Time spent in queue (nanoseconds)
+  optional int64 processing_time_ns = 2; // Actual processing time
+  optional int64 network_latency_ns = 3; // Network round-trip time
+  optional int64 serialization_time_ns = 4; // Time spent serializing/deserializing
+  optional int64 db_query_time_ns = 5; // Database query time
+  optional int64 cache_lookup_time_ns = 6; // Cache lookup time
+  optional int64 llm_time_to_first_token_ns = 7; // Time to first token for LLM calls
+  optional int64 llm_time_per_token_ns = 8; // Average time per token
+}
+
+// ResourceMetrics represents resource utilization
+message ResourceMetrics {
+  optional int64 memory_used_bytes = 1; // Memory used during observation
+  optional int64 memory_allocated_bytes = 2; // Memory allocated
+  optional double cpu_usage_percent = 3; // CPU usage percentage
+  optional int64 network_bytes_sent = 4; // Network bytes sent
+  optional int64 network_bytes_received = 5; // Network bytes received
+  optional int64 disk_read_bytes = 6; // Disk read bytes
+  optional int64 disk_write_bytes = 7; // Disk write bytes
+  optional int32 thread_count = 8; // Number of threads used
+}
+
+// WorkflowMetadata represents workflow execution context
+message WorkflowMetadata {
+  optional string workflow_id = 1; // Unique workflow instance ID
+  optional string workflow_type = 2; // Type of workflow (e.g., "langgraph", "custom")
+  optional string workflow_name = 3; // Human-readable workflow name
+  optional string workflow_version = 4; // Workflow version
+  map<string, string> context = 5; // Additional workflow context
+  optional string execution_mode = 6; // e.g., "sync", "async", "streaming"
+  optional string trigger_source = 7; // What triggered this workflow
+}
+
+// EnhancedObservation extends RichObservation with workflow and performance data
+message EnhancedObservation {
+  string id = 1;
+  string trace_id = 2;
+  string type = 3; // SPAN, GENERATION, EVENT, CHAIN, TOOL
+  optional string name = 4;
+  google.protobuf.Timestamp start_time = 5;
+  optional google.protobuf.Timestamp end_time = 6;
+  optional string model = 7;
+  optional string level = 8; // DEBUG, DEFAULT, WARNING, ERROR
+  optional string status_message = 9;
+  optional string parent_observation_id = 10;
+  optional double latency = 11; // in seconds
+  
+  // Token usage
+  optional int64 input_tokens = 12;
+  optional int64 output_tokens = 13;
+  optional int64 total_tokens = 14;
+  
+  // Costs
+  optional double input_cost = 15;
+  optional double output_cost = 16;
+  optional double total_cost = 17;
+  
+  // Enhanced fields
+  optional uint32 step = 18; // Execution step number
+  optional string node = 19; // Workflow node name
+  optional ObservationIO io = 20; // Input/output data
+  optional PerformanceMetrics performance = 21; // Performance breakdown
+  optional ResourceMetrics resources = 22; // Resource utilization
+  optional WorkflowMetadata workflow = 23; // Workflow context
+  map<string, string> tags = 24; // Custom tags for filtering
+  map<string, string> metadata = 25; // Additional metadata
+}
+
+// TraceAnalytics represents pre-aggregated trace statistics
+message TraceAnalytics {
+  string trace_id = 1;
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp end_time = 3;
+  int64 total_duration_ns = 4;
+  int32 total_observations = 5;
+  int32 error_count = 6;
+  
+  // Performance statistics
+  int64 p50_latency_ns = 7;
+  int64 p95_latency_ns = 8;
+  int64 p99_latency_ns = 9;
+  int64 avg_latency_ns = 10;
+  int64 max_latency_ns = 11;
+  int64 min_latency_ns = 12;
+  
+  // Resource statistics
+  int64 total_memory_bytes = 13;
+  int64 peak_memory_bytes = 14;
+  double avg_cpu_percent = 15;
+  double peak_cpu_percent = 16;
+  
+  // Token and cost statistics
+  int64 total_input_tokens = 17;
+  int64 total_output_tokens = 18;
+  double total_cost = 19;
+  
+  // Observation type breakdown
+  map<string, int32> observation_type_counts = 20;
+  map<string, int64> observation_type_durations = 21;
+}
+
+// TraceOverlay contains user/API-authored presentation changes for a trace.
+// It is stored separately from raw OTEL spans so runtime telemetry remains
+// immutable and auditable.
+message TraceOverlay {
+  string trace_id = 1;
+  google.protobuf.Timestamp updated_at = 2;
+  optional string author_user_id = 3;
+  optional string display_name = 4;
+  optional string input_override = 5;
+  optional string output_override = 6;
+  map<string, string> metadata = 7;
+  repeated string tags = 8;
+  repeated string hidden_span_ids = 9;
+}
+
+// CustomObservation is a user/API-authored observation appended to a trace.
+// It renders alongside raw spans but is marked by source and author metadata.
+message CustomObservation {
+  string id = 1;
+  string trace_id = 2;
+  optional string parent_observation_id = 3;
+  string name = 4;
+  string type = 5; // SPAN, GENERATION, EVENT, CHAIN, TOOL
+  string source = 6; // USER, API, SDK
+  google.protobuf.Timestamp start_time = 7;
+  optional google.protobuf.Timestamp end_time = 8;
+  int64 duration = 9;
+  optional string level = 10; // DEBUG, DEFAULT, WARNING, ERROR
+  optional string status_message = 11;
+  optional string model = 12;
+  optional string input_data = 13;
+  optional string output_data = 14;
+  optional string input_mime_type = 15;
+  optional string output_mime_type = 16;
+  optional int64 input_tokens = 17;
+  optional int64 output_tokens = 18;
+  optional int64 total_tokens = 19;
+  optional double input_cost = 20;
+  optional double output_cost = 21;
+  optional double total_cost = 22;
+  map<string, string> metadata = 23;
+  repeated string tags = 24;
+  optional string author_user_id = 25;
+  google.protobuf.Timestamp created_at = 26;
+  google.protobuf.Timestamp updated_at = 27;
+}
+
+// TraceAnnotation is an append-only note attached to a trace or observation.
+message TraceAnnotation {
+  string id = 1;
+  string trace_id = 2;
+  optional string observation_id = 3;
+  string body = 4;
+  map<string, string> metadata = 5;
+  optional string author_user_id = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+// WorkflowPerformance represents workflow-level performance metrics
+message WorkflowPerformance {
+  string workflow_id = 1;
+  string workflow_type = 2;
+  string workflow_name = 3;
+  int32 total_steps = 4;
+  int32 completed_steps = 5;
+  int32 failed_steps = 6;
+  int64 total_duration_ns = 7;
+  double success_rate = 8;
+  
+  // Step-level statistics
+  repeated StepPerformance steps = 9;
+  
+  // Bottleneck analysis
+  optional string slowest_step = 10;
+  optional int64 slowest_step_duration_ns = 11;
+  optional string most_expensive_step = 12;
+  optional double most_expensive_step_cost = 13;
+}
+
+// StepPerformance represents performance for a single step
+message StepPerformance {
+  uint32 step_number = 1;
+  string node_name = 2;
+  string observation_type = 3;
+  int64 duration_ns = 4;
+  optional double cost = 5;
+  optional int64 tokens = 6;
+  string status = 7; // "success", "error", "pending"
+}

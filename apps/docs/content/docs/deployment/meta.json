@@ -1,0 +1,5 @@
+{
+  "title": "Deployment",
+  "root": true,
+  "pages": ["index", "docker", "kubernetes", "database-setup"]
+}

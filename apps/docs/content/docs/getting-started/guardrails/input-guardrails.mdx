@@ -1,0 +1,88 @@
+---
+title: Input Guardrails
+description: PII detection, prompt injection prevention, and content filtering for incoming requests.
+icon: ShieldAlert
+---
+
+Input guardrails inspect every message before it reaches the LLM. Their job is to catch dangerous, sensitive, or policy-violating content at the point of entry, before tokens are spent and before the model has a chance to act on a bad input.
+
+Three checks make up the input guardrail layer: PII detection, prompt injection prevention, and content filtering. They can run independently or together, and each produces a pass or block result.
+
+## PII detection
+
+PII detection scans incoming text for personally identifiable information using pattern-based heuristics. When it finds a match, the guardrail either blocks the request entirely or redacts the sensitive value before forwarding it to the model.
+
+### What it catches
+
+| PII type | Pattern | Default action |
+| --- | --- | --- |
+| **Social Security Numbers** | `XXX-XX-XXXX` format | Block |
+| **Credit card numbers** | 16 digits with optional spaces or dashes | Block |
+| **Email addresses** | Standard `user@domain.tld` pattern | Redact |
+| **Phone numbers** | US format, 10 digits with optional separators | Redact |
+| **IP addresses** | IPv4 dotted notation | Redact |
+
+The difference between block and redact matters. Blocking stops the request entirely and returns an error. Redacting replaces the sensitive value with a placeholder and lets the request continue. SSNs and credit card numbers default to block because they should never reach a model. Email addresses and phone numbers default to redact because the surrounding context may still be useful.
+
+### When to enable PII detection
+
+Enable PII detection when your application accepts freeform user input, especially in customer-facing chat interfaces, support tools, or any workflow where users might paste personal information without thinking. It is particularly important in regulated industries where sending PII to a third-party model could create a compliance violation.
+
+## Prompt injection prevention
+
+Prompt injection detection scans incoming messages for patterns that attempt to override, bypass, or extract the system prompt. This is a keyword-based detector that matches against known attack patterns.
+
+### What it catches
+
+The default configuration detects 12+ patterns including:
+
+- **Instruction override**: "ignore previous instructions", "forget everything above", "disregard all previous"
+- **Role impersonation**: "system:", "assistant:", "human:", "user:" -- attempts to inject fake role markers
+- **Prompt extraction**: patterns designed to make the model reveal its system prompt
+
+All matched patterns result in a **block** action with high severity.
+
+### How it works
+
+The detector runs a case-insensitive scan of the user message against the configured pattern list. This is intentionally simple and fast. It does not use an LLM or classifier, which means it adds near-zero latency and works without external API calls.
+
+The tradeoff is that keyword matching can produce false positives on legitimate messages that happen to contain trigger phrases. If your use case involves discussing AI safety, prompt engineering, or security topics, you may need to tune the pattern list or adjust the sensitivity.
+
+### When to enable prompt injection detection
+
+Enable it for any production application where untrusted users can send freeform messages. It is especially important when your system prompt contains sensitive instructions, API keys, tool definitions, or business logic that should not be exposed.
+
+## Content filtering
+
+Content filtering delegates to the OpenAI Moderation API to classify incoming messages across five harm categories. Each category has a configurable threshold (default 0.7) and can be individually enabled or disabled.
+
+### Categories
+
+| Category | What it covers |
+| --- | --- |
+| **Hate** | Content that expresses or promotes hate based on identity |
+| **Harassment** | Content that threatens, intimidates, or bullies |
+| **Self-harm** | Content that promotes or encourages self-harm |
+| **Sexual** | Sexually explicit content |
+| **Violence** | Content that depicts or promotes violence |
+
+When the moderation API returns a score above the configured threshold for any enabled category, the guardrail blocks the request.
+
+### When to enable content filtering
+
+Enable content filtering when you need to prevent harmful content from reaching the model. This is relevant for consumer-facing applications, applications used by minors, and any deployment where you have a duty of care around the content your system processes.
+
+Because content filtering calls an external API, it adds a small amount of latency to the request path. For latency-critical applications, consider whether the safety tradeoff is worth the added round trip.
+
+## How the three checks work together
+
+When multiple input guardrails are enabled, they all run on every incoming request. The request is blocked if **any** guardrail produces a block result. The evaluation order is:
+
+1. **Token limits** -- checked first to reject oversized inputs cheaply
+2. **Prompt injection** -- fast keyword scan, no external calls
+3. **PII detection** -- pattern matching with block or redact actions
+4. **Content filtering** -- external API call, highest latency
+
+This order is designed to fail fast. The cheapest checks run first so that obviously bad inputs are rejected before spending time on more expensive checks.
+
+When a guardrail blocks, the violation is recorded in the execution context and the block result propagates immediately. In Workflow Studio, this means the flow routes through the **block** output handle. In the gateway, the request returns an error response with violation details.

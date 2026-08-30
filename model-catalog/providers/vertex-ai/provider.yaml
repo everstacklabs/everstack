@@ -1,0 +1,62 @@
+name: "vertex-ai"
+display_name: "Vertex AI"
+base_url: "https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}"
+api_version: "v1"
+
+provider_type: "static"
+supports_model_discovery: false
+
+auth:
+  type: "oauth2"
+  header_name: "Authorization"
+  header_format: "Bearer {access_token}"
+  env_var: "GOOGLE_APPLICATION_CREDENTIALS"
+
+rate_limits:
+  requests_per_minute: 1500
+  tokens_per_minute: 300000
+  concurrent_requests: 40
+
+capabilities:
+  chat: true
+  completions: true
+  embeddings: false
+  function_calling: true
+  vision: true
+  streaming: true
+  fine_tuning: false
+  assistants: false
+
+model_families:
+  gemini:
+    description: "Gemini via Vertex AI"
+    capabilities: ["chat", "function_calling", "vision"]
+    max_tokens: 1048576
+
+  claude:
+    description: "Claude via Vertex AI"
+    capabilities: ["chat", "function_calling", "vision"]
+    max_tokens: 200000
+
+  llama:
+    description: "Meta Llama via Vertex AI"
+    capabilities: ["chat", "function_calling"]
+    max_tokens: 131072
+
+  mistral:
+    description: "Mistral via Vertex AI"
+    capabilities: ["chat", "function_calling"]
+    max_tokens: 128000
+
+defaults:
+  temperature: 0.7
+  max_tokens: 1000
+  top_p: 1.0
+  timeout: 60s
+  retry_attempts: 3
+  retry_delay: 1s
+
+error_mapping:
+  "PERMISSION_DENIED": "authentication_failed"
+  "RESOURCE_EXHAUSTED": "rate_limit_exceeded"
+  "NOT_FOUND": "model_unavailable"

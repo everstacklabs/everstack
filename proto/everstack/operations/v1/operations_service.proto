@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package everstack.operations.v1;
+
+import "everstack/hosting/v1/hosting.proto";
+import "everstack/operations/v1/operations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/operations/v1;operations";
+
+// OperationsService is the private, staff-only control plane. Human requests
+// use the Operations BFF's opaque session cookie and platform role checks.
+service OperationsService {
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
+  rpc GetOverview(GetOverviewRequest) returns (GetOverviewResponse);
+  rpc ListOrganizations(ListOrganizationsRequest) returns (ListOrganizationsResponse);
+  rpc ListInstallations(ListInstallationsRequest) returns (ListInstallationsResponse);
+  rpc ListLicenses(ListLicensesRequest) returns (ListLicensesResponse);
+  rpc ListInstances(ListInstancesRequest) returns (ListInstancesResponse);
+  rpc GetInstance(GetInstanceRequest) returns (GetInstanceResponse);
+  rpc ChangeInstanceLifecycle(ChangeInstanceLifecycleRequest) returns (ChangeInstanceLifecycleResponse);
+  rpc ListSandboxes(ListSandboxesRequest) returns (ListSandboxesResponse);
+  rpc ListEnvironments(ListEnvironmentsRequest) returns (ListEnvironmentsResponse);
+  rpc GetEnvironment(GetEnvironmentRequest) returns (GetEnvironmentResponse);
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
+  rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse);
+  rpc GetIdentityOverview(GetIdentityOverviewRequest) returns (GetIdentityOverviewResponse);
+  rpc ListIdentityUsers(ListIdentityUsersRequest) returns (ListIdentityUsersResponse);
+  rpc ListIdentitySessions(ListIdentitySessionsRequest) returns (ListIdentitySessionsResponse);
+  rpc RevokeIdentitySession(RevokeIdentitySessionRequest) returns (RevokeIdentitySessionResponse);
+  rpc ListIdentityConnections(ListIdentityConnectionsRequest) returns (ListIdentityConnectionsResponse);
+  rpc UpsertIdentityConnection(UpsertIdentityConnectionRequest) returns (UpsertIdentityConnectionResponse);
+  rpc DeleteIdentityConnection(DeleteIdentityConnectionRequest) returns (DeleteIdentityConnectionResponse);
+
+  // Incidents. Read is gated on inventory.read; the mutating three are gated
+  // on incidents.manage and audited like every other staff write.
+  rpc ListIncidents(ListIncidentsRequest) returns (ListIncidentsResponse);
+  rpc GetIncident(GetIncidentRequest) returns (GetIncidentResponse);
+  rpc AcknowledgeIncident(AcknowledgeIncidentRequest) returns (AcknowledgeIncidentResponse);
+  rpc SnoozeIncident(SnoozeIncidentRequest) returns (SnoozeIncidentResponse);
+  rpc ResolveIncident(ResolveIncidentRequest) returns (ResolveIncidentResponse);
+  rpc ListAlertRules(ListAlertRulesRequest) returns (ListAlertRulesResponse);
+  rpc ListNotificationTargets(ListNotificationTargetsRequest) returns (ListNotificationTargetsResponse);
+
+  rpc GetHostingOverview(everstack.hosting.v1.HostingOverviewRequest) returns (everstack.hosting.v1.HostingOverviewResponse);
+  rpc ListHostedSites(everstack.hosting.v1.ListOperatorSitesRequest) returns (everstack.hosting.v1.ListOperatorSitesResponse);
+  rpc ListAbuseReports(everstack.hosting.v1.ListAbuseReportsRequest) returns (everstack.hosting.v1.ListAbuseReportsResponse);
+  rpc TakedownSite(everstack.hosting.v1.TakedownSiteRequest) returns (everstack.hosting.v1.TakedownSiteResponse);
+  rpc RestoreSite(everstack.hosting.v1.RestoreSiteRequest) returns (everstack.hosting.v1.RestoreSiteResponse);
+  rpc ReviewAbuseReport(everstack.hosting.v1.ReviewAbuseReportRequest) returns (everstack.hosting.v1.ReviewAbuseReportResponse);
+}
+
+// OperationsAgentService is deployed once per managed environment. Only the
+// central service may call it, using a separate scoped machine credential.
+service OperationsAgentService {
+  rpc GetSnapshot(GetAgentSnapshotRequest) returns (GetAgentSnapshotResponse);
+}

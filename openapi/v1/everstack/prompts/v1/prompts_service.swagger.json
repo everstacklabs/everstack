@@ -1,0 +1,681 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/prompts/v1/prompts_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "PromptService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/prompts": {
+      "get": {
+        "operationId": "PromptService_ListPrompts",
+        "responses": {
+          "200": {
+            "description": "List prompts for the tenant",
+            "schema": {
+              "$ref": "#/definitions/v1ListPromptsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "PromptService"
+        ]
+      },
+      "post": {
+        "operationId": "PromptService_CreatePrompt",
+        "responses": {
+          "200": {
+            "description": "Create a new prompt (optionally with version 1)",
+            "schema": {
+              "$ref": "#/definitions/v1CreatePromptResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreatePromptRequest"
+            }
+          }
+        ],
+        "tags": [
+          "PromptService"
+        ]
+      }
+    },
+    "/v1/prompts/{id}": {
+      "get": {
+        "operationId": "PromptService_GetPrompt",
+        "responses": {
+          "200": {
+            "description": "Get prompt by id or name",
+            "schema": {
+              "$ref": "#/definitions/v1GetPromptResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Lookup by id or by name (exactly one required).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "PromptService"
+        ]
+      },
+      "delete": {
+        "operationId": "PromptService_DeletePrompt",
+        "responses": {
+          "200": {
+            "description": "Archive a prompt",
+            "schema": {
+              "$ref": "#/definitions/v1DeletePromptResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "PromptService"
+        ]
+      },
+      "patch": {
+        "operationId": "PromptService_UpdatePrompt",
+        "responses": {
+          "200": {
+            "description": "Update prompt metadata (name, description, tags)",
+            "schema": {
+              "$ref": "#/definitions/v1UpdatePromptResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PromptServiceUpdatePromptBody"
+            }
+          }
+        ],
+        "tags": [
+          "PromptService"
+        ]
+      }
+    },
+    "/v1/prompts/{promptId}/version": {
+      "get": {
+        "operationId": "PromptService_GetPromptVersion",
+        "responses": {
+          "200": {
+            "description": "Get a prompt version by number, label, or latest",
+            "schema": {
+              "$ref": "#/definitions/v1GetPromptVersionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "promptId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "description": "Resolve by explicit version number, by label, or latest when both unset.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "label",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "PromptService"
+        ]
+      }
+    },
+    "/v1/prompts/{promptId}/versions": {
+      "get": {
+        "operationId": "PromptService_ListPromptVersions",
+        "responses": {
+          "200": {
+            "description": "List versions of a prompt, newest first",
+            "schema": {
+              "$ref": "#/definitions/v1ListPromptVersionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "promptId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "PromptService"
+        ]
+      },
+      "post": {
+        "operationId": "PromptService_CreatePromptVersion",
+        "responses": {
+          "200": {
+            "description": "Create a new immutable version of a prompt",
+            "schema": {
+              "$ref": "#/definitions/v1CreatePromptVersionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "promptId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PromptServiceCreatePromptVersionBody"
+            }
+          }
+        ],
+        "tags": [
+          "PromptService"
+        ]
+      }
+    },
+    "/v1/prompts/{promptId}/versions/{version}/labels": {
+      "put": {
+        "operationId": "PromptService_SetPromptLabels",
+        "responses": {
+          "200": {
+            "description": "Assign deployment labels to a version",
+            "schema": {
+              "$ref": "#/definitions/v1SetPromptLabelsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "promptId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PromptServiceSetPromptLabelsBody"
+            }
+          }
+        ],
+        "tags": [
+          "PromptService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "PromptServiceCreatePromptVersionBody": {
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PromptMessage"
+          }
+        },
+        "config": {
+          "type": "object"
+        },
+        "commitMessage": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Labels to assign to the new version (moved from other versions if needed)."
+        }
+      }
+    },
+    "PromptServiceSetPromptLabelsBody": {
+      "type": "object",
+      "properties": {
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "SetPromptLabels replaces the label set of one version. Any of the supplied\nlabels currently held by sibling versions are moved to this version."
+    },
+    "PromptServiceUpdatePromptBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "setTags": {
+          "type": "boolean",
+          "description": "Tags are only replaced when set_tags is true (distinguishes \"no change\"\nfrom \"clear all tags\")."
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "protobufNullValue": {
+      "type": "string",
+      "enum": [
+        "NULL_VALUE"
+      ],
+      "default": "NULL_VALUE",
+      "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1CreatePromptRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PromptMessage"
+          },
+          "description": "Optional initial content; when present, version 1 is created with it."
+        },
+        "config": {
+          "type": "object"
+        },
+        "commitMessage": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreatePromptResponse": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "$ref": "#/definitions/v1Prompt"
+        }
+      }
+    },
+    "v1CreatePromptVersionResponse": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "$ref": "#/definitions/v1PromptVersion"
+        }
+      }
+    },
+    "v1DeletePromptResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "v1GetPromptResponse": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "$ref": "#/definitions/v1Prompt"
+        }
+      }
+    },
+    "v1GetPromptVersionResponse": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "$ref": "#/definitions/v1PromptVersion"
+        }
+      }
+    },
+    "v1ListPromptVersionsResponse": {
+      "type": "object",
+      "properties": {
+        "versions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PromptVersion"
+          }
+        }
+      }
+    },
+    "v1ListPromptsResponse": {
+      "type": "object",
+      "properties": {
+        "prompts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Prompt"
+          }
+        }
+      }
+    },
+    "v1Prompt": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "latestVersion": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Highest version number that exists for this prompt (0 = no versions yet)."
+        },
+        "versionCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": "Deployment labels currently assigned across versions: label -\u003e version."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "archivedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "Prompt is a named, versioned chat template. The tenant id is always derived\nfrom the authenticated request context server-side; requests never carry it."
+    },
+    "v1PromptMessage": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string",
+          "title": "\"system\" | \"user\" | \"assistant\""
+        },
+        "content": {
+          "type": "string"
+        }
+      },
+      "description": "PromptMessage is a single chat-template message inside a prompt version."
+    },
+    "v1PromptVersion": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "promptId": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PromptMessage"
+          }
+        },
+        "config": {
+          "type": "object",
+          "description": "Default inference config (model, temperature, ...) captured with the version."
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Deployment labels assigned to this version (e.g. \"production\"). A label\nbelongs to at most one version of a prompt."
+        },
+        "commitMessage": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "PromptVersion is an immutable snapshot of a prompt's content."
+    },
+    "v1SetPromptLabelsResponse": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "$ref": "#/definitions/v1PromptVersion"
+        }
+      }
+    },
+    "v1UpdatePromptResponse": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "$ref": "#/definitions/v1Prompt"
+        }
+      }
+    }
+  }
+}

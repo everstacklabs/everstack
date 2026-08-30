@@ -1,0 +1,37 @@
+---
+title: Codex
+description: Send OpenAI Codex CLI session traces to your Everstack instance.
+icon: openai
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<OpenAIIcon /> **Codex** (OpenAI) exports OpenTelemetry via the `[otel]` table in
+`~/.codex/config.toml`.
+
+See [Trace Coding Agents](/docs/getting-started/observability/coding-agents) for
+the endpoints, API key, and what Everstack renders.
+
+## Configuration
+
+```toml
+[otel]
+exporter = "otlp-http"
+endpoint = "https://<your-instance>/v1/traces"
+# headers are sent on every export
+headers = { Authorization = "Bearer <your-api-key>" }
+```
+
+<Callout type="warn">
+  Codex's metrics exporter defaults to an internal sink, and OTLP coverage is
+  uneven across subcommands — full in the interactive TUI, none in
+  `codex mcp-server`. Confirm the exact keys against the Codex config reference
+  for your version.
+</Callout>
+
+## Notes
+
+- Codex emits token counts but **no cost** — Everstack computes it from your
+  model-catalog pricing.
+- Codex groups a session under a `conversation.id`; Everstack treats that as the
+  session grouping key.

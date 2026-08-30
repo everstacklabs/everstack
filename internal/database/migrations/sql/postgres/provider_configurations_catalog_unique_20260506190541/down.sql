@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS provider_configurations_catalog_provider_unique;

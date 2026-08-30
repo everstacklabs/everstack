@@ -1,0 +1,312 @@
+syntax = "proto3";
+
+package everstack.config.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/config/v1;config";
+
+// ConfigService provides configuration validation and management functionality
+service ConfigService {
+  // ValidateYAML validates a YAML configuration string
+  rpc ValidateYAML(ValidateYAMLRequest) returns (ValidationResult) {
+    option (google.api.http) = {
+      post: "/api/v1/config/validate"
+      body: "*"
+    };
+  }
+
+  // ValidateMap validates a configuration map
+  rpc ValidateMap(ValidateMapRequest) returns (ValidationResult) {
+    option (google.api.http) = {
+      post: "/api/v1/config/validate-map"
+      body: "*"
+    };
+  }
+
+  // GetValidationStatus returns the current validation status of the configuration
+  rpc GetValidationStatus(GetValidationStatusRequest) returns (ValidationStatus) {
+    option (google.api.http) = {get: "/api/v1/config/validation-status"};
+  }
+
+  // GetValidationHistory returns the validation history
+  rpc GetValidationHistory(GetValidationHistoryRequest) returns (ValidationHistory) {
+    option (google.api.http) = {get: "/api/v1/config/validation-history"};
+  }
+
+  // GetSchema returns a specific schema
+  rpc GetSchema(GetSchemaRequest) returns (SchemaResponse) {
+    option (google.api.http) = {get: "/api/v1/config/schemas/{name}"};
+  }
+
+  // ListSchemas returns available schemas
+  rpc ListSchemas(ListSchemasRequest) returns (ListSchemasResponse) {
+    option (google.api.http) = {get: "/api/v1/config/schemas"};
+  }
+
+  // ============================================================================
+  // Runtime Configuration Management
+  // ============================================================================
+
+  // GetRuntimeConfig returns the full runtime configuration
+  rpc GetRuntimeConfig(GetRuntimeConfigRequest) returns (RuntimeConfig) {
+    option (google.api.http) = {get: "/api/v1/config/runtime"};
+  }
+
+  // UpdateRuntimeConfig updates the full runtime configuration
+  rpc UpdateRuntimeConfig(UpdateRuntimeConfigRequest) returns (RuntimeConfig) {
+    option (google.api.http) = {
+      put: "/api/v1/config/runtime"
+      body: "*"
+    };
+  }
+
+  // GetRuntimeConfigSection returns a specific section of the runtime configuration
+  rpc GetRuntimeConfigSection(GetRuntimeConfigSectionRequest) returns (ConfigSection) {
+    option (google.api.http) = {get: "/api/v1/config/runtime/{section}"};
+  }
+
+  // UpdateRuntimeConfigSection updates a specific section of the runtime configuration
+  rpc UpdateRuntimeConfigSection(UpdateRuntimeConfigSectionRequest) returns (ConfigSection) {
+    option (google.api.http) = {
+      put: "/api/v1/config/runtime/{section}"
+      body: "*"
+    };
+  }
+
+  // ResetRuntimeConfigSection resets a section to its default values
+  rpc ResetRuntimeConfigSection(ResetRuntimeConfigSectionRequest) returns (ConfigSection) {
+    option (google.api.http) = {
+      post: "/api/v1/config/runtime/{section}/reset"
+      body: "*"
+    };
+  }
+}
+
+// ValidateYAMLRequest represents a request to validate YAML configuration
+message ValidateYAMLRequest {
+  string yaml_config = 1;
+}
+
+// ValidateMapRequest represents a request to validate a configuration map
+message ValidateMapRequest {
+  google.protobuf.Struct config = 1;
+}
+
+// ValidationResult represents the result of a validation operation
+message ValidationResult {
+  bool valid = 1;
+  repeated ValidationError errors = 2;
+  repeated ValidationWarning warnings = 3;
+  ValidationStatus status = 4;
+  google.protobuf.Timestamp validated_at = 5;
+}
+
+// ValidationError represents a validation error
+message ValidationError {
+  string field = 1;
+  string message = 2;
+  string code = 3;
+  ValidationSeverity severity = 4;
+}
+
+// ValidationWarning represents a validation warning
+message ValidationWarning {
+  string field = 1;
+  string message = 2;
+  string code = 3;
+}
+
+// ValidationStatus represents the overall validation status
+message ValidationStatus {
+  ValidationState state = 1;
+  string message = 2;
+  int32 error_count = 3;
+  int32 warning_count = 4;
+  google.protobuf.Timestamp last_validated = 5;
+  repeated string validated_sections = 6;
+  repeated string failed_sections = 7;
+}
+
+// ValidationState represents the current validation state
+enum ValidationState {
+  VALIDATION_STATE_UNSPECIFIED = 0;
+  VALIDATION_STATE_VALID = 1;
+  VALIDATION_STATE_INVALID = 2;
+  VALIDATION_STATE_WARNING = 3;
+  VALIDATION_STATE_PARTIAL = 4;
+  VALIDATION_STATE_PENDING = 5;
+  VALIDATION_STATE_ERROR = 6;
+}
+
+// ValidationSeverity represents the severity level of validation issues
+enum ValidationSeverity {
+  VALIDATION_SEVERITY_UNSPECIFIED = 0;
+  VALIDATION_SEVERITY_INFO = 1;
+  VALIDATION_SEVERITY_WARNING = 2;
+  VALIDATION_SEVERITY_ERROR = 3;
+  VALIDATION_SEVERITY_CRITICAL = 4;
+}
+
+// GetValidationStatusRequest represents a request to get validation status
+message GetValidationStatusRequest {
+  // Optional: specific section to get status for
+  string section = 1;
+}
+
+// GetValidationHistoryRequest represents a request to get validation history
+message GetValidationHistoryRequest {
+  int32 limit = 1;
+  string section = 2;
+}
+
+// ValidationHistory represents validation history
+message ValidationHistory {
+  repeated ValidationHistoryEntry entries = 1;
+}
+
+// ValidationHistoryEntry represents a single validation history entry
+message ValidationHistoryEntry {
+  google.protobuf.Timestamp timestamp = 1;
+  ValidationState state = 2;
+  int32 error_count = 3;
+  int32 warning_count = 4;
+  string config_hash = 5;
+  repeated string sections = 6;
+}
+
+// GetSchemaRequest represents a request to get a schema
+message GetSchemaRequest {
+  string name = 1;
+}
+
+// SchemaResponse represents a schema response
+message SchemaResponse {
+  string name = 1;
+  google.protobuf.Struct schema = 2;
+}
+
+// ListSchemasRequest represents a request to list schemas
+message ListSchemasRequest {
+  // Empty for now, could add filtering later
+}
+
+// ListSchemasResponse represents a list of available schemas
+message ListSchemasResponse {
+  repeated string schema_names = 1;
+}
+
+// ============================================================================
+// Runtime Configuration Messages
+// ============================================================================
+
+// RateLimitConfig represents gateway-level rate limiting configuration
+message RateLimitConfig {
+  bool enabled = 1;
+  int32 requests_per_minute = 2;
+  int32 burst = 3;
+  string key_source = 4; // "correlation", "ip", "api_key"
+}
+
+// LoadBalancerConfig represents load balancing configuration
+message LoadBalancerConfig {
+  bool enabled = 1;
+  string strategy = 2; // "round_robin", "weighted", "least_connections"
+  string key_source = 3;
+}
+
+// FeaturesConfig represents feature flags for the gateway
+message FeaturesConfig {
+  bool enable_streaming = 1;
+  bool enable_embeddings = 2;
+  bool enable_function_calling = 3;
+  bool enable_response_caching = 4;
+  bool enable_sse = 5;
+  bool enable_request_logging = 6;
+  bool enable_health_checks = 7;
+  bool enable_agents = 8;
+}
+
+// CacheConfig represents cache configuration
+message CacheConfig {
+  bool enabled = 1;
+  string type = 2; // "memory", "redis"
+  string ttl = 3;  // Duration string like "10m", "1h"
+  // Memory-specific settings
+  int32 memory_max_size = 4;
+  // Redis-specific settings
+  string redis_address = 5;
+  int32 redis_db = 6;
+  int32 redis_pool_size = 7;
+}
+
+// TelemetryConfig represents telemetry/OTEL configuration
+message TelemetryConfig {
+  bool enabled = 1;
+  double sampling_rate = 2;    // 0.0 to 1.0
+  string granularity = 3;      // "minimal", "standard", "detailed"
+  bool trace_provider_calls = 4;
+  bool trace_stream_chunks = 5;
+  bool trace_fallbacks = 6;
+  string collector_url = 7;
+  string service_name = 8;
+}
+
+// CORSConfig represents CORS configuration
+message CORSConfig {
+  bool enabled = 1;
+  repeated string allowed_origins = 2;
+  repeated string allowed_methods = 3;
+  repeated string allowed_headers = 4;
+  repeated string exposed_headers = 5;
+  bool allow_credentials = 6;
+  string max_age = 7; // Duration string
+}
+
+// RuntimeConfig represents the full runtime configuration
+message RuntimeConfig {
+  RateLimitConfig rate_limit = 1;
+  LoadBalancerConfig load_balancer = 2;
+  FeaturesConfig features = 3;
+  CacheConfig cache = 4;
+  TelemetryConfig telemetry = 5;
+  CORSConfig cors = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  int32 version = 8;
+}
+
+// ConfigSection represents a single configuration section with both structured and YAML views
+message ConfigSection {
+  string name = 1;
+  google.protobuf.Struct config = 2; // Structured config as JSON
+  string yaml_content = 3;           // YAML representation for editor
+  google.protobuf.Timestamp updated_at = 4;
+  int32 version = 5;
+}
+
+// GetRuntimeConfigRequest is the request for GetRuntimeConfig
+message GetRuntimeConfigRequest {}
+
+// UpdateRuntimeConfigRequest is the request for UpdateRuntimeConfig
+message UpdateRuntimeConfigRequest {
+  RuntimeConfig config = 1;
+}
+
+// GetRuntimeConfigSectionRequest is the request for GetRuntimeConfigSection
+message GetRuntimeConfigSectionRequest {
+  string section = 1; // "rate_limit", "load_balancer", "features", "cache", "telemetry", "cors"
+}
+
+// UpdateRuntimeConfigSectionRequest is the request for UpdateRuntimeConfigSection
+message UpdateRuntimeConfigSectionRequest {
+  string section = 1;
+  google.protobuf.Struct config = 2; // Update via structured data (JSON)
+  string yaml_content = 3;           // OR update via YAML string
+}
+
+// ResetRuntimeConfigSectionRequest is the request for ResetRuntimeConfigSection
+message ResetRuntimeConfigSectionRequest {
+  string section = 1;
+}

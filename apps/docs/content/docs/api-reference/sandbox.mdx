@@ -1,0 +1,411 @@
+---
+title: Sandbox
+description: Sandbox APIs for isolated runtimes, lifecycle, networking, automation, and observability.
+---
+
+# Sandbox API
+
+Programmatic endpoints for treating sandboxes as isolated runtimes you can create, inspect, automate, expose, and destroy.
+
+Sandboxes are not only for agents. The same API can be used to:
+
+- run isolated code execution
+- host temporary preview apps and expose them at the edge
+- create scheduled workers with crons
+- create HTTP-triggered workers with webhooks
+- inspect logs, metrics, events, and execution history
+- manage shell, files, ports, SSH access, and lifecycle
+
+## Common workflows
+
+### Create an isolated runtime
+
+Start with [`POST /v1/sandbox`](./sandbox/sandbox-management) to create a sandbox from a template or image, then use shell, files, commands, or code execution APIs inside it.
+
+### Host a temporary service
+
+Create a sandbox, start a web process, detect or expose a listening port, and use the generated URL for previews, demos, or QA.
+
+### Run recurring or event-driven jobs
+
+Use cron and webhook endpoints to turn a sandbox into a scheduled or HTTP-triggered worker.
+
+### Observe and debug
+
+Use stats, events, and execution history to understand what happened inside the runtime.
+
+---
+
+## Lifecycle
+
+| Method   | Endpoint | Description |
+| -------- | -------- | ----------- |
+| `POST`   | `/v1/sandbox` | Create Sandbox |
+| `GET`    | `/v1/sandbox/instances` | List Instances |
+| `GET`    | `/v1/sandbox/instances/{sandboxId}` | Get Instance |
+| `PATCH`  | `/v1/sandbox/instances/{sandboxId}` | Resize (CPU/memory) |
+| `GET`    | `/v1/sandbox/overview` | Overview |
+| `POST`   | `/v1/sandbox/recreate` | Recreate |
+| `POST`   | `/v1/sandbox/{sandboxId}/stop` | Stop |
+| `POST`   | `/v1/sandbox/{sandboxId}/revive` | Revive from sleep |
+| `POST`   | `/v1/sandbox/instances/{sandboxId}/restore` | Restore from archive |
+| `POST`   | `/v1/sandbox/{sandboxId}/terminate` | Terminate |
+| `DELETE` | `/v1/sandbox/{sessionId}` | Destroy |
+| `POST`   | `/v1/sandbox/{sandboxId}/renew-expiration` | Renew Expiration |
+
+### Lifecycle states
+
+Sandboxes progress through these `lifecycle_state` values:
+
+| State | Description |
+|-------|-------------|
+| `pending` | Creation queued |
+| `creating` | VM being provisioned |
+| `running` | Active and reachable |
+| `stopping` | Shutting down |
+| `sleeping` | VM stopped, workspace preserved |
+| `reviving` | Waking from sleep |
+| `archiving` | Compressing to archive storage |
+| `archived` | VM gone, workspace in cold storage. Restore with `/restore`. |
+| `terminating` | Being permanently deleted |
+| `terminated` | Permanently deleted |
+| `failed` | Unrecoverable error |
+
+### Create sandbox -- new fields
+
+The following fields were added to `POST /v1/sandbox` in the Sandbox Overhaul:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `labels` | `object` | Key-value metadata for filtering (`{ "agent_id": "agt_123" }`). Filterable via `label_filter` on List. |
+| `autoArchiveAfterDays` | `integer` | Days before sleeping sandbox is archived. `0` = disabled. Default: 7. |
+| `autoDeleteAfterDays` | `integer` | Days before sandbox is deleted. `-1` = never (default). `0` = on stop. |
+| `networkBlockAll` | `boolean` | Block all outbound egress. Always permits loopback, link-local, DNS. |
+| `networkAllowCidrs` | `string[]` | CIDR blocks to permit when `networkBlockAll` is true (max 10). |
+| `computerUse` | `boolean` | Start Xvfb + XFCE4 desktop at boot for GUI automation. |
+| `tailscaleAuthKey` | `string` | Join sandbox to a Tailnet at boot via this ephemeral auth key. |
+| `mounts` | `StorageMount[]` | FUSE-mount external S3/R2/GCS/Azure storage at boot. |
+| `snapshotId` | `string` | Use a named snapshot's image instead of `image`. |
+
+---
+
+## Templates
+
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| `GET`  | `/v1/sandbox/templates` | List Templates |
+| `GET`  | `/v1/sandbox/templates/{templateId}` | Get Template |
+
+---
+
+## Snapshots
+
+Named, reusable environment templates. Create from a public image or an existing sandbox. Reference via `snapshotId` when creating sandboxes.
+
+> **Note:** Creating a snapshot from an existing sandbox currently captures the base image reference. Full filesystem snapshots (Firecracker-level) are planned for Phase 2 of snapshot support.
+
+| Method   | Endpoint | Description |
+| -------- | -------- | ----------- |
+| `POST`   | `/v1/snapshots` | Create snapshot `{ name, image? }` or `{ name, from_sandbox_id }` |
+| `GET`    | `/v1/snapshots` | List snapshots |
+| `GET`    | `/v1/snapshots/{snapshotId}` | Get snapshot |
+| `DELETE` | `/v1/snapshots/{snapshotId}` | Delete snapshot |
+
+**Snapshot states:** `pending` → `active` | `error`. Auto-deactivated after 2 weeks of no use; reactivated on next use.
+
+---
+
+## Volumes
+
+Persistent FUSE-backed storage independent of sandbox lifecycle. Multiple sandboxes can mount the same volume simultaneously.
+
+| Method   | Endpoint | Description |
+| -------- | -------- | ----------- |
+| `POST`   | `/v1/volumes` | Create volume `{ name }` |
+| `GET`    | `/v1/volumes` | List volumes |
+| `DELETE` | `/v1/volumes/{volumeId}` | Delete volume |
+
+Attach volumes at sandbox creation via the `mounts` field with `type: "everstack-volume"`.
+
+---
+
+## Command Execution
+
+| Method   | Endpoint | Description |
+| -------- | -------- | ----------- |
+| `GET`    | `/v1/sandbox/{sandboxId}/ping` | Ping |
+| `POST`   | `/v1/sandbox/{sandboxId}/command` | Execute Command (SSE) |
+| `DELETE` | `/v1/sandbox/{sandboxId}/command` | Interrupt Command |
+| `GET`    | `/v1/sandbox/{sandboxId}/command/status/{cmdId}` | Command Status |
+| `GET`    | `/v1/sandbox/{sandboxId}/command/{cmdId}/logs` | Command Logs |
+
+---
+
+## Code Execution
+
+| Method   | Endpoint | Description |
+| -------- | -------- | ----------- |
+| `POST`   | `/v1/sandbox/{sandboxId}/code/context` | Create Code Context |
+| `GET`    | `/v1/sandbox/{sandboxId}/code/contexts` | List Code Contexts |
+| `GET`    | `/v1/sandbox/{sandboxId}/code/contexts/{contextId}` | Get Code Context |
+| `DELETE` | `/v1/sandbox/{sandboxId}/code/contexts/{contextId}` | Delete Code Context |
+| `DELETE` | `/v1/sandbox/{sandboxId}/code/contexts` | Delete by Language |
+| `POST`   | `/v1/sandbox/{sandboxId}/code` | Execute Code (SSE) |
+| `DELETE` | `/v1/sandbox/{sandboxId}/code` | Interrupt Code |
+
+---
+
+## Filesystem
+
+Standard file operations:
+
+| Method   | Endpoint | Description |
+| -------- | -------- | ----------- |
+| `GET`    | `/v1/sandbox/{sandboxId}/files/info` | File Info |
+| `DELETE` | `/v1/sandbox/{sandboxId}/files` | Delete Files |
+| `POST`   | `/v1/sandbox/{sandboxId}/files/permissions` | File Permissions |
+| `POST`   | `/v1/sandbox/{sandboxId}/files/mv` | Move Files |
+| `POST`   | `/v1/sandbox/{sandboxId}/files/replace` | Replace in File |
+| `POST`   | `/v1/sandbox/{sandboxId}/files/upload` | Upload File |
+| `GET`    | `/v1/sandbox/{sandboxId}/files/download` | Download File |
+| `POST`   | `/v1/sandbox/{sandboxId}/directories` | Create Directories |
+| `DELETE` | `/v1/sandbox/{sandboxId}/directories` | Delete Directories |
+
+Bulk and search operations (added in Sandbox Overhaul):
+
+| Method   | Endpoint | Description |
+| -------- | -------- | ----------- |
+| `POST`   | `/v1/sandbox/{sandboxId}/files/bulk-upload` | Upload multiple files (multipart, 256MB limit) |
+| `GET`    | `/v1/sandbox/{sandboxId}/files/content-search` | Search file contents (`?pattern=&path=`) |
+| `POST`   | `/v1/sandbox/{sandboxId}/files/global-replace` | Find-and-replace across files (`{ path, pattern, replacement, dry_run }`) |
+
+---
+
+## Metrics & Observability
+
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| `GET`  | `/v1/sandbox/{sandboxId}/metrics` | Point-in-time stats |
+| `GET`  | `/v1/sandbox/{sandboxId}/metrics/watch` | Stream stats (SSE, every 2s) |
+| `GET`  | `/v1/sandbox/{sandboxId}/metrics/history` | Time-series history (30s resolution, 2h retention) |
+| `GET`  | `/v1/sandbox/metrics/batch` | Latest metrics for multiple sandboxes (`?ids=id1,id2`) |
+| `GET`  | `/v1/sandbox/{sandboxId}/events` | Lifecycle events |
+| `GET`  | `/v1/sandbox/{sandboxId}/executions` | Execution history |
+
+### OTLP Export
+
+Forward sandbox metrics to your own observability backend (New Relic, Grafana Cloud, Datadog, Honeycomb).
+
+> **Preview:** Metric forwarding to the OTLP endpoint is in development. The config API is live; metrics will be forwarded in a follow-up release.
+
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| `GET`  | `/v1/settings/otlp` | Get OTLP config |
+| `PUT`  | `/v1/settings/otlp` | Set OTLP config `{ endpoint, headers, extra_labels, enabled }` |
+| `POST` | `/v1/settings/otlp/test` | Send test span to configured endpoint |
+
+---
+
+## Ports & Preview URLs
+
+| Method   | Endpoint | Description |
+| -------- | -------- | ----------- |
+| `GET`    | `/v1/sandbox/{sessionId}/ports` | List Exposed Ports |
+| `POST`   | `/v1/sandbox/{sessionId}/ports` | Expose Port |
+| `GET`    | `/v1/sandbox/{sessionId}/ports/detect` | Detect Listening Ports |
+| `DELETE` | `/v1/sandbox/{sessionId}/ports/{port}` | Unexpose Port |
+| `POST`   | `/v1/sandbox/instances/{sandboxId}/preview-url` | Generate signed preview URL |
+
+### Signed preview URLs
+
+`POST /v1/sandbox/instances/{sandboxId}/preview-url` generates an HMAC-signed URL that embeds auth in the URL itself -- no custom headers required. Useful for shareable links, iframe embeds, and link sharing.
+
+```json
+{ "port": 3000, "expires_in_seconds": 3600 }
+```
+
+Response:
+```json
+{ "url": "https://...", "expires_at": "2026-06-01T13:00:00Z" }
+```
+
+---
+
+## SSH
+
+| Method   | Endpoint | Description |
+| -------- | -------- | ----------- |
+| `POST`   | `/v1/sandbox/{sandboxId}/ssh/access` | Grant SSH Access |
+| `DELETE` | `/v1/sandbox/{sandboxId}/ssh/access/{userId}` | Revoke SSH Access |
+| `GET`    | `/v1/sandbox/{sandboxId}/ssh/info` | SSH Info |
+| `POST`   | `/v1/sandbox/instances/{sandboxId}/ssh-token` | Generate temporary SSH token |
+| `GET`    | `/v1/sandbox/instances/{sandboxId}/ssh-tokens` | List active SSH tokens |
+| `DELETE` | `/v1/sandbox/instances/{sandboxId}/ssh-tokens/{tokenId}` | Revoke SSH token |
+
+### SSH tokens
+
+SSH tokens let agents and users SSH into sandboxes without key distribution. Connect via:
+
+```
+ssh <token>@ssh.everstack.ai
+```
+
+Tokens are temporary (default 60 minutes, max 24 hours) and can be revoked before expiry.
+
+> **Note:** The SSH proxy token validation is in development. Token generation and revocation APIs are live; proxy-level enforcement ships in a follow-up.
+
+---
+
+## Language Server Protocol (LSP)
+
+Get structured code intelligence inside sandboxes without parsing raw terminal output.
+
+Requires the relevant tools installed in the sandbox image (`pylint`/`pylsp` for Python, `tsc` for TypeScript). The `everstack-python` and `everstack-node` catalog images include these by default.
+
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| `GET`  | `/v1/sandbox/{sandboxId}/lsp` | LSP capability info |
+| `GET`  | `/v1/sandbox/{sandboxId}/lsp/{lang}/diagnostics?path=` | Errors and warnings |
+| `GET`  | `/v1/sandbox/{sandboxId}/lsp/{lang}/symbols?path=` | Functions, classes, variables in a file |
+| `GET`  | `/v1/sandbox/{sandboxId}/lsp/{lang}/workspace-symbols?query=` | Cross-file symbol search |
+
+**Supported languages:** `python`, `typescript`
+
+**Returns:** Structured JSON with line numbers and severity -- not raw terminal output.
+
+---
+
+## Computer Use
+
+Full desktop automation for vision-capable agents. Requires `computer_use: true` on sandbox creation, which launches Xvfb + XFCE4 at boot.
+
+Install `xdotool`, `scrot`/ImageMagick, and `ffmpeg` in your sandbox image for full functionality.
+
+### Screenshot
+
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| `GET`  | `/v1/sandbox/{sandboxId}/computer` | Capability info |
+| `POST` | `/v1/sandbox/{sandboxId}/computer/screenshot` | Take screenshot (returns image bytes) |
+| `GET`  | `/v1/sandbox/{sandboxId}/computer/displays` | List displays |
+| `GET`  | `/v1/sandbox/{sandboxId}/computer/windows` | List open windows |
+
+```json
+{ "format": "jpeg", "quality": 85 }
+```
+
+Response: `Content-Type: image/jpeg` binary body.
+
+### Mouse & keyboard
+
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| `POST` | `/v1/sandbox/{sandboxId}/computer/mouse/click` | Click `{ x, y, button, double }` |
+| `POST` | `/v1/sandbox/{sandboxId}/computer/mouse/move` | Move `{ x, y }` |
+| `POST` | `/v1/sandbox/{sandboxId}/computer/mouse/scroll` | Scroll `{ x, y, direction, amount }` |
+| `POST` | `/v1/sandbox/{sandboxId}/computer/mouse/drag` | Drag `{ from: {x,y}, to: {x,y} }` |
+| `POST` | `/v1/sandbox/{sandboxId}/computer/keyboard/type` | Type text `{ text }` |
+| `POST` | `/v1/sandbox/{sandboxId}/computer/keyboard/key` | Key combo `{ key }` (e.g. `"ctrl+c"`) |
+
+### Screen recording
+
+| Method   | Endpoint | Description |
+| -------- | -------- | ----------- |
+| `POST`   | `/v1/sandbox/{sandboxId}/computer/recording/start` | Start recording `{ label, fps }` |
+| `POST`   | `/v1/sandbox/{sandboxId}/computer/recording/stop` | Stop recording `{ recording_id }` |
+| `GET`    | `/v1/sandbox/{sandboxId}/computer/recordings` | List recordings |
+| `GET`    | `/v1/sandbox/{sandboxId}/computer/recordings/{id}/download` | Download MP4 |
+| `DELETE` | `/v1/sandbox/{sandboxId}/computer/recordings/{id}` | Delete recording |
+
+### VNC access
+
+When `computer_use: true`, deploy `x11vnc` and `NoVNC` in your sandbox image. NoVNC is then accessible on port 6080 via the preview URL infrastructure:
+
+```
+https://6080-{token}.preview.everstack.ai
+```
+
+---
+
+## Lifecycle Webhooks
+
+Outgoing webhooks that notify your system when sandbox state changes.
+
+> These are **outgoing** lifecycle events -- distinct from the incoming trigger webhooks (`/v1/sandbox/webhooks`) used to invoke sandboxes.
+
+| Method   | Endpoint | Description |
+| -------- | -------- | ----------- |
+| `GET`    | `/v1/sandbox-webhooks` | List endpoints |
+| `POST`   | `/v1/sandbox-webhooks` | Create endpoint `{ url, events, secret }` |
+| `DELETE` | `/v1/sandbox-webhooks/{id}` | Remove endpoint |
+| `GET`    | `/v1/sandbox-webhooks/{id}/deliveries` | Delivery log (last 100) |
+| `POST`   | `/v1/sandbox-webhooks/{id}/test` | Send test payload |
+
+**Events:** `sandbox.started`, `sandbox.stopped`, `sandbox.archived`, `sandbox.deleted`, `sandbox.error`
+
+All payloads are HMAC-SHA256 signed (`X-Everstack-Signature: sha256=<hex>`). 3 retries with 0s/5s/30s backoff.
+
+---
+
+## Declarative Image Builder
+
+Build sandbox environments from a spec in code, without maintaining a Docker registry.
+
+> **Preview:** Phase 1 maps specs to the nearest catalog image. Custom package installation via BuildKit build is in Phase 2.
+
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| `POST` | `/v1/images/build` | Build from spec (24h cache) |
+
+```json
+{
+  "spec": {
+    "base": "debian:bookworm-slim",
+    "apt": ["python3", "nodejs"],
+    "pip": ["numpy", "pandas"],
+    "npm": ["typescript"],
+    "run": ["pip install -r requirements.txt"],
+    "env": { "PYTHONPATH": "/app" },
+    "workdir": "/app"
+  }
+}
+```
+
+Same spec within 24h returns the cached result instantly (`"cached": true`).
+
+---
+
+## MCP Setup
+
+Get the MCP server config block for your AI client with one call.
+
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| `GET`  | `/v1/mcp/config?client=claude` | Config block for Claude / Cursor / Windsurf |
+
+Supported clients: `claude`, `cursor`, `windsurf`.
+
+---
+
+## Crons
+
+| Method   | Endpoint | Description |
+| -------- | -------- | ----------- |
+| `GET`    | `/v1/sandbox/crons` | List Crons |
+| `POST`   | `/v1/sandbox/crons` | Create Cron |
+| `PATCH`  | `/v1/sandbox/crons/{id}` | Update Cron |
+| `DELETE` | `/v1/sandbox/crons/{id}` | Delete Cron |
+
+## Incoming Webhooks
+
+| Method   | Endpoint | Description |
+| -------- | -------- | ----------- |
+| `GET`    | `/v1/sandbox/webhooks` | List Webhooks |
+| `POST`   | `/v1/sandbox/webhooks` | Create Webhook |
+| `DELETE` | `/v1/sandbox/webhooks/{id}` | Delete Webhook |
+
+## Triggers
+
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| `GET`  | `/v1/sandbox/triggers` | Shared History |

@@ -1,0 +1,73 @@
+name: "openai"
+display_name: "OpenAI"
+base_url: "https://api.openai.com/v1"
+api_version: "2024-01-01"
+
+# Provider type
+provider_type: "static"
+supports_model_discovery: false
+
+# Authentication
+auth:
+  type: "api_key"
+  header_name: "Authorization"
+  header_format: "Bearer {api_key}"
+  env_var: "OPENAI_API_KEY"
+
+# Rate limiting
+rate_limits:
+  requests_per_minute: 3500
+  tokens_per_minute: 90000
+  concurrent_requests: 50
+
+# Supported features
+capabilities:
+  chat: true
+  completions: true
+  embeddings: true
+  function_calling: true
+  vision: true
+  streaming: true
+  fine_tuning: true
+  assistants: true
+
+# Model families
+model_families:
+  gpt-5:
+    description: "GPT-5 family models"
+    capabilities: ["chat", "function_calling", "vision"]
+    max_tokens: 128000
+
+  gpt-4:
+    description: "GPT-4 family models"
+    capabilities: ["chat", "function_calling", "vision"]
+    max_tokens: 128000
+
+  gpt-3.5:
+    description: "GPT-3.5 family models"
+    capabilities: ["chat", "function_calling"]
+    max_tokens: 16385
+
+  embedding:
+    description: "Embedding models"
+    capabilities: ["embeddings"]
+    max_tokens: 8191
+
+# Default settings
+defaults:
+  temperature: 0.7
+  max_tokens: 1000
+  top_p: 1.0
+  frequency_penalty: 0.0
+  presence_penalty: 0.0
+  timeout: 60s
+  retry_attempts: 3
+  retry_delay: 1s
+
+# Error handling
+error_mapping:
+  "insufficient_quota": "rate_limit_exceeded"
+  "billing_not_active": "payment_required"
+  "model_not_found": "model_unavailable"
+  "invalid_api_key": "authentication_failed"
+

@@ -1,0 +1,360 @@
+---
+title: TypeScript / Node.js
+description: Official Everstack Node.js SDK for gateway and platform APIs.
+icon: Code2
+---
+
+The official TypeScript SDK provides typed access to every Everstack API from Node.js and TypeScript applications.
+
+## Installation
+
+```bash
+pnpm add @everstack/node
+```
+
+Or with npm:
+
+```bash
+npm install @everstack/node
+```
+
+## Initialize the client
+
+```typescript
+import Everstack from "@everstack/node";
+
+const client = new Everstack({
+  apiKey: process.env.EVERSTACK_API_KEY!,
+  baseUrl: "https://{instance}.{region}.everstack.ai",
+});
+```
+
+The client accepts these options:
+
+- `apiKey` (required) -- your Everstack API key
+- `baseUrl` -- gateway URL (defaults to `https://{instance}.{region}.everstack.ai`)
+- `provider` -- default provider for routing (e.g., `"@openai"`)
+- `orgId` -- organization ID for multi-tenant setups
+- `userId` -- user ID for tracking and attribution
+- `headers` -- additional default headers
+- `timeout` -- request timeout in milliseconds
+- `maxRetries` -- maximum retry attempts
+
+You can also use the async factory method to validate the connection on initialization:
+
+```typescript
+const client = await Everstack.init({
+  apiKey: process.env.EVERSTACK_API_KEY!,
+});
+```
+
+## Gateway APIs
+
+### Chat completions
+
+```typescript
+const completion = await client.chat.completions.create({
+  model: "@openai/gpt-4o-mini",
+  messages: [{ role: "user", content: "Hello" }],
+});
+```
+
+Streaming:
+
+```typescript
+const stream = await client.chat.completions.create({
+  model: "@anthropic/claude-sonnet-4-20250514",
+  messages: [{ role: "user", content: "Write a haiku" }],
+  stream: true,
+});
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk.choices[0]?.delta?.content ?? "");
+}
+```
+
+### Embeddings
+
+```typescript
+const embeddings = await client.embeddings.create({
+  model: "@openai/text-embedding-3-small",
+  input: "Everstack routes requests across providers.",
+});
+```
+
+### Models
+
+```typescript
+const models = await client.models.list();
+```
+
+### Audio
+
+Text-to-speech:
+
+```typescript
+const audio = await client.audio.speech.create({
+  model: "tts-1",
+  input: "Hello from Everstack.",
+  voice: "alloy",
+});
+```
+
+Speech-to-text:
+
+```typescript
+const transcription = await client.audio.transcriptions.create({
+  model: "whisper-1",
+  file: audioBuffer,
+});
+```
+
+Translation (audio to English):
+
+```typescript
+const translation = await client.audio.translations.create({
+  model: "whisper-1",
+  file: audioBuffer,
+});
+```
+
+### Images
+
+```typescript
+const image = await client.images.generate({
+  model: "dall-e-3",
+  prompt: "A cat wearing a tiny hat",
+});
+```
+
+### Moderations
+
+```typescript
+const moderation = await client.moderations.create({
+  input: "Some text to check for policy violations",
+});
+```
+
+### Reranking
+
+```typescript
+const reranked = await client.rerank.create({
+  model: "rerank-v1",
+  query: "What is Everstack?",
+  documents: ["Everstack is an AI platform.", "Unrelated document."],
+});
+```
+
+### Responses (agentic orchestration)
+
+```typescript
+const response = await client.responses.create({
+  model: "@openai/gpt-4o",
+  input: "Summarize this document",
+});
+
+// Streaming
+const stream = await client.responses.create({
+  model: "@openai/gpt-4o",
+  input: "Summarize this document",
+  stream: true,
+});
+
+for await (const event of stream) {
+  // handle response stream events
+}
+```
+
+## Platform APIs
+
+### Memory
+
+```typescript
+await client.memory.collections.create({
+  name: "docs",
+  embedding_model: "text-embedding-3-small",
+  embedding_dimension: 1536,
+});
+
+await client.memory.collections.addDocuments("docs", {
+  documents: [{ content: "Everstack routes requests across providers." }],
+});
+
+const results = await client.memory.collections.query("docs", {
+  query: "How does routing work?",
+});
+```
+
+### Agents
+
+```typescript
+const agent = await client.agents.definitions.create({
+  name: "support-agent",
+  systemPrompt: "You are a concise support assistant.",
+});
+
+const session = await client.agents.sessions.create({
+  agentId: agent.agent?.id,
+});
+
+await client.agents.sessions.runTurn({
+  sessionId: session.session?.id,
+  input: "Summarize open tickets.",
+});
+```
+
+### Datasets and evaluations
+
+```typescript
+const dataset = await client.datasets.create({
+  name: "support-regression",
+});
+
+await client.datasets.items.createBatch({
+  datasetId: dataset.dataset?.id,
+  items: [{ input: { query: "How do I reset my password?" } }],
+});
+
+const run = await client.evaluations.runs.create({
+  datasetId: dataset.dataset?.id,
+  name: "nightly-regression",
+});
+
+const summary = await client.evaluations.runs.getSummary({
+  id: run.evalRun?.id ?? "",
+});
+```
+
+### Scores
+
+```typescript
+await client.scores.submit({
+  traceId: "trace-123",
+  name: "relevancy",
+  value: 0.95,
+  dataType: 1, // NUMERIC
+  source: 2, // API
+});
+
+const scores = await client.scores.getByTrace({
+  traceId: "trace-123",
+});
+```
+
+### Traces
+
+```typescript
+const traces = client.traces.list({
+  limit: 50,
+});
+
+for await (const trace of traces) {
+  console.log(trace.id, trace.name);
+}
+
+const tree = await client.traces.getTree({
+  traceId: "trace-123",
+});
+
+const rich = await client.traces.getRich({
+  traceId: "trace-123",
+});
+```
+
+### Observability
+
+```typescript
+const dashboard = await client.observability.getMetricsDashboard({});
+
+const sessions = await client.observability.listSessions({});
+
+const timeseries = await client.observability.getMetricsTimeSeries({
+  metric: "latency",
+});
+```
+
+### Channels
+
+```typescript
+const channels = await client.channels.list({});
+
+await client.channels.create({
+  platform: "slack",
+  // ... channel config
+});
+
+await client.channels.test({ id: "channel-id" });
+```
+
+## Full resource map
+
+```
+client.chat.completions.create()
+client.embeddings.create()
+client.models.list()
+client.audio.speech.create()
+client.audio.transcriptions.create()
+client.audio.translations.create()
+client.images.generate(), .edit(), .createVariation()
+client.moderations.create()
+client.rerank.create()
+client.responses.create(), .get(), .cancel(), .del(), .list()
+
+client.memory.collections.create(), .list(), .addDocuments(), .query()
+client.agents.definitions.create(), .list(), .get(), .update(), .delete()
+client.agents.sessions.create(), .runTurn(), .list(), .get()
+client.agents.reviews.*
+client.agents.sandboxes.*
+client.agents.crons.*
+client.agents.webhooks.*
+client.agents.triggers.*
+client.agents.memories.*
+client.agents.integrations.github.*
+client.agents.ssh.*
+client.agents.lifecycle.*
+client.agents.links.*
+client.agents.channels.*
+client.agents.deployments.*
+client.datasets.create(), .list(), .get(), .update(), .delete()
+client.datasets.items.createBatch(), .list()
+client.datasets.scoreConfigs.*
+client.datasets.metrics.*
+client.evaluations.runs.create(), .list(), .get(), .getSummary(), .compare()
+client.evaluations.schedules.*
+client.scores.submit(), .submitBatch(), .getByTrace()
+client.traces.list(), .get(), .getSpans(), .getTree(), .getRich(), .listRich()
+client.traces.scores.list(), .create(), .delete()
+client.traces.performance.breakdown(), .utilization()
+client.traces.workflow.getMetrics()
+client.traces.observations.listByStep(), .getIO()
+client.observability.getMetricsDashboard(), .getMetricsTimeSeries()
+client.observability.listSessions(), .getSession()
+client.observability.listUsers(), .getUser()
+client.observability.getOutcomeDashboard(), .getOutcomeTimeSeries()
+client.channels.create(), .get(), .update(), .delete(), .list(), .test()
+client.channels.listStatuses(), .listSessions(), .listPlatformChannels()
+```
+
+## OpenAI SDK compatibility
+
+You can use the official OpenAI SDK with the Everstack gateway for basic chat, embeddings, and audio:
+
+```typescript
+import OpenAI from "openai";
+import { createOpenAIConfig } from "@everstack/node/compat";
+
+const openai = new OpenAI(
+  createOpenAIConfig({
+    apiKey: process.env.EVERSTACK_API_KEY!,
+    baseURL: "https://{instance}.{region}.everstack.ai",
+  })
+);
+```
+
+This gives you OpenAI SDK ergonomics while routing through Everstack's gateway for caching, rate limiting, and provider failover. For platform features like agents, memory, evaluations, and observability, use the Everstack SDK directly.
+
+## Resources
+
+- [Node SDK source](https://github.com/everstacklabs/everstack/tree/main/packages/sdks/everstack-node)
+- [npm package](https://www.npmjs.com/package/@everstack/node)
+- [SDK examples](https://github.com/everstacklabs/everstack/tree/main/packages/sdks/everstack-node/examples)

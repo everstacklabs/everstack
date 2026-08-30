@@ -1,0 +1,270 @@
+---
+title: "PUT Save workflow draft without creating a version event"
+description: "Save workflow draft without creating a version event"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Save workflow draft without creating a version event</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">PUT</span>
+    <code className="text-sm text-fd-muted-foreground">{"/v1/workflows/{id}/draft"}</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="put"
+  path="/v1/workflows/{id}/draft"
+  parameters={[{"name":"id","in":"path","required":true,"schema":{"type":"string"}}]}
+  defaultBody={`{
+  "tenantId": "string",
+  "name": "string",
+  "description": "string",
+  "nodes": [
+    {
+      "id": "string",
+      "type": "string",
+      "label": "string",
+      "position": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "string",
+      "source": "string",
+      "target": "string",
+      "sourceHandle": "string",
+      "targetHandle": "string"
+    }
+  ],
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "zoom": 0
+  }
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X PUT "http://localhost:8089/v1/workflows/{id}/draft" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"tenantId":"string","name":"string","description":"string","nodes":[{"id":"string","type":"string","label":"string","position":{"x":0,"y":0}}],"edges":[{"id":"string","source":"string","target":"string","sourceHandle":"string","targetHandle":"string"}],"viewport":{"x":0,"y":0,"zoom":0}}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/workflows/{id}/draft", {
+  method: "PUT",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "tenantId": "string",
+  "name": "string",
+  "description": "string",
+  "nodes": [
+    {
+      "id": "string",
+      "type": "string",
+      "label": "string",
+      "position": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "string",
+      "source": "string",
+      "target": "string",
+      "sourceHandle": "string",
+      "targetHandle": "string"
+    }
+  ],
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "zoom": 0
+  }
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.put(
+    "http://localhost:8089/v1/workflows/{id}/draft",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "tenantId": "string",
+  "name": "string",
+  "description": "string",
+  "nodes": [
+    {
+      "id": "string",
+      "type": "string",
+      "label": "string",
+      "position": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "string",
+      "source": "string",
+      "target": "string",
+      "sourceHandle": "string",
+      "targetHandle": "string"
+    }
+  ],
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "zoom": 0
+  }
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "workflow": {
+    "id": "string",
+    "tenantId": "string",
+    "name": "string",
+    "description": "string",
+    "nodes": [
+      {
+        "id": "string",
+        "type": "string",
+        "label": "string"
+      }
+    ],
+    "edges": [
+      {
+        "id": "string",
+        "source": "string",
+        "target": "string",
+        "sourceHandle": "string",
+        "targetHandle": "string"
+      }
+    ],
+    "viewport": {
+      "x": 0,
+      "y": 0,
+      "zoom": 0
+    },
+    "enabled": true,
+    "version": 0,
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+### Parameters
+
+| Name | In | Type | Required | Description |
+|------|-----|------|----------|-------------|
+| `id` | path | `string` | **Yes** |  |
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `tenantId` | `string` | No |  |
+| `name` | `string` | No |  |
+| `description` | `string` | No |  |
+| `nodes` | `object[]` | No |  |
+| `edges` | `object[]` | No |  |
+| `viewport` | `object` | No |  |
+
+
+### Responses
+
+#### 200 Save workflow draft
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `workflow` | `object` |  |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

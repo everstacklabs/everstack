@@ -1,0 +1,192 @@
+---
+title: "POST Audio Translation: Translate audio to English text"
+description: "Audio Translation: Translate audio to English text"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Audio Translation: Translate audio to English text</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400">POST</span>
+    <code className="text-sm text-fd-muted-foreground">/v1/audio/translations</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="post"
+  path="/v1/audio/translations"
+  parameters={[]}
+  defaultBody={`{
+  "file": "string",
+  "model": "string",
+  "prompt": "string",
+  "responseFormat": "string",
+  "temperature": 0,
+  "filename": "string"
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X POST "http://localhost:8089/v1/audio/translations" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"file":"string","model":"string","prompt":"string","responseFormat":"string","temperature":0,"filename":"string"}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/audio/translations", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "file": "string",
+  "model": "string",
+  "prompt": "string",
+  "responseFormat": "string",
+  "temperature": 0,
+  "filename": "string"
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8089/v1/audio/translations",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "file": "string",
+  "model": "string",
+  "prompt": "string",
+  "responseFormat": "string",
+  "temperature": 0,
+  "filename": "string"
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "text": "string",
+  "task": "string",
+  "language": "string",
+  "duration": 0,
+  "segments": [
+    {
+      "id": 0,
+      "seek": 0,
+      "start": 0,
+      "end": 0,
+      "text": "string",
+      "tokens": [
+        0
+      ],
+      "temperature": 0,
+      "avgLogprob": 0,
+      "compressionRatio": 0,
+      "noSpeechProb": 0
+    }
+  ]
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `file` | `string` | No |  |
+| `model` | `string` | No |  |
+| `prompt` | `string` | No |  |
+| `responseFormat` | `string` | No |  |
+| `temperature` | `number` | No |  |
+| `filename` | `string` | No |  |
+| `metadata` | `object` | No |  |
+
+
+### Responses
+
+#### 200 Translated text
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `text` | `string` |  |
+| `task` | `string` |  |
+| `language` | `string` |  |
+| `duration` | `number` |  |
+| `segments` | `object[]` |  |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

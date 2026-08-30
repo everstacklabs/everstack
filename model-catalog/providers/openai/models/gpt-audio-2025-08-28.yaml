@@ -1,0 +1,14 @@
+name: gpt-audio-2025-08-28
+display_name: GPT Audio 2025 08 28
+family: other
+status: stable
+limits:
+    max_tokens: 128000
+capabilities:
+    - chat
+    - function_calling
+modalities:
+    input:
+        - text
+    output:
+        - text

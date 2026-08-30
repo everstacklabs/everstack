@@ -1,0 +1,449 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "everstack/api_key/v1/api_key_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "ApiKeyService"
+    }
+  ],
+  "paths": {
+    "/v1/api-key/create": {
+      "post": {
+        "operationId": "ApiKeyService_CreateApiKey",
+        "responses": {
+          "200": {
+            "description": "Create new Everstack API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreateApiKeyResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateApiKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["ApiKeyService"]
+      }
+    },
+    "/v1/api-key/list": {
+      "get": {
+        "operationId": "ApiKeyService_ListApiKeys",
+        "responses": {
+          "200": {
+            "description": "List Everstack API keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListApiKeysResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orgId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "API_KEY_TYPE_UNSPECIFIED",
+                "API_KEY_TYPE_USER",
+                "API_KEY_TYPE_ORG"
+              ],
+              "default": "API_KEY_TYPE_UNSPECIFIED"
+            }
+          }
+        ],
+        "tags": ["ApiKeyService"]
+      }
+    },
+    "/v1/api-key/regenerate": {
+      "post": {
+        "operationId": "ApiKeyService_RegenerateApiKey",
+        "responses": {
+          "200": {
+            "description": "Regenerate Everstack API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RegenerateApiKeyResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["ApiKeyService"]
+      }
+    },
+    "/v1/api-key/update": {
+      "post": {
+        "operationId": "ApiKeyService_UpdateApiKey",
+        "responses": {
+          "200": {
+            "description": "Update Everstack API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1UpdateApiKeyResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orgId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "API_KEY_TYPE_UNSPECIFIED",
+                "API_KEY_TYPE_USER",
+                "API_KEY_TYPE_ORG"
+              ],
+              "default": "API_KEY_TYPE_UNSPECIFIED"
+            }
+          }
+        ],
+        "tags": ["ApiKeyService"]
+      }
+    },
+    "/v1/api-key/{id}": {
+      "get": {
+        "operationId": "ApiKeyService_GetApiKey",
+        "responses": {
+          "200": {
+            "description": "Get Everstack API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetApiKeyResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["ApiKeyService"]
+      },
+      "delete": {
+        "operationId": "ApiKeyService_DeleteApiKey",
+        "responses": {
+          "200": {
+            "description": "Delete Everstack API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteApiKeyResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["ApiKeyService"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "protobufAny": {
+        "type": "object",
+        "properties": {
+          "@type": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": {}
+      },
+      "rpcStatus": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/protobufAny"
+            }
+          }
+        }
+      },
+      "v1ApiKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/v1ApiKeyType"
+          },
+          "sensitiveId": {
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1ApiKeyType": {
+        "type": "string",
+        "enum": [
+          "API_KEY_TYPE_UNSPECIFIED",
+          "API_KEY_TYPE_USER",
+          "API_KEY_TYPE_ORG"
+        ],
+        "default": "API_KEY_TYPE_UNSPECIFIED"
+      },
+      "v1CreateApiKeyRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/v1ApiKeyType"
+          }
+        }
+      },
+      "v1CreateApiKeyResponse": {
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "$ref": "#/components/schemas/v1ApiKey"
+          }
+        }
+      },
+      "v1DeleteApiKeyResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1GetApiKeyResponse": {
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "$ref": "#/components/schemas/v1ApiKey"
+          }
+        }
+      },
+      "v1ListApiKeysResponse": {
+        "type": "object",
+        "properties": {
+          "apiKeys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ApiKey"
+            }
+          }
+        }
+      },
+      "v1RegenerateApiKeyResponse": {
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "$ref": "#/components/schemas/v1ApiKey"
+          }
+        }
+      },
+      "v1UpdateApiKeyResponse": {
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "$ref": "#/components/schemas/v1ApiKey"
+          }
+        }
+      }
+    }
+  }
+}

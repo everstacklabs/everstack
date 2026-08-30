@@ -1,0 +1,15 @@
+{
+  "pages": [
+    "get-runtime-config-returns-the-full-runtime-configuration",
+    "update-runtime-config-updates-the-full-runtime-configuration",
+    "get-runtime-config-section-returns-a-specific-section-of-the-runtime-configuration",
+    "update-runtime-config-section-updates-a-specific-section-of-the-runtime-configuration",
+    "reset-runtime-config-section-resets-a-section-to-its-default-values",
+    "list-schemas-returns-available-schemas",
+    "get-schema-returns-a-specific-schema",
+    "validate-yaml-validates-a-yaml-configuration-string",
+    "validate-map-validates-a-configuration-map",
+    "get-validation-history-returns-the-validation-history",
+    "get-validation-status-returns-the-current-validation-status-of-the-configuration"
+  ]
+}

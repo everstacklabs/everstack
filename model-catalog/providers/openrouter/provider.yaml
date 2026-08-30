@@ -1,0 +1,65 @@
+name: "openrouter"
+display_name: "OpenRouter"
+base_url: "https://openrouter.ai/api/v1"
+api_version: "2024-01-01"
+
+# Provider type - meta-provider with dynamic model discovery
+provider_type: "meta"
+supports_model_discovery: true
+discovery_api_endpoint: "https://openrouter.ai/api/v1/models"
+
+# Authentication
+auth:
+  type: "api_key"
+  header_name: "Authorization"
+  header_format: "Bearer {api_key}"
+  env_var: "OPENROUTER_API_KEY"
+
+# Rate limiting
+rate_limits:
+  requests_per_minute: 1000
+  tokens_per_minute: 30000
+  concurrent_requests: 20
+
+# Supported features
+capabilities:
+  chat: true
+  completions: true
+  embeddings: true
+  function_calling: true
+  vision: true
+  streaming: true
+  fine_tuning: true
+  assistants: true
+  web_search: true
+
+# Model families (dynamic - models discovered at runtime)
+model_families:
+  openai:
+    description: "OpenAI models via OpenRouter"
+    capabilities: ["chat", "function_calling", "vision"]
+
+  anthropic:
+    description: "Anthropic models via OpenRouter"
+    capabilities: ["chat", "function_calling", "vision"]
+
+  google:
+    description: "Google models via OpenRouter"
+    capabilities: ["chat", "function_calling", "vision"]
+
+# Default settings
+defaults:
+  temperature: 0.7
+  max_tokens: 1000
+  top_p: 1.0
+  timeout: 60s
+  retry_attempts: 3
+  retry_delay: 1s
+
+# Error handling
+error_mapping:
+  "rate_limit_exceeded": "rate_limit_exceeded"
+  "quota_exceeded": "payment_required"
+  "model_not_found": "model_unavailable"
+  "invalid_api_key": "authentication_failed"
+

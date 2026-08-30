@@ -1,0 +1,34 @@
+# Configuration templates for Mistral
+# Pre-configured settings for common use cases
+
+high_performance:
+  name: "High Performance"
+  description: "Optimized for high throughput and low latency"
+  settings:
+    timeout: 30s
+    retry_attempts: 2
+    retry_delay: 500ms
+    connection_pool_size: 30
+    max_concurrent_requests: 15
+
+cost_optimized:
+  name: "Cost Optimized"
+  description: "Optimized for cost efficiency"
+  settings:
+    timeout: 120s
+    retry_attempts: 1
+    retry_delay: 2s
+    connection_pool_size: 10
+    max_concurrent_requests: 5
+
+reliability:
+  name: "High Reliability"
+  description: "Optimized for maximum reliability"
+  settings:
+    timeout: 180s
+    retry_attempts: 5
+    retry_delay: 2s
+    connection_pool_size: 20
+    max_concurrent_requests: 10
+    circuit_breaker_enabled: true
+

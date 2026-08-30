@@ -1,0 +1,156 @@
+syntax = "proto3";
+
+package everstack.identity.v1;
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/identity/v1;identity";
+
+message GetIdentityStatusRequest {}
+
+message GetIdentityStatusResponse {
+  string backend = 1;
+  bool healthy = 2;
+  int64 total_users = 3;
+  int64 verified_users = 4;
+  int64 active_sessions = 5;
+  int64 linked_everstack_users = 6;
+  repeated string enabled_methods = 7;
+}
+
+message ResolveIdentitySessionRequest {
+  repeated string cookies = 1;
+  string user_agent = 2;
+  repeated string forwarded_for = 3;
+  string real_ip = 4;
+}
+
+message IdentitySession {
+  string id = 1;
+  string created_at = 2;
+  string updated_at = 3;
+  string expires_at = 4;
+  string ip_address = 5;
+  string user_agent = 6;
+  string authentication_method = 7;
+  string authentication_provider_id = 8;
+  string identity_connection_id = 9;
+}
+
+message ResolveIdentitySessionResponse {
+  string provider = 1;
+  string subject = 2;
+  string email = 3;
+  bool email_verified = 4;
+  string name = 5;
+  string image = 6;
+  IdentitySession session = 7;
+}
+
+message ListIdentityUsersRequest {
+  string search = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message IdentityUser {
+  string id = 1;
+  string everstack_user_id = 2;
+  string email = 3;
+  bool email_verified = 4;
+  string name = 5;
+  string image = 6;
+  string created_at = 7;
+  string updated_at = 8;
+  string last_active_at = 9;
+  int32 active_session_count = 10;
+  repeated string authentication_methods = 11;
+}
+
+message ListIdentityUsersResponse {
+  repeated IdentityUser users = 1;
+  int64 total = 2;
+}
+
+message ListIdentitySessionsRequest {
+  string user_id = 1;
+}
+
+message DirectoryIdentitySession {
+  string id = 1;
+  string user_id = 2;
+  string created_at = 3;
+  string updated_at = 4;
+  string expires_at = 5;
+  string ip_address = 6;
+  string user_agent = 7;
+}
+
+message ListIdentitySessionsResponse {
+  repeated DirectoryIdentitySession sessions = 1;
+}
+
+message RevokeIdentitySessionRequest {
+  string session_id = 1;
+}
+
+message RevokeIdentitySessionResponse {}
+
+message IdentityConnection {
+  string id = 1;
+  string organization_id = 2;
+  string provider_id = 3;
+  string display_name = 4;
+  string issuer = 5;
+  repeated string domains = 6;
+  string client_id = 7;
+  bool client_secret_configured = 8;
+  repeated string scopes = 9;
+  bool enabled = 10;
+  string callback_url = 11;
+  string created_at = 12;
+  string updated_at = 13;
+}
+
+message ListIdentityConnectionsRequest {}
+
+message ListIdentityConnectionsResponse {
+  repeated IdentityConnection connections = 1;
+}
+
+message ListOrganizationIdentityConnectionsRequest {
+  string organization_id = 1;
+}
+
+message OrganizationIdentityConnection {
+  string id = 1;
+  string organization_id = 2;
+  string display_name = 3;
+  repeated string domains = 4;
+  bool enabled = 5;
+}
+
+message ListOrganizationIdentityConnectionsResponse {
+  repeated OrganizationIdentityConnection connections = 1;
+}
+
+message UpsertIdentityConnectionRequest {
+  string id = 1;
+  string organization_id = 2;
+  string provider_id = 3;
+  string display_name = 4;
+  string issuer = 5;
+  repeated string domains = 6;
+  string client_id = 7;
+  optional string client_secret = 8;
+  repeated string scopes = 9;
+  bool enabled = 10;
+}
+
+message UpsertIdentityConnectionResponse {
+  IdentityConnection connection = 1;
+}
+
+message DeleteIdentityConnectionRequest {
+  string id = 1;
+}
+
+message DeleteIdentityConnectionResponse {}

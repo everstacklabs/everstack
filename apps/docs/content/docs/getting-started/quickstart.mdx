@@ -1,0 +1,179 @@
+---
+title: Quick Start
+description: Configure providers and send your first request.
+icon: Rocket
+---
+
+This guide picks up where [Installation](/getting-started/installation) left off. By the end you'll have an LLM provider configured, an API key issued, and your first request routed through the gateway.
+
+<Callout type="info">
+  Make sure Everstack is running and the health check passes before continuing:
+
+```bash
+curl https://{instance}.{region}.everstack.ai/debug/healthz
+```
+
+</Callout>
+
+<Steps>
+
+<Step>
+## Open the Admin Dashboard
+
+Navigate to `https://{instance}.{region}.everstack.ai` in your browser.
+
+If authentication is enabled, you'll be prompted to create an account. **The first user to register automatically becomes the owner** with full admin access.
+
+</Step>
+
+<Step>
+## Add an LLM Provider
+
+Go to **Vault → LLM Providers** and click **Add Provider**. Enter your credentials for the provider you want to use:
+
+<Tabs items={["OpenAI", "Anthropic", "Google", "Azure OpenAI"]}>
+  <Tab value="OpenAI">
+    | Field | Value |
+    | --- | --- |
+    | Provider | `openai` |
+    | API Key | `sk-…` |
+
+    Supported models: `gpt-4o`, `gpt-4o-mini`, `o3-mini`, and more.
+
+  </Tab>
+  <Tab value="Anthropic">
+    | Field | Value |
+    | --- | --- |
+    | Provider | `anthropic` |
+    | API Key | `sk-ant-…` |
+
+    Supported models: `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5`, and more.
+
+  </Tab>
+  <Tab value="Google">
+    | Field | Value |
+    | --- | --- |
+    | Provider | `google` |
+    | API Key | `AIza…` |
+
+    Supported models: `gemini-2.0-flash`, `gemini-2.5-pro`, and more.
+
+  </Tab>
+  <Tab value="Azure OpenAI">
+    | Field | Value |
+    | --- | --- |
+    | Provider | `azure` |
+    | API Key | your Azure key |
+    | Base URL | `https://<resource>.openai.azure.com/openai/deployments/<deployment>` |
+
+    The base URL must point to a specific deployment endpoint.
+
+  </Tab>
+</Tabs>
+
+You can add multiple providers. The gateway routes requests to the right provider based on the model name in the request.
+
+</Step>
+
+<Step>
+## Create an API Key
+
+Go to **Vault → API Keys** and click **Create Key**. Give it a name, set an optional expiry, and copy the key — **it's only shown once**.
+
+This is the key your applications will use when calling the gateway.
+
+</Step>
+
+<Step>
+## Send Your First Request
+
+Everstack is OpenAI API-compatible — any existing OpenAI SDK or tool works by changing the base URL and API key.
+
+<Tabs items={["curl", "Python", "Node.js"]}>
+  <Tab value="curl">
+    ```bash
+    curl -X POST https://{instance}.{region}.everstack.ai/v1/chat/completions \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer YOUR_EVERSTACK_API_KEY" \
+      -d '{
+        "model": "gpt-4o-mini",
+        "messages": [
+          {"role": "user", "content": "Hello!"}
+        ]
+      }'
+    ```
+  </Tab>
+  <Tab value="Python">
+    ```python
+    from openai import OpenAI
+
+    client = OpenAI(
+        base_url="https://{instance}.{region}.everstack.ai/v1",
+        api_key="YOUR_EVERSTACK_API_KEY",
+    )
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": "Hello!"}],
+    )
+
+    print(response.choices[0].message.content)
+    ```
+
+  </Tab>
+  <Tab value="Node.js">
+    ```typescript
+    import OpenAI from "openai";
+
+    const client = new OpenAI({
+      baseURL: "https://{instance}.{region}.everstack.ai/v1",
+      apiKey: "YOUR_EVERSTACK_API_KEY",
+    });
+
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: "Hello!" }],
+    });
+
+    console.log(response.choices[0].message.content);
+    ```
+
+  </Tab>
+</Tabs>
+
+You should get a response from the provider within a few hundred milliseconds. The request is routed, logged, and traced automatically.
+
+</Step>
+
+<Step>
+## View the Trace
+
+Go to **Observability → Traces** in the dashboard. You'll see your request listed with its full trace — latency breakdown, token counts, cost estimate, and the raw provider response.
+
+Every request is traced automatically with no SDK or instrumentation required in your application.
+
+</Step>
+
+</Steps>
+
+## What's Next?
+
+<Cards>
+  <Card title="Configuration" href="/getting-started/configuration">
+    Set up the YAML config file, environment variables, database modes, and
+    more.
+  </Card>
+  <Card title="Node SDK" href="/sdks/client-libraries/typescript">
+    Integrate chat, memory, agents, sandboxes, datasets, and evaluations from
+    Node.js.
+  </Card>
+  <Card title="Gateway" href="/getting-started/gateway/overview">
+    Routing rules, fallbacks, load balancing, and rate limiting.
+  </Card>
+  <Card title="Agents" href="/getting-started/agents/overview">
+    Build autonomous AI agents with tools, memory, and sandboxed execution.
+  </Card>
+  <Card title="Workflow Studio" href="/getting-started/studio/overview">
+    Design visual AI pipelines with the drag-and-drop studio.
+  </Card>
+</Cards>

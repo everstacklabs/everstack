@@ -1,0 +1,20 @@
+name: "command-light"
+display_name: "Command Light"
+family: "command"
+status: "deprecated"
+
+cost:
+  input_per_1k: 0.0003
+  output_per_1k: 0.0006
+
+limits:
+  max_tokens: 4096
+  max_completion_tokens: 4096
+
+capabilities:
+  - chat
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+

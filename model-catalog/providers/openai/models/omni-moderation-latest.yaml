@@ -1,0 +1,14 @@
+name: omni-moderation-latest
+display_name: Omni Moderation Latest
+family: other
+status: stable
+limits:
+    max_tokens: 128000
+capabilities:
+    - chat
+    - function_calling
+modalities:
+    input:
+        - text
+    output:
+        - text

@@ -1,0 +1,5 @@
+{
+  "title": "SDKs",
+  "root": true,
+  "pages": ["index", "typescript", "python", "go"]
+}

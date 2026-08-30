@@ -1,0 +1,80 @@
+---
+title: Speech-to-Text
+description: Transcribe and translate audio with language detection and timing data.
+icon: AudioLines
+---
+
+The STT endpoints convert audio into text. Transcription produces a text representation of what was spoken. Translation does the same but also translates the result into English, regardless of the source language. Both endpoints accept an audio file and return structured text output.
+
+## Endpoints
+
+```
+POST /v1/audio/transcriptions
+POST /v1/audio/translations
+```
+
+The transcription endpoint preserves the original language. The translation endpoint always outputs English. Both use the same request shape and parameter set.
+
+See the [Gateway API Reference](/api-reference/gateway) for full request and response schemas.
+
+## Models
+
+| Model | Provider | Notes |
+|-------|----------|-------|
+| `whisper-1` | OpenAI | Default model for both transcription and translation. Supports automatic language detection. |
+
+## Response formats
+
+The `response_format` parameter controls the shape of the output:
+
+| Format | What you get |
+|--------|-------------|
+| `json` | A JSON object with a single `text` field containing the full transcript. |
+| `text` | Plain text string with no wrapper. |
+| `verbose_json` | A JSON object with the transcript, detected language, duration, and detailed timing segments. |
+| `srt` | SubRip subtitle format. Each segment has an index, timestamp range, and text. |
+| `vtt` | WebVTT subtitle format. Similar to SRT but used natively in HTML5 video players. |
+
+Use `json` or `text` when you only need the words. Use `verbose_json` when you need timing data for search indexing, alignment, or analytics. Use `srt` or `vtt` when the transcript will be displayed as subtitles.
+
+## Language handling
+
+STT supports two approaches to language:
+
+- **Automatic detection**: Omit the `language` parameter and the model identifies the spoken language from the audio content. The detected language code is included in `verbose_json` responses.
+- **Explicit specification**: Set the `language` parameter to an ISO 639-1 code (for example, `en`, `es`, `fr`, `ja`). This can improve accuracy when you already know the source language, especially for shorter audio clips where detection has less signal.
+
+For the translation endpoint, the source language is detected or specified the same way, but the output is always English.
+
+## Timing data
+
+When you use `verbose_json` as the response format, the output includes:
+
+- **Segment-level timing**: Each logical segment of speech includes `start` and `end` timestamps in seconds, plus the transcribed text for that segment.
+- **Word-level timing**: Individual words include their own `start` and `end` timestamps, giving you precise alignment between audio and text.
+
+This timing data is useful for:
+
+- building searchable audio indexes where you can jump to the exact moment a word was spoken
+- syncing transcripts with video or audio playback
+- measuring speaking pace, pause duration, and turn-taking patterns
+- generating highlights or clips from longer recordings
+
+## When to use STT
+
+- **Call transcription** for support, sales, or compliance workflows that need a written record of conversations
+- **Meeting notes** where you want a searchable, time-aligned transcript alongside the recording
+- **Content indexing** to make audio and video libraries searchable by spoken content
+- **Accessibility** for generating captions or subtitles from audio tracks
+- **Agent input** where users speak to an agent and the audio needs to be converted to text before the LLM processes it
+- **Multilingual translation** when you receive audio in one language and need the content in English
+
+## Translation vs. transcription
+
+Use transcription (`/v1/audio/transcriptions`) when you want the text in the same language as the audio. Use translation (`/v1/audio/translations`) when you want English output regardless of the source language. If the source audio is already in English, both endpoints produce the same result.
+
+## Next steps
+
+- [Text-to-Speech](/getting-started/voice/text-to-speech) covers the reverse direction, generating audio from text.
+- [Voice Cloning](/getting-started/voice/voice-cloning) explains custom voice profiles for personalized TTS output.
+- [Gateway API Reference](/api-reference/gateway) has the full endpoint schema.

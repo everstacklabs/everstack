@@ -1,0 +1,9 @@
+{
+  "title": "Guardrails",
+  "pages": [
+    "overview",
+    "input-guardrails",
+    "output-guardrails",
+    "configuration"
+  ]
+}

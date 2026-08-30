@@ -1,0 +1,6 @@
+default:
+  name: "Default"
+  description: "Standard Perplexity gateway settings"
+  settings:
+    timeout: 60s
+    retry_attempts: 2

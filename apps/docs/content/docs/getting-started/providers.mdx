@@ -1,0 +1,323 @@
+---
+title: Providers
+description: LLM provider setup -- configure, sync, and manage 22 providers and 200+ models.
+icon: Plug
+---
+
+Everstack ships with a built-in **model catalog** containing 22 LLM providers and 200+ models. You can configure providers through the Admin Dashboard or YAML config, and the catalog syncs automatically to keep models up to date.
+
+## Supported Providers
+
+<Cards>
+  <Card title="OpenAI" href="https://platform.openai.com" icon={<OpenAIIcon />}>
+    GPT-4o, GPT-4o-mini, o3-mini, text-embedding-3-small, and more. Chat, vision, function calling, embeddings, fine-tuning.
+  </Card>
+  <Card title="Anthropic" href="https://console.anthropic.com" icon={<AnthropicIcon />}>
+    Claude Opus 4, Claude Sonnet 4, Claude Haiku 3.5. Chat, vision, function calling, streaming.
+  </Card>
+  <Card title="Google" href="https://ai.google.dev" icon={<GeminiIcon />}>
+    Gemini 2.5 Pro, Gemini 2.0 Flash, and more. Chat, vision, function calling, embeddings.
+  </Card>
+  <Card title="Azure OpenAI" href="https://azure.microsoft.com/en-us/products/ai-services/openai-service" icon={<AzureIcon />}>
+    OpenAI models hosted on Azure with deployment-based routing and Azure AD auth.
+  </Card>
+  <Card title="AWS Bedrock" href="https://aws.amazon.com/bedrock" icon={<BedrockIcon />}>
+    Claude, Titan, Llama, and more via AWS Bedrock. Uses AWS SigV4 authentication.
+  </Card>
+  <Card title="Vertex AI" href="https://cloud.google.com/vertex-ai" icon={<VertexAIIcon />}>
+    Google Cloud-hosted models with OAuth2 authentication and project-based routing.
+  </Card>
+  <Card title="Groq" href="https://console.groq.com" icon={<GroqIcon />}>
+    Ultra-fast inference for Llama, Mixtral, and Gemma models on Groq LPU hardware.
+  </Card>
+  <Card title="Together AI" href="https://www.together.ai" icon={<TogetherIcon />}>
+    Open-source models -- Llama, Mixtral, CodeLlama, Qwen, and more. Chat, embeddings, function calling.
+  </Card>
+  <Card title="Fireworks AI" href="https://fireworks.ai" icon={<FireworksIcon />}>
+    High-performance inference for open-source models with function calling and streaming.
+  </Card>
+  <Card title="DeepSeek" href="https://platform.deepseek.com" icon={<DeepSeekIcon />}>
+    DeepSeek-V3, DeepSeek-R1, and Coder models. Chat, function calling, streaming.
+  </Card>
+  <Card title="Mistral" href="https://console.mistral.ai" icon={<MistralIcon />}>
+    Mistral Large, Medium, Small, Codestral, and embedding models.
+  </Card>
+  <Card title="Cohere" href="https://dashboard.cohere.com" icon={<CohereIcon />}>
+    Command R+, Command R, and Embed models. Chat, embeddings, RAG-optimized.
+  </Card>
+  <Card title="xAI" href="https://console.x.ai" icon={<XAIIcon />}>
+    Grok models with chat, vision, and function calling support.
+  </Card>
+  <Card title="Perplexity" href="https://docs.perplexity.ai" icon={<PerplexityIcon />}>
+    Sonar models optimized for search-augmented generation.
+  </Card>
+  <Card title="Cerebras" href="https://cloud.cerebras.ai" icon={<CerebrasIcon />}>
+    Ultra-fast inference on Cerebras wafer-scale hardware.
+  </Card>
+  <Card title="NVIDIA NIM" href="https://build.nvidia.com" icon={<NvidiaIcon />}>
+    NVIDIA-optimized models via the NIM inference microservice.
+  </Card>
+  <Card title="OpenRouter" href="https://openrouter.ai" icon={<OpenRouterIcon />}>
+    Meta-provider routing to 200+ models across multiple providers.
+  </Card>
+  <Card title="Ollama" href="https://ollama.com" icon={<OllamaIcon />}>
+    Run open-source models locally. Auto-discovers installed models.
+  </Card>
+  <Card title="HuggingFace" href="https://huggingface.co" icon={<HuggingFaceIcon />}>
+    Inference API access to thousands of open-source models.
+  </Card>
+  <Card title="Qwen" href="https://www.alibabacloud.com/solutions/generative-ai/qwen" icon={<QwenIcon />}>
+    Alibaba's Qwen family -- chat, vision, and code models.
+  </Card>
+  <Card title="Minimax" href="https://www.minimax.chat" icon={<MinimaxIcon />}>
+    Minimax chat and generation models.
+  </Card>
+  <Card title="Moonshot" href="https://www.moonshot.cn" icon={<MoonshotIcon />}>
+    Moonshot AI models with long-context support.
+  </Card>
+</Cards>
+
+## Configuring a Provider
+
+Providers can be configured through the Admin Dashboard or the YAML config file.
+
+### Admin Dashboard
+
+Go to **Vault → LLM Providers** and click **Add Provider**. Select a provider from the catalog, enter your API key, and choose which models to enable.
+
+The dashboard shows each provider as a card with its status, model count, and configuration. You can toggle providers on/off, set a default provider, and manage multiple API keys per provider.
+
+### YAML Config
+
+Add providers directly in your config file under `gateway.models`:
+
+```yaml
+gateway:
+  models:
+    - provider: openai
+      model:
+        - gpt-4o
+        - gpt-4o-mini
+      api_key: sk-your-openai-key
+      default: true
+
+    - provider: anthropic
+      model:
+        - claude-sonnet-4-6
+        - claude-haiku-4-5-20251001
+      api_key: sk-ant-your-anthropic-key
+
+    - provider: google
+      model:
+        - gemini-2.0-flash
+        - gemini-2.5-pro
+      api_key: AIza-your-google-key
+```
+
+<Callout type="info">
+  Set `default: true` on one provider to make it the fallback when a request doesn't match any specific model name.
+</Callout>
+
+### Provider-Specific Configuration
+
+Some providers require additional configuration beyond an API key:
+
+<Tabs items={["Azure OpenAI", "AWS Bedrock", "Vertex AI", "Ollama"]}>
+  <Tab value="Azure OpenAI">
+    Azure OpenAI uses deployment-based routing. The base URL must point to your specific deployment:
+
+    ```yaml
+    - provider: azure-openai
+      api_key: your-azure-key
+      base_url: "https://{resource}.openai.azure.com/openai/deployments/{deployment}"
+      model:
+        - gpt-4o
+    ```
+
+  </Tab>
+  <Tab value="AWS Bedrock">
+    AWS Bedrock uses SigV4 authentication instead of API keys. Configure your AWS credentials:
+
+    ```yaml
+    - provider: aws-bedrock
+      base_url: "https://bedrock-runtime.{region}.amazonaws.com"
+      model:
+        - anthropic.claude-3-sonnet-20240229-v1:0
+    ```
+
+    Set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_REGION` environment variables.
+
+  </Tab>
+  <Tab value="Vertex AI">
+    Vertex AI uses OAuth2 authentication with Google Cloud project-based routing:
+
+    ```yaml
+    - provider: vertex-ai
+      base_url: "https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}"
+      model:
+        - gemini-2.0-flash
+    ```
+
+    Authenticate via `GOOGLE_APPLICATION_CREDENTIALS` or workload identity.
+
+  </Tab>
+  <Tab value="Ollama">
+    Ollama runs locally and supports **automatic model discovery** — Everstack detects installed models without manual configuration:
+
+    ```yaml
+    - provider: ollama
+      base_url: "http://localhost:11434"
+      model:
+        - llama3
+        - codellama
+    ```
+
+    Ollama is the only provider with `supports_model_discovery: true`, querying `http://localhost:11434/api/tags` to list available models.
+
+  </Tab>
+</Tabs>
+
+## Model Catalog
+
+The model catalog is a versioned registry of all known models across every supported provider. It includes metadata like context window sizes, capabilities, pricing, and deprecation status.
+
+### How It Works
+
+The catalog operates in three layers:
+
+1. **Embedded catalog** — bundled into the Everstack binary at build time. Always available as a fallback.
+2. **Remote catalog** -- fetched from the [model-catalog](https://github.com/everstacklabs/model-catalog) repository. Contains the latest models and pricing.
+3. **Merged catalog** — the embedded and remote catalogs are merged at runtime, with remote data taking precedence.
+
+### Catalog Structure
+
+Each provider in the catalog includes:
+
+```yaml
+# provider.yaml
+name: "openai"
+display_name: "OpenAI"
+base_url: "https://api.openai.com/v1"
+provider_type: "static"           # static or meta
+supports_model_discovery: false
+
+capabilities:
+  chat: true
+  embeddings: true
+  function_calling: true
+  vision: true
+  streaming: true
+
+model_families:
+  gpt-4:
+    description: "GPT-4 family models"
+    capabilities: ["chat", "function_calling", "vision"]
+    max_tokens: 128000
+```
+
+Individual models are defined in separate YAML files with detailed metadata — context window, pricing per token, deprecation dates, and supported features.
+
+### Provider Types
+
+| Type | Behavior | Examples |
+| --- | --- | --- |
+| `static` | Fixed model list defined in the catalog | OpenAI, Anthropic, Google, DeepSeek |
+| `meta` | Aggregates models from multiple sources or discovers them dynamically | Groq, Together, Fireworks, OpenRouter, Ollama, NVIDIA NIM |
+
+Meta-providers may offer hundreds of models from various upstream providers. The catalog tracks which models are available through each meta-provider.
+
+## Syncing
+
+Everstack keeps the model catalog up to date through automatic and manual sync.
+
+### Automatic Sync
+
+The catalog sync service runs in the background:
+
+1. **Initial sync** — runs 5 minutes after startup
+2. **Periodic sync** — runs daily to check for updates
+3. **Version check** — compares local and remote `manifest.yaml` versions
+4. **Atomic updates** — downloads are written atomically with SHA verification
+5. **Graceful fallback** — if the remote is unavailable, the embedded catalog is used
+
+### Manual Sync
+
+Trigger a sync from the Admin Dashboard:
+
+1. Go to **Vault → LLM Providers**
+2. Click the **Sync** button in the toolbar
+3. The dashboard shows sync status — new models, new providers, and deprecated items
+
+Or trigger via the API:
+
+```bash
+curl -X POST https://{instance}.{region}.everstack.ai/api/providers/reload \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### What Gets Synced
+
+| Data | Source | Frequency |
+| --- | --- | --- |
+| Provider definitions | Remote catalog repo | Daily |
+| Model metadata | Remote catalog repo | Daily |
+| Pricing & token limits | Remote catalog repo | Daily |
+| Provider configuration | Admin Dashboard → YAML | On change (debounced 5s) |
+
+### Config Sync (YAML ↔ Database)
+
+When you configure a provider through the Admin Dashboard, the configuration is stored in the database **and** synced to YAML config files. This two-way sync ensures:
+
+- Dashboard changes are reflected in the config file
+- Config file changes can be loaded on restart
+- The sync worker uses a debounce window (5 seconds) to batch rapid changes
+
+## Capabilities Reference
+
+Each provider supports a different set of capabilities. Here's a summary:
+
+| Provider | Chat | Embeddings | Vision | Function Calling | Streaming | Fine-tuning |
+| --- | --- | --- | --- | --- | --- | --- |
+| OpenAI | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Anthropic | ✓ | — | ✓ | ✓ | ✓ | — |
+| Google | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Azure OpenAI | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| AWS Bedrock | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| Vertex AI | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Groq | ✓ | — | ✓ | ✓ | ✓ | — |
+| Together AI | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Fireworks AI | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| DeepSeek | ✓ | — | — | ✓ | ✓ | — |
+| Mistral | ✓ | ✓ | — | ✓ | ✓ | ✓ |
+| Cohere | ✓ | ✓ | — | ✓ | ✓ | ✓ |
+| xAI | ✓ | — | ✓ | ✓ | ✓ | — |
+| Perplexity | ✓ | — | — | — | ✓ | — |
+| Cerebras | ✓ | — | — | ✓ | ✓ | — |
+| NVIDIA NIM | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| OpenRouter | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| Ollama | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| HuggingFace | ✓ | ✓ | ✓ | — | ✓ | — |
+| Qwen | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| Minimax | ✓ | — | — | — | ✓ | — |
+| Moonshot | ✓ | — | — | ✓ | ✓ | — |
+
+## Authentication Methods
+
+Most providers use API key authentication, but some require different auth mechanisms:
+
+| Method | Providers | Configuration |
+| --- | --- | --- |
+| API Key (Bearer) | OpenAI, Groq, Together, Fireworks, DeepSeek, xAI, Perplexity, Cerebras, NVIDIA NIM, OpenRouter, HuggingFace, Qwen, Minimax, Moonshot | `Authorization: Bearer {api_key}` |
+| API Key (Custom Header) | Anthropic | `x-api-key: {api_key}` |
+| API Key (Query Param) | Google | `?key={api_key}` |
+| API Key (Header) | Azure OpenAI, Cohere, Mistral | `api-key: {api_key}` |
+| AWS SigV4 | AWS Bedrock | AWS credentials via env vars |
+| OAuth2 / Service Account | Vertex AI | Google Cloud credentials |
+| No Auth | Ollama | Local-only, no key needed |
+
+## Next Steps
+
+- [Configuration](/getting-started/configuration) — full config file reference
+- [Gateway Overview](/getting-started/gateway/overview) — routing, load balancing, and fallbacks
+- [Provider Keys](/getting-started/vault/provider-keys) — key management and rotation
+- [Quick Start](/getting-started/quickstart) — configure your first provider and send a request

@@ -1,0 +1,313 @@
+syntax = "proto3";
+
+package everstack.alerts.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/alerts/v1;alerts";
+
+// AlertCategory classifies what an alert monitors.
+enum AlertCategory {
+  ALERT_CATEGORY_UNSPECIFIED = 0;
+  ALERT_CATEGORY_PERFORMANCE = 1;
+  ALERT_CATEGORY_COST = 2;
+  ALERT_CATEGORY_PROVIDER = 3;
+  ALERT_CATEGORY_CUSTOM = 4;
+}
+
+// AlertSeverity indicates urgency.
+enum AlertSeverity {
+  ALERT_SEVERITY_UNSPECIFIED = 0;
+  ALERT_SEVERITY_CRITICAL = 1;
+  ALERT_SEVERITY_WARNING = 2;
+  ALERT_SEVERITY_INFO = 3;
+}
+
+// ComparisonOperator for threshold evaluation.
+enum ComparisonOperator {
+  COMPARISON_OPERATOR_UNSPECIFIED = 0;
+  COMPARISON_OPERATOR_GT = 1;
+  COMPARISON_OPERATOR_LT = 2;
+  COMPARISON_OPERATOR_GTE = 3;
+  COMPARISON_OPERATOR_LTE = 4;
+}
+
+// AlertEventStatus tracks the lifecycle of a fired alert.
+enum AlertEventStatus {
+  ALERT_EVENT_STATUS_UNSPECIFIED = 0;
+  ALERT_EVENT_STATUS_FIRING = 1;
+  ALERT_EVENT_STATUS_ACKNOWLEDGED = 2;
+  ALERT_EVENT_STATUS_RESOLVED = 3;
+}
+
+// NotificationTargetType identifies the delivery mechanism.
+enum NotificationTargetType {
+  NOTIFICATION_TARGET_TYPE_UNSPECIFIED = 0;
+  NOTIFICATION_TARGET_TYPE_CHANNEL = 1;
+  NOTIFICATION_TARGET_TYPE_WEBHOOK = 2;
+  NOTIFICATION_TARGET_TYPE_EMAIL = 3;
+}
+
+// ─── Resources ───────────────────────────────────────────────────────
+
+// AlertRule defines a monitoring rule that evaluates a metric condition.
+message AlertRule {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  AlertCategory category = 5;
+  AlertSeverity severity = 6;
+  optional string builtin_key = 7;
+  string metric = 8;
+  ComparisonOperator operator = 9;
+  double threshold = 10;
+  int32 duration_seconds = 11;
+  google.protobuf.Struct filters = 12;
+  bool enabled = 13;
+  optional google.protobuf.Timestamp muted_until = 14;
+  repeated string target_ids = 15;
+  google.protobuf.Timestamp created_at = 16;
+  google.protobuf.Timestamp updated_at = 17;
+}
+
+// NotificationTarget defines where alert notifications are delivered.
+message NotificationTarget {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  NotificationTargetType target_type = 4;
+  optional string channel_config_id = 5;
+  optional string platform_channel_ref = 6;
+  optional string webhook_url = 7;
+  google.protobuf.Struct webhook_headers = 8;
+  repeated string email_addresses = 9;
+  AlertSeverity min_severity = 10;
+  bool enabled = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+// AlertEvent records a single firing of an alert rule.
+message AlertEvent {
+  string id = 1;
+  string tenant_id = 2;
+  string alert_rule_id = 3;
+  string alert_rule_name = 4;
+  AlertSeverity severity = 5;
+  AlertEventStatus status = 6;
+  double metric_value = 7;
+  double threshold = 8;
+  google.protobuf.Timestamp fired_at = 9;
+  optional google.protobuf.Timestamp acknowledged_at = 10;
+  optional string acknowledged_by = 11;
+  optional google.protobuf.Timestamp resolved_at = 12;
+  optional google.protobuf.Timestamp last_notified_at = 13;
+  int32 notification_count = 14;
+}
+
+// AlertsSummary provides a quick overview for the sidebar badge.
+message AlertsSummary {
+  int32 firing_count = 1;
+  int32 acknowledged_count = 2;
+  int32 total_rules = 3;
+  int32 enabled_rules = 4;
+}
+
+// ─── Request / Response Messages ─────────────────────────────────────
+
+// AlertRule CRUD
+message CreateAlertRuleRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string description = 3;
+  AlertCategory category = 4;
+  AlertSeverity severity = 5;
+  string metric = 6;
+  ComparisonOperator operator = 7;
+  double threshold = 8;
+  int32 duration_seconds = 9;
+  google.protobuf.Struct filters = 10;
+  bool enabled = 11;
+  repeated string target_ids = 12;
+}
+
+message CreateAlertRuleResponse {
+  AlertRule rule = 1;
+}
+
+message GetAlertRuleRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message GetAlertRuleResponse {
+  AlertRule rule = 1;
+}
+
+message UpdateAlertRuleRequest {
+  string id = 1;
+  string tenant_id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional AlertCategory category = 5;
+  optional AlertSeverity severity = 6;
+  optional string metric = 7;
+  optional ComparisonOperator operator = 8;
+  optional double threshold = 9;
+  optional int32 duration_seconds = 10;
+  google.protobuf.Struct filters = 11;
+  optional bool enabled = 12;
+  repeated string target_ids = 13;
+  optional google.protobuf.Timestamp muted_until = 14;
+}
+
+message UpdateAlertRuleResponse {
+  AlertRule rule = 1;
+}
+
+message DeleteAlertRuleRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message DeleteAlertRuleResponse {}
+
+message ListAlertRulesRequest {
+  string tenant_id = 1;
+  optional AlertCategory category = 2;
+  optional bool enabled = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message ListAlertRulesResponse {
+  repeated AlertRule rules = 1;
+  int32 total = 2;
+}
+
+// NotificationTarget CRUD
+message CreateNotificationTargetRequest {
+  string tenant_id = 1;
+  string name = 2;
+  NotificationTargetType target_type = 3;
+  optional string channel_config_id = 4;
+  optional string platform_channel_ref = 5;
+  optional string webhook_url = 6;
+  google.protobuf.Struct webhook_headers = 7;
+  repeated string email_addresses = 8;
+  AlertSeverity min_severity = 9;
+  bool enabled = 10;
+}
+
+message CreateNotificationTargetResponse {
+  NotificationTarget target = 1;
+}
+
+message GetNotificationTargetRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message GetNotificationTargetResponse {
+  NotificationTarget target = 1;
+}
+
+message UpdateNotificationTargetRequest {
+  string id = 1;
+  string tenant_id = 2;
+  optional string name = 3;
+  optional NotificationTargetType target_type = 4;
+  optional string channel_config_id = 5;
+  optional string platform_channel_ref = 6;
+  optional string webhook_url = 7;
+  google.protobuf.Struct webhook_headers = 8;
+  repeated string email_addresses = 9;
+  optional AlertSeverity min_severity = 10;
+  optional bool enabled = 11;
+}
+
+message UpdateNotificationTargetResponse {
+  NotificationTarget target = 1;
+}
+
+message DeleteNotificationTargetRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message DeleteNotificationTargetResponse {}
+
+message ListNotificationTargetsRequest {
+  string tenant_id = 1;
+  optional NotificationTargetType target_type = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message ListNotificationTargetsResponse {
+  repeated NotificationTarget targets = 1;
+  int32 total = 2;
+}
+
+message TestNotificationTargetRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message TestNotificationTargetResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// AlertEvent operations
+message ListAlertEventsRequest {
+  string tenant_id = 1;
+  optional string alert_rule_id = 2;
+  optional AlertEventStatus status = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message ListAlertEventsResponse {
+  repeated AlertEvent events = 1;
+  int32 total = 2;
+}
+
+message AcknowledgeAlertRequest {
+  string id = 1;
+  string tenant_id = 2;
+  string acknowledged_by = 3;
+}
+
+message AcknowledgeAlertResponse {
+  AlertEvent event = 1;
+}
+
+message ResolveAlertRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message ResolveAlertResponse {
+  AlertEvent event = 1;
+}
+
+// Builtin seeder
+message SeedBuiltinRulesRequest {
+  string tenant_id = 1;
+}
+
+message SeedBuiltinRulesResponse {
+  int32 seeded_count = 1;
+}
+
+// Summary
+message GetAlertsSummaryRequest {
+  string tenant_id = 1;
+}
+
+message GetAlertsSummaryResponse {
+  AlertsSummary summary = 1;
+}

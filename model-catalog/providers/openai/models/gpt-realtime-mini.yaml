@@ -1,0 +1,14 @@
+name: gpt-realtime-mini
+display_name: Gpt Realtime Mini
+family: other
+status: stable
+limits:
+    max_tokens: 128000
+capabilities:
+    - chat
+    - function_calling
+modalities:
+    input:
+        - text
+    output:
+        - text

@@ -1,0 +1,53 @@
+---
+title: Cursor
+description: Observe Cursor by routing its model traffic through your Everstack gateway.
+icon: cursor
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<CursorIcon /> **Cursor** does not export OpenTelemetry for its model calls. To
+see Cursor sessions in Everstack, route its traffic through your Everstack
+**gateway** — the same OpenAI-compatible surface the SDKs use — so every request
+lands in [Logs](/docs/getting-started/observability/logs) and
+[Traces](/docs/getting-started/observability/traces).
+
+## Configuration
+
+In Cursor: **Settings → Models → API Keys**, set the **OpenAI API Key** to an
+Everstack gateway key, enable **Override OpenAI Base URL**, and point it at your
+instance's gateway:
+
+```text
+Base URL:  https://<your-instance>/v1
+API Key:   <your-everstack-gateway-key>
+```
+
+Cursor then sends chat/plan requests to Everstack, which routes them to the
+upstream provider and records each call. The model you pick in Cursor must exist
+in your gateway's model catalog.
+
+<Callout type="warn">
+  Cursor only honors a custom base URL for its **Ask / Plan** (chat) modes.
+  Agent, Composer inline edit, and Tab autocomplete run against Cursor's own
+  backend and will not appear in Everstack.
+</Callout>
+
+## How Everstack attributes Cursor
+
+This is the gateway-proxy path (like [GLM](/docs/getting-started/observability/coding-agents/glm)
+and [Kimi](/docs/getting-started/observability/coding-agents/kimi)), so the
+provider, model, token usage, and cost come from the gateway request itself, not
+from Cursor telemetry. Traces whose emitter identifies as `cursor` render with
+the Cursor mark.
+
+## Notes
+
+- Use a gateway key scoped to the models you want Cursor to reach; the same key
+  authenticates and attributes the traffic to your tenant.
+- Cost is computed from your model-catalog pricing, matching what you are billed
+  for the underlying provider call.
+- If your setup also exports OpenTelemetry for agent activity (for example via a
+  community OTel hook), point its exporter at
+  `https://<your-instance>/v1/traces` with a Bearer API key, exactly like the
+  [other agents](/docs/getting-started/observability/coding-agents).

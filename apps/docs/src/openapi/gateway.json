@@ -1,0 +1,3762 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "everstack/gateway/v1/gateway_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "GatewayService"
+    }
+  ],
+  "paths": {
+    "/v1/audio/speech": {
+      "post": {
+        "summary": "Text-to-Speech: Generate audio from text",
+        "operationId": "GatewayService_Speech",
+        "responses": {
+          "200": {
+            "description": "Generated audio file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1SpeechResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1SpeechRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/audio/transcriptions": {
+      "post": {
+        "summary": "Speech-to-Text: Transcribe audio to text",
+        "operationId": "GatewayService_Transcription",
+        "responses": {
+          "200": {
+            "description": "Transcribed text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1TranscriptionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1TranscriptionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/audio/translations": {
+      "post": {
+        "summary": "Audio Translation: Translate audio to English text",
+        "operationId": "GatewayService_Translation",
+        "responses": {
+          "200": {
+            "description": "Translated text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1TranslationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1TranslationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/chat/completions": {
+      "post": {
+        "operationId": "GatewayService_ChatCompletion",
+        "responses": {
+          "200": {
+            "description": "The chat completion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {
+                      "$ref": "#/components/schemas/v1ChatCompletionResponse"
+                    },
+                    "error": {
+                      "$ref": "#/components/schemas/rpcStatus"
+                    }
+                  },
+                  "title": "Stream result of v1ChatCompletionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ChatCompletionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/embeddings": {
+      "post": {
+        "operationId": "GatewayService_Embeddings",
+        "responses": {
+          "200": {
+            "description": "The embeddings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {
+                      "$ref": "#/components/schemas/v1EmbeddingsResponse"
+                    },
+                    "error": {
+                      "$ref": "#/components/schemas/rpcStatus"
+                    }
+                  },
+                  "title": "Stream result of v1EmbeddingsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1EmbeddingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/gateway/activation-callback": {
+      "post": {
+        "summary": "Activation callback from cloud (called by cloud after successful payment)",
+        "operationId": "GatewayService_ActivationCallback",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ActivationCallbackResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ActivationCallbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/gateway/instance/activate": {
+      "post": {
+        "summary": "Admin endpoints for Gateway instance management",
+        "operationId": "GatewayService_ActivateGatewayInstance",
+        "responses": {
+          "200": {
+            "description": "Gateway instance activated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ActivateGatewayInstanceResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ActivateGatewayInstanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/gateway/instance/status": {
+      "get": {
+        "operationId": "GatewayService_GetGatewayInstanceStatus",
+        "responses": {
+          "200": {
+            "description": "Gateway instance status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetGatewayInstanceStatusResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/gateway/models": {
+      "get": {
+        "operationId": "GatewayService_ListModels",
+        "responses": {
+          "200": {
+            "description": "Provider model catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListModelsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/gateway/subscription-status-callback": {
+      "post": {
+        "summary": "Subscription status callback from billing service (called after Stripe webhooks)",
+        "operationId": "GatewayService_SubscriptionStatusCallback",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1SubscriptionStatusCallbackResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1SubscriptionStatusCallbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/gateway/{id}": {
+      "get": {
+        "operationId": "GatewayService_GetGateway",
+        "responses": {
+          "200": {
+            "description": "The created application",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetGatewayResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/images/edits": {
+      "post": {
+        "summary": "Edit an existing image",
+        "operationId": "GatewayService_ImageEdit",
+        "responses": {
+          "200": {
+            "description": "Edited images",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ImageEditResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ImageEditRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/images/generations": {
+      "post": {
+        "summary": "Generate images from text prompts",
+        "operationId": "GatewayService_ImageGeneration",
+        "responses": {
+          "200": {
+            "description": "Generated images",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ImageGenerationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ImageGenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/images/variations": {
+      "post": {
+        "summary": "Create variations of an image",
+        "operationId": "GatewayService_ImageVariation",
+        "responses": {
+          "200": {
+            "description": "Image variations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ImageVariationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ImageVariationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/moderations": {
+      "post": {
+        "summary": "Classify content for policy violations",
+        "operationId": "GatewayService_Moderation",
+        "responses": {
+          "200": {
+            "description": "Moderation results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ModerationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ModerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/rerank": {
+      "post": {
+        "summary": "Rerank documents by relevance to a query",
+        "operationId": "GatewayService_Rerank",
+        "responses": {
+          "200": {
+            "description": "Reranked documents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RerankResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1RerankRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/responses": {
+      "get": {
+        "summary": "List responses",
+        "operationId": "GatewayService_ListResponses",
+        "responses": {
+          "200": {
+            "description": "List of responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListResponsesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "description": "Filter by status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "description": "Pagination limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "after",
+            "description": "Pagination cursor (after)",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "before",
+            "description": "Pagination cursor (before)",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order",
+            "description": "Order: \"asc\" or \"desc\"",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["GatewayService"]
+      },
+      "post": {
+        "summary": "Create a response (agentic loop with auto tool calling)",
+        "operationId": "GatewayService_CreateResponse",
+        "responses": {
+          "200": {
+            "description": "Generated response with tool calls",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {
+                      "$ref": "#/components/schemas/v1CreateResponseResponse"
+                    },
+                    "error": {
+                      "$ref": "#/components/schemas/rpcStatus"
+                    }
+                  },
+                  "title": "Stream result of v1CreateResponseResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateResponseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/responses/{responseId}": {
+      "get": {
+        "summary": "Get a response by ID",
+        "operationId": "GatewayService_GetResponse",
+        "responses": {
+          "200": {
+            "description": "The response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetResponseResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "responseId",
+            "description": "The response ID to retrieve",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeInput",
+            "description": "Include input items in the response",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "tags": ["GatewayService"]
+      },
+      "delete": {
+        "summary": "Delete a response",
+        "operationId": "GatewayService_DeleteResponse",
+        "responses": {
+          "200": {
+            "description": "Deleted response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteResponseResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "responseId",
+            "description": "The response ID to delete",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["GatewayService"]
+      }
+    },
+    "/v1/responses/{responseId}/cancel": {
+      "post": {
+        "summary": "Cancel an in-progress response",
+        "operationId": "GatewayService_CancelResponse",
+        "responses": {
+          "200": {
+            "description": "Cancelled response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CancelResponseResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "responseId",
+            "description": "The response ID to cancel",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GatewayServiceCancelResponseBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["GatewayService"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "GatewayServiceCancelResponseBody": {
+        "type": "object"
+      },
+      "everstackgatewayv1FeatureRelease": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Human-readable name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Feature description"
+          },
+          "status": {
+            "type": "string",
+            "title": "'development', 'beta', 'released', 'deprecated'"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "['gateway', 'dashboard', 'api']"
+          }
+        },
+        "title": "Feature release metadata from the license service"
+      },
+      "everstackgatewayv1GetPlansResponse": {
+        "type": "object",
+        "properties": {
+          "plans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/everstackgatewayv1Plan"
+            }
+          }
+        }
+      },
+      "everstackgatewayv1PerSeatPricing": {
+        "type": "object",
+        "properties": {
+          "monthly": {
+            "type": "string",
+            "title": "Monthly per-seat price"
+          },
+          "yearly": {
+            "type": "string",
+            "title": "Yearly per-seat price"
+          },
+          "subText": {
+            "type": "string",
+            "title": "Description e.g. \"per additional seat beyond 3 included\""
+          }
+        },
+        "title": "Per-seat pricing for additional users beyond included seats"
+      },
+      "everstackgatewayv1Plan": {
+        "type": "object",
+        "properties": {
+          "tier": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "trialDurationDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/everstackgatewayv1PlanPricing"
+          },
+          "highlight": {
+            "type": "boolean"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/everstackgatewayv1PlanFeature"
+            }
+          },
+          "usageLimits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/everstackgatewayv1PlanUsageLimit"
+            }
+          },
+          "seatLimit": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Max users allowed (0 = unlimited)"
+          }
+        }
+      },
+      "everstackgatewayv1PlanFeature": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "everstackgatewayv1PlanPricing": {
+        "type": "object",
+        "properties": {
+          "monthly": {
+            "type": "string"
+          },
+          "yearly": {
+            "type": "string"
+          },
+          "perSeat": {
+            "$ref": "#/components/schemas/everstackgatewayv1PerSeatPricing"
+          }
+        }
+      },
+      "everstackgatewayv1PlanUsageLimit": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "format": "int64"
+          },
+          "subText": {
+            "type": "string"
+          }
+        }
+      },
+      "protobufAny": {
+        "type": "object",
+        "properties": {
+          "@type": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": {}
+      },
+      "protobufNullValue": {
+        "type": "string",
+        "enum": ["NULL_VALUE"],
+        "default": "NULL_VALUE",
+        "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+      },
+      "rpcStatus": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/protobufAny"
+            }
+          }
+        }
+      },
+      "v1ActivateGatewayInstanceRequest": {
+        "type": "object",
+        "properties": {
+          "activationToken": {
+            "type": "string",
+            "title": "The activation token obtained from the cloud portal"
+          },
+          "deviceFingerprintHash": {
+            "type": "string",
+            "title": "Optional device fingerprint for additional security"
+          },
+          "instanceId": {
+            "type": "string",
+            "title": "Optional instance ID for upgrading existing instance"
+          }
+        },
+        "title": "Gateway instance activation messages (called by Admin UI)"
+      },
+      "v1ActivateGatewayInstanceResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Activation status"
+          },
+          "instanceId": {
+            "type": "string",
+            "title": "Instance ID assigned by the License Service"
+          },
+          "tenantId": {
+            "type": "string",
+            "title": "Tenant ID for multi-tenant tracking"
+          },
+          "planTier": {
+            "type": "string",
+            "title": "Plan tier (free, pro, enterprise)"
+          },
+          "activatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "When the instance was activated"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "When the license expires (if applicable)"
+          }
+        }
+      },
+      "v1ActivationCallbackRequest": {
+        "type": "object",
+        "properties": {
+          "signedPayload": {
+            "type": "string",
+            "title": "JWT signed by cloud containing activation_token"
+          },
+          "callbackSecret": {
+            "type": "string",
+            "title": "The secret to verify this is the expected callback"
+          }
+        },
+        "title": "Activation callback from cloud after successful payment"
+      },
+      "v1ActivationCallbackResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "planTier": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1BuiltInToolConfig": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Tool type: \"web_search\", \"file_search\", \"code_interpreter\", \"computer_use\", \"mcp\""
+          },
+          "webSearch": {
+            "$ref": "#/components/schemas/v1WebSearchConfig"
+          },
+          "fileSearch": {
+            "$ref": "#/components/schemas/v1FileSearchConfig"
+          },
+          "codeInterpreter": {
+            "$ref": "#/components/schemas/v1CodeInterpreterConfig"
+          },
+          "computerUse": {
+            "$ref": "#/components/schemas/v1ComputerUseConfig"
+          },
+          "mcp": {
+            "$ref": "#/components/schemas/v1McpServerConfig"
+          }
+        },
+        "title": "Built-in tool configuration"
+      },
+      "v1CancelResponseResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success status"
+          },
+          "response": {
+            "$ref": "#/components/schemas/v1CreateResponseResponse"
+          }
+        }
+      },
+      "v1ChatCompletionRequest": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model name as shown in gateway.yaml (e.g., \"gpt-4o-mini\")"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Message"
+            },
+            "title": "Required conversation context"
+          },
+          "sampling": {
+            "$ref": "#/components/schemas/v1SamplingParams"
+          },
+          "responseFormat": {
+            "type": "object",
+            "title": "Optional: request JSON response shaping (future-friendly)"
+          },
+          "stream": {
+            "type": "boolean",
+            "description": "Streaming hint; use ChatStream for true streaming. Optional to allow presence detection."
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Optional per-call metadata/tags"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Tool"
+            },
+            "title": "Tools available for the model to call"
+          },
+          "toolChoice": {
+            "$ref": "#/components/schemas/v1ToolChoice"
+          },
+          "parallelToolCalls": {
+            "type": "boolean",
+            "title": "Whether to run parallel tool calls (default: true)"
+          }
+        }
+      },
+      "v1ChatCompletionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "created": {
+            "type": "string",
+            "format": "int64",
+            "title": "epoch seconds"
+          },
+          "model": {
+            "type": "string"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Choice"
+            }
+          },
+          "usage": {
+            "$ref": "#/components/schemas/v1Usage"
+          },
+          "fallbackInfo": {
+            "$ref": "#/components/schemas/v1FallbackInfo"
+          }
+        }
+      },
+      "v1Choice": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "$ref": "#/components/schemas/v1Message"
+          },
+          "finishReason": {
+            "type": "string",
+            "description": "\"stop\", \"length\", etc."
+          }
+        }
+      },
+      "v1CodeInterpreterConfig": {
+        "type": "object",
+        "properties": {
+          "container": {
+            "$ref": "#/components/schemas/v1CodeInterpreterContainer"
+          }
+        }
+      },
+      "v1CodeInterpreterContainer": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type of container: \"auto\""
+          },
+          "fileIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "File IDs accessible in the container"
+          }
+        }
+      },
+      "v1ComputerUseConfig": {
+        "type": "object",
+        "properties": {
+          "environment": {
+            "type": "string",
+            "title": "Display environment: \"browser\", \"mac\", \"windows\", \"linux\", \"ubuntu\""
+          },
+          "displayWidth": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Display width"
+          },
+          "displayHeight": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Display height"
+          }
+        }
+      },
+      "v1ContentPart": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "\"text\", \"image_url\""
+          },
+          "text": {
+            "type": "string"
+          },
+          "imageUrl": {
+            "type": "string"
+          },
+          "fileId": {
+            "type": "string"
+          },
+          "toolCallId": {
+            "type": "string"
+          },
+          "functionCall": {
+            "type": "string"
+          }
+        }
+      },
+      "v1CreateResponseRequest": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "The model to use for generating the response"
+          },
+          "instructions": {
+            "type": "string",
+            "title": "System instructions (developer message)"
+          },
+          "input": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ResponseInput"
+            },
+            "title": "Input messages for the conversation"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Tool"
+            },
+            "title": "Tools available for the model to call (function definitions)"
+          },
+          "builtinTools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1BuiltInToolConfig"
+            },
+            "title": "Built-in tools configuration"
+          },
+          "toolChoice": {
+            "$ref": "#/components/schemas/v1ToolChoice"
+          },
+          "parallelToolCalls": {
+            "type": "boolean",
+            "title": "Whether to run parallel tool calls (default: true)"
+          },
+          "text": {
+            "$ref": "#/components/schemas/v1ResponseTextConfig"
+          },
+          "reasoning": {
+            "$ref": "#/components/schemas/v1ReasoningConfig"
+          },
+          "maxOutputTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Maximum number of output tokens"
+          },
+          "temperature": {
+            "type": "number",
+            "format": "float",
+            "title": "Sampling temperature (0 to 2, default 1)"
+          },
+          "topP": {
+            "type": "number",
+            "format": "float",
+            "title": "Top-p sampling (0 to 1, default 1)"
+          },
+          "truncation": {
+            "$ref": "#/components/schemas/v1TruncationStrategy"
+          },
+          "store": {
+            "type": "boolean",
+            "title": "Whether to store the response for retrieval"
+          },
+          "previousResponseId": {
+            "type": "string",
+            "title": "Optional previous response ID to continue from"
+          },
+          "stream": {
+            "type": "boolean",
+            "title": "Whether to stream the response"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Metadata to associate with the response"
+          }
+        }
+      },
+      "v1CreateResponseResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Unique identifier for the response"
+          },
+          "object": {
+            "type": "string",
+            "title": "Object type (always \"response\")"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "int64",
+            "title": "Unix timestamp of creation"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status: \"in_progress\", \"completed\", \"incomplete\", \"failed\", \"cancelled\""
+          },
+          "error": {
+            "$ref": "#/components/schemas/v1ResponseError"
+          },
+          "incompleteDetails": {
+            "$ref": "#/components/schemas/v1IncompleteDetails"
+          },
+          "model": {
+            "type": "string",
+            "title": "The model used"
+          },
+          "output": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ResponseOutputItem"
+            },
+            "title": "Output items generated"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/v1ResponseUsage"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Response metadata"
+          },
+          "temperature": {
+            "type": "number",
+            "format": "float",
+            "title": "Temperature used"
+          },
+          "topP": {
+            "type": "number",
+            "format": "float",
+            "title": "Top-p used"
+          },
+          "maxOutputTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Max output tokens"
+          },
+          "previousResponseId": {
+            "type": "string",
+            "title": "Previous response ID (if continuing)"
+          },
+          "reasoning": {
+            "$ref": "#/components/schemas/v1ReasoningConfig"
+          },
+          "truncation": {
+            "$ref": "#/components/schemas/v1TruncationStrategy"
+          }
+        }
+      },
+      "v1DeleteResponseResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "The ID of the deleted response"
+          },
+          "object": {
+            "type": "string",
+            "title": "Object type (always \"response.deleted\")"
+          },
+          "deleted": {
+            "type": "boolean",
+            "title": "Whether the deletion was successful"
+          }
+        }
+      },
+      "v1EmbeddingData": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "title": "The type of object (always \"embedding\")"
+          },
+          "embedding": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "float"
+            },
+            "title": "The embedding vector"
+          },
+          "index": {
+            "type": "integer",
+            "format": "int32",
+            "title": "The index of this embedding in the list"
+          }
+        },
+        "title": "EmbeddingData represents a single embedding in the response"
+      },
+      "v1EmbeddingsRequest": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model name for embedding (e.g., \"text-embedding-ada-002\")"
+          },
+          "input": {
+            "type": "string",
+            "title": "Direct text input (simple usage) - can be a single string or will be derived from messages"
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Optional per-call metadata"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Message"
+            },
+            "title": "Messages array (consistent with ChatCompletion - extracts text from user messages)\nIf provided and input is empty, text from messages will be concatenated and used as input"
+          }
+        }
+      },
+      "v1EmbeddingsResponse": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "title": "The type of object (always \"list\")"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1EmbeddingData"
+            },
+            "title": "List of embedding data objects"
+          },
+          "model": {
+            "type": "string",
+            "title": "The model used for embedding"
+          },
+          "id": {
+            "type": "string",
+            "title": "Unique identifier for this response (optional)"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/v1EmbeddingsUsage"
+          }
+        },
+        "title": "EmbeddingsResponse follows OpenAI's embedding response format"
+      },
+      "v1EmbeddingsUsage": {
+        "type": "object",
+        "properties": {
+          "promptTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Number of tokens in the input"
+          },
+          "totalTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Total tokens used"
+          },
+          "cost": {
+            "type": "number",
+            "format": "double",
+            "title": "Estimated cost in USD (optional)"
+          }
+        },
+        "title": "EmbeddingsUsage represents token usage for the embeddings request"
+      },
+      "v1FallbackInfo": {
+        "type": "object",
+        "properties": {
+          "fallbackUsed": {
+            "type": "boolean",
+            "title": "Whether this response was served via fallback (requested model failed/unavailable)"
+          },
+          "requestedModel": {
+            "type": "string",
+            "title": "The model that was originally requested"
+          },
+          "actualModel": {
+            "type": "string",
+            "title": "The model that actually served the response (may differ if fallback_used = true)"
+          },
+          "fallbackReason": {
+            "type": "string",
+            "title": "Reason for fallback (e.g., \"model_unavailable\", \"rate_limit\", \"timeout\")"
+          },
+          "fallbackAttempts": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Number of fallback attempts before success"
+          }
+        }
+      },
+      "v1FeatureFlag": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1FeatureStatus": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "requiredTier": {
+            "type": "string"
+          },
+          "lockedReason": {
+            "type": "string"
+          }
+        }
+      },
+      "v1FileSearchConfig": {
+        "type": "object",
+        "properties": {
+          "vectorStoreIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Vector store IDs to search"
+          },
+          "maxNumResults": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Maximum number of results per query"
+          },
+          "rankingOptions": {
+            "$ref": "#/components/schemas/v1FileSearchRankingOptions"
+          }
+        }
+      },
+      "v1FileSearchRankingOptions": {
+        "type": "object",
+        "properties": {
+          "ranker": {
+            "type": "string",
+            "title": "Ranker to use: \"auto\", \"default_2024_08_21\""
+          },
+          "scoreThreshold": {
+            "type": "number",
+            "format": "float",
+            "title": "Score threshold (0.0 to 1.0)"
+          }
+        }
+      },
+      "v1FileSearchResult": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "title": "File ID"
+          },
+          "fileName": {
+            "type": "string",
+            "title": "File name"
+          },
+          "content": {
+            "type": "string",
+            "title": "Matching content"
+          },
+          "score": {
+            "type": "number",
+            "format": "float",
+            "title": "Relevance score"
+          }
+        }
+      },
+      "v1FileSearchResults": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "The search query used"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1FileSearchResult"
+            },
+            "title": "Search results"
+          }
+        }
+      },
+      "v1GatewayStatus": {
+        "type": "object",
+        "properties": {
+          "locked": {
+            "type": "boolean"
+          },
+          "lockReason": {
+            "type": "string"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1FeatureStatus"
+            }
+          },
+          "spendBlocked": {
+            "type": "boolean"
+          },
+          "spendBlockedReason": {
+            "type": "string"
+          }
+        }
+      },
+      "v1GetGatewayInstanceStatusResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status: \"active\" or \"inactive\""
+          },
+          "activated": {
+            "type": "boolean",
+            "title": "Whether the gateway is activated"
+          },
+          "instanceId": {
+            "type": "string",
+            "title": "Instance ID (only if activated)"
+          },
+          "activatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "When the instance was activated (only if activated)"
+          },
+          "licenseState": {
+            "$ref": "#/components/schemas/v1LicenseState"
+          },
+          "message": {
+            "type": "string",
+            "title": "Human-readable message"
+          }
+        }
+      },
+      "v1GetGatewayResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "v1GetLicenseMonitorStatusResponse": {
+        "type": "object",
+        "properties": {
+          "license": {
+            "$ref": "#/components/schemas/v1LicenseInfo"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/v1UsageInfo"
+          },
+          "gateway": {
+            "$ref": "#/components/schemas/v1GatewayStatus"
+          },
+          "availableFeatures": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/everstackgatewayv1FeatureRelease"
+            },
+            "title": "Available features for this instance (from license service, evaluated by tier)"
+          }
+        }
+      },
+      "v1GetResponseResponse": {
+        "type": "object",
+        "properties": {
+          "response": {
+            "$ref": "#/components/schemas/v1CreateResponseResponse"
+          },
+          "input": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ResponseInput"
+            },
+            "title": "Input items (if include_input is true)"
+          }
+        }
+      },
+      "v1GetTrialStatusResponse": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "title": "Operating mode: \"trial\", \"licensed\", or \"disabled\""
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Whether trial is currently active"
+          },
+          "expired": {
+            "type": "boolean",
+            "title": "Whether trial has expired"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "When the trial was created"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "When the trial expires"
+          },
+          "daysRemaining": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Days remaining in trial"
+          },
+          "dailyUsed": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Daily usage tracking"
+          },
+          "dailyLimit": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalRequests": {
+            "type": "string",
+            "format": "int64",
+            "title": "Total requests made during trial"
+          },
+          "fingerprintHash": {
+            "type": "string",
+            "title": "Machine fingerprint hash (for debugging)"
+          },
+          "message": {
+            "type": "string",
+            "title": "Human-readable message"
+          },
+          "tokensUsed": {
+            "type": "string",
+            "format": "int64",
+            "title": "Token usage tracking"
+          },
+          "tokenLimit": {
+            "type": "string",
+            "format": "int64"
+          },
+          "rpmLimit": {
+            "type": "string",
+            "format": "int64",
+            "title": "RPM limit for display"
+          }
+        }
+      },
+      "v1GetUpgradeCallbackSecretResponse": {
+        "type": "object",
+        "properties": {
+          "found": {
+            "type": "boolean"
+          },
+          "planTier": {
+            "type": "string"
+          },
+          "billingPeriod": {
+            "type": "string"
+          },
+          "expired": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1ImageData": {
+        "type": "object",
+        "properties": {
+          "b64Json": {
+            "type": "string",
+            "title": "Base64-encoded image data (if response_format is \"b64_json\")"
+          },
+          "url": {
+            "type": "string",
+            "title": "URL of the generated image (if response_format is \"url\")\nURLs are valid for 60 minutes"
+          },
+          "revisedPrompt": {
+            "type": "string",
+            "title": "The revised prompt (DALL-E 3 returns the actual prompt used)"
+          }
+        },
+        "title": "Individual image data"
+      },
+      "v1ImageEditRequest": {
+        "type": "object",
+        "properties": {
+          "image": {
+            "type": "string",
+            "format": "byte",
+            "title": "The image to edit (PNG, max 4MB, must be square)"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "A text description of the desired edit"
+          },
+          "mask": {
+            "type": "string",
+            "format": "byte",
+            "title": "An optional mask image indicating which areas to edit\nMust be PNG with transparent areas marking editable regions"
+          },
+          "model": {
+            "type": "string",
+            "title": "The model to use for editing\nOptions: \"gpt-image-1\", \"dall-e-2\""
+          },
+          "n": {
+            "type": "integer",
+            "format": "int32",
+            "title": "The number of images to generate (1-10, default 1)"
+          },
+          "size": {
+            "type": "string",
+            "title": "The size of the generated images\nOptions vary by model"
+          },
+          "responseFormat": {
+            "type": "string",
+            "title": "The format of the generated images\nOptions: \"url\" (default), \"b64_json\""
+          },
+          "user": {
+            "type": "string",
+            "title": "A unique identifier for the end user"
+          },
+          "quality": {
+            "type": "string",
+            "title": "The quality of the generated images (GPT Image only)\nOptions: \"auto\" (default), \"standard\", \"hd\""
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Optional per-call metadata"
+          }
+        }
+      },
+      "v1ImageEditResponse": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "string",
+            "format": "int64",
+            "title": "Unix timestamp when the response was created"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ImageData"
+            },
+            "title": "List of edited images"
+          },
+          "model": {
+            "type": "string",
+            "title": "The model used"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/v1ImageUsage"
+          }
+        }
+      },
+      "v1ImageGenerationRequest": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "title": "A text description of the desired image(s)\nMax length: 32,000 chars (GPT Image), 4,000 chars (DALL-E 3), 1,000 chars (DALL-E 2)"
+          },
+          "model": {
+            "type": "string",
+            "title": "The model to use for image generation\nOptions: \"gpt-image-1.5\", \"gpt-image-1\", \"dall-e-3\", \"dall-e-2\""
+          },
+          "n": {
+            "type": "integer",
+            "format": "int32",
+            "title": "The number of images to generate (1-10, default 1)\nNote: DALL-E 3 only supports n=1"
+          },
+          "quality": {
+            "type": "string",
+            "title": "The quality of the generated images\nOptions: \"auto\" (default), \"standard\", \"hd\""
+          },
+          "responseFormat": {
+            "type": "string",
+            "title": "The format of the generated images\nOptions: \"url\" (default), \"b64_json\""
+          },
+          "size": {
+            "type": "string",
+            "title": "The size of the generated images\nOptions vary by model:\n- GPT Image: \"1024x1024\", \"1536x1024\", \"1024x1536\", \"auto\"\n- DALL-E 3: \"1024x1024\", \"1792x1024\", \"1024x1792\"\n- DALL-E 2: \"256x256\", \"512x512\", \"1024x1024\""
+          },
+          "style": {
+            "type": "string",
+            "title": "The style of the generated images (DALL-E 3 only)\nOptions: \"vivid\" (default), \"natural\""
+          },
+          "user": {
+            "type": "string",
+            "title": "A unique identifier for the end user"
+          },
+          "background": {
+            "type": "string",
+            "title": "Background style for transparent images (GPT Image only)\nOptions: \"auto\" (default), \"transparent\", \"opaque\""
+          },
+          "outputFormat": {
+            "type": "string",
+            "title": "Output image format (GPT Image only)\nOptions: \"png\" (default), \"jpeg\", \"webp\""
+          },
+          "moderation": {
+            "type": "string",
+            "title": "Moderation mode (GPT Image only)\nOptions: \"auto\" (default), \"low\""
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Optional per-call metadata"
+          }
+        }
+      },
+      "v1ImageGenerationResponse": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "string",
+            "format": "int64",
+            "title": "Unix timestamp when the response was created"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ImageData"
+            },
+            "title": "List of generated images"
+          },
+          "model": {
+            "type": "string",
+            "title": "The model used"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/v1ImageUsage"
+          }
+        }
+      },
+      "v1ImageTokenDetails": {
+        "type": "object",
+        "properties": {
+          "textTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Text tokens used"
+          },
+          "imageTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Image tokens used"
+          }
+        }
+      },
+      "v1ImageUsage": {
+        "type": "object",
+        "properties": {
+          "inputTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Number of input tokens used"
+          },
+          "outputTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Number of output tokens used"
+          },
+          "totalTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Total tokens used"
+          },
+          "inputTokensDetails": {
+            "$ref": "#/components/schemas/v1ImageTokenDetails"
+          },
+          "outputTokensDetails": {
+            "$ref": "#/components/schemas/v1ImageTokenDetails"
+          }
+        }
+      },
+      "v1ImageVariationRequest": {
+        "type": "object",
+        "properties": {
+          "image": {
+            "type": "string",
+            "format": "byte",
+            "title": "The image to use as the basis for variations (PNG, max 4MB)"
+          },
+          "model": {
+            "type": "string",
+            "title": "The model to use (only \"dall-e-2\" supports variations)"
+          },
+          "n": {
+            "type": "integer",
+            "format": "int32",
+            "title": "The number of images to generate (1-10, default 1)"
+          },
+          "responseFormat": {
+            "type": "string",
+            "title": "The format of the generated images\nOptions: \"url\" (default), \"b64_json\""
+          },
+          "size": {
+            "type": "string",
+            "title": "The size of the generated images\nOptions: \"256x256\", \"512x512\", \"1024x1024\""
+          },
+          "user": {
+            "type": "string",
+            "title": "A unique identifier for the end user"
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Optional per-call metadata"
+          }
+        }
+      },
+      "v1ImageVariationResponse": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "string",
+            "format": "int64",
+            "title": "Unix timestamp when the response was created"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ImageData"
+            },
+            "title": "List of generated variations"
+          },
+          "model": {
+            "type": "string",
+            "title": "The model used"
+          }
+        }
+      },
+      "v1IncompleteDetails": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "title": "Reason for incomplete status"
+          }
+        },
+        "title": "Incomplete status details"
+      },
+      "v1LicenseInfo": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "tier": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "isPaid": {
+            "type": "boolean"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "trialExpires": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fetchedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "usageLimits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1UsageLimit"
+            }
+          },
+          "tenantId": {
+            "type": "string",
+            "title": "Organization/tenant ID"
+          },
+          "instanceId": {
+            "type": "string",
+            "title": "Gateway instance ID"
+          }
+        }
+      },
+      "v1LicenseState": {
+        "type": "object",
+        "properties": {
+          "instanceId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "planTier": {
+            "$ref": "#/components/schemas/v1LicenseType"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1FeatureFlag"
+            }
+          },
+          "usageLimits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1UsageLimits"
+            }
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "refreshIntervalSecs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gracePeriodSecs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "$ref": "#/components/schemas/v1LicenseStatus"
+          }
+        },
+        "title": "LicenseState represents the current state of a license for enforcement"
+      },
+      "v1LicenseStatus": {
+        "type": "string",
+        "enum": [
+          "LICENSE_STATUS_UNSPECIFIED",
+          "LICENSE_STATUS_ACTIVE",
+          "LICENSE_STATUS_INACTIVE",
+          "LICENSE_STATUS_EXPIRED",
+          "LICENSE_STATUS_SUSPENDED",
+          "LICENSE_STATUS_CANCELLED"
+        ],
+        "default": "LICENSE_STATUS_UNSPECIFIED"
+      },
+      "v1LicenseType": {
+        "type": "string",
+        "enum": [
+          "LICENSE_TYPE_UNSPECIFIED",
+          "LICENSE_TYPE_FREE",
+          "LICENSE_TYPE_BASIC",
+          "LICENSE_TYPE_PRO",
+          "LICENSE_TYPE_ENTERPRISE"
+        ],
+        "default": "LICENSE_TYPE_UNSPECIFIED"
+      },
+      "v1ListModelsResponse": {
+        "type": "object",
+        "properties": {
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ProviderModels"
+            }
+          }
+        }
+      },
+      "v1ListResponsesResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1CreateResponseResponse"
+            },
+            "title": "List of responses"
+          },
+          "object": {
+            "type": "string",
+            "title": "Object type (always \"list\")"
+          },
+          "firstId": {
+            "type": "string",
+            "title": "First ID in list"
+          },
+          "lastId": {
+            "type": "string",
+            "title": "Last ID in list"
+          },
+          "hasMore": {
+            "type": "boolean",
+            "title": "Whether there are more results"
+          }
+        }
+      },
+      "v1McpServerConfig": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "MCP server URL"
+          },
+          "name": {
+            "type": "string",
+            "title": "Server name"
+          },
+          "toolFilter": {
+            "$ref": "#/components/schemas/v1McpToolFilter"
+          },
+          "requireApproval": {
+            "type": "boolean",
+            "title": "Whether approval is required for tool calls"
+          },
+          "allowedTools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed tools (if require_approval is true)"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Headers to send with requests"
+          }
+        }
+      },
+      "v1McpToolFilter": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Filter type: \"include\" or \"exclude\""
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Tool names to include/exclude"
+          }
+        }
+      },
+      "v1Message": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/v1Role"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ContentPart"
+            }
+          },
+          "toolCalls": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ToolCall"
+            },
+            "title": "Tool calls made by assistant (when role=assistant)"
+          },
+          "toolCallId": {
+            "type": "string",
+            "title": "Tool call ID this message responds to (when role=tool)"
+          },
+          "name": {
+            "type": "string",
+            "title": "Optional name for tool responses"
+          }
+        }
+      },
+      "v1ModerationCategories": {
+        "type": "object",
+        "properties": {
+          "hate": {
+            "type": "boolean",
+            "title": "Content that expresses, incites, or promotes hate based on protected characteristics"
+          },
+          "hateThreatening": {
+            "type": "boolean",
+            "title": "Hateful content that also includes violence or threat of violence"
+          },
+          "harassment": {
+            "type": "boolean",
+            "title": "Content that expresses, incites, or promotes harassing language"
+          },
+          "harassmentThreatening": {
+            "type": "boolean",
+            "title": "Harassment content that also includes violence or threat of violence"
+          },
+          "illicit": {
+            "type": "boolean",
+            "title": "Content that depicts death, violence, or physical injury in graphic detail"
+          },
+          "illicitViolent": {
+            "type": "boolean",
+            "title": "Content giving advice or instructions on how to commit illicit acts"
+          },
+          "selfHarm": {
+            "type": "boolean",
+            "title": "Content that promotes, encourages, or depicts acts of self-harm"
+          },
+          "selfHarmIntent": {
+            "type": "boolean",
+            "title": "Content giving advice or instructions on how to commit self-harm"
+          },
+          "selfHarmInstructions": {
+            "type": "boolean",
+            "title": "Content giving advice or instructions on how to plan or commit self-harm"
+          },
+          "sexual": {
+            "type": "boolean",
+            "title": "Sexual content (arousing or explicit)"
+          },
+          "sexualMinors": {
+            "type": "boolean",
+            "title": "Sexual content involving minors"
+          },
+          "violence": {
+            "type": "boolean",
+            "title": "Content that depicts violence"
+          },
+          "violenceGraphic": {
+            "type": "boolean",
+            "title": "Violence content with graphic detail"
+          }
+        },
+        "title": "Category flags for moderation results"
+      },
+      "v1ModerationCategoryAppliedInputTypes": {
+        "type": "object",
+        "properties": {
+          "hate": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Input types that were analyzed for hate"
+          },
+          "hateThreatening": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Input types that were analyzed for hate/threatening"
+          },
+          "harassment": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Input types that were analyzed for harassment"
+          },
+          "harassmentThreatening": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Input types that were analyzed for harassment/threatening"
+          },
+          "illicit": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Input types that were analyzed for illicit"
+          },
+          "illicitViolent": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Input types that were analyzed for illicit/violent"
+          },
+          "selfHarm": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Input types that were analyzed for self-harm"
+          },
+          "selfHarmIntent": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Input types that were analyzed for self-harm/intent"
+          },
+          "selfHarmInstructions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Input types that were analyzed for self-harm/instructions"
+          },
+          "sexual": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Input types that were analyzed for sexual"
+          },
+          "sexualMinors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Input types that were analyzed for sexual/minors"
+          },
+          "violence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Input types that were analyzed for violence"
+          },
+          "violenceGraphic": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Input types that were analyzed for violence/graphic"
+          }
+        },
+        "title": "Applied input types for multi-modal content"
+      },
+      "v1ModerationCategoryScores": {
+        "type": "object",
+        "properties": {
+          "hate": {
+            "type": "number",
+            "format": "double",
+            "title": "Score for hate category (0.0 to 1.0)"
+          },
+          "hateThreatening": {
+            "type": "number",
+            "format": "double",
+            "title": "Score for hate/threatening category"
+          },
+          "harassment": {
+            "type": "number",
+            "format": "double",
+            "title": "Score for harassment category"
+          },
+          "harassmentThreatening": {
+            "type": "number",
+            "format": "double",
+            "title": "Score for harassment/threatening category"
+          },
+          "illicit": {
+            "type": "number",
+            "format": "double",
+            "title": "Score for illicit category"
+          },
+          "illicitViolent": {
+            "type": "number",
+            "format": "double",
+            "title": "Score for illicit/violent category"
+          },
+          "selfHarm": {
+            "type": "number",
+            "format": "double",
+            "title": "Score for self-harm category"
+          },
+          "selfHarmIntent": {
+            "type": "number",
+            "format": "double",
+            "title": "Score for self-harm/intent category"
+          },
+          "selfHarmInstructions": {
+            "type": "number",
+            "format": "double",
+            "title": "Score for self-harm/instructions category"
+          },
+          "sexual": {
+            "type": "number",
+            "format": "double",
+            "title": "Score for sexual category"
+          },
+          "sexualMinors": {
+            "type": "number",
+            "format": "double",
+            "title": "Score for sexual/minors category"
+          },
+          "violence": {
+            "type": "number",
+            "format": "double",
+            "title": "Score for violence category"
+          },
+          "violenceGraphic": {
+            "type": "number",
+            "format": "double",
+            "title": "Score for violence/graphic category"
+          }
+        },
+        "title": "Category scores for moderation results"
+      },
+      "v1ModerationImageUrl": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "URL of the image or base64 data URL"
+          }
+        }
+      },
+      "v1ModerationInput": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type of input: \"text\" or \"image_url\""
+          },
+          "text": {
+            "type": "string",
+            "title": "Text content (when type is \"text\")"
+          },
+          "imageUrl": {
+            "$ref": "#/components/schemas/v1ModerationImageUrl"
+          }
+        },
+        "title": "Input content for moderation - can be text or image"
+      },
+      "v1ModerationRequest": {
+        "type": "object",
+        "properties": {
+          "input": {
+            "type": "string",
+            "title": "The input text or content to classify\nCan be a single string or multiple content items"
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ModerationInput"
+            },
+            "title": "Alternative: array of content items for multi-modal moderation"
+          },
+          "model": {
+            "type": "string",
+            "title": "The model to use for classification\nOptions: \"omni-moderation-latest\", \"omni-moderation-2024-09-26\", \"text-moderation-latest\", \"text-moderation-stable\""
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Optional per-call metadata"
+          }
+        }
+      },
+      "v1ModerationResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Unique identifier for this moderation request"
+          },
+          "model": {
+            "type": "string",
+            "title": "The model used for moderation"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ModerationResult"
+            },
+            "title": "List of moderation results (one per input)"
+          }
+        }
+      },
+      "v1ModerationResult": {
+        "type": "object",
+        "properties": {
+          "flagged": {
+            "type": "boolean",
+            "title": "Whether any content was flagged as violating policies"
+          },
+          "categories": {
+            "$ref": "#/components/schemas/v1ModerationCategories"
+          },
+          "categoryScores": {
+            "$ref": "#/components/schemas/v1ModerationCategoryScores"
+          },
+          "categoryAppliedInputTypes": {
+            "$ref": "#/components/schemas/v1ModerationCategoryAppliedInputTypes"
+          }
+        },
+        "title": "Individual moderation result"
+      },
+      "v1ProviderModels": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "title": "ProviderModels describes supported models for a provider"
+      },
+      "v1ReasoningConfig": {
+        "type": "object",
+        "properties": {
+          "effort": {
+            "type": "string",
+            "title": "Effort level: \"low\", \"medium\", \"high\""
+          },
+          "generateSummary": {
+            "type": "string",
+            "title": "Content type to generate: \"concise\", \"summary\""
+          }
+        },
+        "title": "Reasoning configuration for advanced models"
+      },
+      "v1RefreshLicenseMonitorResponse": {
+        "type": "object",
+        "properties": {
+          "license": {
+            "$ref": "#/components/schemas/v1LicenseInfo"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/v1UsageInfo"
+          },
+          "gateway": {
+            "$ref": "#/components/schemas/v1GatewayStatus"
+          },
+          "availableFeatures": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/everstackgatewayv1FeatureRelease"
+            },
+            "title": "Available features for this instance (from license service, evaluated by tier)"
+          }
+        }
+      },
+      "v1RerankApiVersion": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "API version string"
+          },
+          "isBillable": {
+            "type": "boolean",
+            "title": "Whether this is a billable request"
+          },
+          "billedUnits": {
+            "$ref": "#/components/schemas/v1RerankBilledUnits"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/v1RerankTokens"
+          }
+        },
+        "title": "API metadata"
+      },
+      "v1RerankBilledUnits": {
+        "type": "object",
+        "properties": {
+          "searchUnits": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Number of search units used"
+          },
+          "inputTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Number of input tokens processed"
+          },
+          "outputTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Number of output tokens generated"
+          }
+        },
+        "title": "Billing information for rerank request"
+      },
+      "v1RerankDocument": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "The text content of the document"
+          }
+        },
+        "title": "Document to be reranked"
+      },
+      "v1RerankRequest": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "The model to use for reranking\nOptions: \"rerank-v3.5\", \"rerank-english-v3.0\", \"rerank-multilingual-v3.0\", \"rerank-english-v2.0\", \"rerank-multilingual-v2.0\""
+          },
+          "query": {
+            "type": "string",
+            "title": "The search query to rank documents against"
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "The list of documents to rerank\nCan be provided as strings directly or as document objects"
+          },
+          "documentObjects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1RerankDocument"
+            },
+            "title": "Alternative: structured document objects (for additional metadata)"
+          },
+          "topN": {
+            "type": "integer",
+            "format": "int32",
+            "title": "The number of top results to return (default: return all)"
+          },
+          "returnDocuments": {
+            "type": "boolean",
+            "title": "Whether to return the documents in the response"
+          },
+          "maxTokensPerDoc": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Maximum number of tokens per document (truncates if exceeded)"
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Optional per-call metadata"
+          }
+        }
+      },
+      "v1RerankResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Unique identifier for this rerank request"
+          },
+          "model": {
+            "type": "string",
+            "title": "The model used"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1RerankResult"
+            },
+            "title": "List of reranked results, sorted by relevance (highest first)"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/v1RerankApiVersion"
+          }
+        }
+      },
+      "v1RerankResult": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "format": "int32",
+            "title": "The index of the document in the original list"
+          },
+          "relevanceScore": {
+            "type": "number",
+            "format": "double",
+            "title": "The relevance score (higher is more relevant)"
+          },
+          "document": {
+            "type": "string",
+            "title": "The document text (if return_documents is true)"
+          }
+        },
+        "title": "Individual reranked result"
+      },
+      "v1RerankTokens": {
+        "type": "object",
+        "properties": {
+          "inputTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Number of input tokens"
+          },
+          "outputTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Number of output tokens"
+          }
+        },
+        "title": "Token usage information"
+      },
+      "v1ResponseError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Error code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Error message"
+          }
+        },
+        "title": "Error details"
+      },
+      "v1ResponseFormatConfig": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Format type: \"text\", \"json_schema\", \"json_object\""
+          },
+          "jsonSchema": {
+            "type": "object",
+            "title": "JSON Schema (when type is \"json_schema\")"
+          }
+        }
+      },
+      "v1ResponseInput": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type of input: \"message\", \"item_reference\""
+          },
+          "role": {
+            "$ref": "#/components/schemas/v1Role"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ContentPart"
+            },
+            "title": "For message type: the content (text, file reference, etc.)"
+          },
+          "itemId": {
+            "type": "string",
+            "title": "For item_reference type: reference to a previous output item"
+          }
+        },
+        "title": "Input type for responses - can be text, file, or existing input item"
+      },
+      "v1ResponseOutputItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Unique identifier for this item"
+          },
+          "type": {
+            "type": "string",
+            "title": "Object type: \"message\", \"function_call\", \"function_call_output\", \"web_search_call\", \"file_search_call\", \"computer_call\", \"reasoning\""
+          },
+          "status": {
+            "type": "string",
+            "title": "Status: \"in_progress\", \"completed\", \"incomplete\""
+          },
+          "role": {
+            "$ref": "#/components/schemas/v1Role"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ContentPart"
+            }
+          },
+          "callId": {
+            "type": "string",
+            "title": "For function call items"
+          },
+          "name": {
+            "type": "string"
+          },
+          "arguments": {
+            "type": "string"
+          },
+          "output": {
+            "type": "string",
+            "title": "For function call output items"
+          },
+          "webSearchResults": {
+            "$ref": "#/components/schemas/v1WebSearchResults"
+          },
+          "fileSearchResults": {
+            "$ref": "#/components/schemas/v1FileSearchResults"
+          }
+        },
+        "title": "Output item from a response"
+      },
+      "v1ResponseTextConfig": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "$ref": "#/components/schemas/v1ResponseFormatConfig"
+          }
+        },
+        "title": "Response configuration for text output"
+      },
+      "v1ResponseUsage": {
+        "type": "object",
+        "properties": {
+          "inputTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Input tokens used"
+          },
+          "outputTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Output tokens generated"
+          },
+          "totalTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Total tokens"
+          },
+          "inputTokensDetails": {
+            "$ref": "#/components/schemas/v1ResponseUsageDetails"
+          },
+          "outputTokensDetails": {
+            "$ref": "#/components/schemas/v1ResponseUsageDetails"
+          }
+        },
+        "title": "Token usage information for responses"
+      },
+      "v1ResponseUsageDetails": {
+        "type": "object",
+        "properties": {
+          "cachedTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Cached tokens"
+          },
+          "textTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Text tokens"
+          },
+          "audioTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Audio tokens"
+          },
+          "imageTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Image tokens"
+          },
+          "reasoningTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Reasoning tokens"
+          }
+        }
+      },
+      "v1Role": {
+        "type": "string",
+        "enum": [
+          "ROLE_UNSPECIFIED",
+          "ROLE_SYSTEM",
+          "ROLE_USER",
+          "ROLE_ASSISTANT",
+          "ROLE_FUNCTION",
+          "ROLE_TOOL"
+        ],
+        "default": "ROLE_UNSPECIFIED"
+      },
+      "v1SamplingParams": {
+        "type": "object",
+        "properties": {
+          "temperature": {
+            "type": "number",
+            "format": "float"
+          },
+          "topP": {
+            "type": "number",
+            "format": "float"
+          },
+          "maxTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "stop": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "maxCompletionTokens": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1SpeechRequest": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "The model to use for speech synthesis\nOptions: \"tts-1\", \"tts-1-hd\", \"gpt-4o-mini-tts\""
+          },
+          "input": {
+            "type": "string",
+            "title": "The text to generate audio for (max 4096 characters)"
+          },
+          "voice": {
+            "type": "string",
+            "title": "The voice to use for synthesis\nOptions: \"alloy\", \"ash\", \"ballad\", \"coral\", \"echo\", \"fable\", \"onyx\", \"nova\", \"sage\", \"shimmer\", \"verse\""
+          },
+          "responseFormat": {
+            "type": "string",
+            "title": "The format of the audio output\nOptions: \"mp3\" (default), \"opus\", \"aac\", \"flac\", \"wav\", \"pcm\""
+          },
+          "speed": {
+            "type": "number",
+            "format": "float",
+            "title": "The speed of the generated audio (0.25 to 4.0, default 1.0)"
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Optional per-call metadata"
+          }
+        }
+      },
+      "v1SpeechResponse": {
+        "type": "object",
+        "properties": {
+          "audio": {
+            "type": "string",
+            "format": "byte",
+            "title": "The generated audio data (binary)"
+          },
+          "format": {
+            "type": "string",
+            "title": "The format of the audio"
+          },
+          "contentType": {
+            "type": "string",
+            "title": "Content type for the audio (e.g., \"audio/mpeg\")"
+          },
+          "durationSeconds": {
+            "type": "number",
+            "format": "float",
+            "title": "Duration of the audio in seconds"
+          },
+          "inputCharacters": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Character count of the input"
+          }
+        }
+      },
+      "v1StoreUpgradeCallbackSecretResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "expiresAt": {
+            "type": "string",
+            "title": "ISO timestamp when the secret expires"
+          }
+        }
+      },
+      "v1SubscriptionStatusCallbackRequest": {
+        "type": "object",
+        "properties": {
+          "signedPayload": {
+            "type": "string",
+            "title": "JWT signed by cloud containing subscription status"
+          }
+        },
+        "title": "Subscription status callback from billing service after Stripe webhook"
+      },
+      "v1SubscriptionStatusCallbackResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1Tool": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "\"function\""
+          },
+          "function": {
+            "$ref": "#/components/schemas/v1ToolFunctionDef"
+          }
+        }
+      },
+      "v1ToolCall": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "title": "\"function\""
+          },
+          "function": {
+            "$ref": "#/components/schemas/v1ToolCallFunction"
+          }
+        },
+        "title": "Tool call made by the assistant"
+      },
+      "v1ToolCallFunction": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "arguments": {
+            "type": "string",
+            "title": "JSON string of arguments"
+          }
+        },
+        "title": "Tool call function details"
+      },
+      "v1ToolChoice": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "title": "\"auto\", \"none\", \"required\""
+          },
+          "specificTool": {
+            "$ref": "#/components/schemas/v1Tool"
+          }
+        },
+        "title": "Tool choice can be \"auto\", \"none\", \"required\", or a specific tool"
+      },
+      "v1ToolFunctionDef": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "parameters": {
+            "type": "object",
+            "title": "JSON Schema"
+          }
+        },
+        "title": "Tool definition for chat requests"
+      },
+      "v1TranscriptionRequest": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "byte",
+            "title": "The audio file to transcribe (binary data)"
+          },
+          "model": {
+            "type": "string",
+            "title": "The model to use for transcription\nOptions: \"whisper-1\", \"gpt-4o-transcribe\", \"gpt-4o-mini-transcribe\""
+          },
+          "language": {
+            "type": "string",
+            "title": "The language of the audio in ISO-639-1 format (optional)\nIf not provided, the model will auto-detect"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "An optional prompt to guide the transcription style"
+          },
+          "responseFormat": {
+            "type": "string",
+            "title": "The format of the output\nOptions: \"json\" (default), \"text\", \"srt\", \"verbose_json\", \"vtt\""
+          },
+          "temperature": {
+            "type": "number",
+            "format": "float",
+            "title": "The sampling temperature (0 to 1, default 0)"
+          },
+          "timestampGranularities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Timestamp granularities (for verbose_json format)\nOptions: \"word\", \"segment\""
+          },
+          "filename": {
+            "type": "string",
+            "title": "The filename of the audio file (for content type detection)"
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Optional per-call metadata"
+          }
+        }
+      },
+      "v1TranscriptionResponse": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "The transcribed text"
+          },
+          "task": {
+            "type": "string",
+            "title": "The task type (always \"transcribe\")"
+          },
+          "language": {
+            "type": "string",
+            "title": "The language of the audio"
+          },
+          "duration": {
+            "type": "number",
+            "format": "float",
+            "title": "Duration of the audio in seconds"
+          },
+          "words": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1TranscriptionWord"
+            },
+            "title": "Word-level timestamps (if requested)"
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1TranscriptionSegment"
+            },
+            "title": "Segment-level timestamps (if requested)"
+          }
+        }
+      },
+      "v1TranscriptionSegment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Segment ID"
+          },
+          "seek": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Seek position"
+          },
+          "start": {
+            "type": "number",
+            "format": "float",
+            "title": "Start time in seconds"
+          },
+          "end": {
+            "type": "number",
+            "format": "float",
+            "title": "End time in seconds"
+          },
+          "text": {
+            "type": "string",
+            "title": "The transcribed text"
+          },
+          "tokens": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "title": "Token IDs"
+          },
+          "temperature": {
+            "type": "number",
+            "format": "float",
+            "title": "Temperature used"
+          },
+          "avgLogprob": {
+            "type": "number",
+            "format": "float",
+            "title": "Average log probability"
+          },
+          "compressionRatio": {
+            "type": "number",
+            "format": "float",
+            "title": "Compression ratio"
+          },
+          "noSpeechProb": {
+            "type": "number",
+            "format": "float",
+            "title": "No speech probability"
+          }
+        },
+        "title": "Segment-level timing information"
+      },
+      "v1TranscriptionWord": {
+        "type": "object",
+        "properties": {
+          "word": {
+            "type": "string",
+            "title": "The word text"
+          },
+          "start": {
+            "type": "number",
+            "format": "float",
+            "title": "Start time in seconds"
+          },
+          "end": {
+            "type": "number",
+            "format": "float",
+            "title": "End time in seconds"
+          }
+        },
+        "title": "Word-level timing information"
+      },
+      "v1TranslationRequest": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "byte",
+            "title": "The audio file to translate (binary data)"
+          },
+          "model": {
+            "type": "string",
+            "title": "The model to use for translation\nOptions: \"whisper-1\""
+          },
+          "prompt": {
+            "type": "string",
+            "title": "An optional prompt to guide the translation style"
+          },
+          "responseFormat": {
+            "type": "string",
+            "title": "The format of the output\nOptions: \"json\" (default), \"text\", \"srt\", \"verbose_json\", \"vtt\""
+          },
+          "temperature": {
+            "type": "number",
+            "format": "float",
+            "title": "The sampling temperature (0 to 1, default 0)"
+          },
+          "filename": {
+            "type": "string",
+            "title": "The filename of the audio file (for content type detection)"
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Optional per-call metadata"
+          }
+        }
+      },
+      "v1TranslationResponse": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "The translated text (in English)"
+          },
+          "task": {
+            "type": "string",
+            "title": "The task type (always \"translate\")"
+          },
+          "language": {
+            "type": "string",
+            "title": "The detected language of the source audio"
+          },
+          "duration": {
+            "type": "number",
+            "format": "float",
+            "title": "Duration of the audio in seconds"
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1TranscriptionSegment"
+            },
+            "title": "Segment-level information (if verbose_json format)"
+          }
+        }
+      },
+      "v1TruncationStrategy": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type of truncation: \"auto\", \"disabled\""
+          },
+          "lastMessages": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Last messages to keep"
+          }
+        },
+        "title": "Truncation strategy for long contexts"
+      },
+      "v1Usage": {
+        "type": "object",
+        "properties": {
+          "promptTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completionTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalTokens": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1UsageInfo": {
+        "type": "object",
+        "properties": {
+          "rpm": {
+            "type": "string",
+            "format": "int64",
+            "description": "Peak requests per minute",
+            "title": "Request rate metrics"
+          },
+          "rps": {
+            "type": "string",
+            "format": "int64",
+            "title": "Peak requests per second"
+          },
+          "rph": {
+            "type": "string",
+            "format": "int64",
+            "title": "Peak requests per hour"
+          },
+          "totalRequests": {
+            "type": "string",
+            "format": "int64",
+            "title": "Total requests this period"
+          },
+          "lastReset": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestsInMin": {
+            "type": "string",
+            "format": "int64",
+            "title": "Requests in current minute"
+          },
+          "requestsInSec": {
+            "type": "string",
+            "format": "int64",
+            "title": "Requests in current second"
+          },
+          "requestsInHour": {
+            "type": "string",
+            "format": "int64",
+            "title": "Requests in current hour"
+          },
+          "totalInputTokens": {
+            "type": "string",
+            "format": "int64",
+            "description": "Total input tokens processed",
+            "title": "Token metrics"
+          },
+          "totalOutputTokens": {
+            "type": "string",
+            "format": "int64",
+            "title": "Total output tokens generated"
+          },
+          "totalTokens": {
+            "type": "string",
+            "format": "int64",
+            "title": "Total tokens (input + output)"
+          },
+          "estimatedCostUsd": {
+            "type": "number",
+            "format": "double",
+            "description": "Estimated total cost",
+            "title": "Cost metrics (in USD)"
+          },
+          "cacheSavingsUsd": {
+            "type": "number",
+            "format": "double",
+            "title": "Cost savings from cache hits"
+          },
+          "cacheHits": {
+            "type": "string",
+            "format": "int64",
+            "description": "Number of cache hits",
+            "title": "Cache performance metrics"
+          },
+          "cacheMisses": {
+            "type": "string",
+            "format": "int64",
+            "title": "Number of cache misses"
+          }
+        }
+      },
+      "v1UsageLimit": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "e.g., \"RPM\", \"RPS\", \"RPH\", \"REQUESTS\""
+          },
+          "limit": {
+            "type": "string",
+            "format": "int64",
+            "title": "-1 for unlimited"
+          }
+        }
+      },
+      "v1UsageLimits": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/v1UsageLimitsType"
+          },
+          "value": {
+            "type": "string",
+            "format": "int64"
+          }
+        }
+      },
+      "v1UsageLimitsType": {
+        "type": "string",
+        "enum": [
+          "USAGE_LIMITS_TYPE_UNSPECIFIED",
+          "USAGE_LIMITS_TYPE_REQUESTS",
+          "USAGE_LIMITS_TYPE_EXECUTIONS",
+          "USAGE_LIMITS_TYPE_STORAGE",
+          "USAGE_LIMITS_TYPE_BANDWIDTH",
+          "USAGE_LIMITS_TYPE_RPS",
+          "USAGE_LIMITS_TYPE_RPM",
+          "USAGE_LIMITS_TYPE_RPH"
+        ],
+        "default": "USAGE_LIMITS_TYPE_UNSPECIFIED"
+      },
+      "v1WebSearchConfig": {
+        "type": "object",
+        "properties": {
+          "maxResults": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Maximum number of search results to return"
+          },
+          "searchContextSize": {
+            "type": "string",
+            "title": "Search context size: \"low\", \"medium\", \"high\""
+          },
+          "userLocation": {
+            "$ref": "#/components/schemas/v1WebSearchLocation"
+          }
+        }
+      },
+      "v1WebSearchLocation": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type of location: \"approximate\""
+          },
+          "city": {
+            "type": "string",
+            "title": "City name"
+          },
+          "region": {
+            "type": "string",
+            "title": "Region/state code"
+          },
+          "country": {
+            "type": "string",
+            "title": "Country code (ISO 3166-1 alpha-2)"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          }
+        }
+      },
+      "v1WebSearchResult": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Result title"
+          },
+          "url": {
+            "type": "string",
+            "title": "Result URL"
+          },
+          "snippet": {
+            "type": "string",
+            "title": "Result snippet"
+          }
+        }
+      },
+      "v1WebSearchResults": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "The search query used"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1WebSearchResult"
+            },
+            "title": "Search results"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,44 @@
+# Configuration templates for Ollama
+# Pre-configured settings for local inference
+
+high_performance:
+  name: "High Performance"
+  description: "Optimized for maximum local throughput"
+  settings:
+    timeout: 60s
+    retry_attempts: 2
+    retry_delay: 500ms
+    connection_pool_size: 10
+    max_concurrent_requests: 5
+    num_gpu: 1
+
+memory_optimized:
+  name: "Memory Optimized"
+  description: "Optimized for limited memory environments"
+  settings:
+    timeout: 180s
+    retry_attempts: 3
+    retry_delay: 2s
+    max_concurrent_requests: 1
+    num_ctx: 2048
+
+cpu_only:
+  name: "CPU Only"
+  description: "Configuration for CPU-only inference"
+  settings:
+    timeout: 300s
+    retry_attempts: 3
+    retry_delay: 5s
+    max_concurrent_requests: 1
+    num_gpu: 0
+    num_thread: 4
+
+development:
+  name: "Development"
+  description: "Configuration for local development"
+  settings:
+    timeout: 120s
+    retry_attempts: 1
+    retry_delay: 1s
+    max_concurrent_requests: 2
+

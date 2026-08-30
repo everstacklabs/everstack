@@ -1,0 +1,1299 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/alerts/v1/alerts_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "AlertsService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/alerts/events": {
+      "get": {
+        "summary": "AlertEvent operations",
+        "operationId": "AlertsService_ListAlertEvents",
+        "responses": {
+          "200": {
+            "description": "List alert events",
+            "schema": {
+              "$ref": "#/definitions/v1ListAlertEventsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "alertRuleId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ALERT_EVENT_STATUS_UNSPECIFIED",
+              "ALERT_EVENT_STATUS_FIRING",
+              "ALERT_EVENT_STATUS_ACKNOWLEDGED",
+              "ALERT_EVENT_STATUS_RESOLVED"
+            ],
+            "default": "ALERT_EVENT_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "AlertsService"
+        ]
+      }
+    },
+    "/v1/alerts/events/{id}/acknowledge": {
+      "post": {
+        "operationId": "AlertsService_AcknowledgeAlert",
+        "responses": {
+          "200": {
+            "description": "Acknowledge a firing alert",
+            "schema": {
+              "$ref": "#/definitions/v1AcknowledgeAlertResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AlertsServiceAcknowledgeAlertBody"
+            }
+          }
+        ],
+        "tags": [
+          "AlertsService"
+        ]
+      }
+    },
+    "/v1/alerts/events/{id}/resolve": {
+      "post": {
+        "operationId": "AlertsService_ResolveAlert",
+        "responses": {
+          "200": {
+            "description": "Resolve a firing alert",
+            "schema": {
+              "$ref": "#/definitions/v1ResolveAlertResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AlertsServiceResolveAlertBody"
+            }
+          }
+        ],
+        "tags": [
+          "AlertsService"
+        ]
+      }
+    },
+    "/v1/alerts/rules": {
+      "get": {
+        "operationId": "AlertsService_ListAlertRules",
+        "responses": {
+          "200": {
+            "description": "List alert rules",
+            "schema": {
+              "$ref": "#/definitions/v1ListAlertRulesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ALERT_CATEGORY_UNSPECIFIED",
+              "ALERT_CATEGORY_PERFORMANCE",
+              "ALERT_CATEGORY_COST",
+              "ALERT_CATEGORY_PROVIDER",
+              "ALERT_CATEGORY_CUSTOM"
+            ],
+            "default": "ALERT_CATEGORY_UNSPECIFIED"
+          },
+          {
+            "name": "enabled",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "AlertsService"
+        ]
+      },
+      "post": {
+        "summary": "AlertRule CRUD",
+        "operationId": "AlertsService_CreateAlertRule",
+        "responses": {
+          "200": {
+            "description": "Create a new alert rule",
+            "schema": {
+              "$ref": "#/definitions/v1CreateAlertRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateAlertRuleRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AlertsService"
+        ]
+      }
+    },
+    "/v1/alerts/rules/seed": {
+      "post": {
+        "summary": "Builtin + Summary",
+        "operationId": "AlertsService_SeedBuiltinRules",
+        "responses": {
+          "200": {
+            "description": "Seed built-in alert rules",
+            "schema": {
+              "$ref": "#/definitions/v1SeedBuiltinRulesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SeedBuiltinRulesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AlertsService"
+        ]
+      }
+    },
+    "/v1/alerts/rules/{id}": {
+      "get": {
+        "operationId": "AlertsService_GetAlertRule",
+        "responses": {
+          "200": {
+            "description": "Get alert rule by ID",
+            "schema": {
+              "$ref": "#/definitions/v1GetAlertRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AlertsService"
+        ]
+      },
+      "delete": {
+        "operationId": "AlertsService_DeleteAlertRule",
+        "responses": {
+          "200": {
+            "description": "Delete an alert rule",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteAlertRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AlertsService"
+        ]
+      },
+      "patch": {
+        "operationId": "AlertsService_UpdateAlertRule",
+        "responses": {
+          "200": {
+            "description": "Update an alert rule",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateAlertRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AlertsServiceUpdateAlertRuleBody"
+            }
+          }
+        ],
+        "tags": [
+          "AlertsService"
+        ]
+      }
+    },
+    "/v1/alerts/summary": {
+      "get": {
+        "operationId": "AlertsService_GetAlertsSummary",
+        "responses": {
+          "200": {
+            "description": "Get alerts summary",
+            "schema": {
+              "$ref": "#/definitions/v1GetAlertsSummaryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AlertsService"
+        ]
+      }
+    },
+    "/v1/alerts/targets": {
+      "get": {
+        "operationId": "AlertsService_ListNotificationTargets",
+        "responses": {
+          "200": {
+            "description": "List notification targets",
+            "schema": {
+              "$ref": "#/definitions/v1ListNotificationTargetsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "targetType",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "NOTIFICATION_TARGET_TYPE_UNSPECIFIED",
+              "NOTIFICATION_TARGET_TYPE_CHANNEL",
+              "NOTIFICATION_TARGET_TYPE_WEBHOOK",
+              "NOTIFICATION_TARGET_TYPE_EMAIL"
+            ],
+            "default": "NOTIFICATION_TARGET_TYPE_UNSPECIFIED"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "AlertsService"
+        ]
+      },
+      "post": {
+        "summary": "NotificationTarget CRUD",
+        "operationId": "AlertsService_CreateNotificationTarget",
+        "responses": {
+          "200": {
+            "description": "Create a notification target",
+            "schema": {
+              "$ref": "#/definitions/v1CreateNotificationTargetResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateNotificationTargetRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AlertsService"
+        ]
+      }
+    },
+    "/v1/alerts/targets/{id}": {
+      "get": {
+        "operationId": "AlertsService_GetNotificationTarget",
+        "responses": {
+          "200": {
+            "description": "Get notification target by ID",
+            "schema": {
+              "$ref": "#/definitions/v1GetNotificationTargetResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AlertsService"
+        ]
+      },
+      "delete": {
+        "operationId": "AlertsService_DeleteNotificationTarget",
+        "responses": {
+          "200": {
+            "description": "Delete a notification target",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteNotificationTargetResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AlertsService"
+        ]
+      },
+      "patch": {
+        "operationId": "AlertsService_UpdateNotificationTarget",
+        "responses": {
+          "200": {
+            "description": "Update a notification target",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateNotificationTargetResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AlertsServiceUpdateNotificationTargetBody"
+            }
+          }
+        ],
+        "tags": [
+          "AlertsService"
+        ]
+      }
+    },
+    "/v1/alerts/targets/{id}/test": {
+      "post": {
+        "operationId": "AlertsService_TestNotificationTarget",
+        "responses": {
+          "200": {
+            "description": "Test a notification target",
+            "schema": {
+              "$ref": "#/definitions/v1TestNotificationTargetResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AlertsServiceTestNotificationTargetBody"
+            }
+          }
+        ],
+        "tags": [
+          "AlertsService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "AlertsServiceAcknowledgeAlertBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "acknowledgedBy": {
+          "type": "string"
+        }
+      }
+    },
+    "AlertsServiceResolveAlertBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        }
+      }
+    },
+    "AlertsServiceTestNotificationTargetBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        }
+      }
+    },
+    "AlertsServiceUpdateAlertRuleBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "category": {
+          "$ref": "#/definitions/v1AlertCategory"
+        },
+        "severity": {
+          "$ref": "#/definitions/v1AlertSeverity"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "operator": {
+          "$ref": "#/definitions/v1ComparisonOperator"
+        },
+        "threshold": {
+          "type": "number",
+          "format": "double"
+        },
+        "durationSeconds": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "filters": {
+          "type": "object"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "targetIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mutedUntil": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "AlertsServiceUpdateNotificationTargetBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "targetType": {
+          "$ref": "#/definitions/v1NotificationTargetType"
+        },
+        "channelConfigId": {
+          "type": "string"
+        },
+        "platformChannelRef": {
+          "type": "string"
+        },
+        "webhookUrl": {
+          "type": "string"
+        },
+        "webhookHeaders": {
+          "type": "object"
+        },
+        "emailAddresses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "minSeverity": {
+          "$ref": "#/definitions/v1AlertSeverity"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "protobufNullValue": {
+      "type": "string",
+      "enum": [
+        "NULL_VALUE"
+      ],
+      "default": "NULL_VALUE",
+      "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AcknowledgeAlertResponse": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "$ref": "#/definitions/v1AlertEvent"
+        }
+      }
+    },
+    "v1AlertCategory": {
+      "type": "string",
+      "enum": [
+        "ALERT_CATEGORY_UNSPECIFIED",
+        "ALERT_CATEGORY_PERFORMANCE",
+        "ALERT_CATEGORY_COST",
+        "ALERT_CATEGORY_PROVIDER",
+        "ALERT_CATEGORY_CUSTOM"
+      ],
+      "default": "ALERT_CATEGORY_UNSPECIFIED",
+      "description": "AlertCategory classifies what an alert monitors."
+    },
+    "v1AlertEvent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "alertRuleId": {
+          "type": "string"
+        },
+        "alertRuleName": {
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/definitions/v1AlertSeverity"
+        },
+        "status": {
+          "$ref": "#/definitions/v1AlertEventStatus"
+        },
+        "metricValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "threshold": {
+          "type": "number",
+          "format": "double"
+        },
+        "firedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "acknowledgedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "acknowledgedBy": {
+          "type": "string"
+        },
+        "resolvedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastNotifiedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notificationCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "description": "AlertEvent records a single firing of an alert rule."
+    },
+    "v1AlertEventStatus": {
+      "type": "string",
+      "enum": [
+        "ALERT_EVENT_STATUS_UNSPECIFIED",
+        "ALERT_EVENT_STATUS_FIRING",
+        "ALERT_EVENT_STATUS_ACKNOWLEDGED",
+        "ALERT_EVENT_STATUS_RESOLVED"
+      ],
+      "default": "ALERT_EVENT_STATUS_UNSPECIFIED",
+      "description": "AlertEventStatus tracks the lifecycle of a fired alert."
+    },
+    "v1AlertRule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "category": {
+          "$ref": "#/definitions/v1AlertCategory"
+        },
+        "severity": {
+          "$ref": "#/definitions/v1AlertSeverity"
+        },
+        "builtinKey": {
+          "type": "string"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "operator": {
+          "$ref": "#/definitions/v1ComparisonOperator"
+        },
+        "threshold": {
+          "type": "number",
+          "format": "double"
+        },
+        "durationSeconds": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "filters": {
+          "type": "object"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "mutedUntil": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "targetIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "AlertRule defines a monitoring rule that evaluates a metric condition."
+    },
+    "v1AlertSeverity": {
+      "type": "string",
+      "enum": [
+        "ALERT_SEVERITY_UNSPECIFIED",
+        "ALERT_SEVERITY_CRITICAL",
+        "ALERT_SEVERITY_WARNING",
+        "ALERT_SEVERITY_INFO"
+      ],
+      "default": "ALERT_SEVERITY_UNSPECIFIED",
+      "description": "AlertSeverity indicates urgency."
+    },
+    "v1AlertsSummary": {
+      "type": "object",
+      "properties": {
+        "firingCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "acknowledgedCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalRules": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "enabledRules": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "description": "AlertsSummary provides a quick overview for the sidebar badge."
+    },
+    "v1ComparisonOperator": {
+      "type": "string",
+      "enum": [
+        "COMPARISON_OPERATOR_UNSPECIFIED",
+        "COMPARISON_OPERATOR_GT",
+        "COMPARISON_OPERATOR_LT",
+        "COMPARISON_OPERATOR_GTE",
+        "COMPARISON_OPERATOR_LTE"
+      ],
+      "default": "COMPARISON_OPERATOR_UNSPECIFIED",
+      "description": "ComparisonOperator for threshold evaluation."
+    },
+    "v1CreateAlertRuleRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "category": {
+          "$ref": "#/definitions/v1AlertCategory"
+        },
+        "severity": {
+          "$ref": "#/definitions/v1AlertSeverity"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "operator": {
+          "$ref": "#/definitions/v1ComparisonOperator"
+        },
+        "threshold": {
+          "type": "number",
+          "format": "double"
+        },
+        "durationSeconds": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "filters": {
+          "type": "object"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "targetIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "title": "AlertRule CRUD"
+    },
+    "v1CreateAlertRuleResponse": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "$ref": "#/definitions/v1AlertRule"
+        }
+      }
+    },
+    "v1CreateNotificationTargetRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "targetType": {
+          "$ref": "#/definitions/v1NotificationTargetType"
+        },
+        "channelConfigId": {
+          "type": "string"
+        },
+        "platformChannelRef": {
+          "type": "string"
+        },
+        "webhookUrl": {
+          "type": "string"
+        },
+        "webhookHeaders": {
+          "type": "object"
+        },
+        "emailAddresses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "minSeverity": {
+          "$ref": "#/definitions/v1AlertSeverity"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "title": "NotificationTarget CRUD"
+    },
+    "v1CreateNotificationTargetResponse": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "$ref": "#/definitions/v1NotificationTarget"
+        }
+      }
+    },
+    "v1DeleteAlertRuleResponse": {
+      "type": "object"
+    },
+    "v1DeleteNotificationTargetResponse": {
+      "type": "object"
+    },
+    "v1GetAlertRuleResponse": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "$ref": "#/definitions/v1AlertRule"
+        }
+      }
+    },
+    "v1GetAlertsSummaryResponse": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "$ref": "#/definitions/v1AlertsSummary"
+        }
+      }
+    },
+    "v1GetNotificationTargetResponse": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "$ref": "#/definitions/v1NotificationTarget"
+        }
+      }
+    },
+    "v1ListAlertEventsResponse": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AlertEvent"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListAlertRulesResponse": {
+      "type": "object",
+      "properties": {
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AlertRule"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListNotificationTargetsResponse": {
+      "type": "object",
+      "properties": {
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1NotificationTarget"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1NotificationTarget": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "targetType": {
+          "$ref": "#/definitions/v1NotificationTargetType"
+        },
+        "channelConfigId": {
+          "type": "string"
+        },
+        "platformChannelRef": {
+          "type": "string"
+        },
+        "webhookUrl": {
+          "type": "string"
+        },
+        "webhookHeaders": {
+          "type": "object"
+        },
+        "emailAddresses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "minSeverity": {
+          "$ref": "#/definitions/v1AlertSeverity"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "NotificationTarget defines where alert notifications are delivered."
+    },
+    "v1NotificationTargetType": {
+      "type": "string",
+      "enum": [
+        "NOTIFICATION_TARGET_TYPE_UNSPECIFIED",
+        "NOTIFICATION_TARGET_TYPE_CHANNEL",
+        "NOTIFICATION_TARGET_TYPE_WEBHOOK",
+        "NOTIFICATION_TARGET_TYPE_EMAIL"
+      ],
+      "default": "NOTIFICATION_TARGET_TYPE_UNSPECIFIED",
+      "description": "NotificationTargetType identifies the delivery mechanism."
+    },
+    "v1ResolveAlertResponse": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "$ref": "#/definitions/v1AlertEvent"
+        }
+      }
+    },
+    "v1SeedBuiltinRulesRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        }
+      },
+      "title": "Builtin seeder"
+    },
+    "v1SeedBuiltinRulesResponse": {
+      "type": "object",
+      "properties": {
+        "seededCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1TestNotificationTargetResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "v1UpdateAlertRuleResponse": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "$ref": "#/definitions/v1AlertRule"
+        }
+      }
+    },
+    "v1UpdateNotificationTargetResponse": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "$ref": "#/definitions/v1NotificationTarget"
+        }
+      }
+    }
+  }
+}

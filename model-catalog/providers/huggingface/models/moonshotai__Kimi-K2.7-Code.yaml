@@ -1,0 +1,34 @@
+name: "moonshotai/Kimi-K2.7-Code"
+display_name: "Kimi K2.7 Code (Hugging Face)"
+family: "kimi-k2"
+status: "stable"
+release_date: "2026-06-12"
+
+cost:
+  input_per_1k: 0.00095
+  output_per_1k: 0.004
+
+limits:
+  max_tokens: 262144
+  max_completion_tokens: 262144
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image"]
+  output: ["text"]
+
+knowledge_cutoff: "2025-01"
+notes: "Coding-focused Kimi model, stronger on long-horizon repo work with less overthinking"
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 262144
+    has_max_value: true

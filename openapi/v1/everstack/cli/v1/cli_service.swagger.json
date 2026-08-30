@@ -1,0 +1,452 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/cli/v1/cli_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "CLIService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/cli/configs": {
+      "get": {
+        "summary": "ListConfigs returns all pushed configs for the authenticated org.",
+        "operationId": "CLIService_ListConfigs",
+        "responses": {
+          "200": {
+            "description": "List of pushed configs",
+            "schema": {
+              "$ref": "#/definitions/v1ListConfigsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectName",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CLIService"
+        ]
+      },
+      "post": {
+        "summary": "PushConfig uploads a worktree config to Everstack for cloud provisioning.",
+        "operationId": "CLIService_PushConfig",
+        "responses": {
+          "200": {
+            "description": "Pushed config info",
+            "schema": {
+              "$ref": "#/definitions/v1PushConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1PushConfigRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CLIService"
+        ]
+      }
+    },
+    "/v1/cli/configs/{configId}": {
+      "get": {
+        "summary": "GetConfig returns a specific pushed config.",
+        "operationId": "CLIService_GetConfig",
+        "responses": {
+          "200": {
+            "description": "Config details",
+            "schema": {
+              "$ref": "#/definitions/v1GetConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "configId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CLIService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteConfig removes a pushed config.",
+        "operationId": "CLIService_DeleteConfig",
+        "responses": {
+          "200": {
+            "description": "Deletion result",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "configId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CLIService"
+        ]
+      }
+    },
+    "/v1/cli/sandboxes": {
+      "get": {
+        "summary": "ListSandboxes returns active sandboxes for the authenticated org.",
+        "operationId": "CLIService_ListSandboxes",
+        "responses": {
+          "200": {
+            "description": "List of sandboxes",
+            "schema": {
+              "$ref": "#/definitions/v1ListSandboxesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "CLIService"
+        ]
+      },
+      "post": {
+        "summary": "CreateSandbox provisions a cloud sandbox from a pushed config.",
+        "operationId": "CLIService_CreateSandbox",
+        "responses": {
+          "200": {
+            "description": "Created sandbox info",
+            "schema": {
+              "$ref": "#/definitions/v1CreateSandboxResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateSandboxRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CLIService"
+        ]
+      }
+    },
+    "/v1/cli/sandboxes/{sandboxId}:stop": {
+      "post": {
+        "summary": "StopSandbox stops a running cloud sandbox.",
+        "operationId": "CLIService_StopSandbox",
+        "responses": {
+          "200": {
+            "description": "Stop result",
+            "schema": {
+              "$ref": "#/definitions/v1StopSandboxResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sandboxId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CLIService"
+        ]
+      }
+    },
+    "/v1/cli/whoami": {
+      "get": {
+        "summary": "Whoami returns the authenticated user and organization info.",
+        "operationId": "CLIService_Whoami",
+        "responses": {
+          "200": {
+            "description": "Authenticated user info",
+            "schema": {
+              "$ref": "#/definitions/v1WhoamiResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "CLIService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1CreateSandboxRequest": {
+      "type": "object",
+      "properties": {
+        "configId": {
+          "type": "string"
+        },
+        "overrideBranch": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateSandboxResponse": {
+      "type": "object",
+      "properties": {
+        "sandboxId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "sshUrl": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DeleteConfigResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1GetConfigResponse": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "$ref": "#/definitions/v1WorktreeConfig"
+        }
+      }
+    },
+    "v1ListConfigsResponse": {
+      "type": "object",
+      "properties": {
+        "configs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorktreeConfig"
+          }
+        }
+      }
+    },
+    "v1ListSandboxesResponse": {
+      "type": "object",
+      "properties": {
+        "sandboxes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SandboxSummary"
+          }
+        }
+      }
+    },
+    "v1PushConfigRequest": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "configYaml": {
+          "type": "string"
+        },
+        "configHash": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "gitRemote": {
+          "type": "string"
+        }
+      }
+    },
+    "v1PushConfigResponse": {
+      "type": "object",
+      "properties": {
+        "configId": {
+          "type": "string"
+        },
+        "created": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1SandboxSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "projectName": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1StopSandboxResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1WhoamiResponse": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "orgSlug": {
+          "type": "string"
+        },
+        "planTier": {
+          "type": "string"
+        }
+      }
+    },
+    "v1WorktreeConfig": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "projectName": {
+          "type": "string"
+        },
+        "configHash": {
+          "type": "string"
+        },
+        "configYaml": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "gitRemote": {
+          "type": "string"
+        },
+        "pushedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "pushedByEmail": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

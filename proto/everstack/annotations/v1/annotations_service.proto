@@ -1,0 +1,162 @@
+syntax = "proto3";
+
+package everstack.annotations.v1;
+
+import "google/api/annotations.proto";
+import "everstack/annotations/v1/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/annotations/v1;annotations";
+
+service AnnotationService {
+  rpc CreateQueue(CreateQueueRequest) returns (CreateQueueResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a new annotation queue"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/annotation-queues"
+      body: "*"
+    };
+  }
+
+  rpc GetQueue(GetQueueRequest) returns (GetQueueResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get annotation queue by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/annotation-queues/{id}"};
+  }
+
+  rpc ListQueues(ListQueuesRequest) returns (ListQueuesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List annotation queues for tenant"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/annotation-queues"};
+  }
+
+  rpc UpdateQueue(UpdateQueueRequest) returns (UpdateQueueResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update annotation queue"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/annotation-queues/{id}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteQueue(DeleteQueueRequest) returns (DeleteQueueResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete annotation queue"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/annotation-queues/{id}"};
+  }
+
+  rpc AddItemToQueue(AddItemToQueueRequest) returns (AddItemToQueueResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Add a single item to an annotation queue"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/annotation-queues/{queue_id}/items"
+      body: "*"
+    };
+  }
+
+  rpc AddItemsToQueueBatch(AddItemsToQueueBatchRequest) returns (AddItemsToQueueBatchResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Add multiple items to an annotation queue"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/annotation-queues/{queue_id}/items/batch"
+      body: "*"
+    };
+  }
+
+  rpc GetNextItem(GetNextItemRequest) returns (GetNextItemResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get the next pending item from the queue"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/annotation-queues/{queue_id}/items/next"};
+  }
+
+  rpc SubmitAnnotation(SubmitAnnotationRequest) returns (SubmitAnnotationResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Submit annotation scores for a queue item"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/annotation-queues/items/{item_id}/submit"
+      body: "*"
+    };
+  }
+
+  rpc SkipItem(SkipItemRequest) returns (SkipItemResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Skip an annotation queue item"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/annotation-queues/items/{item_id}/skip"
+      body: "*"
+    };
+  }
+
+  rpc ListQueueItems(ListQueueItemsRequest) returns (ListQueueItemsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List items in an annotation queue"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/annotation-queues/{queue_id}/items"};
+  }
+
+  rpc GetQueueStats(GetQueueStatsRequest) returns (GetQueueStatsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get statistics for an annotation queue"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/annotation-queues/{queue_id}/stats"};
+  }
+
+  rpc PopulateFromTraces(PopulateFromTracesRequest) returns (PopulateFromTracesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Populate queue items from trace data"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/annotation-queues/{queue_id}/populate"
+      body: "*"
+    };
+  }
+}

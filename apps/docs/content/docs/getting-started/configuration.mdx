@@ -1,0 +1,409 @@
+---
+title: Configuration
+description: Config file structure, environment variables, and validation.
+icon: Settings
+---
+
+Everstack is configured through a YAML config file, environment variables, or a combination of both. Environment variables take precedence over the config file, which takes precedence over built-in defaults.
+
+## Configuration Sources
+
+Everstack loads configuration in this order (highest priority first):
+
+1. **Environment variables** (`EVS_*` prefix)
+2. **Config file** (YAML, local or remote)
+3. **Built-in defaults** (bundled in the binary)
+
+## Config File
+
+By default, Everstack uses its bundled defaults. To use a custom config file:
+
+<Tabs items={["Local file", "Remote URL", "Docker mount"]}>
+  <Tab value="Local file">
+    ```bash
+    evs serve --config ./config/gateway.yaml
+    ```
+  </Tab>
+  <Tab value="Remote URL">
+    ```bash
+    evs serve --config https://raw.githubusercontent.com/your-org/configs/main/gateway.yaml
+
+    # With authentication
+    EVS_CONFIG_AUTH_TOKEN=ghp_your_token evs serve --config https://...
+    ```
+
+  </Tab>
+  <Tab value="Docker mount">
+    ```yaml
+    volumes:
+      - ./config/gateway.yaml:/app/config/gateway.yaml:ro
+    command: 'serve'
+    ```
+  </Tab>
+</Tabs>
+
+## Minimal Config
+
+A minimal config file that adds an OpenAI provider — everything else uses built-in defaults:
+
+```yaml
+gateway:
+  models:
+    - provider: openai
+      model:
+        - gpt-4o
+        - gpt-4o-mini
+      api_key: sk-your-openai-key
+      default: true
+```
+
+## Full Config Reference
+
+<Tabs items={["Server", "Database", "Auth", "Cache", "Gateway", "Telemetry", "Features"]}>
+  <Tab value="Server">
+    ```yaml
+    server:
+      config:
+        port: 8089                      # EVS_SERVER_PORT
+        host: "0.0.0.0"
+        external_port: 8089             # EVS_SERVER_EXTERNAL_PORT
+        external_domain: "localhost"    # EVS_SERVER_EXTERNAL_DOMAIN
+        external_secure: false
+        enforce_external_domain: false  # true in production
+
+      log:
+        level: "info"                   # EVS_LOG_LEVEL (debug, info, warn, error, trace)
+        include_levels: ["info", "warn", "error", "fatal", "panic"]
+        exclude_levels: []
+        formatter:
+          format: "text"                # EVS_LOG_FORMATTER_FORMAT (text, json)
+
+      cors:
+        enabled: true                   # EVS_CORS_ENABLED
+        allow_credentials: true
+        allowed_origins:
+          - "http://localhost:3000"
+          - "https://{instance}.{region}.everstack.ai"
+        allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"]
+        allowed_headers:
+          - "Origin"
+          - "Content-Type"
+          - "Accept"
+          - "Authorization"
+          - "Cookie"
+
+      tls:
+        enabled: false                  # EVS_TLS_ENABLED
+        key_path: ""                    # EVS_TLS_KEY_PATH
+        cert_path: ""                   # EVS_TLS_CERT_PATH
+    ```
+
+  </Tab>
+  <Tab value="Database">
+    ```yaml
+    database:
+      mode: hybrid                      # EVS_DATABASE_MODE (single, hybrid)
+      type: postgres                    # EVS_DATABASE_TYPE (postgres, memory)
+
+      postgres:
+        dsn: "postgres://postgres:postgres@localhost:5432/everstack"  # EVS_DATABASE_POSTGRES_DSN
+        max_open_conns: 200             # EVS_DATABASE_POSTGRES_MAX_OPEN_CONNS
+        max_idle_conns: 200             # EVS_DATABASE_POSTGRES_MAX_IDLE_CONNS
+        conn_max_lifetime: 5m           # EVS_DATABASE_POSTGRES_CONN_MAX_LIFETIME
+        ssl_mode: disable               # EVS_DATABASE_POSTGRES_SSL_MODE
+
+      clickhouse:
+        dsn: "clickhouse://clickhouse:clickhouse@localhost:9000/everstack"  # EVS_DATABASE_CLICKHOUSE_DSN
+        max_open_conns: 100             # EVS_DATABASE_CLICKHOUSE_MAX_OPEN_CONNS
+        max_idle_conns: 50              # EVS_DATABASE_CLICKHOUSE_MAX_IDLE_CONNS
+        conn_max_lifetime: 10m
+        query_timeout: 30s
+        compression: true
+    ```
+
+    **Single mode** stores everything in PostgreSQL. **Hybrid mode** (recommended) stores telemetry in ClickHouse for better analytics query performance.
+
+  </Tab>
+  <Tab value="Auth">
+    ```yaml
+    auth:
+      mode: "none"                      # EVS_AUTH_MODE (none, builtin, oidc)
+
+      # Built-in email/password auth — first user becomes owner
+      builtin:
+        session_secret: "change-me-in-production"  # EVS_AUTH_BUILTIN_SESSION_SECRET
+        session_max_age: 604800         # 7 days in seconds
+        session_secure: false           # true in production (HTTPS)
+        seat_limit: 0                   # 0 = unlimited users
+
+      # OpenID Connect (Keycloak, Auth0, Okta, Azure AD, etc.)
+      oidc:
+        issuer_url: ""                  # EVS_AUTH_OIDC_ISSUER_URL
+        client_id: ""                   # EVS_AUTH_OIDC_CLIENT_ID
+        client_secret: ""               # EVS_AUTH_OIDC_CLIENT_SECRET
+        redirect_uri: ""                # EVS_AUTH_OIDC_REDIRECT_URI
+        scopes: ["openid", "profile", "email"]
+    ```
+
+  </Tab>
+  <Tab value="Cache">
+    ```yaml
+    cache:
+      enabled: true                     # EVS_CACHE_ENABLED
+      type: memory                      # EVS_CACHE_TYPE (memory, redis)
+
+      memory:
+        max_size: 50000                 # EVS_CACHE_MEMORY_MAX_SIZE
+        ttl: 10m                        # EVS_CACHE_MEMORY_TTL
+
+      redis:
+        address: ""                     # EVS_CACHE_REDIS_ADDRESS (e.g., "localhost:6379")
+        password: ""                    # EVS_CACHE_REDIS_PASSWORD
+        db: 0
+        ttl: 10m
+        pool_size: 100
+        search:
+          enabled: false                # Requires RedisSearch module
+          index_name: "semantic_cache_idx"
+
+      # Semantic cache with embeddings (experimental)
+      semantic:
+        enabled: false                  # EVS_CACHE_SEMANTIC_ENABLED
+        max_entries: 10000
+        ttl: 5m
+        similarity_threshold: 0.85      # Cosine similarity (0.0-1.0)
+        backend: "auto"                 # redis, memory, or auto
+        embedding:
+          model: ""                     # Must be in gateway.models (e.g., "text-embedding-3-small")
+          dimensions: 0                 # Auto-detected if 0
+          cache_embeddings: true
+          cache_ttl: 1h
+          batch_size: 10
+          timeout: 30s
+    ```
+
+  </Tab>
+  <Tab value="Gateway">
+    ```yaml
+    gateway:
+      models:
+        - provider: openai
+          model:
+            - gpt-4o
+            - gpt-4o-mini
+          api_key: sk-your-key          # Or use Vault for key management
+          base_url: https://api.openai.com/v1
+          max_tokens: 4096
+          default: true                 # Default provider for unmatched models
+          default_alias: gpt-4o         # Default model when none specified
+
+        - provider: anthropic
+          model:
+            - claude-sonnet-4-5-20250929
+            - claude-haiku-4-5-20251001
+          api_key: sk-ant-your-key
+          base_url: https://api.anthropic.com/v1
+          max_tokens: 4096
+
+      rate_limit:
+        enabled: true                   # EVS_RATE_LIMIT_ENABLED
+        requests_per_minute: 500        # EVS_RATE_LIMIT_REQUESTS_PER_MINUTE
+        burst: 100                      # EVS_RATE_LIMIT_BURST
+        key_source: "correlation"       # ip, user_id, api_key, or correlation
+
+      load_balancer:
+        enabled: false
+        strategy: round_robin           # round_robin, priority, weighted
+        fallback:
+          enabled: false
+          factors:
+            - name: "unified_fallback"
+              priority: 1
+              criteria:
+                - error_codes: [429, 500, 502, 503, 504]
+                - rate_limit_hit: true
+              strategy: priority
+              timeout_ms: 5000
+              max_attempts: 1
+              models:
+                - provider: anthropic
+                  model: claude-haiku-4-5-20251001
+                  max_tokens: 4096
+    ```
+
+  </Tab>
+  <Tab value="Telemetry">
+    ```yaml
+    server:
+      telemetry:
+        otel:
+          enabled: true
+          mode: embedded                # embedded or external
+          collector_url: "localhost:4317"
+          service_name: "everstack-gateway"
+          tenant_type: "self_hosted"
+          direct_export:
+            enabled: true               # Export logs/traces to ClickHouse
+          tracing:
+            sampling_rate: 1.0          # 0.0-1.0 (1.0 = trace all requests)
+            granularity: standard       # minimal, standard, or detailed
+            trace_provider_calls: true
+            trace_stream_chunks: false  # Noisy — only for debugging
+            trace_fallbacks: true
+            trace_key_rotation: false
+
+      metrics:
+        type: otel                      # EVS_METRICS_TYPE (otel, none)
+
+      tracing:
+        type: otel                      # EVS_TRACING_TYPE (otel, none)
+        fraction: 0.1                   # Sampling fraction
+        otel:
+          sampling_rate: 1.0
+          granularity: standard
+          service_name: "everstack-gateway"
+          timeout: 30s
+          retry:
+            enabled: true
+            max_attempts: 3
+            backoff_duration: 1s
+    ```
+
+  </Tab>
+  <Tab value="Features">
+    ```yaml
+    features:
+      # Fast-path engine for ultra-low latency
+      fastpath:
+        enabled: true
+        auth:
+          bloom_filter_size: 100000
+          bloom_false_positive_rate: 0.001
+          cache_ttl: "60s"
+        cache:
+          exact:
+            enabled: true
+            max_entries: 50000
+            ttl: "5m"
+          semantic:
+            enabled: true
+            similarity_threshold: 0.35
+            algorithm: "minhash"
+        streaming:
+          buffer_size: 32768
+          pool_size: 1024
+          connection_pool:
+            max_idle_per_host: 256
+            prewarm_connections: 10
+
+      # Vector memory (pgvector backend)
+      enable_memory: true
+      memory:
+        backend: pgvector
+        embedding_models:
+          - model: text-embedding-3-small
+            dimension: 1536
+
+      # Sandbox environments
+      sandbox:
+        enabled: true
+        backend: "docker"               # docker or kubernetes
+        default_image: "everstack/sandbox:base"
+        max_cpu: 4.0
+        max_memory_mb: 4096
+        ssh:
+          listen_addr: ":2222"
+
+      # Isolated functions
+      isolated_functions:
+        pool:
+          enabled: true
+          min_per_runtime: 1
+          max_per_runtime: 10
+          idle_timeout_seconds: 300
+
+      # Gateway features
+      gateway:
+        enable_streaming: true
+        enable_embeddings: true
+        enable_response_caching: true
+        enable_request_logging: true
+        enable_cost_tracking: true
+    ```
+
+  </Tab>
+</Tabs>
+
+## Environment Variables
+
+All config values can be set via environment variables with the `EVS_` prefix. Each config key maps to a variable — check the comments in the config reference above for the exact variable name.
+
+### Common Variables
+
+| Variable                  | Description                  | Default  |
+| ------------------------- | ---------------------------- | -------- |
+| `EVS_SERVER_PORT`         | Port to listen on            | `8089`   |
+| `EVS_DATABASE_MODE`       | `single` or `hybrid`         | `hybrid` |
+| `EVS_POSTGRES_DSN`        | PostgreSQL connection string | —        |
+| `EVS_CLICKHOUSE_DSN`      | ClickHouse connection string | —        |
+| `EVS_AUTH_MODE`           | `none`, `builtin`, or `oidc` | `none`   |
+| `EVS_CACHE_TYPE`          | `memory` or `redis`          | `memory` |
+| `EVS_CACHE_REDIS_ADDRESS` | Redis address                | —        |
+| `EVS_LOG_LEVEL`           | Log level                    | `info`   |
+
+## Database Modes
+
+<Tabs items={["Single", "Hybrid (Recommended)"]}>
+  <Tab value="Single">
+    All data stored in PostgreSQL. Simpler to operate but limited telemetry query performance.
+
+    ```yaml
+    database:
+      mode: "single"
+      postgres:
+        dsn: "postgres://postgres:postgres@localhost:5432/everstack"
+    ```
+
+  </Tab>
+  <Tab value="Hybrid (Recommended)">
+    Application data in PostgreSQL, telemetry (traces, logs) in ClickHouse. Better query performance for observability at scale.
+
+    ```yaml
+    database:
+      mode: "hybrid"
+      postgres:
+        dsn: "postgres://postgres:postgres@localhost:5432/everstack"
+      clickhouse:
+        dsn: "clickhouse://clickhouse:clickhouse@localhost:9000/everstack"
+    ```
+
+  </Tab>
+</Tabs>
+
+## Validation
+
+```bash
+# Validate config without starting
+evs serve --validate-config
+
+# Validate on every startup (recommended for production)
+evs serve --validate-on-start
+```
+
+## CLI Flags
+
+| Flag                  | Description                                     | Default           |
+| --------------------- | ----------------------------------------------- | ----------------- |
+| `--port`              | Override the server port                        | `8089`            |
+| `--config`            | Path or URL to config file                      | Built-in defaults |
+| `--customDomain`      | Custom domain (e.g., `https://api.example.com`) | —                 |
+| `--customPort`        | Custom port for external access                 | —                 |
+| `--validate-config`   | Validate config and exit                        | `false`           |
+| `--validate-on-start` | Validate config before starting                 | `false`           |
+| `--info`              | Show instance information                       | `false`           |
+
+## Next Steps
+
+- [Architecture](/getting-started/architecture) — understand how services connect
+- [Authentication](/getting-started/authentication) — set up user authentication
+- [Providers](/getting-started/providers) — configure LLM providers in detail

@@ -1,0 +1,3 @@
+-- The token-only corrections are indistinguishable from valid facts and the
+-- alias-aware materialized view remains backward compatible. Rollback
+-- intentionally leaves both in place rather than deleting token telemetry.

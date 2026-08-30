@@ -1,0 +1,869 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "everstack/mcp/v1/mcp_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "McpService"
+    }
+  ],
+  "paths": {
+    "/v1/mcp/servers": {
+      "get": {
+        "operationId": "McpService_ListMcpServers",
+        "responses": {
+          "200": {
+            "description": "List all registered MCP servers for tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListMcpServersResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "enabledOnly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "tags": ["McpService"]
+      },
+      "post": {
+        "operationId": "McpService_RegisterMcpServer",
+        "responses": {
+          "200": {
+            "description": "Register a new MCP server and discover its tools",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RegisterMcpServerResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1RegisterMcpServerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["McpService"]
+      }
+    },
+    "/v1/mcp/servers/{id}": {
+      "get": {
+        "operationId": "McpService_GetMcpServer",
+        "responses": {
+          "200": {
+            "description": "Get MCP server by ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetMcpServerResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["McpService"]
+      },
+      "delete": {
+        "operationId": "McpService_DeleteMcpServer",
+        "responses": {
+          "200": {
+            "description": "Delete an MCP server and its discovered tools",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteMcpServerResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["McpService"]
+      },
+      "patch": {
+        "operationId": "McpService_UpdateMcpServer",
+        "responses": {
+          "200": {
+            "description": "Update MCP server configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1UpdateMcpServerResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/McpServiceUpdateMcpServerBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["McpService"]
+      }
+    },
+    "/v1/mcp/servers/{id}/health": {
+      "get": {
+        "operationId": "McpService_GetMcpServerHealth",
+        "responses": {
+          "200": {
+            "description": "Get health status of an MCP server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetMcpServerHealthResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["McpService"]
+      }
+    },
+    "/v1/mcp/servers/{serverId}/tools": {
+      "get": {
+        "operationId": "McpService_DiscoverTools",
+        "responses": {
+          "200": {
+            "description": "Trigger tool discovery on a specific MCP server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DiscoverToolsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["McpService"]
+      }
+    },
+    "/v1/mcp/tools": {
+      "get": {
+        "operationId": "McpService_ListFederatedTools",
+        "responses": {
+          "200": {
+            "description": "List tools across all registered MCP servers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListFederatedToolsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "serverIds",
+            "description": "Optional: filter by server IDs",
+            "in": "query",
+            "required": false,
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "namePrefix",
+            "description": "Optional: search by tool name prefix",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["McpService"]
+      }
+    },
+    "/v1/mcp/tools/call": {
+      "post": {
+        "operationId": "McpService_CallTool",
+        "responses": {
+          "200": {
+            "description": "Call a tool on the appropriate MCP server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CallToolResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CallToolRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["McpService"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "McpServiceUpdateMcpServerBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "transportType": {
+            "$ref": "#/components/schemas/v1McpTransportType"
+          },
+          "authType": {
+            "$ref": "#/components/schemas/v1McpAuthType"
+          },
+          "authConfig": {
+            "type": "object"
+          },
+          "toolFilter": {
+            "$ref": "#/components/schemas/v1McpToolFilter"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "stdioConfig": {
+            "$ref": "#/components/schemas/v1McpStdioConfig"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "title": "UpdateMcpServer"
+      },
+      "protobufAny": {
+        "type": "object",
+        "properties": {
+          "@type": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": {}
+      },
+      "protobufNullValue": {
+        "type": "string",
+        "enum": ["NULL_VALUE"],
+        "default": "NULL_VALUE",
+        "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+      },
+      "rpcStatus": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/protobufAny"
+            }
+          }
+        }
+      },
+      "v1CallToolRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "serverId": {
+            "type": "string"
+          },
+          "toolName": {
+            "type": "string"
+          },
+          "arguments": {
+            "type": "object"
+          }
+        },
+        "title": "CallTool — execute a tool on the appropriate MCP server"
+      },
+      "v1CallToolResponse": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/v1McpToolCallResult"
+          }
+        }
+      },
+      "v1DeleteMcpServerResponse": {
+        "type": "object"
+      },
+      "v1DiscoverToolsResponse": {
+        "type": "object",
+        "properties": {
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1McpTool"
+            }
+          }
+        }
+      },
+      "v1GetMcpServerHealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/v1McpServerHealthStatus"
+          },
+          "lastCheck": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "v1GetMcpServerResponse": {
+        "type": "object",
+        "properties": {
+          "server": {
+            "$ref": "#/components/schemas/v1McpServer"
+          }
+        }
+      },
+      "v1ListFederatedToolsResponse": {
+        "type": "object",
+        "properties": {
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1McpTool"
+            }
+          }
+        }
+      },
+      "v1ListMcpServersResponse": {
+        "type": "object",
+        "properties": {
+          "servers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1McpServer"
+            }
+          }
+        }
+      },
+      "v1McpAuthType": {
+        "type": "string",
+        "enum": [
+          "MCP_AUTH_TYPE_UNSPECIFIED",
+          "MCP_AUTH_TYPE_NONE",
+          "MCP_AUTH_TYPE_API_KEY",
+          "MCP_AUTH_TYPE_BEARER",
+          "MCP_AUTH_TYPE_OAUTH2"
+        ],
+        "default": "MCP_AUTH_TYPE_UNSPECIFIED"
+      },
+      "v1McpServer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "title": "Server URL (for SSE/Streamable HTTP transports)"
+          },
+          "transportType": {
+            "$ref": "#/components/schemas/v1McpTransportType"
+          },
+          "authType": {
+            "$ref": "#/components/schemas/v1McpAuthType"
+          },
+          "authConfig": {
+            "type": "object",
+            "title": "Auth configuration (API key value, bearer token, OAuth config)"
+          },
+          "toolFilter": {
+            "$ref": "#/components/schemas/v1McpToolFilter"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Custom headers sent with requests"
+          },
+          "stdioConfig": {
+            "$ref": "#/components/schemas/v1McpStdioConfig"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "healthStatus": {
+            "$ref": "#/components/schemas/v1McpServerHealthStatus"
+          },
+          "healthLastCheck": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "toolCount": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Number of discovered tools"
+          }
+        }
+      },
+      "v1McpServerHealthStatus": {
+        "type": "string",
+        "enum": [
+          "MCP_SERVER_HEALTH_STATUS_UNSPECIFIED",
+          "MCP_SERVER_HEALTH_STATUS_HEALTHY",
+          "MCP_SERVER_HEALTH_STATUS_UNHEALTHY",
+          "MCP_SERVER_HEALTH_STATUS_UNKNOWN"
+        ],
+        "default": "MCP_SERVER_HEALTH_STATUS_UNSPECIFIED"
+      },
+      "v1McpStdioConfig": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "title": "Command to execute for the stdio MCP server"
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Arguments passed to the command"
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Environment variables for the child process"
+          },
+          "workingDir": {
+            "type": "string",
+            "title": "Working directory for the child process"
+          }
+        }
+      },
+      "v1McpTool": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "serverId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "title": "Tool name as reported by the MCP server"
+          },
+          "description": {
+            "type": "string",
+            "title": "Human-readable description"
+          },
+          "inputSchema": {
+            "type": "object",
+            "title": "JSON Schema for tool input parameters"
+          },
+          "annotations": {
+            "type": "object",
+            "title": "MCP tool annotations (readOnlyHint, destructiveHint, etc.)"
+          },
+          "discoveredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1McpToolCallResult": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "serverId": {
+            "type": "string"
+          },
+          "toolName": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/v1McpToolCallStatus"
+          },
+          "inputArgs": {
+            "type": "object",
+            "title": "Input arguments passed to the tool"
+          },
+          "output": {
+            "type": "string",
+            "title": "Tool output (text content)"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error message if status is ERROR"
+          },
+          "latencyMs": {
+            "type": "string",
+            "format": "int64",
+            "title": "Execution latency in milliseconds"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1McpToolCallStatus": {
+        "type": "string",
+        "enum": [
+          "MCP_TOOL_CALL_STATUS_UNSPECIFIED",
+          "MCP_TOOL_CALL_STATUS_SUCCESS",
+          "MCP_TOOL_CALL_STATUS_ERROR",
+          "MCP_TOOL_CALL_STATUS_TIMEOUT"
+        ],
+        "default": "MCP_TOOL_CALL_STATUS_UNSPECIFIED"
+      },
+      "v1McpToolFilter": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Filter type: \"include\" or \"exclude\""
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Tool names to include/exclude"
+          }
+        }
+      },
+      "v1McpTransportType": {
+        "type": "string",
+        "enum": [
+          "MCP_TRANSPORT_TYPE_UNSPECIFIED",
+          "MCP_TRANSPORT_TYPE_SSE",
+          "MCP_TRANSPORT_TYPE_STREAMABLE_HTTP",
+          "MCP_TRANSPORT_TYPE_STDIO"
+        ],
+        "default": "MCP_TRANSPORT_TYPE_UNSPECIFIED"
+      },
+      "v1RegisterMcpServerRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "transportType": {
+            "$ref": "#/components/schemas/v1McpTransportType"
+          },
+          "authType": {
+            "$ref": "#/components/schemas/v1McpAuthType"
+          },
+          "authConfig": {
+            "type": "object"
+          },
+          "toolFilter": {
+            "$ref": "#/components/schemas/v1McpToolFilter"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "stdioConfig": {
+            "$ref": "#/components/schemas/v1McpStdioConfig"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "title": "RegisterMcpServer"
+      },
+      "v1RegisterMcpServerResponse": {
+        "type": "object",
+        "properties": {
+          "server": {
+            "$ref": "#/components/schemas/v1McpServer"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1McpTool"
+            },
+            "title": "Tools discovered during registration"
+          }
+        }
+      },
+      "v1UpdateMcpServerResponse": {
+        "type": "object",
+        "properties": {
+          "server": {
+            "$ref": "#/components/schemas/v1McpServer"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "title": "Evaluations",
+  "pages": ["overview", "datasets", "scorers", "running-evals", "annotations"]
+}

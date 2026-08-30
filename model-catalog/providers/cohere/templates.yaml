@@ -1,0 +1,35 @@
+# Configuration templates for Cohere
+# Pre-configured settings for common use cases
+
+high_performance:
+  name: "High Performance"
+  description: "Optimized for high throughput and low latency"
+  settings:
+    timeout: 30s
+    retry_attempts: 2
+    retry_delay: 500ms
+    connection_pool_size: 50
+    max_concurrent_requests: 20
+
+cost_optimized:
+  name: "Cost Optimized"
+  description: "Optimized for cost efficiency"
+  settings:
+    timeout: 120s
+    retry_attempts: 1
+    retry_delay: 2s
+    connection_pool_size: 10
+    max_concurrent_requests: 5
+  recommended_models:
+    - command-light
+
+rag:
+  name: "RAG Pipeline"
+  description: "Optimized for retrieval-augmented generation"
+  settings:
+    timeout: 60s
+    retry_attempts: 3
+  recommended_models:
+    - command-a-03-2025
+    - embed-english-v3.0
+

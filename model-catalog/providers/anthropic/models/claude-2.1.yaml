@@ -1,0 +1,22 @@
+name: "claude-2.1"
+display_name: "Claude 2.1"
+family: "claude-2"
+status: "deprecated"
+
+cost:
+  input_per_1k: 0.008
+  output_per_1k: 0.024
+
+limits:
+  max_tokens: 200000
+  max_completion_tokens: 4096
+
+capabilities:
+  - chat
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+
+notes: "Legacy model - consider upgrading to Claude 3.5+"
+

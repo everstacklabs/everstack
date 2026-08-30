@@ -1,0 +1,71 @@
+name: "gpt-5.6"
+display_name: "GPT-5.6"
+family: "gpt-sol"
+status: "stable"
+release_date: "2026-07-09"
+
+cost:
+  input_per_1k: 0.004
+  output_per_1k: 0.02
+  cache_read_per_1k: 0.0004
+  cache_write_per_1k: 0.005
+
+limits:
+  max_tokens: 1050000
+  max_completion_tokens: 128000
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image","pdf"]
+  output: ["text"]
+
+knowledge_cutoff: "2026-02-16"
+notes: "Frontier GPT-5.6 model for complex professional work, coding, and agentic workflows"
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 128000
+    has_max_value: true
+  - key: "reasoning_effort"
+    display_name: "Reasoning effort"
+    type: "enum"
+    options: ["none","low","medium","high","xhigh","max"]
+variants:
+  - id: "none"
+    display_name: "No reasoning"
+    description: "Fastest response with reasoning disabled when the model permits it."
+    parameters:
+      reasoning_effort: "none"
+  - id: "low"
+    display_name: "Low reasoning"
+    description: "Lower latency and cost for straightforward tasks."
+    parameters:
+      reasoning_effort: "low"
+  - id: "medium"
+    display_name: "Medium reasoning"
+    description: "Balanced reasoning for general-purpose work."
+    parameters:
+      reasoning_effort: "medium"
+  - id: "high"
+    display_name: "High reasoning"
+    description: "Deeper reasoning for complex analysis and coding."
+    parameters:
+      reasoning_effort: "high"
+  - id: "xhigh"
+    display_name: "Extra-high reasoning"
+    description: "Extended reasoning for long-horizon agentic work."
+    parameters:
+      reasoning_effort: "xhigh"
+  - id: "max"
+    display_name: "Maximum reasoning"
+    description: "Maximum available reasoning depth for the model."
+    parameters:
+      reasoning_effort: "max"

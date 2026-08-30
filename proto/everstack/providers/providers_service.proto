@@ -1,0 +1,183 @@
+syntax = "proto3";
+
+package everstack.providers.v1;
+
+import "google/api/annotations.proto";
+import "everstack/providers/providers.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/providers/v1;providers";
+
+service ProvidersService {
+  // ListProviderCatalog returns all available providers from the catalog (defaults)
+  rpc ListProviderCatalog(ListProviderCatalogRequest) returns (ListProviderCatalogResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List of all available providers from catalog"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/providers/catalog"};
+  }
+
+  // ListConfiguredProviders returns all providers with their status (configured and unconfigured)
+  rpc ListConfiguredProviders(ListConfiguredProvidersRequest) returns (ListConfiguredProvidersResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List of all providers with their status"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/providers/configured"};
+  }
+
+  // GetProvider returns detailed information about a specific provider
+  rpc GetProvider(GetProviderRequest) returns (GetProviderResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Provider details with catalog and configuration"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/providers/{provider_name}"};
+  }
+
+  // ConfigureProvider creates or updates a provider configuration
+  rpc ConfigureProvider(ConfigureProviderRequest) returns (ConfigureProviderResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Provider configured successfully"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/providers/{provider_name}/configure"
+      body: "*"
+    };
+  }
+
+  // ToggleProvider activates or deactivates a provider
+  rpc ToggleProvider(ToggleProviderRequest) returns (ToggleProviderResponse) {}
+
+  // DeleteProviderConfiguration removes a provider configuration
+  rpc DeleteProviderConfiguration(DeleteProviderConfigurationRequest) returns (DeleteProviderConfigurationResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Provider configuration deleted successfully"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/providers/{provider_name}"};
+  }
+
+  // AddProviderAPIKey adds a new API key to a provider configuration
+  rpc AddProviderAPIKey(AddProviderAPIKeyRequest) returns (AddProviderAPIKeyResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "API key added successfully"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/providers/api-keys"
+      body: "*"
+    };
+  }
+
+  // UpdateAPIKeyWeight updates the weight of an API key for load balancing
+  rpc UpdateAPIKeyWeight(UpdateAPIKeyWeightRequest) returns (UpdateAPIKeyWeightResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "API key weight updated successfully"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/providers/api-keys/{key_id}/weight"
+      body: "*"
+    };
+  }
+
+  // ToggleAPIKey activates or deactivates an API key
+  rpc ToggleAPIKey(ToggleAPIKeyRequest) returns (ToggleAPIKeyResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "API key toggled successfully"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/providers/api-keys/{key_id}/toggle"
+      body: "*"
+    };
+  }
+
+  // DeleteProviderAPIKey deletes an API key
+  rpc DeleteProviderAPIKey(DeleteProviderAPIKeyRequest) returns (DeleteProviderAPIKeyResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "API key deleted successfully"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/providers/api-keys/{key_id}"};
+  }
+
+  // ListProviderAPIKeys lists all API keys for a provider configuration
+  rpc ListProviderAPIKeys(ListProviderAPIKeysRequest) returns (ListProviderAPIKeysResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List of API keys"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/providers/api-keys/{provider_config_id}"};
+  }
+
+  // GetSyncStatus checks if YAML and DB are in sync
+  rpc GetSyncStatus(GetSyncStatusRequest) returns (GetSyncStatusResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Sync status information"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/providers/sync-status"};
+  }
+
+  // GetConfigYAML gets the current YAML config content
+  rpc GetConfigYAML(GetConfigYAMLRequest) returns (GetConfigYAMLResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "YAML config content"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/providers/config-yaml"};
+  }
+
+  // SaveConfigYAML saves YAML config and syncs to database
+  rpc SaveConfigYAML(SaveConfigYAMLRequest) returns (SaveConfigYAMLResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Config saved successfully"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/providers/config-yaml"
+      body: "*"
+    };
+  }
+
+  // ReloadConfig syncs YAML to DB and triggers gateway reload
+  rpc ReloadConfig(ReloadConfigRequest) returns (ReloadConfigResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Config reloaded successfully"}
+      }
+    };
+    option (google.api.http) = {post: "/v1/providers/reload"};
+  }
+}

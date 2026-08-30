@@ -1,0 +1,17 @@
+name: gpt-4o-realtime-preview-2025-06-03
+display_name: GPT 4o Realtime Preview 2025 06 03
+family: gpt-4
+status: stable
+limits:
+    max_tokens: 128000
+    max_completion_tokens: 16384
+capabilities:
+    - chat
+    - function_calling
+    - vision
+modalities:
+    input:
+        - text
+        - image
+    output:
+        - text

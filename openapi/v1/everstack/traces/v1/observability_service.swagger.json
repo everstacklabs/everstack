@@ -1,0 +1,1101 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/traces/v1/observability_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "ObservabilityService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/observability/metrics/breakdown": {
+      "post": {
+        "summary": "GetMetricsBreakdown returns Top-N grouped metrics for ranked panels.",
+        "operationId": "ObservabilityService_GetMetricsBreakdown",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetMetricsBreakdownResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetMetricsBreakdownRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ObservabilityService"
+        ]
+      }
+    },
+    "/v1/observability/metrics/dashboard": {
+      "post": {
+        "summary": "GetMetricsDashboard returns top-level KPI metrics for the dashboard",
+        "operationId": "ObservabilityService_GetMetricsDashboard",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetMetricsDashboardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetMetricsDashboardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ObservabilityService"
+        ]
+      }
+    },
+    "/v1/observability/metrics/timeseries": {
+      "post": {
+        "summary": "GetMetricsTimeSeries returns time-bucketed metric data for charts",
+        "operationId": "ObservabilityService_GetMetricsTimeSeries",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetMetricsTimeSeriesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetMetricsTimeSeriesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ObservabilityService"
+        ]
+      }
+    },
+    "/v1/observability/outcomes/dashboard": {
+      "post": {
+        "summary": "GetOutcomeDashboard returns aggregated outcome KPIs from auto-scoring data",
+        "operationId": "ObservabilityService_GetOutcomeDashboard",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetOutcomeDashboardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetOutcomeDashboardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ObservabilityService"
+        ]
+      }
+    },
+    "/v1/observability/outcomes/timeseries": {
+      "post": {
+        "summary": "GetOutcomeTimeSeries returns time-bucketed score data for trend charts",
+        "operationId": "ObservabilityService_GetOutcomeTimeSeries",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetOutcomeTimeSeriesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetOutcomeTimeSeriesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ObservabilityService"
+        ]
+      }
+    },
+    "/v1/observability/sessions": {
+      "post": {
+        "summary": "ListTraceSessions returns paginated session aggregations",
+        "operationId": "ObservabilityService_ListTraceSessions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListTraceSessionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ListTraceSessionsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ObservabilityService"
+        ]
+      }
+    },
+    "/v1/observability/sessions/{sessionId}": {
+      "get": {
+        "summary": "GetTraceSession returns a single session by ID",
+        "operationId": "ObservabilityService_GetTraceSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetTraceSessionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ObservabilityService"
+        ]
+      }
+    },
+    "/v1/observability/users": {
+      "post": {
+        "summary": "ListTraceUsers returns paginated user aggregations",
+        "operationId": "ObservabilityService_ListTraceUsers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListTraceUsersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ListTraceUsersRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ObservabilityService"
+        ]
+      }
+    },
+    "/v1/observability/users/{userId}": {
+      "get": {
+        "summary": "GetTraceUser returns a single user by ID",
+        "operationId": "ObservabilityService_GetTraceUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetTraceUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ObservabilityService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1BreakdownRow": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "number",
+          "format": "double"
+        },
+        "requestCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "previousValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Dominant provider for the row, set only for group_by = \"model\" (the\nprovider that served the most requests for this model). Empty otherwise."
+        }
+      }
+    },
+    "v1GetMetricsBreakdownRequest": {
+      "type": "object",
+      "properties": {
+        "filter": {
+          "$ref": "#/definitions/v1MetricsFilter"
+        },
+        "metric": {
+          "type": "string",
+          "title": "\"requests\" | \"errors\" | \"cost\" | \"tokens\""
+        },
+        "groupBy": {
+          "type": "string",
+          "description": "\"model\" | \"provider\" | \"environment\" | \"trace_name\".\nFuture extension point: \"prompt_name\". For \"trace_name\", model/provider\nfilters are ignored in v1 because root spans do not always carry those\ndimensions; use trace search for deeper slicing."
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int32",
+          "title": "default 5, max 50"
+        },
+        "compare": {
+          "type": "boolean",
+          "title": "populate previous_value from preceding window"
+        }
+      }
+    },
+    "v1GetMetricsBreakdownResponse": {
+      "type": "object",
+      "properties": {
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1BreakdownRow"
+          }
+        },
+        "totalGroups": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1GetMetricsDashboardRequest": {
+      "type": "object",
+      "properties": {
+        "filter": {
+          "$ref": "#/definitions/v1MetricsFilter"
+        },
+        "compare": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1GetMetricsDashboardResponse": {
+      "type": "object",
+      "properties": {
+        "dashboard": {
+          "$ref": "#/definitions/v1MetricsDashboard"
+        },
+        "previous": {
+          "$ref": "#/definitions/v1MetricsDashboard"
+        },
+        "deltas": {
+          "$ref": "#/definitions/v1MetricsDeltas"
+        }
+      }
+    },
+    "v1GetMetricsTimeSeriesRequest": {
+      "type": "object",
+      "properties": {
+        "filter": {
+          "$ref": "#/definitions/v1MetricsFilter"
+        },
+        "metric": {
+          "type": "string",
+          "description": "Supported values: \"request_count\", \"error_count\", \"avg_latency_ms\",\n\"total_cost\", \"error_rate\", \"total_tokens\", \"tokens\", \"input_tokens\",\n\"output_tokens\", \"agent_turn_count\", \"avg_agent_turn_ms\", \"ttft_p50\",\n\"ttft_p95\"."
+        },
+        "groupBy": {
+          "type": "string",
+          "title": "\"model\", \"provider\", \"\" (no grouping)"
+        },
+        "granularity": {
+          "type": "string",
+          "title": "\"hour\", \"6hour\", \"day\"; minute falls back to hourly"
+        },
+        "compare": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1GetMetricsTimeSeriesResponse": {
+      "type": "object",
+      "properties": {
+        "series": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MetricsTimeSeries"
+          }
+        },
+        "previousSeries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MetricsTimeSeries"
+          },
+          "description": "Previous-period data. Buckets keep their original timestamps; clients may\nshift them for visual overlay while retaining true times in tooltips."
+        }
+      }
+    },
+    "v1GetOutcomeDashboardRequest": {
+      "type": "object",
+      "properties": {
+        "filter": {
+          "$ref": "#/definitions/v1MetricsFilter"
+        },
+        "agentId": {
+          "type": "string",
+          "title": "optional: scope to specific agent"
+        },
+        "groupBy": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "group_by accepts: \"model\", \"provider\", \"prompt_template_id\",\n\"prompt_version\", \"tool_name\". Empty list = overall only."
+        }
+      }
+    },
+    "v1GetOutcomeDashboardResponse": {
+      "type": "object",
+      "properties": {
+        "dashboard": {
+          "$ref": "#/definitions/v1OutcomeDashboard"
+        },
+        "scores": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OutcomeScoreSummary"
+          }
+        },
+        "verdictRates": {
+          "$ref": "#/definitions/v1VerdictRates",
+          "description": "Overall fix_attempt_verdict rates across the filter window."
+        },
+        "verdictBreakdowns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1VerdictBreakdown"
+          },
+          "description": "Faceted verdict rates per dimension requested via group_by."
+        }
+      }
+    },
+    "v1GetOutcomeTimeSeriesRequest": {
+      "type": "object",
+      "properties": {
+        "filter": {
+          "$ref": "#/definitions/v1MetricsFilter"
+        },
+        "scoreName": {
+          "type": "string",
+          "title": "e.g. \"task_completion.finished\", \"tool_quality.success_rate\""
+        },
+        "aggregation": {
+          "type": "string",
+          "title": "\"avg\", \"rate_true\", \"rate_false\", \"count\""
+        },
+        "granularity": {
+          "type": "string",
+          "title": "\"minute\", \"hour\", \"day\""
+        },
+        "agentId": {
+          "type": "string",
+          "title": "optional"
+        },
+        "groupBy": {
+          "type": "string",
+          "description": "group_by accepts: \"model\", \"provider\", \"prompt_template_id\",\n\"prompt_version\", \"tool_name\". Empty = single series."
+        }
+      }
+    },
+    "v1GetOutcomeTimeSeriesResponse": {
+      "type": "object",
+      "properties": {
+        "series": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MetricsTimeSeries"
+          }
+        }
+      }
+    },
+    "v1GetTraceSessionResponse": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "$ref": "#/definitions/v1TraceSession"
+        }
+      }
+    },
+    "v1GetTraceUserResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1TraceUser"
+        }
+      }
+    },
+    "v1ListTraceSessionsRequest": {
+      "type": "object",
+      "properties": {
+        "filter": {
+          "$ref": "#/definitions/v1MetricsFilter"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "search": {
+          "type": "string",
+          "title": "Search session_id"
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "offset": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "orderBy": {
+          "type": "string",
+          "title": "\"last_trace_at\", \"trace_count\", \"total_cost\""
+        }
+      }
+    },
+    "v1ListTraceSessionsResponse": {
+      "type": "object",
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TraceSession"
+          }
+        },
+        "totalCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListTraceUsersRequest": {
+      "type": "object",
+      "properties": {
+        "filter": {
+          "$ref": "#/definitions/v1MetricsFilter"
+        },
+        "search": {
+          "type": "string",
+          "title": "Search user_id"
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "offset": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "orderBy": {
+          "type": "string",
+          "title": "\"last_seen\", \"trace_count\", \"total_cost\""
+        }
+      }
+    },
+    "v1ListTraceUsersResponse": {
+      "type": "object",
+      "properties": {
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TraceUser"
+          }
+        },
+        "totalCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1MetricsDashboard": {
+      "type": "object",
+      "properties": {
+        "totalRequests": {
+          "type": "string",
+          "format": "int64"
+        },
+        "avgLatencyMs": {
+          "type": "number",
+          "format": "double"
+        },
+        "totalCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "errorRate": {
+          "type": "number",
+          "format": "double",
+          "title": "0.0-1.0"
+        },
+        "totalTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalInputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalOutputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "uniqueModels": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "uniqueProviders": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalAgentTurns": {
+          "type": "string",
+          "format": "int64",
+          "description": "Agent-loop metrics, separated from gateway request_count /\navg_latency_ms so a 30s tool loop doesn't skew the user-facing\nchat-completion latency. See migration metrics_split_kinds."
+        },
+        "avgAgentTurnMs": {
+          "type": "number",
+          "format": "double"
+        },
+        "p50LatencyMs": {
+          "type": "number",
+          "format": "double",
+          "description": "Latency percentiles in ms, computed across span durations in window."
+        },
+        "p95LatencyMs": {
+          "type": "number",
+          "format": "double"
+        },
+        "p99LatencyMs": {
+          "type": "number",
+          "format": "double"
+        },
+        "totalErrors": {
+          "type": "string",
+          "format": "int64"
+        },
+        "ttftP50Ms": {
+          "type": "number",
+          "format": "double",
+          "description": "Streaming TTFT percentiles in ms, computed from root/provider spans that\ncarry llm.stream.time_to_first_token_ms. Zero when no streaming traffic\nmatched the window."
+        },
+        "ttftP95Ms": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "MetricsDashboard contains top-level KPIs for the observability dashboard"
+    },
+    "v1MetricsDeltas": {
+      "type": "object",
+      "properties": {
+        "requests": {
+          "type": "number",
+          "format": "double"
+        },
+        "errors": {
+          "type": "number",
+          "format": "double"
+        },
+        "errorRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "cost": {
+          "type": "number",
+          "format": "double"
+        },
+        "tokens": {
+          "type": "number",
+          "format": "double"
+        },
+        "avgLatency": {
+          "type": "number",
+          "format": "double"
+        },
+        "p95Latency": {
+          "type": "number",
+          "format": "double"
+        },
+        "ttftP50": {
+          "type": "number",
+          "format": "double"
+        },
+        "ttftP95": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "description": "MetricsDeltas contains previous-period percentage deltas. Values are\n(current - previous) / previous, or 0 when the previous value is 0."
+    },
+    "v1MetricsFilter": {
+      "type": "object",
+      "properties": {
+        "startTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "environments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "title": "MetricsFilter defines time range and dimension filters for metrics queries"
+    },
+    "v1MetricsTimeSeries": {
+      "type": "object",
+      "properties": {
+        "buckets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TimeSeriesBucket"
+          }
+        },
+        "metricName": {
+          "type": "string",
+          "title": "e.g., \"request_count\", \"avg_latency_ms\", \"total_cost\""
+        }
+      },
+      "title": "MetricsTimeSeries contains time-bucketed metric data"
+    },
+    "v1OutcomeDashboard": {
+      "type": "object",
+      "properties": {
+        "taskCompletionRate": {
+          "type": "number",
+          "format": "double",
+          "title": "rate_true(task_completion.finished)"
+        },
+        "toolSuccessRate": {
+          "type": "number",
+          "format": "double",
+          "title": "avg(tool_quality.success_rate)"
+        },
+        "policyComplianceRate": {
+          "type": "number",
+          "format": "double",
+          "title": "rate_true(policy.compliant)"
+        },
+        "loopHealthRate": {
+          "type": "number",
+          "format": "double",
+          "title": "1 - rate_true(loop_health.looping)"
+        },
+        "iterationEfficiency": {
+          "type": "number",
+          "format": "double",
+          "title": "avg(task_completion.efficiency)"
+        },
+        "sandboxSuccessRate": {
+          "type": "number",
+          "format": "double",
+          "title": "avg(sandbox_hygiene.exit_code_rate)"
+        },
+        "totalEvaluations": {
+          "type": "string",
+          "format": "int64",
+          "title": "total score records in window"
+        },
+        "uniqueSessions": {
+          "type": "string",
+          "format": "int64",
+          "title": "distinct session count"
+        }
+      },
+      "description": "OutcomeDashboard contains aggregated KPIs computed from otel_trace_scores."
+    },
+    "v1OutcomeScoreSummary": {
+      "type": "object",
+      "properties": {
+        "scoreName": {
+          "type": "string"
+        },
+        "dataType": {
+          "type": "string",
+          "title": "\"numeric\", \"boolean\", \"categorical\""
+        },
+        "count": {
+          "type": "string",
+          "format": "int64"
+        },
+        "mean": {
+          "type": "number",
+          "format": "double",
+          "title": "avg(NumericValue) or rate_true for boolean"
+        },
+        "min": {
+          "type": "number",
+          "format": "double"
+        },
+        "max": {
+          "type": "number",
+          "format": "double"
+        },
+        "p50": {
+          "type": "number",
+          "format": "double"
+        },
+        "p95": {
+          "type": "number",
+          "format": "double"
+        },
+        "passRate": {
+          "type": "number",
+          "format": "double",
+          "title": "for boolean scores: rate of true"
+        }
+      },
+      "description": "OutcomeScoreSummary provides stats for a single score name."
+    },
+    "v1TimeSeriesBucket": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "value": {
+          "type": "number",
+          "format": "double"
+        },
+        "label": {
+          "type": "string",
+          "title": "Optional label for multi-series (e.g., model name)"
+        }
+      },
+      "title": "TimeSeriesBucket represents a single data point in a time series"
+    },
+    "v1TraceSession": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "firstTraceAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastTraceAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "traceCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalDurationNs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalInputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalOutputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "errorCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "environment": {
+          "type": "string"
+        },
+        "kinds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Execution kinds present in the session, e.g. [\"agent\"], [\"workflow\", \"llm\"],\n[\"sandbox\"]. Derived from each trace's root span so the Sessions view can\nshow what a session actually is instead of an opaque id."
+        }
+      },
+      "title": "TraceSession represents an aggregated user session"
+    },
+    "v1TraceUser": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "firstSeen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastSeen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sessionCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "traceCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "errorRate": {
+          "type": "number",
+          "format": "double",
+          "title": "0.0-1.0"
+        },
+        "avgLatencyNs": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "title": "TraceUser represents aggregated per-user metrics"
+    },
+    "v1VerdictBreakdown": {
+      "type": "object",
+      "properties": {
+        "dimension": {
+          "type": "string",
+          "title": "the group_by dimension"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1VerdictBreakdownEntry"
+          }
+        }
+      },
+      "description": "VerdictBreakdown groups VerdictBreakdownEntries by the dimension they were\nsliced on (model, provider, prompt_template_id, prompt_version, tool_name)."
+    },
+    "v1VerdictBreakdownEntry": {
+      "type": "object",
+      "properties": {
+        "groupKey": {
+          "type": "string",
+          "title": "e.g. \"claude-opus-4-7\""
+        },
+        "rates": {
+          "$ref": "#/definitions/v1VerdictRates"
+        }
+      },
+      "description": "VerdictBreakdownEntry is one row in a faceted verdict breakdown — for\nexample \"model=claude-opus-4-7 → {win:0.62, fail:0.31, draw:0.05, no_change:0.02}\"."
+    },
+    "v1VerdictRates": {
+      "type": "object",
+      "properties": {
+        "winRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "failRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "drawRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "noChangeRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "sampleSize": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "VerdictRates breaks down fix_attempt_verdict categorical scores into the\ncanonical four buckets. Used for per-model/per-prompt outcome comparison.\nsample_size is the row count over which the rates were computed."
+    }
+  }
+}

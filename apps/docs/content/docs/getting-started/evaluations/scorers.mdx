@@ -1,0 +1,81 @@
+---
+title: Scorers
+description: Built-in metrics, custom score configs, and code-based scorers.
+icon: Target
+---
+
+Scorers define how an AI output gets graded. Everstack provides five built-in metrics for common quality dimensions and a flexible score config system for defining your own.
+
+## Built-in metrics
+
+These metrics are ready to use out of the box. Each uses an LLM-as-judge approach with a preconfigured prompt and scoring rubric.
+
+### Answer Relevancy
+
+Measures whether the response addresses the question that was asked. A response can be factually correct but still score low on relevancy if it answers a different question or includes excessive unrelated information. Requires input and output fields.
+
+### Faithfulness
+
+Checks whether every claim in the response is supported by the provided context. This is critical for retrieval-augmented generation (RAG) systems where the model should ground its answers in retrieved documents rather than its parametric knowledge. Requires input, output, and context fields.
+
+### Hallucination
+
+Detects fabricated information, including invented facts, nonexistent citations, made-up entities, and false attributions. Where Faithfulness checks for grounding in context, Hallucination casts a wider net for anything the model appears to have invented. Requires input, output, and context fields.
+
+### Bias
+
+Identifies unfair, prejudiced, or stereotyping content across demographic dimensions including race, gender, age, religion, and nationality. Useful for compliance requirements and for ensuring outputs treat all groups equitably. Requires input and output fields.
+
+### Toxicity
+
+Flags harmful, offensive, abusive, or inappropriate language. Covers profanity, hate speech, threats, sexually explicit content, and other categories that violate content policies. Requires input and output fields.
+
+## Custom score configs
+
+When built-in metrics do not cover your use case, create a custom score config. Each config specifies a name, scoring type, and evaluation logic.
+
+### Scoring types
+
+- **Numeric** produces a score on a defined range (for example, 0 to 10). Good for graded quality assessments where you need fine-grained comparison between runs.
+
+- **Boolean** produces a pass/fail result. Good for binary checks like "Did the response include a disclaimer?" or "Does the output contain valid JSON?"
+
+- **Categorical** produces one of a predefined set of labels. Good for classification tasks like sentiment (positive/neutral/negative) or intent detection.
+
+- **LLM judge** uses a language model with a custom prompt and rubric that you define. This is the most flexible option for subjective or domain-specific criteria. You write the judge prompt, specify the scoring scale, and the system handles execution and result extraction.
+
+- **Code scorer** runs a Python, JavaScript, or TypeScript function that computes the score programmatically. The code executes in a sandboxed environment for safety and isolation.
+
+## Code scorers
+
+Code scorers are useful when evaluation logic is deterministic, requires external lookups, or involves complex parsing that a language model would handle unreliably.
+
+Your scorer function receives the dataset item (input, output, expected output, context, metadata) and returns a score. The runtime environment supports standard libraries for string manipulation, JSON parsing, regex matching, and HTTP requests.
+
+**When to use code scorers:**
+
+- Exact match or fuzzy match against expected output
+- JSON schema validation of structured responses
+- Regex-based extraction and verification
+- Length, format, or structural compliance checks
+- API calls to external validation services
+- Custom similarity metrics or distance calculations
+
+Code scorers run inside Everstack sandboxes, so they have the same isolation guarantees as any other sandboxed workload. Python, JavaScript, and TypeScript are all supported.
+
+## Choosing the right scorer type
+
+**Start with built-in metrics** if your concern maps to relevancy, faithfulness, hallucination, bias, or toxicity. They require no configuration and provide well-calibrated baselines.
+
+**Use LLM judge configs** when you need to evaluate subjective, domain-specific qualities like tone, completeness, or adherence to brand voice. LLM judges handle nuance well but cost one LLM call per item scored.
+
+**Use code scorers** when evaluation logic is deterministic or needs external validation. Code scorers are fast, cheap, and perfectly reproducible, but they cannot assess subjective quality.
+
+**Combine multiple scorers** in a single eval run for comprehensive coverage. A typical setup might include Faithfulness for RAG grounding, a custom LLM judge for domain relevance, and a code scorer for format validation.
+
+## Related pages
+
+- [Evaluations Overview](/getting-started/evaluations/overview)
+- [Datasets](/getting-started/evaluations/datasets)
+- [Running Evaluations](/getting-started/evaluations/running-evals)
+- [Evaluations API](/getting-started/evaluations/overview)

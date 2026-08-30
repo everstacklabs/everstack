@@ -1,0 +1,13 @@
+{
+  "pages": [
+    "list-mcp-servers",
+    "register-mcp-server",
+    "get-mcp-server",
+    "update-mcp-server",
+    "delete-mcp-server",
+    "get-mcp-server-health",
+    "discover-tools",
+    "list-federated-tools",
+    "call-tool"
+  ]
+}

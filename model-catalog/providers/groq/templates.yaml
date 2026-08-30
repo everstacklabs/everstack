@@ -1,0 +1,6 @@
+default:
+  name: "Default"
+  description: "Standard Groq gateway settings"
+  settings:
+    timeout: 30s
+    retry_attempts: 2

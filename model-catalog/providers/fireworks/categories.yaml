@@ -1,0 +1,61 @@
+chat:
+  - accounts/fireworks/models/deepseek-v4-pro
+  - accounts/fireworks/models/deepseek-v3p2
+  - accounts/fireworks/models/deepseek-v3p1
+  - accounts/fireworks/models/glm-5p1
+  - accounts/fireworks/models/glm-5
+  - accounts/fireworks/models/glm-4p7
+  - accounts/fireworks/models/glm-4p5
+  - accounts/fireworks/models/glm-4p5-air
+  - accounts/fireworks/models/gpt-oss-120b
+  - accounts/fireworks/models/gpt-oss-20b
+  - accounts/fireworks/models/kimi-k2-thinking
+  - accounts/fireworks/models/kimi-k2-instruct
+  - accounts/fireworks/models/kimi-k2p5
+  - accounts/fireworks/models/kimi-k2p6
+  - accounts/fireworks/models/minimax-m2p1
+  - accounts/fireworks/models/minimax-m2p5
+  - accounts/fireworks/models/minimax-m2p7
+  - accounts/fireworks/models/qwen3p6-plus
+
+function_calling:
+  - accounts/fireworks/models/deepseek-v4-pro
+  - accounts/fireworks/models/deepseek-v3p2
+  - accounts/fireworks/models/deepseek-v3p1
+  - accounts/fireworks/models/glm-5p1
+  - accounts/fireworks/models/glm-5
+  - accounts/fireworks/models/glm-4p7
+  - accounts/fireworks/models/glm-4p5
+  - accounts/fireworks/models/glm-4p5-air
+  - accounts/fireworks/models/gpt-oss-120b
+  - accounts/fireworks/models/gpt-oss-20b
+  - accounts/fireworks/models/kimi-k2-thinking
+  - accounts/fireworks/models/kimi-k2-instruct
+  - accounts/fireworks/models/kimi-k2p5
+  - accounts/fireworks/models/kimi-k2p6
+  - accounts/fireworks/models/minimax-m2p1
+  - accounts/fireworks/models/minimax-m2p5
+  - accounts/fireworks/models/minimax-m2p7
+  - accounts/fireworks/models/qwen3p6-plus
+
+reasoning:
+  - accounts/fireworks/models/deepseek-v4-pro
+  - accounts/fireworks/models/deepseek-v3p2
+  - accounts/fireworks/models/deepseek-v3p1
+  - accounts/fireworks/models/glm-5p1
+  - accounts/fireworks/models/glm-5
+  - accounts/fireworks/models/glm-4p7
+  - accounts/fireworks/models/glm-4p5
+  - accounts/fireworks/models/glm-4p5-air
+  - accounts/fireworks/models/gpt-oss-120b
+  - accounts/fireworks/models/gpt-oss-20b
+  - accounts/fireworks/models/kimi-k2-thinking
+  - accounts/fireworks/models/kimi-k2p5
+  - accounts/fireworks/models/kimi-k2p6
+  - accounts/fireworks/models/minimax-m2p1
+  - accounts/fireworks/models/minimax-m2p5
+  - accounts/fireworks/models/minimax-m2p7
+  - accounts/fireworks/models/qwen3p6-plus
+
+embeddings:
+  - accounts/fireworks/models/nomic-embed-text-v1.5

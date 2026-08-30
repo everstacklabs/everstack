@@ -1,0 +1,198 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/license/v1/features_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "FeatureManagementService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {},
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1CreateFeatureResponse": {
+      "type": "object",
+      "properties": {
+        "feature": {
+          "$ref": "#/definitions/v1FeatureDefinitionProto"
+        }
+      }
+    },
+    "v1DeleteFeatureResponse": {
+      "type": "object"
+    },
+    "v1DeleteTenantOverrideResponse": {
+      "type": "object"
+    },
+    "v1FeatureDefinitionProto": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "title": "development, beta, released, deprecated"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "minTier": {
+          "type": "string",
+          "title": "empty = all tiers"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "Feature definition messages"
+    },
+    "v1FeatureOverrideProto": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "featureKey": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ForcePublishManifestResponse": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "publishedAt": {
+          "type": "string"
+        }
+      }
+    },
+    "v1GetFeatureResponse": {
+      "type": "object",
+      "properties": {
+        "feature": {
+          "$ref": "#/definitions/v1FeatureDefinitionProto"
+        }
+      }
+    },
+    "v1ListFeaturesResponse": {
+      "type": "object",
+      "properties": {
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FeatureDefinitionProto"
+          }
+        }
+      }
+    },
+    "v1ListTenantOverridesResponse": {
+      "type": "object",
+      "properties": {
+        "overrides": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FeatureOverrideProto"
+          }
+        }
+      }
+    },
+    "v1SetTenantOverrideResponse": {
+      "type": "object",
+      "properties": {
+        "override": {
+          "$ref": "#/definitions/v1FeatureOverrideProto"
+        }
+      }
+    },
+    "v1UpdateFeatureResponse": {
+      "type": "object",
+      "properties": {
+        "feature": {
+          "$ref": "#/definitions/v1FeatureDefinitionProto"
+        }
+      }
+    }
+  }
+}

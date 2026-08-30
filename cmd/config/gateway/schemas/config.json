@@ -1,0 +1,1002 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LLM Gateway Configuration Schema",
+  "description": "Schema for validating the main gateway configuration file",
+  "type": "object",
+  "properties": {
+    "grpc": {
+      "type": "object",
+      "description": "gRPC server configuration",
+      "properties": {
+        "server": {
+          "type": "object",
+          "properties": {
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535,
+              "description": "gRPC server port"
+            },
+            "host": {
+              "type": "string",
+              "description": "gRPC server host"
+            }
+          },
+          "required": ["port", "host"]
+        },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "max_concurrent_streams": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum concurrent gRPC streams"
+            },
+            "max_connection_idle": {
+              "type": "string",
+              "pattern": "^\\d+[smhd]$",
+              "description": "Maximum connection idle time"
+            },
+            "max_connection_age": {
+              "type": "string",
+              "pattern": "^\\d+[smhd]$",
+              "description": "Maximum connection age"
+            },
+            "max_connection_age_grace": {
+              "type": "string",
+              "pattern": "^\\d+[smhd]$",
+              "description": "Maximum connection age grace period"
+            },
+            "time": {
+              "type": "string",
+              "pattern": "^\\d+[smhd]$",
+              "description": "gRPC keepalive time"
+            },
+            "timeout": {
+              "type": "string",
+              "pattern": "^\\d+[smhd]$",
+              "description": "gRPC timeout"
+            }
+          }
+        },
+        "tls": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable TLS"
+            },
+            "cert_file": {
+              "type": "string",
+              "description": "TLS certificate file path"
+            },
+            "key_file": {
+              "type": "string",
+              "description": "TLS key file path"
+            },
+            "ca_file": {
+              "type": "string",
+              "description": "TLS CA file path"
+            }
+          }
+        }
+      },
+      "required": ["server"]
+    },
+    "log": {
+      "type": "object",
+      "description": "Logging configuration",
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["debug", "info", "warn", "error"],
+          "description": "Log level"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["text", "json"],
+          "description": "Log format"
+        },
+        "output": {
+          "type": "string",
+          "enum": ["stdout", "stderr", "file"],
+          "description": "Log output destination"
+        },
+        "file": {
+          "type": "string",
+          "description": "Log file path (when output is file)"
+        }
+      },
+      "required": ["level", "format", "output"]
+    },
+    "observability": {
+      "type": "object",
+      "description": "Observability configuration",
+      "properties": {
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable metrics collection"
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535,
+              "description": "Metrics server port"
+            },
+            "path": {
+              "type": "string",
+              "description": "Metrics endpoint path"
+            }
+          },
+          "required": ["enabled"]
+        },
+        "tracing": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable tracing"
+            },
+            "endpoint": {
+              "type": "string",
+              "description": "Tracing endpoint URL"
+            },
+            "service_name": {
+              "type": "string",
+              "description": "Service name for tracing"
+            },
+            "service_version": {
+              "type": "string",
+              "description": "Service version for tracing"
+            }
+          },
+          "required": ["enabled"]
+        },
+        "health": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable health checks"
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535,
+              "description": "Health check server port"
+            },
+            "path": {
+              "type": "string",
+              "description": "Health check endpoint path"
+            }
+          },
+          "required": ["enabled"]
+        }
+      }
+    },
+    "secret_manager": {
+      "type": "object",
+      "description": "Secret manager configuration",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["env", "vault", "gcp", "azure", "aws"],
+          "description": "Secret manager type"
+        },
+        "env": {
+          "type": "object",
+          "properties": {
+            "prefix": {
+              "type": "string",
+              "description": "Environment variable prefix"
+            }
+          }
+        },
+        "storage_credentials": {
+          "type": "object",
+          "description": "Secret backend and envelope encryption for external object-storage credentials",
+          "properties": {
+            "backend": {
+              "type": "string",
+              "enum": ["inherit", "postgres", "vault"],
+              "description": "Backend that owns external object-storage credential values"
+            },
+            "key_id": {
+              "type": "string",
+              "description": "Active storage credential encryption key ID"
+            },
+            "master_key": {
+              "type": "string",
+              "description": "Active storage credential master key"
+            },
+            "previous_keys": {
+              "type": "string",
+              "description": "JSON object mapping previous key IDs to master keys during rotation"
+            },
+            "path_prefix": {
+              "type": "string",
+              "description": "Backend path prefix for dynamically stored credentials"
+            }
+          }
+        },
+        "vault": {
+          "type": "object",
+          "properties": {
+            "address": {
+              "type": "string",
+              "description": "Vault server address"
+            },
+            "token": {
+              "type": "string",
+              "description": "Vault authentication token"
+            },
+            "namespace": {
+              "type": "string",
+              "description": "Optional Vault Enterprise namespace"
+            },
+            "mount_path": {
+              "type": "string",
+              "description": "Vault secret mount path"
+            }
+          }
+        }
+      },
+      "required": ["type"]
+    },
+    "database": {
+      "type": "object",
+      "description": "Database configuration",
+      "properties": {
+        "memory": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable in-memory database"
+            },
+            "data_file": {
+              "type": "string",
+              "description": "Data file for persistence"
+            }
+          }
+        },
+        "postgres": {
+          "type": "object",
+          "properties": {
+            "dsn": {
+              "type": "string",
+              "description": "PostgreSQL connection string"
+            },
+            "max_open_conns": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum open connections"
+            },
+            "max_idle_conns": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Maximum idle connections"
+            },
+            "conn_max_lifetime": {
+              "type": "string",
+              "pattern": "^\\d+[smhd]$",
+              "description": "Connection max lifetime"
+            }
+          }
+        },
+        "clickhouse": {
+          "type": "object",
+          "properties": {
+            "dsn": {
+              "type": "string",
+              "description": "ClickHouse connection string"
+            },
+            "max_open_conns": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum open connections"
+            },
+            "max_idle_conns": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Maximum idle connections"
+            },
+            "conn_max_lifetime": {
+              "type": "string",
+              "pattern": "^\\d+[smhd]$",
+              "description": "Connection max lifetime"
+            }
+          }
+        }
+      }
+    },
+    "cache": {
+      "type": "object",
+      "description": "Cache configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable caching"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["memory", "redis"],
+          "description": "Cache type"
+        },
+        "memory": {
+          "type": "object",
+          "properties": {
+            "max_size": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum cache size"
+            },
+            "ttl": {
+              "type": "string",
+              "pattern": "^\\d+[smhd]$",
+              "description": "Cache TTL"
+            }
+          }
+        },
+        "redis": {
+          "type": "object",
+          "properties": {
+            "address": {
+              "type": "string",
+              "description": "Redis server address"
+            },
+            "password": {
+              "type": "string",
+              "description": "Redis password"
+            },
+            "db": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Redis database number"
+            },
+            "ttl": {
+              "type": "string",
+              "pattern": "^\\d+[smhd]$",
+              "description": "Cache TTL"
+            }
+          }
+        }
+      },
+      "required": ["enabled", "type"]
+    },
+    "gateway": {
+      "type": "object",
+      "description": "Gateway configuration",
+      "properties": {
+        "models": {
+          "type": "array",
+          "description": "Model configurations",
+          "items": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "description": "Model provider"
+              },
+              "model": {
+                "type": "string",
+                "description": "Model name"
+              },
+              "api_key": {
+                "type": "string",
+                "description": "API key (can use environment variable reference)"
+              },
+              "base_url": {
+                "type": "string",
+                "description": "Provider base URL"
+              },
+              "max_tokens": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Maximum tokens"
+              },
+              "temperature": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 2,
+                "description": "Temperature setting"
+              },
+              "rate_limit": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "requests_per_minute": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "burst": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            },
+            "required": ["provider", "model"]
+          }
+        },
+        "rate_limit": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "requests_per_minute": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "burst": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "key_source": {
+              "type": "string",
+              "enum": ["api_key", "ip", "user_id"]
+            }
+          }
+        },
+        "load_balancer": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "strategy": {
+              "type": "string",
+              "enum": ["round_robin", "weighted", "least_connections"]
+            },
+            "weights": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "memory": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "type": {
+              "type": "string",
+              "enum": ["redis", "postgres", "memory", "vector"]
+            },
+            "ttl": {
+              "type": "string",
+              "pattern": "^\\d+[smhd]$"
+            },
+            "max_tokens": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "capabilities": {
+          "type": "object",
+          "properties": {
+            "function_calling": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "providers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "max_functions": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "embeddings": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "providers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "default_model": {
+                  "type": "string"
+                }
+              }
+            },
+            "agents": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "max_iterations": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "tools_enabled": {
+                  "type": "boolean"
+                },
+                "memory_enabled": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "streaming": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "chunk_size": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "buffer_size": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          }
+        },
+        "guardrails": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "input": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "prompt_injection": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "patterns": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": ["block", "sanitize", "warn"]
+                    }
+                  }
+                },
+                "content_filtering": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "provider": {
+                      "type": "string"
+                    },
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "threshold": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  }
+                },
+                "token_limits": {
+                  "type": "object",
+                  "properties": {
+                    "max_input_tokens": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "max_total_tokens": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": ["truncate", "block", "warn"]
+                    }
+                  }
+                }
+              }
+            },
+            "output": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "content_validation": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "check_hallucination": {
+                      "type": "boolean"
+                    },
+                    "check_facts": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "jailbreak_detection": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "methods": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": ["block", "flag", "warn"]
+                    }
+                  }
+                }
+              }
+            },
+            "custom": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "rules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string",
+                        "enum": ["pattern", "semantic", "behavioral"]
+                      },
+                      "pattern": {
+                        "type": "string"
+                      },
+                      "action": {
+                        "type": "string",
+                        "enum": ["block", "flag", "warn", "redact"]
+                      },
+                      "severity": {
+                        "type": "string",
+                        "enum": ["low", "medium", "high", "critical"]
+                      }
+                    },
+                    "required": ["name", "type", "action"]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "required": ["models"]
+    },
+    "backup": {
+      "type": "object",
+      "description": "Backup configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable backup"
+        },
+        "schedule": {
+          "type": "string",
+          "description": "Backup schedule (cron format)"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "config": {
+              "type": "boolean"
+            },
+            "custom_rules": {
+              "type": "boolean"
+            },
+            "logs": {
+              "type": "boolean"
+            },
+            "cache": {
+              "type": "boolean"
+            }
+          }
+        },
+        "storage": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["local", "s3", "gcs"]
+            },
+            "local": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                }
+              }
+            },
+            "s3": {
+              "type": "object",
+              "properties": {
+                "bucket": {
+                  "type": "string"
+                },
+                "region": {
+                  "type": "string"
+                },
+                "access_key_id": {
+                  "type": "string"
+                },
+                "secret_access_key": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "retention": {
+          "type": "object",
+          "properties": {
+            "days": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_backups": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "alerts": {
+      "type": "object",
+      "description": "Alerts configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable alerts"
+        },
+        "server": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "condition": {
+                    "type": "string"
+                  },
+                  "duration": {
+                    "type": "string",
+                    "pattern": "^\\d+[smhd]$"
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": ["info", "warning", "critical"]
+                  }
+                },
+                "required": ["name", "condition", "severity"]
+              }
+            }
+          }
+        },
+        "gateway": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "condition": {
+                    "type": "string"
+                  },
+                  "duration": {
+                    "type": "string",
+                    "pattern": "^\\d+[smhd]$"
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": ["info", "warning", "critical"]
+                  }
+                },
+                "required": ["name", "condition", "severity"]
+              }
+            }
+          }
+        },
+        "notifications": {
+          "type": "object",
+          "properties": {
+            "webhook": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "method": {
+                  "type": "string",
+                  "enum": ["GET", "POST", "PUT", "DELETE"]
+                },
+                "timeout": {
+                  "type": "string",
+                  "pattern": "^\\d+[smhd]$"
+                }
+              }
+            },
+            "log": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "level": {
+                  "type": "string",
+                  "enum": ["debug", "info", "warn", "error"]
+                }
+              }
+            }
+          }
+        },
+        "routing": {
+          "type": "object",
+          "properties": {
+            "critical": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "warning": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "info": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "features": {
+      "type": "object",
+      "description": "Feature flags",
+      "properties": {
+        "server": {
+          "type": "object",
+          "properties": {
+            "enable_new_load_balancer": {
+              "type": "boolean"
+            },
+            "enable_experimental_api_v2": {
+              "type": "boolean"
+            },
+            "enable_debug_endpoints": {
+              "type": "boolean"
+            },
+            "enable_profiling": {
+              "type": "boolean"
+            }
+          }
+        },
+        "gateway": {
+          "type": "object",
+          "properties": {
+            "enable_function_calling": {
+              "type": "boolean"
+            },
+            "enable_embeddings": {
+              "type": "boolean"
+            },
+            "enable_agents": {
+              "type": "boolean"
+            },
+            "enable_streaming": {
+              "type": "boolean"
+            },
+            "enable_model_metrics": {
+              "type": "boolean"
+            },
+            "enable_cost_tracking": {
+              "type": "boolean"
+            },
+            "enable_response_caching": {
+              "type": "boolean"
+            },
+            "enable_request_batching": {
+              "type": "boolean"
+            },
+            "enable_connection_pooling": {
+              "type": "boolean"
+            },
+            "enable_request_logging": {
+              "type": "boolean"
+            },
+            "enable_performance_monitoring": {
+              "type": "boolean"
+            },
+            "enable_health_checks": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": ["grpc", "log", "gateway"]
+}

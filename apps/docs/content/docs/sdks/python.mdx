@@ -1,0 +1,268 @@
+---
+title: Python
+description: Official Everstack Python SDK with sync and async clients.
+icon: Code2
+---
+
+The official Python SDK provides both synchronous and asynchronous clients for every Everstack API.
+
+## Installation
+
+```bash
+pip install everstack
+```
+
+Requires Python 3.9+. Uses httpx for HTTP transport and Pydantic v2 for typed responses.
+
+## Initialize the client
+
+Synchronous:
+
+```python
+from everstack import Everstack
+
+client = Everstack(api_key="pk_...")
+```
+
+Asynchronous:
+
+```python
+from everstack import AsyncEverstack
+
+async with AsyncEverstack(api_key="pk_...") as client:
+    response = await client.chat.completions.create(...)
+```
+
+Both clients accept the same options:
+
+- `api_key` (required) -- authentication token
+- `base_url` -- gateway URL (defaults to `https://{instance}.{region}.everstack.ai`)
+- `provider` -- default provider for routing (e.g., `"@openai"`)
+- `org_id` -- organization ID for multi-tenant setups
+- `user_id` -- user ID for tracking
+- `headers` -- additional default headers
+- `timeout` -- request timeout in seconds (default: 60)
+
+## Gateway APIs
+
+### Chat completions
+
+```python
+response = client.chat.completions.create(
+    model="@openai/gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+print(response.choices[0].message.content)
+```
+
+Streaming:
+
+```python
+for chunk in client.chat.completions.create(
+    model="@anthropic/claude-sonnet-4-20250514",
+    messages=[{"role": "user", "content": "Tell me a joke"}],
+    stream=True,
+):
+    if chunk.choices and chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+```
+
+### Embeddings
+
+```python
+response = client.embeddings.create(
+    model="@openai/text-embedding-3-small",
+    input=["Hello world", "How are you?"],
+)
+```
+
+### Models
+
+```python
+models = client.models.list()
+```
+
+### Audio
+
+Text-to-speech:
+
+```python
+audio = client.audio.speech.create(
+    model="tts-1",
+    input="Hello from Everstack.",
+    voice="alloy",
+)
+```
+
+Speech-to-text:
+
+```python
+transcription = client.audio.transcriptions.create(
+    file=audio_bytes,
+    model="whisper-1",
+)
+```
+
+### Images
+
+```python
+images = client.images.generate(
+    prompt="A sunset over the ocean",
+    model="@openai/dall-e-3",
+    size="1024x1024",
+)
+```
+
+### Moderations
+
+```python
+result = client.moderations.create(input="Text to check")
+```
+
+### Reranking
+
+```python
+result = client.rerank.create(
+    model="rerank-v1",
+    query="What is Everstack?",
+    documents=["Everstack is an AI platform.", "Unrelated text."],
+)
+```
+
+### Responses (agentic orchestration)
+
+```python
+response = client.responses.create(
+    model="@openai/gpt-4o",
+    input="Summarize this document",
+)
+
+# Streaming
+for event in client.responses.create(
+    model="@openai/gpt-4o",
+    input="Summarize this document",
+    stream=True,
+):
+    print(event)
+```
+
+## Platform APIs
+
+### Agents
+
+```python
+agent = client.agents.create(
+    name="support-agent",
+    systemPrompt="You are a concise support assistant.",
+)
+
+session = client.agents.sessions.create(agent_id=agent["id"])
+
+response = client.agents.sessions.run_turn(
+    session_id=session["id"],
+    input="Summarize open tickets.",
+)
+```
+
+Agent sub-resources: `sessions`, `reviews`, `sandboxes`, `lifecycle`, `memories`, `deployments`, `triggers`, `links`, `channels`, `crons`, `webhooks`, `github`, `ssh_keys`.
+
+### Datasets and evaluations
+
+```python
+dataset = client.datasets.create(name="support-regression")
+
+client.datasets.items.create_batch(
+    dataset_id=dataset["id"],
+    items=[{"input": {"query": "How do I reset my password?"}}],
+)
+
+run = client.evaluations.runs.create(
+    dataset_id=dataset["id"],
+    name="nightly-regression",
+)
+
+summary = client.evaluations.runs.get_summary(run_id=run["id"])
+```
+
+### Observability and traces
+
+```python
+dashboard = client.observability.metrics.get_dashboard()
+sessions = client.observability.sessions.list()
+
+traces = client.traces.list_rich(limit=50, environment="production")
+
+client.traces.scores.create(
+    trace_id="abc123",
+    name="quality",
+    source="ANNOTATION",
+    data_type="NUMERIC",
+    numeric_value=0.9,
+)
+```
+
+## Error handling
+
+```python
+from everstack import (
+    AuthenticationError,
+    RateLimitError,
+    NotFoundError,
+    APIError,
+)
+
+try:
+    response = client.chat.completions.create(...)
+except AuthenticationError:
+    print("Invalid API key")
+except RateLimitError:
+    print("Rate limited, retry later")
+except NotFoundError:
+    print("Resource not found")
+except APIError as e:
+    print(f"API error: {e}")
+```
+
+## Full resource map
+
+```
+client.chat.completions.create()
+client.embeddings.create()
+client.models.list()
+client.audio.speech.create()
+client.audio.transcriptions.create()
+client.audio.translations.create()
+client.images.generate(), .edit(), .create_variation()
+client.moderations.create()
+client.rerank.create()
+client.responses.create(), .get(), .list(), .cancel(), .delete()
+
+client.agents.create(), .get(), .list(), .update(), .delete()
+client.agents.sessions.create(), .run_turn(), .run_turn_stream(), .steer(), .cancel(), .complete()
+client.agents.reviews.submit(), .get(), .list()
+client.agents.sandboxes.create(), .list_instances(), .stop(), .revive(), .terminate()
+client.agents.lifecycle.provision(), .sleep(), .wake()
+client.agents.memories.list(), .create(), .update(), .deactivate(), .delete()
+client.agents.deployments.create(), .list(), .get(), .update()
+client.agents.triggers.create(), .list(), .get(), .update(), .delete()
+client.agents.links.create(), .list(), .delete()
+client.agents.channels.bind(), .unbind(), .list()
+client.datasets.create(), .get(), .list(), .update(), .delete()
+client.datasets.items.create(), .create_batch(), .get(), .list(), .update(), .delete()
+client.datasets.score_configs.create(), .get(), .list(), .update(), .delete()
+client.evaluations.runs.create(), .get(), .list(), .cancel(), .delete(), .retry()
+client.evaluations.runs.get_items(), .get_summary(), .compare(), .set_baseline()
+client.evaluations.schedules.create(), .get(), .list(), .update(), .delete()
+client.observability.metrics.get_dashboard(), .get_time_series()
+client.observability.sessions.list(), .get()
+client.observability.users.list(), .get()
+client.observability.outcomes.get_dashboard(), .get_time_series()
+client.traces.get(), .get_spans(), .get_tree(), .get_rich(), .list_rich(), .get_analytics()
+client.traces.scores.list(), .create(), .delete()
+client.traces.performance.breakdown(), .utilization()
+```
+
+## Resources
+
+- [Python SDK source](https://github.com/everstacklabs/everstack-python)
+- [PyPI package](https://pypi.org/project/everstack/)

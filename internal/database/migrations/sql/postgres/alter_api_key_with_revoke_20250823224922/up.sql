@@ -1,0 +1,3 @@
+-- write your UP migration SQL here
+ALTER TABLE api_keys ADD COLUMN revoked BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE api_keys ADD COLUMN revoked_at TIMESTAMP WITH TIME ZONE;

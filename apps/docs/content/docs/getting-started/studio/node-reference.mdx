@@ -1,0 +1,223 @@
+---
+title: Node Reference
+description: Available node types for building workflows.
+icon: Blocks
+---
+
+Every node in Workflow Studio belongs to one of seven categories. This page documents each node type, what it does, its key configuration options, and its handle types.
+
+Handles are the connection points on a node. **Input handles** accept data from upstream nodes. **Output handles** emit data to downstream nodes. Some nodes have multiple output handles for branching (for example, guardrail nodes produce both a **pass** and a **block** handle).
+
+## AI
+
+### LLM
+
+Sends a prompt to a language model and returns the response.
+
+| Config | Description |
+| --- | --- |
+| **Provider** | Which provider and model to use (e.g., OpenAI GPT-4, Anthropic Claude) |
+| **System prompt** | The system message sent with the request |
+| **User prompt** | Template for the user message, supports variable interpolation from upstream handles |
+| **Temperature** | Sampling temperature for the model response |
+| **Max tokens** | Maximum tokens in the response |
+| **Streaming** | Whether to stream tokens as they arrive |
+
+**Handles:** One input (prompt variables), one output (model response).
+
+### Agent
+
+Spawns an Everstack agent and waits for or streams its result. Use this when a step requires autonomous multi-turn reasoning with tool use rather than a single model call.
+
+| Config | Description |
+| --- | --- |
+| **Agent definition** | Which agent configuration to use |
+| **Input message** | The message sent to the agent, supports variable interpolation |
+| **Timeout** | Maximum time the agent is allowed to run |
+| **Async** | Whether to wait for completion or continue and check later |
+
+**Handles:** One input (message and context), one output (agent response).
+
+## Code
+
+### Function
+
+Executes a registered Everstack function. Functions can run as webhook handlers, proxy handlers, or in isolated sandbox runtimes depending on their configuration.
+
+| Config | Description |
+| --- | --- |
+| **Function** | Which registered function to execute |
+| **Input mapping** | Map upstream handle values to function input parameters |
+| **Timeout** | Maximum execution time |
+
+**Handles:** One input (function parameters), one output (function return value).
+
+## Integration
+
+### HTTP
+
+Makes an HTTP request to an external API and returns the response. Use this for calling third-party services, internal APIs, or any REST endpoint.
+
+| Config | Description |
+| --- | --- |
+| **Method** | GET, POST, PUT, PATCH, DELETE |
+| **URL** | The endpoint URL, supports variable interpolation |
+| **Headers** | Request headers, supports variable interpolation |
+| **Body** | Request body template for POST/PUT/PATCH |
+| **Timeout** | Maximum time to wait for a response |
+| **Retry** | Number of retries on failure |
+
+**Handles:** One input (request parameters), one output (response body, status code, headers).
+
+### Webhook
+
+Defines an inbound webhook trigger point within the workflow. When the workflow is triggered by a webhook, this node receives the incoming request payload and makes it available to downstream nodes.
+
+| Config | Description |
+| --- | --- |
+| **Path** | The webhook path suffix |
+| **Secret** | Shared secret for request signature verification |
+| **Method filter** | Which HTTP methods to accept |
+
+**Handles:** No input handle (this is a trigger node), one output (request payload, headers, method).
+
+## Logic
+
+### Condition
+
+Evaluates an expression and routes execution to one of two branches. This is how you build if/else logic in a workflow.
+
+| Config | Description |
+| --- | --- |
+| **Expression** | The condition to evaluate, supports variable references from upstream handles |
+| **Operator** | Comparison operator (equals, not equals, contains, greater than, less than, regex match, etc.) |
+
+**Handles:** One input (variables to evaluate), two outputs -- **true** and **false**. Connect downstream nodes to the appropriate output handle.
+
+### Loop
+
+Iterates over a list or repeats a subgraph a fixed number of times. Each iteration passes the current item and index to the loop body.
+
+| Config | Description |
+| --- | --- |
+| **Mode** | `for-each` (iterate over a list) or `count` (repeat N times) |
+| **Source** | The list variable to iterate over (for-each mode) |
+| **Count** | Number of iterations (count mode) |
+| **Max parallel** | How many iterations can run concurrently |
+
+**Handles:** One input (the list or context), one output (aggregated results from all iterations).
+
+### Transform
+
+Applies a data transformation to reshape, filter, or map values between nodes. Use this when the output format of one node does not match the input format of the next.
+
+| Config | Description |
+| --- | --- |
+| **Expression** | A transformation expression or template |
+| **Output format** | Expected output shape (JSON schema or freeform) |
+
+**Handles:** One input (source data), one output (transformed data).
+
+## Safety
+
+### Input Guardrails
+
+Runs input safety checks (PII detection, prompt injection prevention, content filtering) on data flowing through the workflow. Produces two output handles so you can route safe and blocked content differently.
+
+| Config | Description |
+| --- | --- |
+| **Checks** | Which guardrail checks to enable (PII, prompt injection, content filter) |
+| **PII action** | Block or redact when PII is detected |
+| **Sensitivity** | Threshold for content filtering (0.0 to 1.0) |
+
+**Handles:** One input (content to check), two outputs -- **pass** (content is safe, continues to next step) and **block** (violation detected, routes to error handling or alternative path).
+
+See [Input Guardrails](/getting-started/guardrails/input-guardrails) for details on each check.
+
+### Output Guardrails
+
+Runs output safety checks (jailbreak detection, toxicity filtering, code execution prevention) on model responses before they reach downstream nodes or the end user.
+
+| Config | Description |
+| --- | --- |
+| **Checks** | Which output checks to enable (jailbreak, toxicity, code execution) |
+| **Sensitivity** | Threshold for toxicity detection (0.0 to 1.0) |
+
+**Handles:** One input (model output to check), two outputs -- **pass** and **block**.
+
+See [Output Guardrails](/getting-started/guardrails/output-guardrails) for details on each check.
+
+## Voice
+
+### TTS (Text-to-Speech)
+
+Converts text to audio using a configured voice provider.
+
+| Config | Description |
+| --- | --- |
+| **Provider** | TTS provider and voice model |
+| **Voice** | Voice selection or voice ID |
+| **Speed** | Playback speed multiplier |
+| **Output format** | Audio format (mp3, wav, opus) |
+
+**Handles:** One input (text content), one output (audio data and metadata).
+
+### STT (Speech-to-Text)
+
+Transcribes audio input to text using a configured speech recognition provider.
+
+| Config | Description |
+| --- | --- |
+| **Provider** | STT provider and model |
+| **Language** | Expected language for transcription |
+| **Timestamps** | Whether to include word-level timestamps |
+
+**Handles:** One input (audio data), one output (transcribed text and metadata).
+
+### Voice Clone
+
+Creates or uses a cloned voice profile for TTS synthesis. Combine with the TTS node for personalized voice output.
+
+| Config | Description |
+| --- | --- |
+| **Source audio** | Reference audio for voice cloning |
+| **Voice name** | Label for the cloned voice profile |
+| **Provider** | Voice cloning provider |
+
+**Handles:** One input (reference audio or voice ID), one output (cloned voice profile for use by TTS nodes).
+
+## Data
+
+### Memory Query
+
+Queries the Everstack memory layer to retrieve stored context, facts, or embeddings. Use this to give downstream LLM or Agent nodes access to relevant stored knowledge.
+
+| Config | Description |
+| --- | --- |
+| **Query** | The search query, supports variable interpolation |
+| **Limit** | Maximum number of results to return |
+| **Filter** | Optional metadata filters to narrow results |
+
+**Handles:** One input (query parameters), one output (retrieved memory entries).
+
+### Memory Store
+
+Writes data to the Everstack memory layer. Use this to persist outputs from earlier workflow steps for future retrieval.
+
+| Config | Description |
+| --- | --- |
+| **Content** | The content to store, supports variable interpolation |
+| **Metadata** | Key-value metadata to attach to the memory entry |
+
+**Handles:** One input (content to store), one output (confirmation and stored entry ID).
+
+## Custom nodes
+
+Beyond the built-in types, you can register custom node types by wrapping an Everstack function as a node. Custom nodes appear in the node palette alongside built-in types and follow the same handle and configuration conventions.
+
+## Related pages
+
+- [Building Workflows](/getting-started/studio/building-workflows) -- connecting nodes and configuring workflow logic.
+- [Execution](/getting-started/studio/execution) -- running and monitoring workflow executions.
+- [Guardrails Overview](/getting-started/guardrails/overview) -- deeper detail on safety checks.
+- [Workflows API](/api-reference/workflows) -- programmatic node and workflow management.

@@ -1,0 +1,34 @@
+name: "xai"
+display_name: "xAI"
+base_url: "https://api.x.ai/v1"
+api_version: "2024-01-01"
+
+provider_type: "static"
+supports_model_discovery: false
+
+auth:
+  type: "api_key"
+  header_name: "Authorization"
+  header_format: "Bearer {api_key}"
+  env_var: "XAI_API_KEY"
+
+rate_limits:
+  requests_per_minute: 1200
+  tokens_per_minute: 240000
+  concurrent_requests: 30
+
+capabilities:
+  chat: true
+  completions: true
+  embeddings: false
+  function_calling: true
+  vision: true
+  streaming: true
+  fine_tuning: false
+  assistants: false
+
+model_families:
+  grok:
+    description: "Grok reasoning and chat models"
+    capabilities: ["chat", "function_calling", "vision"]
+    max_tokens: 131072

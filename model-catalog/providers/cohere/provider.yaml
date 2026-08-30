@@ -1,0 +1,62 @@
+name: "cohere"
+display_name: "Cohere"
+base_url: "https://api.cohere.com"
+api_version: "2024-01-01"
+
+# Provider type
+provider_type: "static"
+supports_model_discovery: false
+
+# Authentication
+auth:
+  type: "api_key"
+  header_name: "Authorization"
+  header_format: "Bearer {api_key}"
+  env_var: "COHERE_API_KEY"
+
+# Rate limiting
+rate_limits:
+  requests_per_minute: 1000
+  tokens_per_minute: 30000
+  concurrent_requests: 20
+
+# Supported features
+capabilities:
+  chat: true
+  completions: true
+  embeddings: true
+  function_calling: false
+  vision: false
+  streaming: true
+  fine_tuning: true
+  assistants: false
+
+# Model families
+model_families:
+  command:
+    description: "Command family models"
+    capabilities: ["chat", "completions"]
+    max_tokens: 4096
+
+  embed:
+    description: "Embedding models"
+    capabilities: ["embeddings"]
+    max_tokens: 512
+
+# Default settings
+defaults:
+  temperature: 0.7
+  max_tokens: 1000
+  top_p: 1.0
+  top_k: 40
+  timeout: 60s
+  retry_attempts: 3
+  retry_delay: 1s
+
+# Error handling
+error_mapping:
+  "rate_limit_exceeded": "rate_limit_exceeded"
+  "billing_not_active": "payment_required"
+  "model_not_found": "model_unavailable"
+  "invalid_api_key": "authentication_failed"
+

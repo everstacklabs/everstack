@@ -1,0 +1,12 @@
+{
+  "title": "Sandboxes",
+  "pages": [
+    "overview",
+    "shell-and-files",
+    "networking",
+    "snapshots",
+    "computer-use",
+    "lifecycle-webhooks",
+    "automation"
+  ]
+}

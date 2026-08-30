@@ -1,0 +1,90 @@
+name: "grok-4.20-multi-agent-0309"
+display_name: "Grok 4.20 Multi-Agent"
+family: "grok"
+status: "stable"
+release_date: "2026-03-09"
+
+cost:
+  input_per_1k: 0.00125
+  output_per_1k: 0.0025
+  cache_read_per_1k: 0.0002
+
+limits:
+  max_tokens: 1000000
+  max_completion_tokens: 30000
+
+capabilities:
+  - chat
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image","pdf"]
+  output: ["text"]
+
+notes: "Grok model for agentic tool use, reasoning, coding, and live assistance"
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 30000
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "reasoning_effort"
+    display_name: "Reasoning effort"
+    type: "enum"
+    options: ["low","medium","high","xhigh"]
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "frequency_penalty"
+    display_name: "Frequency penalty"
+    type: "number"
+    min_value: -2
+    has_min_value: true
+    max_value: 2
+    has_max_value: true
+  - key: "presence_penalty"
+    display_name: "Presence penalty"
+    type: "number"
+    min_value: -2
+    has_min_value: true
+    max_value: 2
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+  - key: "seed"
+    display_name: "Seed"
+    type: "integer"
+variants:
+  - id: "low"
+    display_name: "Low reasoning"
+    description: "Lower latency and cost for straightforward tasks."
+    parameters:
+      reasoning_effort: "low"
+  - id: "medium"
+    display_name: "Medium reasoning"
+    description: "Balanced reasoning for general-purpose work."
+    parameters:
+      reasoning_effort: "medium"
+  - id: "high"
+    display_name: "High reasoning"
+    description: "Deeper reasoning for complex analysis and coding."
+    parameters:
+      reasoning_effort: "high"
+  - id: "xhigh"
+    display_name: "Extra-high reasoning"
+    description: "Extended reasoning for long-horizon agentic work."
+    parameters:
+      reasoning_effort: "xhigh"

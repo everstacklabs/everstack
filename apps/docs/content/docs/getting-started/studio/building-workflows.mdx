@@ -1,0 +1,123 @@
+---
+title: Building Workflows
+description: Composing nodes, connecting handles, and configuring workflow logic.
+icon: GitBranch
+---
+
+This page walks through the mechanics of building a workflow in Studio: creating a new workflow, placing nodes, connecting handles, passing variables, adding branching and loops, wiring guardrails, and testing your pipeline before deployment.
+
+## Creating a workflow
+
+Navigate to `/deployments/studio` and click **New Workflow**. Give it a name and an optional description. The canvas opens with an empty graph.
+
+Every workflow starts as a draft. Drafts are editable and testable but do not respond to triggers until you deploy them.
+
+## Adding nodes
+
+Open the node palette on the left side of the canvas. Nodes are grouped by category: AI, Code, Integration, Logic, Safety, Voice, and Data. Drag a node from the palette onto the canvas to add it.
+
+Once placed, click the node to open the config panel on the right. Each node type has its own configuration form. Fill in the required fields. Optional fields have sensible defaults.
+
+You can reposition nodes freely on the canvas. The layout is visual only and does not affect execution order. Execution order is determined entirely by the directed edges between nodes.
+
+## Connecting handles
+
+Every node has at least one handle. Handles are the small circles on the edges of a node. Output handles sit on the right side, input handles on the left.
+
+To connect two nodes, click and drag from an output handle on the upstream node to an input handle on the downstream node. The canvas draws a directed edge. This edge tells the execution engine that the downstream node depends on the upstream node and should receive its output.
+
+The canvas validates connections in real time:
+
+- You cannot create a cycle. The graph must remain a DAG.
+- You cannot connect two output handles or two input handles together.
+- Handle type mismatches are flagged with a warning.
+
+To remove a connection, click the edge and press delete.
+
+## Variable flow between nodes
+
+Data moves between nodes through handles. When a node completes, its output is available to any downstream node connected to that output handle.
+
+Inside node configuration, you reference upstream values using variable interpolation. For example, if an LLM node is connected downstream from an HTTP node, the LLM's user prompt field can reference the HTTP response body using the upstream node's handle name.
+
+Variable names follow the pattern `{{nodeName.handleName}}`. The config panel shows available variables based on what is connected upstream, so you do not need to memorize handle names.
+
+## Conditional branching
+
+Use a **Condition** node to create if/else branches. The Condition node evaluates an expression against incoming data and routes execution to one of two output handles: **true** or **false**.
+
+A typical pattern:
+
+1. Connect an upstream node's output to the Condition node's input.
+2. Configure the expression (e.g., `{{classifier.output}}` equals `"urgent"`).
+3. Connect the **true** handle to the urgent-processing branch.
+4. Connect the **false** handle to the standard-processing branch.
+
+Both branches can rejoin later by connecting to a shared downstream node. The execution engine waits for whichever branch was taken to complete before proceeding.
+
+You can chain multiple Condition nodes to build more complex routing logic. Each condition produces its own true/false split, so you can model multi-way branching by nesting conditions.
+
+## Loops
+
+Use a **Loop** node when you need to repeat a set of steps over a list of items or a fixed number of times.
+
+In `for-each` mode, the Loop node iterates over a list from an upstream handle. Each iteration passes the current item and its index to the nodes connected inside the loop body. Results are aggregated into a list on the loop's output handle.
+
+In `count` mode, the loop runs a fixed number of times. This is useful for retry-like patterns or generating multiple variations.
+
+The `max parallel` setting controls how many iterations run concurrently. Set it to 1 for sequential processing or higher for parallel throughput.
+
+## Guardrail routing
+
+Guardrail nodes (Input Guardrails and Output Guardrails) are different from most nodes because they produce two output handles instead of one: **pass** and **block**.
+
+The recommended pattern for input safety:
+
+1. Place an **Input Guardrails** node before your LLM node.
+2. Connect upstream data to the guardrail's input handle.
+3. Connect the **pass** handle to the LLM node.
+4. Connect the **block** handle to an error-handling node, a Transform node that returns a safe response, or an Output node that stops the workflow.
+
+The same pattern applies to output safety:
+
+1. Place an **Output Guardrails** node after your LLM node.
+2. Connect the LLM output to the guardrail's input handle.
+3. Route **pass** to the next step.
+4. Route **block** to your violation-handling logic.
+
+This gives you explicit, visual control over what happens when a guardrail fires. You can see the safe and blocked paths directly on the canvas.
+
+## Transform nodes for data shaping
+
+When the output format of one node does not match the expected input of the next, place a **Transform** node between them. Transforms let you reshape JSON, extract fields, map arrays, or format strings.
+
+This is commonly needed when:
+
+- An HTTP node returns a deeply nested response and the LLM node expects a flat string.
+- A Loop node aggregates results into a list and the next node expects a single summary.
+- Two branches rejoin and you need to merge their outputs.
+
+## Testing in the editor
+
+Before deploying, use the execution panel at the bottom of the canvas to test your workflow.
+
+1. Click **Run** in the execution panel.
+2. Provide test input values. The panel shows input fields based on the workflow's entry points (Webhook nodes, or the first nodes with no upstream connections).
+3. Watch execution progress in real time. Each node highlights as it runs, and streaming events appear in the panel.
+4. When execution completes, inspect the output of each node by clicking on it. The config panel switches to show execution results for that node.
+
+If a node fails, the error is shown inline on the canvas and in the execution panel. Fix the configuration and re-run without redeploying.
+
+## Tips for readable workflows
+
+- Name your nodes descriptively. "Classify intent" is better than "LLM 1".
+- Keep the graph flowing left to right or top to bottom. The layout does not affect execution, but consistent direction makes the graph easier to read.
+- Use Transform nodes to make data flow explicit rather than relying on complex interpolation expressions.
+- Group related guardrail-LLM-guardrail sequences visually so safety checks are obvious.
+- Add comments to nodes using the description field in the config panel.
+
+## Next steps
+
+- [Node Reference](/getting-started/studio/node-reference) -- details on every node type and its configuration.
+- [Execution](/getting-started/studio/execution) -- running, triggering, and monitoring deployed workflows.
+- [Guardrails Overview](/getting-started/guardrails/overview) -- deeper detail on the safety checks available in guardrail nodes.

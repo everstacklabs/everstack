@@ -1,0 +1,624 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/functions/v1/functions_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "FunctionsService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/functions": {
+      "get": {
+        "operationId": "FunctionsService_ListFunctions",
+        "responses": {
+          "200": {
+            "description": "List all functions for tenant",
+            "schema": {
+              "$ref": "#/definitions/v1ListFunctionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "EXECUTION_MODE_UNSPECIFIED",
+              "EXECUTION_MODE_WEBHOOK",
+              "EXECUTION_MODE_PROXY",
+              "EXECUTION_MODE_ISOLATED"
+            ],
+            "default": "EXECUTION_MODE_UNSPECIFIED"
+          },
+          {
+            "name": "enabled",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "FunctionsService"
+        ]
+      },
+      "post": {
+        "operationId": "FunctionsService_CreateFunction",
+        "responses": {
+          "200": {
+            "description": "Create a new serverless function",
+            "schema": {
+              "$ref": "#/definitions/v1CreateFunctionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateFunctionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "FunctionsService"
+        ]
+      }
+    },
+    "/v1/functions/by-name/{name}": {
+      "get": {
+        "operationId": "FunctionsService_GetFunctionByName",
+        "responses": {
+          "200": {
+            "description": "Get function by name",
+            "schema": {
+              "$ref": "#/definitions/v1GetFunctionByNameResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "FunctionsService"
+        ]
+      }
+    },
+    "/v1/functions/isolation-status": {
+      "get": {
+        "operationId": "FunctionsService_GetIsolationStatus",
+        "responses": {
+          "200": {
+            "description": "Get isolation backend status",
+            "schema": {
+              "$ref": "#/definitions/v1GetIsolationStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "FunctionsService"
+        ]
+      }
+    },
+    "/v1/functions/{id}": {
+      "get": {
+        "operationId": "FunctionsService_GetFunction",
+        "responses": {
+          "200": {
+            "description": "Get function by ID",
+            "schema": {
+              "$ref": "#/definitions/v1GetFunctionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "FunctionsService"
+        ]
+      },
+      "delete": {
+        "operationId": "FunctionsService_DeleteFunction",
+        "responses": {
+          "200": {
+            "description": "Delete function",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteFunctionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "FunctionsService"
+        ]
+      },
+      "patch": {
+        "operationId": "FunctionsService_UpdateFunction",
+        "responses": {
+          "200": {
+            "description": "Update function",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateFunctionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FunctionsServiceUpdateFunctionBody"
+            }
+          }
+        ],
+        "tags": [
+          "FunctionsService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "FunctionsServiceUpdateFunctionBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/definitions/v1ExecutionMode"
+        },
+        "parameters": {
+          "type": "object"
+        },
+        "webhook": {
+          "$ref": "#/definitions/v1WebhookConfig"
+        },
+        "proxy": {
+          "$ref": "#/definitions/v1ProxyConfig"
+        },
+        "isolated": {
+          "$ref": "#/definitions/v1IsolatedConfig"
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "memoryMb": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxRetries": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "protobufNullValue": {
+      "type": "string",
+      "enum": [
+        "NULL_VALUE"
+      ],
+      "default": "NULL_VALUE",
+      "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1CreateFunctionRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/definitions/v1ExecutionMode"
+        },
+        "parameters": {
+          "type": "object"
+        },
+        "webhook": {
+          "$ref": "#/definitions/v1WebhookConfig"
+        },
+        "proxy": {
+          "$ref": "#/definitions/v1ProxyConfig"
+        },
+        "isolated": {
+          "$ref": "#/definitions/v1IsolatedConfig"
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "memoryMb": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxRetries": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "CreateFunctionRequest creates a new function"
+    },
+    "v1CreateFunctionResponse": {
+      "type": "object",
+      "properties": {
+        "function": {
+          "$ref": "#/definitions/v1Function"
+        }
+      }
+    },
+    "v1DeleteFunctionResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ExecutionMode": {
+      "type": "string",
+      "enum": [
+        "EXECUTION_MODE_UNSPECIFIED",
+        "EXECUTION_MODE_WEBHOOK",
+        "EXECUTION_MODE_PROXY",
+        "EXECUTION_MODE_ISOLATED"
+      ],
+      "default": "EXECUTION_MODE_UNSPECIFIED",
+      "title": "ExecutionMode defines how a function is executed"
+    },
+    "v1Function": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/definitions/v1ExecutionMode"
+        },
+        "parameters": {
+          "type": "object"
+        },
+        "webhook": {
+          "$ref": "#/definitions/v1WebhookConfig"
+        },
+        "proxy": {
+          "$ref": "#/definitions/v1ProxyConfig"
+        },
+        "isolated": {
+          "$ref": "#/definitions/v1IsolatedConfig"
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "memoryMb": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxRetries": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "Function represents a registered serverless function"
+    },
+    "v1GetFunctionByNameResponse": {
+      "type": "object",
+      "properties": {
+        "function": {
+          "$ref": "#/definitions/v1Function"
+        }
+      }
+    },
+    "v1GetFunctionResponse": {
+      "type": "object",
+      "properties": {
+        "function": {
+          "$ref": "#/definitions/v1Function"
+        }
+      }
+    },
+    "v1GetIsolationStatusResponse": {
+      "type": "object",
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "dockerHost": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "GetIsolationStatusResponse returns isolation backend availability"
+    },
+    "v1IsolatedConfig": {
+      "type": "object",
+      "properties": {
+        "runtime": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "packages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dockerHost": {
+          "type": "string"
+        }
+      },
+      "title": "IsolatedConfig defines isolated runtime execution settings (Phase 2)"
+    },
+    "v1ListFunctionsResponse": {
+      "type": "object",
+      "properties": {
+        "functions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Function"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ProxyConfig": {
+      "type": "object",
+      "properties": {
+        "baseUrl": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "queryMapping": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "headerMapping": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "bodyMapping": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "responseMapping": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "title": "ProxyConfig defines proxy/passthrough execution settings"
+    },
+    "v1UpdateFunctionResponse": {
+      "type": "object",
+      "properties": {
+        "function": {
+          "$ref": "#/definitions/v1Function"
+        }
+      }
+    },
+    "v1WebhookConfig": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "WebhookConfig defines webhook execution settings"
+    }
+  }
+}

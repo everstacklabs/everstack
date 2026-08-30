@@ -1,0 +1,378 @@
+syntax = "proto3";
+
+package everstack.hosting.v1;
+
+import "google/protobuf/timestamp.proto";
+import "validate/validate.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/hosting/v1;hosting";
+
+// SiteStatus is the lifecycle state of a hosted site.
+enum SiteStatus {
+  SITE_STATUS_UNSPECIFIED = 0;
+  SITE_STATUS_ACTIVE = 1;
+  SITE_STATUS_EXPIRED = 2;
+  SITE_STATUS_DISABLED = 3;
+}
+
+// SiteAccess controls indexing/visibility of a site. Anonymous sites are
+// always served with noindex regardless of this value.
+enum SiteAccess {
+  SITE_ACCESS_UNSPECIFIED = 0;
+  SITE_ACCESS_PUBLIC = 1;
+  SITE_ACCESS_NOINDEX = 2;
+}
+
+// AbuseReason is the reporter-selected category used to triage the operator
+// queue. Free-form context belongs in ReportSiteRequest.details.
+enum AbuseReason {
+  ABUSE_REASON_UNSPECIFIED = 0;
+  ABUSE_REASON_PHISHING = 1;
+  ABUSE_REASON_MALWARE = 2;
+  ABUSE_REASON_IMPERSONATION = 3;
+  ABUSE_REASON_PRIVACY = 4;
+  ABUSE_REASON_COPYRIGHT = 5;
+  ABUSE_REASON_OTHER = 6;
+}
+
+enum ModerationActionKind {
+  MODERATION_ACTION_KIND_UNSPECIFIED = 0;
+  MODERATION_ACTION_KIND_TAKEDOWN = 1;
+  MODERATION_ACTION_KIND_RESTORE = 2;
+}
+
+enum ModerationActionStatus {
+  MODERATION_ACTION_STATUS_UNSPECIFIED = 0;
+  MODERATION_ACTION_STATUS_PENDING = 1;
+  // The serving provider accepted the write. This does not claim that an
+  // eventually-consistent KV update is already visible at every edge.
+  MODERATION_ACTION_STATUS_APPLIED = 2;
+  // A newer decision for the same site replaced this action before it could
+  // be projected. Superseded actions are retained for audit but never retried.
+  MODERATION_ACTION_STATUS_SUPERSEDED = 3;
+}
+
+// Site is a hosted static site served at {slug}.evs.run.
+message Site {
+  string id = 1;
+  string slug = 2;
+  SiteStatus status = 3;
+  SiteAccess access = 4;
+  bool spa_fallback = 5;
+  int32 current_version = 6;
+  int64 total_bytes = 7;
+  int32 file_count = 8;
+  string url = 9;
+  bool claimed = 10;
+  google.protobuf.Timestamp expires_at = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp last_published_at = 13;
+}
+
+// FileManifestEntry describes one file the caller intends to upload.
+message FileManifestEntry {
+  // Site-relative path, e.g. "index.html" or "assets/app.js".
+  string path = 1;
+  int64 size_bytes = 2;
+  string content_type = 3;
+  // Optional lowercase hex sha256 of the file body.
+  string sha256 = 4;
+}
+
+// FileUpload is the presigned upload slot for one manifest entry.
+message FileUpload {
+  string path = 1;
+  string upload_url = 2;
+  map<string, string> headers = 3;
+}
+
+message PublishSiteRequest {
+  // Optional; server generates a slug when empty. Must satisfy the slug
+  // pattern and not be reserved.
+  string slug = 1;
+  repeated FileManifestEntry files = 2;
+  bool spa_fallback = 3;
+  SiteAccess access = 4;
+}
+
+message PublishSiteResponse {
+  string slug = 1;
+  int32 version = 2;
+  repeated FileUpload uploads = 3;
+  // Opaque token required by FinalizeSite for this version.
+  string finalize_token = 4;
+}
+
+message FinalizeSiteRequest {
+  string slug = 1;
+  int32 version = 2;
+  string finalize_token = 3;
+}
+
+message FinalizeSiteResponse {
+  string slug = 1;
+  int32 version = 2;
+  // Live URL, e.g. https://{slug}.evs.run
+  string url = 3;
+  // Present only for anonymous sites: visiting this URL (or calling
+  // ClaimSite with the embedded token) makes the site permanent.
+  string claim_url = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+message GetSiteRequest {
+  string slug = 1;
+}
+
+message GetSiteResponse {
+  Site site = 1;
+}
+
+message ListSitesRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListSitesResponse {
+  repeated Site sites = 1;
+  string next_page_token = 2;
+}
+
+message UpdateSiteRequest {
+  string slug = 1;
+  optional bool spa_fallback = 2;
+  optional SiteAccess access = 3;
+}
+
+message UpdateSiteResponse {
+  Site site = 1;
+}
+
+message DeleteSiteRequest {
+  string slug = 1;
+}
+
+message DeleteSiteResponse {}
+
+message ReportSiteRequest {
+  string slug = 1 [(validate.rules).string = {
+    pattern: "^[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$"
+    max_bytes: 63
+  }];
+  AbuseReason reason = 2 [(validate.rules).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // Optional bounded context for an operator. Required when reason is OTHER.
+  string details = 3 [(validate.rules).string.max_bytes = 2000];
+  // Optional path on this site, for example "/login". Absolute URLs are not
+  // accepted.
+  string page_path = 4 [(validate.rules).string = {
+    pattern: "^$|^/"
+    max_bytes: 1024
+  }];
+}
+
+message ReportSiteResponse {
+  // Always true for a syntactically valid report, including an unknown slug,
+  // so the public endpoint cannot be used to enumerate sites.
+  bool accepted = 1;
+}
+
+message ModerationAction {
+  string id = 1;
+  string slug = 2;
+  ModerationActionKind kind = 3;
+  ModerationActionStatus status = 4;
+  AbuseReason reason = 5;
+  string note = 6;
+  string actor_id = 7;
+  int32 attempt_count = 8;
+  string last_error = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp applied_at = 11;
+}
+
+message TakedownSiteRequest {
+  string slug = 1 [(validate.rules).string = {
+    pattern: "^[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$"
+    max_bytes: 63
+  }];
+  AbuseReason reason = 2 [(validate.rules).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  string note = 3 [(validate.rules).string.max_bytes = 2000];
+  // Reusing a key returns the original action without applying it twice.
+  string idempotency_key = 4 [(validate.rules).string = {
+    min_bytes: 1
+    max_bytes: 128
+  }];
+}
+
+message TakedownSiteResponse {
+  ModerationAction action = 1;
+}
+
+message RestoreSiteRequest {
+  string slug = 1 [(validate.rules).string = {
+    pattern: "^[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$"
+    max_bytes: 63
+  }];
+  string note = 2 [(validate.rules).string.max_bytes = 2000];
+  string idempotency_key = 3 [(validate.rules).string = {
+    min_bytes: 1
+    max_bytes: 128
+  }];
+}
+
+message RestoreSiteResponse {
+  ModerationAction action = 1;
+}
+
+message HostingCapabilitiesRequest {}
+
+message HostingCapabilitiesResponse {
+  bool hosting_enabled = 1;
+  bool can_operate = 2;
+  bool anonymous_publishing_enabled = 3;
+  bool edge_enforcement_configured = 4;
+  string base_domain = 5;
+}
+
+message HostingOverviewRequest {}
+
+message HostingOverviewResponse {
+  int64 total_sites = 1;
+  int64 active_sites = 2;
+  int64 anonymous_sites = 3;
+  int64 expiring_sites = 4;
+  int64 disabled_sites = 5;
+  int64 total_bytes = 6;
+  int64 open_reports = 7;
+  int64 pending_actions = 8;
+}
+
+message OperatorSite {
+  Site site = 1;
+  string tenant_id = 2;
+  string owner_user_id = 3;
+  bool anonymous = 4;
+  bool kill_switch = 5;
+  string takedown_reason = 6;
+  int32 open_report_count = 7;
+  ModerationActionStatus enforcement_status = 8;
+}
+
+message ListOperatorSitesRequest {
+  string search = 1 [(validate.rules).string.max_bytes = 256];
+  string status = 2 [(validate.rules).string = {
+    in: [
+      "",
+      "active",
+      "expired",
+      "disabled"
+    ]
+  }];
+  int32 page_size = 3 [(validate.rules).int32 = {
+    gte: 0
+    lte: 200
+  }];
+  string page_token = 4 [(validate.rules).string = {
+    pattern: "^$|^[0-9]{1,10}$"
+    max_bytes: 10
+  }];
+}
+
+message ListOperatorSitesResponse {
+  repeated OperatorSite sites = 1;
+  string next_page_token = 2;
+}
+
+message AbuseReport {
+  string id = 1;
+  string slug = 2;
+  AbuseReason reason = 3;
+  string details = 4;
+  string page_path = 5;
+  string status = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  google.protobuf.Timestamp resolved_at = 9;
+}
+
+message ListAbuseReportsRequest {
+  string status = 1 [(validate.rules).string = {
+    in: [
+      "",
+      "open",
+      "resolved",
+      "dismissed"
+    ]
+  }];
+  string search = 2 [(validate.rules).string.max_bytes = 256];
+  int32 page_size = 3 [(validate.rules).int32 = {
+    gte: 0
+    lte: 200
+  }];
+  string page_token = 4 [(validate.rules).string = {
+    pattern: "^$|^[0-9]{1,10}$"
+    max_bytes: 10
+  }];
+}
+
+message ListAbuseReportsResponse {
+  repeated AbuseReport reports = 1;
+  string next_page_token = 2;
+}
+
+message ReviewAbuseReportRequest {
+  string report_id = 1 [(validate.rules).string.uuid = true];
+  // "resolved" or "dismissed".
+  string status = 2 [(validate.rules).string = {
+    in: [
+      "resolved",
+      "dismissed"
+    ]
+  }];
+  string note = 3 [(validate.rules).string.max_bytes = 2000];
+}
+
+message ReviewAbuseReportResponse {
+  AbuseReport report = 1;
+}
+
+message ClaimSiteRequest {
+  string slug = 1;
+  // Claim token from FinalizeSiteResponse.claim_url.
+  string claim_token = 2;
+  // Email to bind the site to; a one-time code is sent to it.
+  string email = 3;
+}
+
+message ClaimSiteResponse {
+  // Claim continues via VerifyCode with the emailed code.
+  bool code_sent = 1;
+}
+
+message RequestCodeRequest {
+  string email = 1;
+}
+
+message RequestCodeResponse {
+  bool code_sent = 1;
+}
+
+message VerifyCodeRequest {
+  string email = 1;
+  string code = 2;
+  // Optional: slug + claim token to finish a site claim in the same step.
+  string slug = 3;
+  string claim_token = 4;
+}
+
+message VerifyCodeResponse {
+  // Returned exactly once; not retrievable later.
+  string api_key = 1;
+  string org_id = 2;
+}

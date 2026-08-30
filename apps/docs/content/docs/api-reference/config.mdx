@@ -1,0 +1,20 @@
+---
+title: Config
+description: Config API endpoints
+---
+
+# Config API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | [`/api/v1/config/runtime`](./config/get-runtime-config-returns-the-full-runtime-configuration) | GetRuntimeConfig returns the full runtime configuration |
+| `PUT` | [`/api/v1/config/runtime`](./config/update-runtime-config-updates-the-full-runtime-configuration) | UpdateRuntimeConfig updates the full runtime configuration |
+| `GET` | [`/api/v1/config/runtime/{section}`](./config/get-runtime-config-section-returns-a-specific-section-of-the-runtime-configuration) | GetRuntimeConfigSection returns a specific section of the runtime configuration |
+| `PUT` | [`/api/v1/config/runtime/{section}`](./config/update-runtime-config-section-updates-a-specific-section-of-the-runtime-configuration) | UpdateRuntimeConfigSection updates a specific section of the runtime configuration |
+| `POST` | [`/api/v1/config/runtime/{section}/reset`](./config/reset-runtime-config-section-resets-a-section-to-its-default-values) | ResetRuntimeConfigSection resets a section to its default values |
+| `GET` | [`/api/v1/config/schemas`](./config/list-schemas-returns-available-schemas) | ListSchemas returns available schemas |
+| `GET` | [`/api/v1/config/schemas/{name}`](./config/get-schema-returns-a-specific-schema) | GetSchema returns a specific schema |
+| `POST` | [`/api/v1/config/validate`](./config/validate-yaml-validates-a-yaml-configuration-string) | ValidateYAML validates a YAML configuration string |
+| `POST` | [`/api/v1/config/validate-map`](./config/validate-map-validates-a-configuration-map) | ValidateMap validates a configuration map |
+| `GET` | [`/api/v1/config/validation-history`](./config/get-validation-history-returns-the-validation-history) | GetValidationHistory returns the validation history |
+| `GET` | [`/api/v1/config/validation-status`](./config/get-validation-status-returns-the-current-validation-status-of-the-configuration) | GetValidationStatus returns the current validation status of the configuration |

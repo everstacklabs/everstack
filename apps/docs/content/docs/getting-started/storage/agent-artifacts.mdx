@@ -1,0 +1,99 @@
+---
+title: Agent Artifacts
+description: How agents store and retrieve files during sessions.
+icon: Bot
+---
+
+Agents can read and write files through three built-in storage tools. These tools use the tenant's default storage configuration and presigned URLs, so agents never handle raw bucket credentials.
+
+## Available tools
+
+### upload_artifact
+
+Stores a file in the tenant's bucket with purpose `ARTIFACT`.
+
+The tool accepts:
+
+- **content** -- the file body, either as base64-encoded binary or plain text
+- **filename** -- the desired filename
+- **content_type** -- the MIME type (e.g. `text/plain`, `application/json`, `image/png`)
+
+The platform encodes the content, uploads it to the bucket, records metadata (size, checksum, content type), and returns confirmation with the stored object key.
+
+Use this when an agent generates a report, writes code output, produces a chart, or creates any file that should persist beyond the current message.
+
+### download_artifact
+
+Retrieves a presigned download URL for a previously stored artifact.
+
+The tool accepts:
+
+- **key** -- the object key returned by `upload_artifact` or discovered through `list_artifacts`
+
+The platform returns a presigned GET URL with a 15-minute expiry. The agent can include this URL in its response so the user can download the file directly from the bucket.
+
+Use this when an agent needs to reference or share a file it created earlier in the session, or when a user asks for a file the agent produced in a previous turn.
+
+### list_artifacts
+
+Queries all artifacts stored for the current tenant.
+
+The tool returns a list of objects with their keys, filenames, sizes, and content types. This lets an agent discover what files already exist before deciding whether to create new ones or reference existing ones.
+
+Use this when an agent needs to check whether a file already exists, enumerate available artifacts for a user, or decide which previous outputs to build on.
+
+## How it works end to end
+
+A typical artifact flow during an agent session looks like this:
+
+1. The agent performs some work -- runs code, analyzes data, generates a document.
+2. The agent calls `upload_artifact` with the output content, a filename, and the appropriate content type.
+3. The platform uploads the file to the tenant's default storage bucket, computes a SHA256 checksum, and records metadata.
+4. The agent receives the stored object key as confirmation.
+5. The agent calls `download_artifact` to get a presigned URL and includes it in the response to the user.
+6. The user clicks the link and downloads the file directly from the bucket. The link expires after 15 minutes.
+
+The user never needs to configure anything. The platform handles signing, quota checks, and metadata tracking transparently.
+
+## What gets stored
+
+Agent artifacts are stored with:
+
+- **Purpose** set to `ARTIFACT`, which distinguishes them from datasets, manual uploads, eval results, and voice recordings
+- **Key** prefixed with tenant and session identifiers for easy filtering
+- **SHA256 checksum** computed at upload time for integrity verification
+- **Back-reference** to the agent session, so you can trace which session produced which files
+
+You can browse agent artifacts in the admin UI's Objects tab by filtering on the `ARTIFACT` purpose.
+
+## Quota considerations
+
+Agent artifact uploads count against the tenant's storage quotas (total bytes and object count). If an upload would exceed either limit, the tool call fails and the agent receives a quota error.
+
+This means agents cannot fill a tenant's storage unboundedly. Set quotas that match your expected artifact volume and monitor usage through the admin UI's Usage tab.
+
+## Practical patterns
+
+### Report generation
+
+An agent runs a data analysis workflow, formats the results as a PDF or CSV, and uploads it with `upload_artifact`. The agent includes the download link in its response so the user can grab the file immediately.
+
+### Iterative file building
+
+An agent uses `list_artifacts` to check what files already exist from earlier turns, downloads a previous version with `download_artifact`, modifies it, and uploads the updated version. This works well for multi-turn document editing.
+
+### Code output persistence
+
+An agent writes code to a sandbox, runs it, captures the output (logs, charts, exported files), and stores each output as an artifact. The user gets a set of download links at the end of the conversation.
+
+### Cross-session artifact access
+
+Because artifacts are stored by tenant, not by session, an agent in a later session can use `list_artifacts` to discover files produced by a previous session. This lets agents build on prior work without the user re-uploading anything.
+
+## Recommendations
+
+- Set content types accurately. A file uploaded as `application/octet-stream` when it is actually `text/csv` will confuse downstream consumers and the admin UI's preview behavior.
+- Use descriptive filenames. The filename is displayed in the admin UI and returned to users in download links.
+- Monitor artifact quota usage for tenants with heavy agent workloads. Agents that generate many files per session can consume quota quickly.
+- Use `list_artifacts` before creating duplicate files. An agent that checks existing artifacts first avoids unnecessary storage consumption.
+- Presigned download URLs expire after 15 minutes. If a user needs to access a file later, the agent (or the user through the admin UI) can generate a fresh URL at any time.

@@ -1,0 +1,242 @@
+---
+title: Authentication
+description: Authentication modes, session management, and access control for self-hosted and cloud deployments.
+icon: Lock
+---
+
+## Overview
+
+Everstack uses different authentication strategies depending on your deployment mode:
+
+| Deployment      | Auth Method                | How It Works                                            |
+| --------------- | -------------------------- | ------------------------------------------------------- |
+| **Self-hosted** | Email/password, magic link | Built-in auth with sessions stored in PostgreSQL        |
+| **Cloud**       | OAuth / SSO via WorkOS     | Google, Microsoft, GitHub, or enterprise SSO            |
+| **Both**        | Same-origin bypass         | Automatic when dashboard is served by the same instance |
+| **Both**        | API key                    | `x-evs-api-key` header for programmatic access           |
+
+## Authentication Flow
+
+When a request arrives, Everstack checks authentication in this order:
+
+1. **Policy bypass** — health checks and public endpoints skip auth
+2. **Same-origin check** — if browser headers indicate same-origin, allow without auth
+3. **Session cookie** — if `es_everstack_session` cookie is present and valid, allow
+4. **API key** — if `x-evs-api-key` header is present and valid, allow
+5. **Reject** — return `401 Unauthorized`
+
+---
+
+## Same-Origin Detection
+
+When the admin dashboard is served directly by the Everstack instance (same scheme + host + port), authentication is automatically bypassed. This is detected via browser headers:
+
+- `Origin` header matches the server's origin
+- `Referer` header starts with the server's origin
+- `Sec-Fetch-Site` header is `same-origin` or `none`
+
+This means you can access `http://localhost:8080` without any API key or login — the dashboard just works.
+
+**Note:** Same-origin detection relies on browser-specific headers. Programmatic clients (curl, scripts) will not trigger the bypass and must use an API key or session cookie.
+
+---
+
+## Self-Hosted Authentication
+
+Self-hosted instances use a built-in authentication system with email/password login, magic links, and team invitations. All session data is stored in PostgreSQL.
+
+### First-Time Setup
+
+1. Start Everstack with a PostgreSQL database configured
+2. Open the dashboard — you'll see the registration page
+3. Register with an email and password — this creates the **instance owner** account
+4. You're logged in and a session cookie is set automatically
+
+The first registered user becomes the instance owner and cannot be removed.
+
+### Login Methods
+
+#### Email and Password
+
+The primary login method. Passwords are hashed using Argon2id before storage.
+
+```
+POST /auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "your-password"
+}
+```
+
+On success, a `es_everstack_session` cookie is set and subsequent requests are authenticated automatically.
+
+#### Magic Link
+
+Passwordless login via email. When requested, a one-time token is generated and can be sent to the user (email delivery depends on your SMTP configuration).
+
+1. Request a magic link for your email address
+2. Click the link (or navigate to `/auth/verify-magic-link?token=...`)
+3. The token is validated and a session is created
+
+### Team Management
+
+The instance owner and admins can invite team members:
+
+- **Invite** — send an invitation to an email address with a role (owner, admin, member, viewer)
+- **Accept** — invited users set a password and join the team
+- **Remove** — owners can remove members; owners cannot remove themselves
+- **Revoke** — cancel a pending invitation before it's accepted
+
+Team member limits are enforced by your license. The `seatLimit` is checked when sending invitations.
+
+### Session Management
+
+After logging in:
+
+1. A session record is created in the `sessions` table with a random token
+2. The `es_everstack_session` cookie is set in your browser
+3. On subsequent requests, the cookie is validated directly against the database
+4. Expired sessions are automatically cleaned up
+
+Session cookie properties are configurable:
+
+| Property     | Description                                            |
+| ------------ | ------------------------------------------------------ |
+| `CookieName` | Cookie name (default: `es_everstack_session`)          |
+| `Domain`     | Cookie domain scope                                    |
+| `Secure`     | Require HTTPS (auto-relaxed for localhost/private IPs) |
+| `HTTPOnly`   | Prevent JavaScript access                              |
+| `SameSite`   | CSRF protection (`Lax`, `Strict`, or `None`)           |
+| `MaxAge`     | Session duration                                       |
+
+#### Secure Cookie Relaxation
+
+When running on localhost or private networks over plain HTTP, Everstack automatically relaxes the `Secure` flag on session cookies so they work without TLS. This applies to:
+
+- `localhost` and `*.localhost`
+- Loopback addresses (`127.0.0.1`, `::1`)
+- Private network ranges (`10.x.x.x`, `172.16-31.x.x`, `192.168.x.x`)
+- Carrier-grade NAT (`100.64.0.0/10`)
+
+If `SameSite=None` is configured but `Secure` is relaxed, it's automatically downgraded to `Lax` (browsers reject `SameSite=None` without `Secure`).
+
+---
+
+## Cloud Authentication
+
+Cloud-managed instances authenticate through [WorkOS](https://workos.com), which provides OAuth and enterprise SSO.
+
+### Supported Providers
+
+| Provider       | Identifier          |
+| -------------- | ------------------- |
+| Google         | `GoogleOAuth`       |
+| Microsoft      | `MicrosoftOAuth`    |
+| GitHub         | `GitHubOAuth`       |
+| WorkOS AuthKit | `authkit`           |
+| Enterprise SSO | Via `connection_id` |
+
+### OAuth Flow
+
+1. The dashboard calls `GetAuthURL` with the desired provider
+2. The user is redirected to the provider's login page
+3. After authentication, the provider redirects back with an authorization code
+4. Everstack exchanges the code with WorkOS for user information and tokens
+5. A session is created with the WorkOS access token and refresh token stored
+6. The `es_everstack_session` cookie is set
+
+### Token Management
+
+Cloud sessions store WorkOS OAuth tokens alongside the session:
+
+- **Access token** — short-lived JWT used for WorkOS API calls
+- **Refresh token** — used to obtain new access tokens when they expire
+- **Token expiry** — parsed from the JWT `exp` claim, capped at 24 hours for security
+
+Token refresh happens automatically when the `RefreshSession` endpoint is called and the access token is within 30 seconds of expiry.
+
+### Managed Instance Authentication
+
+Cloud-managed instances use a token exchange flow for cross-domain authentication:
+
+1. User authenticates on the cloud dashboard
+2. Cloud issues a short-lived JWT (60s expiry) signed with HMAC-SHA256 using a derived key
+3. User is redirected to the managed instance with the token
+4. Instance validates the JWT, creates a local user record, and sets a session cookie
+
+This allows users to log in once on the cloud dashboard and seamlessly access any managed instance.
+
+---
+
+## API Key Authentication
+
+For programmatic access (scripts, CI/CD, SDKs), use API keys. See [API Keys](/getting-started/vault/api-keys) for creating and using API keys.
+
+API keys are passed via the `x-evs-api-key` header:
+
+```bash
+curl -X POST https://your-instance.example.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "x-evs-api-key: evs_your_api_key_here" \
+  -d '{"model": "gpt-4", "messages": [{"role": "user", "content": "Hello"}]}'
+```
+
+---
+
+## Reverse Proxy Configuration
+
+When Everstack runs behind a reverse proxy, same-origin detection may not work (the browser sees the proxy's origin, not Everstack's). In this case, session cookies are validated directly against the database, so logged-in users can access the API without an API key.
+
+Your reverse proxy must forward cookies and relevant headers to Everstack.
+
+### Nginx
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name everstack.example.com;
+
+    location / {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Forward cookies and API key header
+        proxy_pass_header Set-Cookie;
+        proxy_pass_header Cookie;
+        proxy_pass_header x-evs-api-key;
+    }
+}
+```
+
+### Caddy
+
+```txt
+everstack.example.com {
+    reverse_proxy localhost:8080
+}
+```
+
+Caddy forwards all headers and cookies by default — no additional configuration needed.
+
+### Traefik
+
+```yaml
+http:
+  routers:
+    everstack:
+      rule: "Host(`everstack.example.com`)"
+      service: everstack
+      tls: {}
+  services:
+    everstack:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8080"
+```
+
+Traefik forwards cookies by default.

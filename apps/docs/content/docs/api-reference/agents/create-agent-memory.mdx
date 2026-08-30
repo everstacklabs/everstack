@@ -1,0 +1,192 @@
+---
+title: "POST Create Agent Memory"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Create Agent Memory</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400">POST</span>
+    <code className="text-sm text-fd-muted-foreground">{"/v1/agents/{agentId}/memories"}</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="post"
+  path="/v1/agents/{agentId}/memories"
+  parameters={[{"name":"agentId","in":"path","required":true,"schema":{"type":"string"}}]}
+  defaultBody={`{
+  "tenantId": "string",
+  "memoryType": "string",
+  "content": "string",
+  "factKey": "string",
+  "confidence": 0,
+  "scope": "string"
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X POST "http://localhost:8089/v1/agents/{agentId}/memories" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"tenantId":"string","memoryType":"string","content":"string","factKey":"string","confidence":0,"scope":"string"}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/agents/{agentId}/memories", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "tenantId": "string",
+  "memoryType": "string",
+  "content": "string",
+  "factKey": "string",
+  "confidence": 0,
+  "scope": "string"
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8089/v1/agents/{agentId}/memories",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "tenantId": "string",
+  "memoryType": "string",
+  "content": "string",
+  "factKey": "string",
+  "confidence": 0,
+  "scope": "string"
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "memory": {
+    "id": "string",
+    "agentId": "string",
+    "tenantId": "string",
+    "memoryType": "string",
+    "content": "string",
+    "factKey": "string",
+    "confidence": 0,
+    "source": "string",
+    "scope": "string",
+    "userId": "string",
+    "accessCount": 0,
+    "isActive": true,
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-01T00:00:00Z",
+    "sourceSessionId": "string",
+    "sourceTurnNumber": 0,
+    "supersededBy": "string",
+    "lastAccessedAt": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+### Parameters
+
+| Name | In | Type | Required | Description |
+|------|-----|------|----------|-------------|
+| `agentId` | path | `string` | **Yes** |  |
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `tenantId` | `string` | No |  |
+| `memoryType` | `string` | No |  |
+| `content` | `string` | No |  |
+| `factKey` | `string` | No |  |
+| `confidence` | `number` | No |  |
+| `scope` | `string` | No |  |
+
+
+### Responses
+
+#### 200 Manually create a persistent memory entry
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `memory` | `object` | AgentMemoryEntry represents a single persistent memory entry. |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

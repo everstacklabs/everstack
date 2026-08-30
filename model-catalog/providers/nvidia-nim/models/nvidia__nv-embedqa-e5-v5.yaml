@@ -1,0 +1,19 @@
+name: "nvidia/nv-embedqa-e5-v5"
+display_name: "NV EmbedQA E5 v5"
+family: "embedding"
+status: "stable"
+
+cost:
+  input_per_1k: 0.00008
+  output_per_1k: 0.0
+
+limits:
+  max_tokens: 8192
+  max_completion_tokens: 0
+
+capabilities:
+  - embeddings
+
+modalities:
+  input: ["text"]
+  output: ["embedding"]

@@ -1,0 +1,14 @@
+name: gpt-realtime
+display_name: Gpt Realtime
+family: other
+status: stable
+limits:
+    max_tokens: 128000
+capabilities:
+    - chat
+    - function_calling
+modalities:
+    input:
+        - text
+    output:
+        - text

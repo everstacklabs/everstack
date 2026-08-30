@@ -1,0 +1,47 @@
+# Configuration templates for OpenAI
+# Pre-configured settings for common use cases
+
+high_performance:
+  name: "High Performance"
+  description: "Optimized for high throughput and low latency"
+  settings:
+    timeout: 30s
+    retry_attempts: 2
+    retry_delay: 500ms
+    connection_pool_size: 100
+    max_concurrent_requests: 50
+
+cost_optimized:
+  name: "Cost Optimized"
+  description: "Optimized for cost efficiency"
+  settings:
+    timeout: 120s
+    retry_attempts: 1
+    retry_delay: 2s
+    connection_pool_size: 10
+    max_concurrent_requests: 5
+  recommended_models:
+    - gpt-4.1-nano
+    - gpt-4.1-mini
+    - gpt-4o-mini
+    - gpt-3.5-turbo
+
+reliability:
+  name: "High Reliability"
+  description: "Optimized for maximum reliability"
+  settings:
+    timeout: 180s
+    retry_attempts: 5
+    retry_delay: 2s
+    connection_pool_size: 50
+    max_concurrent_requests: 20
+    circuit_breaker_enabled: true
+
+batch_processing:
+  name: "Batch Processing"
+  description: "Optimized for batch API operations"
+  settings:
+    timeout: 300s
+    retry_attempts: 3
+    retry_delay: 5s
+    use_batch_api: true

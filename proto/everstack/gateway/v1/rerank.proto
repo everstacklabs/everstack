@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package everstack.gateway.v1;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/gateway/v1;gateway";
+
+// =============================================================================
+// Rerank API Messages
+// =============================================================================
+
+// Document to be reranked
+message RerankDocument {
+  // The text content of the document
+  string text = 1;
+}
+
+message RerankRequest {
+  // The model to use for reranking
+  // Options: "rerank-v3.5", "rerank-english-v3.0", "rerank-multilingual-v3.0", "rerank-english-v2.0", "rerank-multilingual-v2.0"
+  string model = 1;
+
+  // The search query to rank documents against
+  string query = 2;
+
+  // The list of documents to rerank
+  // Can be provided as strings directly or as document objects
+  repeated string documents = 3;
+
+  // Alternative: structured document objects (for additional metadata)
+  repeated RerankDocument document_objects = 4;
+
+  // The number of top results to return (default: return all)
+  int32 top_n = 5;
+
+  // Whether to return the documents in the response
+  bool return_documents = 6;
+
+  // Maximum number of tokens per document (truncates if exceeded)
+  int32 max_tokens_per_doc = 7;
+
+  // Optional per-call metadata
+  google.protobuf.Struct metadata = 8;
+}
+
+// Individual reranked result
+message RerankResult {
+  // The index of the document in the original list
+  int32 index = 1;
+
+  // The relevance score (higher is more relevant)
+  double relevance_score = 2;
+
+  // The document text (if return_documents is true)
+  string document = 3;
+}
+
+// Billing information for rerank request
+message RerankBilledUnits {
+  // Number of search units used
+  int32 search_units = 1;
+
+  // Number of input tokens processed
+  int32 input_tokens = 2;
+
+  // Number of output tokens generated
+  int32 output_tokens = 3;
+}
+
+// Token usage information
+message RerankTokens {
+  // Number of input tokens
+  int32 input_tokens = 1;
+
+  // Number of output tokens
+  int32 output_tokens = 2;
+}
+
+// API metadata
+message RerankApiVersion {
+  // API version string
+  string version = 1;
+
+  // Whether this is a billable request
+  bool is_billable = 2;
+
+  // Billed units breakdown
+  RerankBilledUnits billed_units = 3;
+
+  // Token usage
+  RerankTokens tokens = 4;
+}
+
+message RerankResponse {
+  // Unique identifier for this rerank request
+  string id = 1;
+
+  // The model used
+  string model = 2;
+
+  // List of reranked results, sorted by relevance (highest first)
+  repeated RerankResult results = 3;
+
+  // API metadata including billing information
+  RerankApiVersion meta = 4;
+}

@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package everstack.license.v1;
+
+import "everstack/license/v1/instance.proto";
+import "everstack/license/v1/license.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/license/v1;license";
+
+service LicenseService {
+  rpc GetLicense(GetLicenseRequest) returns (GetLicenseResponse);
+  rpc CreateLicense(CreateLicenseRequest) returns (CreateLicenseResponse);
+  rpc UpdateLicense(UpdateLicenseRequest) returns (UpdateLicenseResponse);
+  rpc DeleteLicense(DeleteLicenseRequest) returns (DeleteLicenseResponse);
+  rpc ValidateLicense(ValidateLicenseRequest) returns (ValidateLicenseResponse);
+  rpc GenerateActivationToken(GenerateActivationTokenRequest) returns (GenerateActivationTokenResponse);
+  // GetPlans returns available license plans configuration
+  rpc GetPlans(GetPlansRequest) returns (GetPlansResponse);
+  
+  // Spend Limits Management
+  // GetSpendLimits returns spend limits for an organization or instance
+  rpc GetSpendLimits(GetSpendLimitsRequest) returns (GetSpendLimitsResponse);
+  // SetSpendLimit creates or updates a spend limit
+  rpc SetSpendLimit(SetSpendLimitRequest) returns (SetSpendLimitResponse);
+  // DeleteSpendLimit removes a spend limit
+  rpc DeleteSpendLimit(DeleteSpendLimitRequest) returns (DeleteSpendLimitResponse);
+  // CheckSpendLimit performs real-time check if a request should be allowed
+  rpc CheckSpendLimit(CheckSpendLimitRequest) returns (CheckSpendLimitResponse);
+  // UpdateSpendUsage updates the current spend for an organization/instance
+  rpc UpdateSpendUsage(UpdateSpendUsageRequest) returns (UpdateSpendUsageResponse);
+}
+
+// InstanceService provides instance lifecycle, activation, and refresh
+service InstanceService {
+  rpc CreateInstance(CreateInstanceRequest) returns (CreateInstanceResponse);
+  rpc GetInstance(GetInstanceRequest) returns (GetInstanceResponse);
+  rpc ActivateInstance(ActivateInstanceRequest) returns (ActivateInstanceResponse);
+  rpc RefreshInstance(RefreshInstanceRequest) returns (RefreshInstanceResponse);
+  rpc RevokeInstance(RevokeInstanceRequest) returns (RevokeInstanceResponse);
+  // ReportUsage receives usage metrics from gateway instances for billing/analytics
+  rpc ReportUsage(ReportUsageRequest) returns (ReportUsageResponse);
+  // CheckActivationTokenStatus checks if an activation token has been used/bound
+  // This is a public endpoint (no M2M auth) for gateway startup checks
+  rpc CheckActivationTokenStatus(CheckActivationTokenStatusRequest) returns (CheckActivationTokenStatusResponse);
+  // CheckDeviceFingerprint checks if a device fingerprint has any bound instances
+  // This is a public endpoint (no M2M auth) for gateway startup tampering detection
+  rpc CheckDeviceFingerprint(CheckDeviceFingerprintRequest) returns (CheckDeviceFingerprintResponse);
+  // UpdateInstancePlan updates the plan tier for all instances of an organization
+  // Called by billing service when a subscription is upgraded/downgraded via Stripe
+  rpc UpdateInstancePlan(UpdateInstancePlanRequest) returns (UpdateInstancePlanResponse);
+  // ReleaseInstance allows a user to release a license from an instance for transfer
+  // Requires tenant_id for authorization (user must own the instance)
+  rpc ReleaseInstance(ReleaseInstanceRequest) returns (ReleaseInstanceResponse);
+  // GetInstancesByTenant returns all instances for an organization
+  // Used by cloud portal for the license management page
+  rpc GetInstancesByTenant(GetInstancesByTenantRequest) returns (GetInstancesByTenantResponse);
+}

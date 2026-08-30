@@ -1,0 +1,145 @@
+---
+title: Storage Backends
+description: Using Everstack Storage or configuring S3, R2, MinIO, and GCS storage providers.
+icon: Server
+---
+
+Everstack supports a system-managed cloud option and four customer-managed, S3-compatible backends. Each option uses the same object storage API, so application code, agent tools, and upload flows do not need provider-specific changes.
+
+When managed storage is enabled for an Everstack Cloud deployment, each tenant receives one stable **Everstack Storage** connection. Everstack owns its physical storage cell, bucket, tenant prefix, and credentials. Those placement details are not returned by the tenant API or shown in the admin UI.
+
+## Supported providers
+
+| Provider | When to use it |
+| --- | --- |
+| **Everstack Storage** | Your Everstack Cloud deployment provides storage and you do not want to supply object-store credentials. This connection is created and maintained by Everstack. |
+| **AWS S3** | You already run on AWS or need the broadest ecosystem of tooling and regions. |
+| **Cloudflare R2** | You want zero egress fees and your workloads are latency-tolerant to Cloudflare's edge. |
+| **MinIO** | You want a self-hosted option, on-prem storage, or a local dev setup. |
+| **Google Cloud Storage** | You already run on GCP and want to keep everything in one cloud. |
+
+The four customer-managed providers expose the same capabilities through the platform. Everstack Storage uses the same logical API while keeping its physical backend private.
+
+## Customer-managed configuration fields
+
+When you bring your own backend, the storage configuration requires:
+
+- **Provider** -- one of `S3`, `R2`, `MINIO`, or `GCS`
+- **Endpoint** -- the S3-compatible endpoint URL (e.g. `https://s3.us-east-1.amazonaws.com`, `https://<account>.r2.cloudflarestorage.com`)
+- **Region** -- the bucket region (use `auto` for R2)
+- **Bucket** -- the target bucket name
+- **Access key** -- your access key ID
+- **Secret key** -- your secret access key (write-only, never returned by the API after creation)
+
+Everstack Storage does not accept these fields. Its connection is system-managed, and attempts to create, edit, or delete it through the tenant API are rejected.
+
+## AWS S3
+
+Use the standard S3 endpoint for your region:
+
+```
+Endpoint: https://s3.<region>.amazonaws.com
+Region:   us-east-1
+Bucket:   my-everstack-bucket
+```
+
+Create an IAM user or role with `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject`, and `s3:ListBucket` permissions scoped to the bucket. Avoid using root credentials.
+
+S3 uses virtual-hosted-style addressing by default. No special flags are needed.
+
+## Cloudflare R2
+
+R2 uses S3-compatible APIs with a few differences:
+
+```
+Endpoint: https://<account-id>.r2.cloudflarestorage.com
+Region:   auto
+Bucket:   my-everstack-bucket
+```
+
+R2 always uses `auto` as the region. The platform automatically enables path-style addressing, which R2 requires.
+
+Generate an R2 API token in the Cloudflare dashboard with read and write permissions on the target bucket.
+
+R2 has no egress fees, which makes it a strong default for workloads that serve many downloads, like agent artifacts and shared reports.
+
+## MinIO
+
+MinIO is a self-hosted S3-compatible server. It works well for local development, air-gapped environments, and on-prem deployments.
+
+```
+Endpoint: https://minio.internal:9000
+Region:   us-east-1
+Bucket:   everstack
+```
+
+The platform automatically enables path-style addressing for MinIO configurations. MinIO does not support virtual-hosted-style by default.
+
+Create a service account or access key pair in the MinIO console. Scope permissions to the target bucket.
+
+For local development, you can run MinIO in Docker:
+
+```bash
+docker run -p 9000:9000 -p 9001:9001 \
+  -e MINIO_ROOT_USER=minioadmin \
+  -e MINIO_ROOT_PASSWORD=minioadmin \
+  minio/minio server /data --console-address ":9001"
+```
+
+Then create a bucket and use `minioadmin` / `minioadmin` as the access and secret key during development.
+
+## Google Cloud Storage
+
+GCS exposes an S3-compatible endpoint through its XML API:
+
+```
+Endpoint: https://storage.googleapis.com
+Region:   auto
+Bucket:   my-everstack-bucket
+```
+
+Create an HMAC key for a service account with `Storage Object Admin` permissions on the bucket. Use the HMAC access ID and secret as the access key and secret key in the configuration.
+
+## Multiple configurations
+
+Each tenant can have multiple storage configurations. This is useful when you need:
+
+- separate buckets for different workloads (e.g. one for datasets, one for artifacts)
+- a secondary bucket in another region for compliance or redundancy
+- a MinIO backend for development alongside an S3 backend for production
+
+One configuration is always marked as the default. Agent tools and platform internals use the default configuration automatically.
+
+When managed storage is enabled, Everstack Storage is the immutable default. Customer-managed configurations can coexist with it, but cannot replace it as the default. In deployments without managed storage, you can switch the customer-managed default from the admin UI or through the `UpdateStorageConfig` RPC.
+
+## Creating a configuration
+
+### Through the admin UI
+
+Everstack Storage is provisioned by the cloud deployment and cannot be added manually. To add a customer-managed backend:
+
+1. Open **Storage** in the sidebar, then go to the **Configurations** tab.
+2. Click **Add Configuration**.
+3. Select the provider and fill in endpoint, region, bucket, access key, and secret key.
+4. Save. The platform will validate connectivity before persisting the configuration.
+
+### Through the API
+
+Use the `ConfigureStorage` RPC. See the [Storage API reference](/getting-started/storage/overview) for the full request schema.
+
+## Security notes
+
+- Secret keys are write-only. Once saved, the API never returns them in responses.
+- Everstack Storage responses do not contain its physical endpoint, region, bucket, prefix, or platform credentials.
+- Use scoped credentials with the minimum permissions needed (put, get, delete, list on a single bucket).
+- Rotate access keys periodically and update the configuration through the admin UI or `UpdateStorageConfig` RPC.
+- For production deployments, prefer IAM roles or service account keys over long-lived static credentials when your provider supports it.
+
+## Recommendations
+
+- Use Everstack Storage when it is enabled for your cloud tenant and you do not need to bring your own bucket.
+- For deployments without managed storage, start with a single default configuration for your primary provider.
+- Use R2 if egress costs are a concern.
+- Use MinIO for local development and testing so you do not incur cloud costs during iteration.
+- Test connectivity from the admin UI before relying on the configuration in agent workflows.
+- Keep bucket names short and descriptive. The platform prefixes object keys with tenant and purpose metadata.

@@ -1,0 +1,6 @@
+default:
+  name: "Default"
+  description: "Standard Fireworks AI gateway settings"
+  settings:
+    timeout: 45s
+    retry_attempts: 2

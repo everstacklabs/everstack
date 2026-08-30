@@ -1,0 +1,128 @@
+---
+title: Logs
+description: Structured logging with ClickHouse storage and real-time querying.
+icon: FileText
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+## Structured JSON logging
+
+Everstack emits all logs as structured JSON. Every log entry includes a standard set of fields:
+
+```json
+{
+  "timestamp": "2026-05-27T14:32:01.003Z",
+  "level": "info",
+  "message": "provider call completed",
+  "trace_id": "abc123def456",
+  "span_id": "789ghi012",
+  "service": "everstack-gateway",
+  "project_id": "proj_01HX...",
+  "provider": "openai",
+  "model": "gpt-4o",
+  "latency_ms": 312,
+  "status": 200
+}
+```
+
+The consistent structure means you can filter, aggregate, and correlate logs without parsing free-text messages. Every log entry that originates from a traced request includes `trace_id` and `span_id` fields, linking it directly to the corresponding trace.
+
+## Log levels
+
+Everstack supports four log levels, from most verbose to least:
+
+| Level | When it fires | Example |
+|---|---|---|
+| `debug` | Internal processing details. High volume. | Cache key computation, routing rule evaluation steps |
+| `info` | Normal operations worth recording. | Request completed, agent turn started, tool executed |
+| `warn` | Something unexpected that did not cause a failure. | Provider rate limit approached, fallback activated, slow query |
+| `error` | A failure that affected the request or operation. | Provider returned 500, sandbox creation failed, timeout exceeded |
+
+Set the minimum level with `log_level` in your gateway configuration. Logs below the configured level are not emitted or stored.
+
+```yaml
+observability:
+  log_level: "info"
+```
+
+<Callout type="info">
+  Setting `log_level` to `debug` in production generates high write volume. Use it temporarily when investigating specific issues, then revert to `info`.
+</Callout>
+
+## Request logging
+
+When `enable_request_logging` is `true` (the default), every gateway request produces a structured log entry containing:
+
+- Request metadata: method, path, model, provider
+- Response metadata: status code, latency, token counts, cost
+- Trace correlation: `trace_id` and `span_id` for linking to the trace view
+
+This gives you a searchable audit log of every request that flowed through the gateway, independent of whether the request was sampled for tracing.
+
+```yaml
+observability:
+  enable_request_logging: true
+```
+
+When disabled, only warning and error events from requests are logged. This reduces storage volume for high-throughput deployments where you rely primarily on traces and metrics.
+
+## ClickHouse storage
+
+Logs are stored in ClickHouse alongside traces. This co-location provides two advantages:
+
+1. **Unified querying** -- you can join logs and trace spans in a single query. Find all error logs for traces that exceeded a latency threshold, or find the trace for a specific error message.
+2. **Columnar performance** -- ClickHouse's columnar storage and compression make it fast to scan millions of log lines. Queries like "show me all error logs from the openai provider in the last 24 hours" execute in milliseconds, not seconds.
+
+Retention and TTL policies are configurable at the ClickHouse level. By default, logs are retained for 30 days. Adjust this based on your compliance requirements and storage budget.
+
+## Querying logs in the admin UI
+
+The admin dashboard at `/observability` includes a dedicated Logs view with:
+
+- **Full-text search** -- search across log messages and structured fields. ClickHouse's indexing makes this fast even over large time ranges.
+- **Field filters** -- filter by level, service, provider, model, project, or any structured field. Combine multiple filters to narrow results.
+- **Time range** -- select a predefined range (last 15 minutes, last hour, last 24 hours) or specify a custom range.
+- **Live tail** -- stream new log entries in real time as they arrive. Useful when debugging an active issue or watching a deployment roll out.
+
+Click any log entry to expand it and see all structured fields. If the entry has a `trace_id`, a single click takes you to the corresponding trace view.
+
+## Correlating logs with traces
+
+The link between logs and traces is bidirectional:
+
+- **From a log entry**, click the trace ID to open the full span tree for that request. This is the fastest way to understand the context around an error.
+- **From a trace**, the span detail panel shows all log entries emitted during that span's lifetime. This surfaces debug-level context without needing to search for it separately.
+
+This correlation works because both logs and traces share the same `trace_id` and `span_id` identifiers, and both are stored in the same ClickHouse instance.
+
+## Log formatters
+
+The `log_formatter` setting controls the output format of logs:
+
+| Formatter | Output | When to use |
+|---|---|---|
+| `json` | Structured JSON, one object per line | Default. Best for ClickHouse ingestion, log aggregators, and programmatic parsing. |
+| `text` | Human-readable single-line format | Local development and debugging. Easier to scan in a terminal. |
+
+```yaml
+observability:
+  log_formatter: "json"
+```
+
+<Callout type="warn">
+  The `text` formatter is intended for local development only. ClickHouse ingestion and the admin UI log viewer expect `json` format. Using `text` in production will prevent logs from appearing in the admin dashboard.
+</Callout>
+
+## Configuration
+
+Full logging configuration lives under the `observability` block:
+
+```yaml
+observability:
+  log_level: "info"
+  log_formatter: "json"
+  enable_request_logging: true
+```
+
+For the full configuration schema, see the [API reference](/api-reference/gateway).

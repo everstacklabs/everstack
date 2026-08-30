@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package everstack.catalog.v1;
+
+import "everstack/catalog/v1/catalog.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/catalog/v1;catalog";
+
+// Catalog service for managing model catalog updates
+service CatalogService {
+  // Get current catalog status and available updates
+  rpc GetCatalogStatus(GetCatalogStatusRequest) returns (CatalogStatus);
+  
+  // Get changelog for catalog updates
+  rpc GetChangelog(GetChangelogRequest) returns (Changelog);
+  
+  // Get list of new models since last view
+  rpc GetNewModels(GetNewModelsRequest) returns (NewModels);
+  
+  // Trigger manual catalog sync
+  rpc TriggerSync(TriggerSyncRequest) returns (SyncStatus);
+}
+

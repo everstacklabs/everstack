@@ -1,0 +1,708 @@
+syntax = "proto3";
+
+package everstack.operations.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/operations/v1;operations";
+
+enum StaffRole {
+  STAFF_ROLE_UNSPECIFIED = 0;
+  STAFF_ROLE_VIEWER = 1;
+  STAFF_ROLE_OPERATOR = 2;
+  STAFF_ROLE_ADMIN = 3;
+}
+
+enum SnapshotFreshness {
+  SNAPSHOT_FRESHNESS_UNSPECIFIED = 0;
+  SNAPSHOT_FRESHNESS_FRESH = 1;
+  SNAPSHOT_FRESHNESS_STALE = 2;
+  SNAPSHOT_FRESHNESS_OFFLINE = 3;
+  SNAPSHOT_FRESHNESS_UNKNOWN = 4;
+}
+
+enum EventSeverity {
+  EVENT_SEVERITY_UNSPECIFIED = 0;
+  EVENT_SEVERITY_INFO = 1;
+  EVENT_SEVERITY_WARNING = 2;
+  EVENT_SEVERITY_ERROR = 3;
+  EVENT_SEVERITY_CRITICAL = 4;
+}
+
+enum InstallationKind {
+  INSTALLATION_KIND_UNSPECIFIED = 0;
+  INSTALLATION_KIND_CLOUD = 1;
+  INSTALLATION_KIND_CONNECTED_SELF_HOSTED = 2;
+  INSTALLATION_KIND_UNLICENSED_UNIFIED = 3;
+  INSTALLATION_KIND_ISSUED_OFFLINE_CAPABLE = 4;
+}
+
+enum InstallationConnectivity {
+  INSTALLATION_CONNECTIVITY_UNSPECIFIED = 0;
+  INSTALLATION_CONNECTIVITY_LIVE = 1;
+  INSTALLATION_CONNECTIVITY_STALE = 2;
+  INSTALLATION_CONNECTIVITY_OFFLINE = 3;
+  INSTALLATION_CONNECTIVITY_UNREPORTED = 4;
+}
+
+enum InstanceLifecycleAction {
+  INSTANCE_LIFECYCLE_ACTION_UNSPECIFIED = 0;
+  INSTANCE_LIFECYCLE_ACTION_START = 1;
+  INSTANCE_LIFECYCLE_ACTION_STOP = 2;
+  INSTANCE_LIFECYCLE_ACTION_RESTART = 3;
+}
+
+message SessionPrincipal {
+  string subject_id = 1;
+  string email = 2;
+  string name = 3;
+  StaffRole role = 4;
+  repeated string permissions = 5;
+}
+
+message GetSessionRequest {}
+
+message GetSessionResponse {
+  SessionPrincipal principal = 1;
+  repeated OperationsDataSource data_sources = 2;
+  string current_data_source_id = 3;
+}
+
+message OperationsOverview {
+  int64 organizations = 1;
+  int64 workspaces = 2;
+  int64 instances = 3;
+  int64 healthy_instances = 4;
+  int64 degraded_instances = 5;
+  int64 stopped_instances = 6;
+  int64 active_sandboxes = 7;
+  int64 hosted_sites = 8;
+  int64 open_abuse_reports = 9;
+  int64 environments = 10;
+  int64 offline_environments = 11;
+  int64 installations = 12;
+  int64 connected_self_hosted = 13;
+  int64 visible_unlicensed = 14;
+  int64 issued_licenses = 15;
+}
+
+message GetOverviewRequest {}
+
+message GetOverviewResponse {
+  OperationsOverview overview = 1;
+}
+
+message OrganizationSummary {
+  string id = 1;
+  string slug = 2;
+  string name = 3;
+  string plan_tier = 4;
+  int64 member_count = 5;
+  int64 workspace_count = 6;
+  int64 instance_count = 7;
+  int64 active_sandbox_count = 8;
+  int64 hosted_site_count = 9;
+  google.protobuf.Timestamp created_at = 10;
+  // False when hosting data is isolated in a separate database and cannot be
+  // joined to the platform organization inventory.
+  bool hosted_site_count_available = 11;
+}
+
+message ListOrganizationsRequest {
+  string search = 1;
+  string plan_tier = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListOrganizationsResponse {
+  repeated OrganizationSummary organizations = 1;
+  string next_page_token = 2;
+}
+
+message InstallationSummary {
+  string id = 1;
+  string source_id = 2;
+  InstallationKind kind = 3;
+  InstallationConnectivity connectivity = 4;
+  string organization_id = 5;
+  string organization_slug = 6;
+  string organization_name = 7;
+  string plan_tier = 8;
+  string license_status = 9;
+  string version = 10;
+  string region = 11;
+  string gateway_url = 12;
+  string fingerprint_prefix = 13;
+  bool live_telemetry = 14;
+  google.protobuf.Struct usage = 15;
+  google.protobuf.Timestamp first_seen_at = 16;
+  google.protobuf.Timestamp last_seen_at = 17;
+  google.protobuf.Timestamp activated_at = 18;
+  google.protobuf.Timestamp expires_at = 19;
+}
+
+message ListInstallationsRequest {
+  string search = 1;
+  InstallationKind kind = 2;
+  InstallationConnectivity connectivity = 3;
+  string plan_tier = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message ListInstallationsResponse {
+  repeated InstallationSummary installations = 1;
+  string next_page_token = 2;
+}
+
+message LicenseSummary {
+  string id = 1;
+  string instance_id = 2;
+  string plan_tier = 3;
+  string status = 4;
+  bool has_live_installation = 5;
+  google.protobuf.Timestamp last_seen_at = 6;
+  google.protobuf.Timestamp expires_at = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message ListLicensesRequest {
+  string search = 1;
+  string plan_tier = 2;
+  string status = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message ListLicensesResponse {
+  repeated LicenseSummary licenses = 1;
+  string next_page_token = 2;
+}
+
+message InstanceSummary {
+  string id = 1;
+  string organization_id = 2;
+  string organization_slug = 3;
+  string organization_name = 4;
+  string workspace_id = 5;
+  string workspace_slug = 6;
+  string workspace_name = 7;
+  string slug = 8;
+  string gateway_url = 9;
+  string status = 10;
+  string version = 11;
+  string environment = 12;
+  string region = 13;
+  string backend_type = 14;
+  bool healthy = 15;
+  google.protobuf.Timestamp last_health_check = 16;
+  string last_health_error = 17;
+  double cpu_limit = 18;
+  int64 memory_mb = 19;
+  int64 disk_mb = 20;
+  int64 sandbox_count = 21;
+  int64 active_sandbox_count = 22;
+  int64 agent_count = 23;
+  int64 hosted_site_count = 24;
+  google.protobuf.Timestamp created_at = 25;
+  google.protobuf.Timestamp updated_at = 26;
+  // False when hosting data is isolated in a separate database and cannot be
+  // joined to this platform instance record.
+  bool hosted_site_count_available = 27;
+}
+
+message ListInstancesRequest {
+  string search = 1;
+  string status = 2;
+  string region = 3;
+  string organization_id = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message ListInstancesResponse {
+  repeated InstanceSummary instances = 1;
+  string next_page_token = 2;
+}
+
+message GetInstanceRequest {
+  string instance_id = 1;
+}
+
+message GetInstanceResponse {
+  InstanceSummary instance = 1;
+}
+
+message ChangeInstanceLifecycleRequest {
+  string instance_id = 1;
+  InstanceLifecycleAction action = 2;
+}
+
+message ChangeInstanceLifecycleResponse {
+  string instance_id = 1;
+  InstanceLifecycleAction action = 2;
+}
+
+message SandboxSummary {
+  string id = 1;
+  string instance_id = 2;
+  string session_id = 3;
+  string backend = 4;
+  string image = 5;
+  string status = 6;
+  string lifecycle_state = 7;
+  string desired_state = 8;
+  string agent_id = 9;
+  bool persistent = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+  google.protobuf.Timestamp last_used_at = 13;
+  string error_reason = 14;
+}
+
+message ListSandboxesRequest {
+  string instance_id = 1;
+  string status = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListSandboxesResponse {
+  repeated SandboxSummary sandboxes = 1;
+  string next_page_token = 2;
+}
+
+message NodeSnapshot {
+  string name = 1;
+  bool ready = 2;
+  bool unschedulable = 3;
+  string architecture = 4;
+  string instance_type = 5;
+  string zone = 6;
+  int64 cpu_capacity_milli = 7;
+  int64 memory_capacity_bytes = 8;
+  map<string, string> labels = 9;
+}
+
+message WorkloadSnapshot {
+  string namespace = 1;
+  string kind = 2;
+  string name = 3;
+  int32 ready = 4;
+  int32 desired = 5;
+  int32 available = 6;
+  string image = 7;
+  map<string, string> labels = 8;
+}
+
+message FirecrackerAgentSnapshot {
+  string name = 1;
+  string endpoint = 2;
+  bool ready = 3;
+  string version = 4;
+  google.protobuf.Timestamp last_seen_at = 5;
+}
+
+message EnvironmentSnapshot {
+  string environment_id = 1;
+  google.protobuf.Timestamp collected_at = 2;
+  string agent_version = 3;
+  string kubernetes_version = 4;
+  repeated NodeSnapshot nodes = 5;
+  repeated WorkloadSnapshot workloads = 6;
+  repeated FirecrackerAgentSnapshot firecracker_agents = 7;
+  repeated string warnings = 8;
+}
+
+message EnvironmentSummary {
+  string id = 1;
+  string name = 2;
+  string region = 3;
+  bool enabled = 4;
+  SnapshotFreshness freshness = 5;
+  google.protobuf.Timestamp last_poll_at = 6;
+  google.protobuf.Timestamp snapshot_at = 7;
+  string last_error = 8;
+  int32 node_count = 9;
+  int32 ready_node_count = 10;
+  int32 workload_count = 11;
+  int32 unhealthy_workload_count = 12;
+  int32 firecracker_agent_count = 13;
+}
+
+message ListEnvironmentsRequest {}
+
+message ListEnvironmentsResponse {
+  repeated EnvironmentSummary environments = 1;
+}
+
+message GetEnvironmentRequest {
+  string environment_id = 1;
+}
+
+message GetEnvironmentResponse {
+  EnvironmentSummary environment = 1;
+  EnvironmentSnapshot snapshot = 2;
+}
+
+message OperationsEvent {
+  string id = 1;
+  string environment_id = 2;
+  string kind = 3;
+  EventSeverity severity = 4;
+  string message = 5;
+  google.protobuf.Struct details = 6;
+  google.protobuf.Timestamp observed_at = 7;
+}
+
+message ListEventsRequest {
+  string environment_id = 1;
+  EventSeverity minimum_severity = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListEventsResponse {
+  repeated OperationsEvent events = 1;
+  string next_page_token = 2;
+}
+
+message AuditEvent {
+  string id = 1;
+  string actor_id = 2;
+  string actor_email = 3;
+  StaffRole actor_role = 4;
+  string action = 5;
+  string target_type = 6;
+  string target_id = 7;
+  string request_id = 8;
+  string outcome = 9;
+  google.protobuf.Struct metadata = 10;
+  google.protobuf.Timestamp occurred_at = 11;
+}
+
+message ListAuditEventsRequest {
+  string actor_id = 1;
+  string action = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListAuditEventsResponse {
+  repeated AuditEvent events = 1;
+  string next_page_token = 2;
+}
+
+// Identity records describe human authentication state only. Organization
+// memberships, product roles, billing, and instance access remain in the
+// Everstack platform model and are intentionally not editable here.
+message IdentityOverview {
+  string backend = 1;
+  bool healthy = 2;
+  int64 total_users = 3;
+  int64 verified_users = 4;
+  int64 active_sessions = 5;
+  int64 linked_everstack_users = 6;
+  repeated string enabled_methods = 7;
+}
+
+message GetIdentityOverviewRequest {}
+
+message GetIdentityOverviewResponse {
+  IdentityOverview overview = 1;
+}
+
+message IdentityUserSummary {
+  string identity_user_id = 1;
+  string everstack_user_id = 2;
+  string email = 3;
+  bool email_verified = 4;
+  string name = 5;
+  string image_url = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  google.protobuf.Timestamp last_active_at = 9;
+  int32 active_session_count = 10;
+  repeated string authentication_methods = 11;
+}
+
+message ListIdentityUsersRequest {
+  string search = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListIdentityUsersResponse {
+  repeated IdentityUserSummary users = 1;
+  int64 total = 2;
+  string next_page_token = 3;
+}
+
+message IdentitySessionSummary {
+  string id = 1;
+  string identity_user_id = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp updated_at = 4;
+  google.protobuf.Timestamp expires_at = 5;
+  string ip_address = 6;
+  string user_agent = 7;
+}
+
+message ListIdentitySessionsRequest {
+  string identity_user_id = 1;
+}
+
+message ListIdentitySessionsResponse {
+  repeated IdentitySessionSummary sessions = 1;
+}
+
+message RevokeIdentitySessionRequest {
+  string session_id = 1;
+}
+
+message RevokeIdentitySessionResponse {
+  bool revoked = 1;
+}
+
+// Identity connections are upstream workforce OIDC providers used by the
+// Everstack-native Cloud login UI. Secrets are write-only and never appear in
+// this control-plane representation.
+message IdentityConnectionSummary {
+  string id = 1;
+  string provider_id = 2;
+  string display_name = 3;
+  string issuer = 4;
+  repeated string domains = 5;
+  string client_id = 6;
+  bool client_secret_configured = 7;
+  repeated string scopes = 8;
+  bool enabled = 9;
+  string callback_url = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+  // Every workforce connection belongs to exactly one Everstack organization.
+  // Empty is possible only for legacy rows that must be assigned before use.
+  string organization_id = 13;
+}
+
+message ListIdentityConnectionsRequest {}
+
+message ListIdentityConnectionsResponse {
+  repeated IdentityConnectionSummary connections = 1;
+}
+
+message UpsertIdentityConnectionRequest {
+  // Empty creates a connection. A populated ID updates the existing
+  // connection; provider_id is immutable and an empty client_secret preserves
+  // the current write-only secret.
+  string id = 1;
+  string provider_id = 2;
+  string display_name = 3;
+  string issuer = 4;
+  repeated string domains = 5;
+  string client_id = 6;
+  string client_secret = 7;
+  repeated string scopes = 8;
+  bool enabled = 9;
+  string organization_id = 10;
+}
+
+message UpsertIdentityConnectionResponse {
+  IdentityConnectionSummary connection = 1;
+}
+
+message DeleteIdentityConnectionRequest {
+  string id = 1;
+}
+
+message DeleteIdentityConnectionResponse {
+  bool deleted = 1;
+}
+
+message GetAgentSnapshotRequest {
+  string environment_id = 1;
+}
+
+message GetAgentSnapshotResponse {
+  EnvironmentSnapshot snapshot = 1;
+}
+
+message OperationsDataSource {
+  string id = 1;
+  string name = 2;
+  bool read_only = 3;
+  bool default = 4;
+}
+
+// ── Incidents ───────────────────────────────────────────────────────
+//
+// One inbox for two engines. Alertmanager-sourced and rule-engine-sourced
+// incidents share this shape so the console never has to care which produced
+// a given row.
+
+enum IncidentSeverity {
+  INCIDENT_SEVERITY_UNSPECIFIED = 0;
+  INCIDENT_SEVERITY_INFO = 1;
+  INCIDENT_SEVERITY_WARNING = 2;
+  INCIDENT_SEVERITY_CRITICAL = 3;
+}
+
+enum IncidentStatus {
+  INCIDENT_STATUS_UNSPECIFIED = 0;
+  INCIDENT_STATUS_FIRING = 1;
+  INCIDENT_STATUS_ACKNOWLEDGED = 2;
+  INCIDENT_STATUS_RESOLVED = 3;
+}
+
+message Incident {
+  string id = 1;
+  // Dedupe key. A condition repeating every ten seconds updates one row
+  // rather than creating thousands, and this is what identifies it.
+  string fingerprint = 2;
+  // alertmanager | rules | manual
+  string source = 3;
+  string rule_key = 4;
+  string title = 5;
+  string summary = 6;
+  string runbook_url = 7;
+  IncidentSeverity severity = 8;
+  IncidentStatus status = 9;
+  string environment = 10;
+  string subject_kind = 11;
+  string subject_id = 12;
+  map<string, string> labels = 13;
+  map<string, string> annotations = 14;
+  // Absent when the incident is not threshold-based.
+  optional double value = 15;
+  optional double threshold = 16;
+  // How many times the condition has been observed. Large numbers here are
+  // normal and are the point: they mean dedupe is working.
+  int32 occurrence_count = 17;
+  google.protobuf.Timestamp first_seen_at = 18;
+  google.protobuf.Timestamp last_seen_at = 19;
+  google.protobuf.Timestamp resolved_at = 20;
+  string acknowledged_by = 21;
+  google.protobuf.Timestamp acknowledged_at = 22;
+  google.protobuf.Timestamp snoozed_until = 23;
+}
+
+message IncidentEvent {
+  string id = 1;
+  string incident_id = 2;
+  // fired | escalated | notified | acknowledged | snoozed | resolved | comment
+  string kind = 3;
+  string actor_id = 4;
+  string actor_email = 5;
+  string note = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message ListIncidentsRequest {
+  string status = 1;
+  string severity = 2;
+  string environment = 3;
+  string source = 4;
+  // Resolved incidents are excluded by default so the inbox shows what still
+  // needs a human.
+  bool include_resolved = 5;
+  int32 page_size = 6;
+  string page_token = 7;
+}
+
+message ListIncidentsResponse {
+  repeated Incident incidents = 1;
+  string next_page_token = 2;
+  // Counts across the whole open set, not just this page, so the console can
+  // show an accurate badge without fetching everything.
+  int32 firing_critical = 3;
+  int32 firing_warning = 4;
+  int32 firing_info = 5;
+}
+
+message GetIncidentRequest {
+  string id = 1;
+}
+
+message GetIncidentResponse {
+  Incident incident = 1;
+  repeated IncidentEvent timeline = 2;
+}
+
+message AcknowledgeIncidentRequest {
+  string id = 1;
+  string note = 2;
+}
+
+message AcknowledgeIncidentResponse {
+  Incident incident = 1;
+}
+
+message SnoozeIncidentRequest {
+  string id = 1;
+  // Minutes from now. Snoozing keeps the incident firing but stops it paging,
+  // which is different from resolving something that is still broken.
+  int32 minutes = 2;
+  string reason = 3;
+}
+
+message SnoozeIncidentResponse {
+  Incident incident = 1;
+}
+
+message ResolveIncidentRequest {
+  string id = 1;
+  string note = 2;
+}
+
+message ResolveIncidentResponse {
+  Incident incident = 1;
+}
+
+message AlertRule {
+  string id = 1;
+  string key = 2;
+  string name = 3;
+  string description = 4;
+  string category = 5;
+  IncidentSeverity severity = 6;
+  // rules | prometheus
+  string engine = 7;
+  string signal = 8;
+  string comparator = 9;
+  double threshold = 10;
+  bool enabled = 11;
+  // Why a builtin ships dark. Surfaced so a disabled rule is never mistaken
+  // for a healthy one.
+  string disabled_reason = 12;
+  google.protobuf.Timestamp muted_until = 13;
+  bool builtin = 14;
+}
+
+message ListAlertRulesRequest {}
+
+message ListAlertRulesResponse {
+  repeated AlertRule rules = 1;
+}
+
+message NotificationTarget {
+  string id = 1;
+  string name = 2;
+  // channel | webhook
+  string target_type = 3;
+  string platform = 4;
+  IncidentSeverity min_severity = 5;
+  int32 priority = 6;
+  bool enabled = 7;
+  // Delivery health, so a target that has silently stopped working is visible.
+  google.protobuf.Timestamp last_delivered_at = 8;
+  string last_error = 9;
+}
+
+message ListNotificationTargetsRequest {}
+
+message ListNotificationTargetsResponse {
+  repeated NotificationTarget targets = 1;
+}

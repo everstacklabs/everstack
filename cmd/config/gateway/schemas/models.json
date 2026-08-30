@@ -1,0 +1,523 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Models Configuration Schema",
+  "description": "Schema for validating model configurations",
+  "type": "object",
+  "properties": {
+    "providers": {
+      "type": "object",
+      "description": "Provider configurations",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Provider display name"
+          },
+          "base_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Provider API base URL"
+          },
+          "provider_type": {
+            "type": "string",
+            "enum": ["static", "meta"],
+            "description": "Provider type: static (fixed catalog) or meta (dynamic model discovery)"
+          },
+          "supports_model_discovery": {
+            "type": "boolean",
+            "description": "Whether the provider supports dynamic model discovery via API"
+          },
+          "discovery_api_endpoint": {
+            "type": "string",
+            "format": "uri",
+            "description": "API endpoint for discovering available models (for meta-providers)"
+          },
+          "models": {
+            "type": "array",
+            "description": "List of models for this provider",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Model identifier"
+                },
+                "display_name": {
+                  "type": "string",
+                  "description": "Human-readable model name"
+                },
+                "max_tokens": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Maximum tokens for this model"
+                },
+                "input_cost_per_1k": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Cost per 1k input tokens"
+                },
+                "output_cost_per_1k": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Cost per 1k output tokens"
+                },
+                "capabilities": {
+                  "type": "array",
+                  "description": "Model capabilities",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "chat",
+                      "completions",
+                      "embeddings",
+                      "function_calling",
+                      "vision",
+                      "streaming",
+                      "fine_tuning",
+                      "assistants"
+                    ]
+                  }
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["stable", "beta", "deprecated"],
+                  "description": "Model status"
+                },
+                "family": {
+                  "type": "string",
+                  "description": "Model family (e.g., gpt-4, claude-3)"
+                },
+                "context_length": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Context window size"
+                },
+                "training_data": {
+                  "type": "string",
+                  "description": "Training data cutoff date"
+                },
+                "parameters": {
+                  "type": "string",
+                  "description": "Model parameter count"
+                },
+                "default_settings": {
+                  "type": "object",
+                  "properties": {
+                    "temperature": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 2,
+                      "description": "Default temperature"
+                    },
+                    "top_p": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "Default top_p"
+                    },
+                    "frequency_penalty": {
+                      "type": "number",
+                      "minimum": -2,
+                      "maximum": 2,
+                      "description": "Default frequency penalty"
+                    },
+                    "presence_penalty": {
+                      "type": "number",
+                      "minimum": -2,
+                      "maximum": 2,
+                      "description": "Default presence penalty"
+                    }
+                  }
+                },
+                "rate_limits": {
+                  "type": "object",
+                  "properties": {
+                    "requests_per_minute": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "description": "Requests per minute limit"
+                    },
+                    "tokens_per_minute": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "description": "Tokens per minute limit"
+                    },
+                    "concurrent_requests": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "description": "Concurrent request limit"
+                    }
+                  }
+                },
+                "supported_languages": {
+                  "type": "array",
+                  "description": "Supported programming languages",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "vision_capabilities": {
+                  "type": "object",
+                  "properties": {
+                    "image_formats": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": ["jpeg", "png", "gif", "webp", "svg"]
+                      }
+                    },
+                    "max_images": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "description": "Maximum images per request"
+                    },
+                    "image_size_limit": {
+                      "type": "string",
+                      "description": "Maximum image size (e.g., '20MB')"
+                    }
+                  }
+                },
+                "function_calling": {
+                  "type": "object",
+                  "properties": {
+                    "supported": {
+                      "type": "boolean",
+                      "description": "Whether function calling is supported"
+                    },
+                    "max_functions": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "description": "Maximum functions per request"
+                    },
+                    "parallel_calls": {
+                      "type": "boolean",
+                      "description": "Whether parallel function calls are supported"
+                    }
+                  }
+                },
+                "embedding": {
+                  "type": "object",
+                  "properties": {
+                    "dimensions": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "description": "Embedding dimensions"
+                    },
+                    "max_input_tokens": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "description": "Maximum input tokens for embeddings"
+                    },
+                    "distance_metrics": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": ["cosine", "euclidean", "dot"]
+                      }
+                    }
+                  }
+                },
+                "metadata": {
+                  "type": "object",
+                  "description": "Additional model metadata",
+                  "additionalProperties": true
+                }
+              },
+              "required": [
+                "name",
+                "display_name",
+                "max_tokens",
+                "capabilities",
+                "status"
+              ]
+            }
+          },
+          "auth": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["api_key", "oauth", "service_account"],
+                "description": "Authentication type"
+              },
+              "header_name": {
+                "type": "string",
+                "description": "HTTP header name for authentication"
+              },
+              "header_format": {
+                "type": "string",
+                "description": "Header format template"
+              },
+              "env_var": {
+                "type": "string",
+                "description": "Environment variable name for API key"
+              }
+            },
+            "required": ["type"]
+          },
+          "rate_limits": {
+            "type": "object",
+            "properties": {
+              "requests_per_minute": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Global requests per minute limit"
+              },
+              "tokens_per_minute": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Global tokens per minute limit"
+              },
+              "concurrent_requests": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Global concurrent request limit"
+              }
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "chat": {
+                "type": "boolean",
+                "description": "Supports chat completions"
+              },
+              "completions": {
+                "type": "boolean",
+                "description": "Supports text completions"
+              },
+              "embeddings": {
+                "type": "boolean",
+                "description": "Supports embeddings"
+              },
+              "function_calling": {
+                "type": "boolean",
+                "description": "Supports function calling"
+              },
+              "vision": {
+                "type": "boolean",
+                "description": "Supports vision/multimodal"
+              },
+              "streaming": {
+                "type": "boolean",
+                "description": "Supports streaming responses"
+              },
+              "fine_tuning": {
+                "type": "boolean",
+                "description": "Supports model fine-tuning"
+              },
+              "assistants": {
+                "type": "boolean",
+                "description": "Supports assistants API"
+              }
+            }
+          },
+          "defaults": {
+            "type": "object",
+            "properties": {
+              "temperature": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 2,
+                "description": "Default temperature"
+              },
+              "max_tokens": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Default max tokens"
+              },
+              "top_p": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Default top_p"
+              },
+              "top_k": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Default top_k"
+              },
+              "frequency_penalty": {
+                "type": "number",
+                "minimum": -2,
+                "maximum": 2,
+                "description": "Default frequency penalty"
+              },
+              "presence_penalty": {
+                "type": "number",
+                "minimum": -2,
+                "maximum": 2,
+                "description": "Default presence penalty"
+              },
+              "timeout": {
+                "type": "string",
+                "pattern": "^\\d+[smhd]$",
+                "description": "Default timeout"
+              },
+              "retry_attempts": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Default retry attempts"
+              },
+              "retry_delay": {
+                "type": "string",
+                "pattern": "^\\d+[smhd]$",
+                "description": "Default retry delay"
+              }
+            }
+          },
+          "error_mapping": {
+            "type": "object",
+            "description": "Provider-specific error code mapping",
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "rate_limit_exceeded",
+                "payment_required",
+                "model_unavailable",
+                "authentication_failed",
+                "invalid_request",
+                "server_error",
+                "timeout"
+              ]
+            }
+          }
+        },
+        "required": ["name", "base_url", "models"]
+      }
+    },
+    "categories": {
+      "type": "object",
+      "description": "Model categories for filtering",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "model_families": {
+      "type": "object",
+      "description": "Model family definitions",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Family description"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "chat",
+                "completions",
+                "embeddings",
+                "function_calling",
+                "vision",
+                "streaming",
+                "fine_tuning",
+                "assistants"
+              ]
+            }
+          },
+          "max_tokens": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum tokens for this family"
+          },
+          "default_model": {
+            "type": "string",
+            "description": "Default model in this family"
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of models in this family"
+          }
+        },
+        "required": ["description", "capabilities", "max_tokens"]
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Global metadata",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "Schema version"
+        },
+        "last_updated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        },
+        "total_models": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of models"
+        },
+        "total_providers": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of providers"
+        },
+        "cost_ranges": {
+          "type": "object",
+          "properties": {
+            "min_input_cost": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Minimum input cost per 1k tokens"
+            },
+            "max_input_cost": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Maximum input cost per 1k tokens"
+            },
+            "min_output_cost": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Minimum output cost per 1k tokens"
+            },
+            "max_output_cost": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Maximum output cost per 1k tokens"
+            }
+          }
+        },
+        "capability_summary": {
+          "type": "object",
+          "properties": {
+            "chat_models": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of chat models"
+            },
+            "embedding_models": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of embedding models"
+            },
+            "vision_models": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of vision models"
+            },
+            "function_calling_models": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of function calling models"
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": ["providers"]
+}

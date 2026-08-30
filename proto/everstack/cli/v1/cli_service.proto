@@ -1,0 +1,211 @@
+syntax = "proto3";
+
+package everstack.cli.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/cli/v1;cli";
+
+// CLIService provides endpoints for the ewt CLI to interact with Everstack Cloud.
+// All endpoints require authentication via Bearer token or API key.
+service CLIService {
+  // Whoami returns the authenticated user and organization info.
+  rpc Whoami(WhoamiRequest) returns (WhoamiResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Authenticated user info"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/cli/whoami"};
+  }
+
+  // PushConfig uploads a worktree config to Everstack for cloud provisioning.
+  rpc PushConfig(PushConfigRequest) returns (PushConfigResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Pushed config info"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/cli/configs"
+      body: "*"
+    };
+  }
+
+  // ListConfigs returns all pushed configs for the authenticated org.
+  rpc ListConfigs(ListConfigsRequest) returns (ListConfigsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List of pushed configs"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/cli/configs"};
+  }
+
+  // GetConfig returns a specific pushed config.
+  rpc GetConfig(GetConfigRequest) returns (GetConfigResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Config details"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/cli/configs/{config_id}"};
+  }
+
+  // DeleteConfig removes a pushed config.
+  rpc DeleteConfig(DeleteConfigRequest) returns (DeleteConfigResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Deletion result"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/cli/configs/{config_id}"};
+  }
+
+  // CreateSandbox provisions a cloud sandbox from a pushed config.
+  rpc CreateSandbox(CreateSandboxRequest) returns (CreateSandboxResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Created sandbox info"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/cli/sandboxes"
+      body: "*"
+    };
+  }
+
+  // ListSandboxes returns active sandboxes for the authenticated org.
+  rpc ListSandboxes(ListSandboxesRequest) returns (ListSandboxesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List of sandboxes"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/cli/sandboxes"};
+  }
+
+  // StopSandbox stops a running cloud sandbox.
+  rpc StopSandbox(StopSandboxRequest) returns (StopSandboxResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Stop result"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/cli/sandboxes/{sandbox_id}:stop"
+    };
+  }
+}
+
+// ============================================
+// Whoami
+// ============================================
+
+message WhoamiRequest {}
+
+message WhoamiResponse {
+  string user_id = 1;
+  string email = 2;
+  string org_id = 3;
+  string org_slug = 4;
+  string plan_tier = 5;
+}
+
+// ============================================
+// Config management
+// ============================================
+
+message PushConfigRequest {
+  string project_name = 1;
+  string config_yaml = 2;
+  string config_hash = 3;
+  optional string branch = 4;
+  optional string git_remote = 5;
+}
+
+message PushConfigResponse {
+  string config_id = 1;
+  bool created = 2;
+}
+
+message ListConfigsRequest {
+  optional string project_name = 1;
+}
+
+message ListConfigsResponse {
+  repeated WorktreeConfig configs = 1;
+}
+
+message GetConfigRequest {
+  string config_id = 1;
+}
+
+message GetConfigResponse {
+  WorktreeConfig config = 1;
+}
+
+message DeleteConfigRequest {
+  string config_id = 1;
+}
+
+message DeleteConfigResponse {
+  bool success = 1;
+}
+
+message WorktreeConfig {
+  string id = 1;
+  string project_name = 2;
+  string config_hash = 3;
+  string config_yaml = 4;
+  optional string branch = 5;
+  optional string git_remote = 6;
+  google.protobuf.Timestamp pushed_at = 7;
+  string pushed_by_email = 8;
+}
+
+// ============================================
+// Sandbox management
+// ============================================
+
+message CreateSandboxRequest {
+  string config_id = 1;
+  optional string override_branch = 2;
+}
+
+message CreateSandboxResponse {
+  string sandbox_id = 1;
+  string status = 2;
+  string ssh_url = 3;
+}
+
+message ListSandboxesRequest {}
+
+message ListSandboxesResponse {
+  repeated SandboxSummary sandboxes = 1;
+}
+
+message SandboxSummary {
+  string id = 1;
+  string project_name = 2;
+  string status = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+message StopSandboxRequest {
+  string sandbox_id = 1;
+}
+
+message StopSandboxResponse {
+  bool success = 1;
+}

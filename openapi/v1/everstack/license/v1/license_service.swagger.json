@@ -1,0 +1,1162 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/license/v1/license_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "LicenseService"
+    },
+    {
+      "name": "InstanceService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {},
+  "definitions": {
+    "CheckActivationTokenStatusResponseTokenStatus": {
+      "type": "string",
+      "enum": [
+        "TOKEN_STATUS_UNSPECIFIED",
+        "TOKEN_STATUS_AVAILABLE",
+        "TOKEN_STATUS_BOUND",
+        "TOKEN_STATUS_EXPIRED",
+        "TOKEN_STATUS_INVALID"
+      ],
+      "default": "TOKEN_STATUS_UNSPECIFIED",
+      "description": "- TOKEN_STATUS_AVAILABLE: Token exists and has not been used yet\n - TOKEN_STATUS_BOUND: Token has been activated/bound to an instance\n - TOKEN_STATUS_EXPIRED: Token has expired\n - TOKEN_STATUS_INVALID: Token does not exist or is malformed",
+      "title": "TokenStatus indicates the current state of an activation token"
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ActivateInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "instanceId": {
+          "type": "string"
+        },
+        "refreshToken": {
+          "type": "string",
+          "title": "long-lived token for refresh calls"
+        },
+        "licenseState": {
+          "$ref": "#/definitions/v1LicenseState"
+        },
+        "signingKey": {
+          "type": "string",
+          "title": "HMAC key for M2M request signing (base64 encoded)"
+        },
+        "availableFeatures": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/v1FeatureRelease"
+          },
+          "title": "Available feature releases for this instance (evaluated based on tier)"
+        },
+        "licenseJwt": {
+          "type": "string",
+          "title": "Ed25519-signed JWT containing license state"
+        },
+        "licensePublicKey": {
+          "type": "string",
+          "title": "Base64-encoded Ed25519 public key for JWT verification"
+        }
+      },
+      "title": "Activation response with instance binding and refresh token"
+    },
+    "v1BillingPeriod": {
+      "type": "string",
+      "enum": [
+        "BILLING_PERIOD_UNSPECIFIED",
+        "BILLING_PERIOD_MONTHLY",
+        "BILLING_PERIOD_YEARLY"
+      ],
+      "default": "BILLING_PERIOD_UNSPECIFIED",
+      "title": "BillingPeriod represents the billing cycle for a plan"
+    },
+    "v1CheckActivationTokenStatusResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/CheckActivationTokenStatusResponseTokenStatus"
+        },
+        "boundInstanceId": {
+          "type": "string",
+          "title": "If BOUND, the instance ID it's bound to"
+        },
+        "planTier": {
+          "type": "string",
+          "title": "Plan tier from the token (free, basic, pro, enterprise)"
+        }
+      },
+      "title": "CheckActivationTokenStatusResponse returns the token's current status"
+    },
+    "v1CheckDeviceFingerprintResponse": {
+      "type": "object",
+      "properties": {
+        "hasBoundInstance": {
+          "type": "boolean",
+          "title": "True if this device has an activated instance"
+        },
+        "boundInstanceId": {
+          "type": "string",
+          "title": "The instance ID bound to this device"
+        },
+        "planTier": {
+          "type": "string",
+          "title": "Plan tier of the bound instance"
+        },
+        "isRevoked": {
+          "type": "boolean",
+          "title": "True if the instance was revoked"
+        }
+      },
+      "title": "CheckDeviceFingerprintResponse returns any instances bound to this device"
+    },
+    "v1CheckSpendLimitResponse": {
+      "type": "object",
+      "properties": {
+        "allowed": {
+          "type": "boolean",
+          "title": "Whether the request should be allowed"
+        },
+        "action": {
+          "$ref": "#/definitions/v1SpendLimitAction",
+          "title": "Action to take (if limit exceeded)"
+        },
+        "limitExceededMessage": {
+          "type": "string",
+          "title": "Human-readable message if limit exceeded"
+        },
+        "currentSpend": {
+          "type": "number",
+          "format": "double",
+          "title": "Current spend in the period"
+        },
+        "limitAmount": {
+          "type": "number",
+          "format": "double",
+          "title": "The limit that would be exceeded"
+        },
+        "remainingBudget": {
+          "type": "number",
+          "format": "double",
+          "title": "Remaining budget before limit"
+        }
+      }
+    },
+    "v1CreateInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "instance": {
+          "$ref": "#/definitions/v1Instance"
+        }
+      }
+    },
+    "v1CreateLicenseResponse": {
+      "type": "object",
+      "properties": {
+        "license": {
+          "$ref": "#/definitions/v1License"
+        }
+      }
+    },
+    "v1CumulativeUsageStats": {
+      "type": "object",
+      "properties": {
+        "totalRequests": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalSpendCents": {
+          "type": "string",
+          "format": "int64",
+          "title": "In cents"
+        },
+        "periodStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "periodEnd": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "CumulativeUsageStats tracks total usage for the current billing period"
+    },
+    "v1DeleteLicenseResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1DeleteSpendLimitResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1EnforcementLimits": {
+      "type": "object",
+      "properties": {
+        "dailyRequestLimit": {
+          "type": "string",
+          "format": "int64",
+          "description": "Max requests per day (0 = unlimited)",
+          "title": "Request limits"
+        },
+        "monthlyRequestLimit": {
+          "type": "string",
+          "format": "int64",
+          "title": "Max requests per month (0 = unlimited)"
+        },
+        "rpmLimit": {
+          "type": "string",
+          "format": "int64",
+          "title": "Max requests per minute (0 = unlimited)"
+        },
+        "dailyTokenLimit": {
+          "type": "string",
+          "format": "int64",
+          "description": "Max tokens per day (0 = unlimited)",
+          "title": "Token limits"
+        },
+        "monthlyTokenLimit": {
+          "type": "string",
+          "format": "int64",
+          "title": "Max tokens per month (0 = unlimited)"
+        },
+        "dailySpendLimitCents": {
+          "type": "string",
+          "format": "int64",
+          "description": "Max spend per day (0 = unlimited)",
+          "title": "Spend limits (in cents to avoid floating point issues)"
+        },
+        "monthlySpendLimitCents": {
+          "type": "string",
+          "format": "int64",
+          "title": "Max spend per month (0 = unlimited)"
+        },
+        "trialExpiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When trial expires (null if not trial)",
+          "title": "Trial-specific"
+        },
+        "isTrial": {
+          "type": "boolean",
+          "title": "Whether this is a trial"
+        }
+      },
+      "title": "EnforcementLimits defines the authoritative limits the gateway should enforce\nThis is returned by the License Service and overrides any local defaults"
+    },
+    "v1FeatureFlag": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1FeatureRelease": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Human-readable name"
+        },
+        "description": {
+          "type": "string",
+          "title": "Feature description"
+        },
+        "status": {
+          "type": "string",
+          "title": "'development', 'beta', 'released', 'deprecated'"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "['gateway', 'dashboard', 'api'] - can belong to multiple"
+        }
+      },
+      "title": "FeatureRelease represents a feature's release status and metadata"
+    },
+    "v1GenerateActivationTokenResponse": {
+      "type": "object",
+      "properties": {
+        "activationToken": {
+          "type": "string",
+          "title": "JWT token to be provided to gateway"
+        },
+        "nonce": {
+          "type": "string",
+          "title": "Nonce for tracking (optional, for audit)"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "int64",
+          "title": "Unix timestamp when token expires"
+        }
+      }
+    },
+    "v1GetInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "instance": {
+          "$ref": "#/definitions/v1Instance"
+        }
+      }
+    },
+    "v1GetInstancesByTenantResponse": {
+      "type": "object",
+      "properties": {
+        "instances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1InstanceSummary"
+          }
+        }
+      },
+      "title": "GetInstancesByTenantResponse returns all instances for the tenant"
+    },
+    "v1GetLicenseResponse": {
+      "type": "object",
+      "properties": {
+        "licenseKey": {
+          "type": "string"
+        }
+      }
+    },
+    "v1GetPlansResponse": {
+      "type": "object",
+      "properties": {
+        "plans": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Plan"
+          }
+        }
+      }
+    },
+    "v1GetSpendLimitsResponse": {
+      "type": "object",
+      "properties": {
+        "spendLimits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SpendLimit"
+          }
+        },
+        "totalEstimatedSpend": {
+          "type": "number",
+          "format": "double",
+          "title": "Current period's total estimated spend"
+        },
+        "totalActualSpend": {
+          "type": "number",
+          "format": "double",
+          "title": "Current period's total actual billing"
+        }
+      }
+    },
+    "v1Instance": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "instanceIdHash": {
+          "type": "string"
+        },
+        "instanceStatus": {
+          "type": "string"
+        },
+        "signedPayload": {
+          "type": "string",
+          "format": "byte",
+          "title": "canonical JSON bytes of signed instance payload"
+        },
+        "instanceSignature": {
+          "type": "string"
+        },
+        "instanceKid": {
+          "type": "string"
+        },
+        "retryCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "lastAttemptAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "nextAttemptAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "errorReason": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1InstanceSummary": {
+      "type": "object",
+      "properties": {
+        "instanceId": {
+          "type": "string"
+        },
+        "planTier": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "title": "active, released, revoked, expired"
+        },
+        "activatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "releasedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "deviceFingerprintPrefix": {
+          "type": "string",
+          "title": "First 8 chars of fingerprint for display"
+        }
+      },
+      "title": "InstanceSummary provides a summary of an instance for the licenses page"
+    },
+    "v1License": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/v1LicenseType"
+        },
+        "licenseStatus": {
+          "$ref": "#/definitions/v1LicenseStatus"
+        },
+        "licenseKey": {
+          "type": "string"
+        },
+        "usageLimits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UsageLimits"
+          }
+        },
+        "featureFlags": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FeatureFlag"
+          }
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "instanceId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1LicenseState": {
+      "type": "object",
+      "properties": {
+        "instanceId": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "planTier": {
+          "$ref": "#/definitions/v1LicenseType"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FeatureFlag"
+          }
+        },
+        "usageLimits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UsageLimits"
+          }
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "refreshIntervalSecs": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "gracePeriodSecs": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "status": {
+          "$ref": "#/definitions/v1LicenseStatus"
+        },
+        "sandboxBillingEnabled": {
+          "type": "boolean",
+          "description": "True only when this tenant has an active billing arrangement for\nsandbox compute. Free is a $0 platform plan, not free compute."
+        }
+      },
+      "title": "LicenseState represents the current state of a license for enforcement"
+    },
+    "v1LicenseStatus": {
+      "type": "string",
+      "enum": [
+        "LICENSE_STATUS_UNSPECIFIED",
+        "LICENSE_STATUS_ACTIVE",
+        "LICENSE_STATUS_INACTIVE",
+        "LICENSE_STATUS_EXPIRED",
+        "LICENSE_STATUS_SUSPENDED",
+        "LICENSE_STATUS_CANCELLED"
+      ],
+      "default": "LICENSE_STATUS_UNSPECIFIED"
+    },
+    "v1LicenseType": {
+      "type": "string",
+      "enum": [
+        "LICENSE_TYPE_UNSPECIFIED",
+        "LICENSE_TYPE_FREE",
+        "LICENSE_TYPE_BASIC",
+        "LICENSE_TYPE_PRO",
+        "LICENSE_TYPE_ENTERPRISE"
+      ],
+      "default": "LICENSE_TYPE_UNSPECIFIED"
+    },
+    "v1PerSeatPricing": {
+      "type": "object",
+      "properties": {
+        "monthly": {
+          "type": "string",
+          "title": "Monthly per-seat price"
+        },
+        "yearly": {
+          "type": "string",
+          "title": "Yearly per-seat price"
+        },
+        "subText": {
+          "type": "string",
+          "title": "Description e.g. \"per additional seat beyond 3 included\""
+        }
+      },
+      "title": "Per-seat pricing for additional users beyond included seats"
+    },
+    "v1Plan": {
+      "type": "object",
+      "properties": {
+        "tier": {
+          "type": "string",
+          "title": "free, basic, pro, enterprise"
+        },
+        "name": {
+          "type": "string",
+          "title": "Display name"
+        },
+        "description": {
+          "type": "string",
+          "title": "Plan description"
+        },
+        "trialDurationDays": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Trial period in days"
+        },
+        "pricing": {
+          "$ref": "#/definitions/v1PlanPricing",
+          "title": "Pricing information"
+        },
+        "highlight": {
+          "type": "boolean",
+          "title": "Whether to highlight this plan"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PlanFeature"
+          },
+          "title": "Available features"
+        },
+        "usageLimits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PlanUsageLimit"
+          },
+          "title": "Usage limits"
+        },
+        "seatLimit": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Max users allowed (0 = unlimited)"
+        },
+        "instanceLimit": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Max instances allowed (0 = unlimited)"
+        }
+      },
+      "title": "Plan represents a license plan configuration"
+    },
+    "v1PlanFeature": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1PlanPricing": {
+      "type": "object",
+      "properties": {
+        "monthly": {
+          "type": "string"
+        },
+        "yearly": {
+          "type": "string"
+        },
+        "discounted": {
+          "type": "string",
+          "title": "Discounted yearly price"
+        },
+        "suggested": {
+          "type": "string",
+          "title": "Marketing text for suggested option"
+        },
+        "perSeat": {
+          "$ref": "#/definitions/v1PerSeatPricing",
+          "title": "Per additional seat pricing"
+        }
+      }
+    },
+    "v1PlanUsageLimit": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "RPM, TOKENS, REQUESTS, etc."
+        },
+        "value": {
+          "type": "string",
+          "format": "int64",
+          "title": "-1 for unlimited"
+        },
+        "subText": {
+          "type": "string",
+          "title": "Additional info like \"+$0.50 per 1M tokens over 10M\""
+        }
+      }
+    },
+    "v1RefreshInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "licenseState": {
+          "$ref": "#/definitions/v1LicenseState"
+        },
+        "availableFeatures": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/v1FeatureRelease"
+          },
+          "title": "Available feature releases for this instance (evaluated based on tier)\nKey is feature key (e.g., \"semantic_cache\"), value is feature metadata"
+        },
+        "licenseJwt": {
+          "type": "string",
+          "title": "Ed25519-signed JWT containing license state"
+        }
+      },
+      "title": "Refresh response with updated license state"
+    },
+    "v1ReleaseInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "activationToken": {
+          "type": "string",
+          "title": "New activation token for activating a new instance"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "title": "When the new token expires"
+        }
+      },
+      "title": "ReleaseInstanceResponse confirms the release and provides a new activation token"
+    },
+    "v1ReportUsageResponse": {
+      "type": "object",
+      "properties": {
+        "accepted": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "nextReportAt": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Next expected report time (for sync interval coordination)"
+        },
+        "limits": {
+          "$ref": "#/definitions/v1EnforcementLimits",
+          "description": "Authoritative limits from License Service (gateway should enforce these)\nFor trial/free tier, these are the trial limits.\nFor activated instances, these come from the license plan."
+        },
+        "cumulativeUsage": {
+          "$ref": "#/definitions/v1CumulativeUsageStats",
+          "title": "Cumulative usage tracked by License Service (for reconciliation)"
+        },
+        "limitsExceeded": {
+          "type": "boolean",
+          "title": "Whether usage limits have been exceeded (gateway should block new requests)"
+        }
+      },
+      "title": "ReportUsageResponse confirms receipt of usage metrics"
+    },
+    "v1RevokeInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1SetSpendLimitResponse": {
+      "type": "object",
+      "properties": {
+        "spendLimit": {
+          "$ref": "#/definitions/v1SpendLimit",
+          "title": "The created or updated spend limit"
+        }
+      }
+    },
+    "v1SpendLimit": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "Unique identifier"
+        },
+        "organizationId": {
+          "type": "string",
+          "title": "Organization this limit applies to"
+        },
+        "instanceId": {
+          "type": "string",
+          "title": "Optional: specific instance override (empty = org-wide)"
+        },
+        "limitType": {
+          "$ref": "#/definitions/v1SpendLimitType",
+          "title": "Type of spend tracking"
+        },
+        "limitAmount": {
+          "type": "number",
+          "format": "double",
+          "title": "USD amount limit"
+        },
+        "period": {
+          "$ref": "#/definitions/v1SpendLimitPeriod",
+          "title": "Time period for the limit"
+        },
+        "actionOnExceed": {
+          "$ref": "#/definitions/v1SpendLimitAction",
+          "title": "What to do when limit is exceeded"
+        },
+        "currentSpend": {
+          "type": "number",
+          "format": "double",
+          "title": "Current spend in the period"
+        },
+        "lastResetAt": {
+          "type": "string",
+          "format": "date-time",
+          "title": "When the spend counter was last reset"
+        },
+        "enabled": {
+          "type": "boolean",
+          "title": "Whether this limit is active"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "SpendLimit represents a spending limit configuration"
+    },
+    "v1SpendLimitAction": {
+      "type": "string",
+      "enum": [
+        "SPEND_LIMIT_ACTION_UNSPECIFIED",
+        "SPEND_LIMIT_ACTION_BLOCK",
+        "SPEND_LIMIT_ACTION_WARN",
+        "SPEND_LIMIT_ACTION_NOTIFY"
+      ],
+      "default": "SPEND_LIMIT_ACTION_UNSPECIFIED",
+      "description": "- SPEND_LIMIT_ACTION_BLOCK: Block further requests\n - SPEND_LIMIT_ACTION_WARN: Log warnings but allow requests\n - SPEND_LIMIT_ACTION_NOTIFY: Send email notification only",
+      "title": "SpendLimitAction represents what happens when a limit is exceeded"
+    },
+    "v1SpendLimitPeriod": {
+      "type": "string",
+      "enum": [
+        "SPEND_LIMIT_PERIOD_UNSPECIFIED",
+        "SPEND_LIMIT_PERIOD_DAILY",
+        "SPEND_LIMIT_PERIOD_MONTHLY"
+      ],
+      "default": "SPEND_LIMIT_PERIOD_UNSPECIFIED",
+      "title": "SpendLimitPeriod represents the time period for spend limits"
+    },
+    "v1SpendLimitType": {
+      "type": "string",
+      "enum": [
+        "SPEND_LIMIT_TYPE_UNSPECIFIED",
+        "SPEND_LIMIT_TYPE_ESTIMATED_COST",
+        "SPEND_LIMIT_TYPE_ACTUAL_BILLING"
+      ],
+      "default": "SPEND_LIMIT_TYPE_UNSPECIFIED",
+      "description": "- SPEND_LIMIT_TYPE_ESTIMATED_COST: Real-time estimated API cost based on token usage\n - SPEND_LIMIT_TYPE_ACTUAL_BILLING: Actual Stripe billing charges",
+      "title": "SpendLimitType represents the type of spend tracking"
+    },
+    "v1UpdateInstancePlanResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "instancesUpdated": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Number of instances updated"
+        }
+      },
+      "title": "UpdateInstancePlanResponse confirms the plan update"
+    },
+    "v1UpdateLicenseResponse": {
+      "type": "object"
+    },
+    "v1UpdateSpendUsageResponse": {
+      "type": "object",
+      "properties": {
+        "newEstimatedSpend": {
+          "type": "number",
+          "format": "double"
+        },
+        "newActualSpend": {
+          "type": "number",
+          "format": "double"
+        },
+        "limitExceeded": {
+          "type": "boolean",
+          "title": "Whether any limit is now exceeded"
+        },
+        "action": {
+          "$ref": "#/definitions/v1SpendLimitAction",
+          "title": "Action to take if limit exceeded"
+        }
+      }
+    },
+    "v1UsageLimits": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/v1UsageLimitsType"
+        },
+        "value": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1UsageLimitsType": {
+      "type": "string",
+      "enum": [
+        "USAGE_LIMITS_TYPE_UNSPECIFIED",
+        "USAGE_LIMITS_TYPE_REQUESTS",
+        "USAGE_LIMITS_TYPE_EXECUTIONS",
+        "USAGE_LIMITS_TYPE_STORAGE",
+        "USAGE_LIMITS_TYPE_BANDWIDTH",
+        "USAGE_LIMITS_TYPE_RPS",
+        "USAGE_LIMITS_TYPE_RPM",
+        "USAGE_LIMITS_TYPE_RPH",
+        "USAGE_LIMITS_TYPE_AGENTS",
+        "USAGE_LIMITS_TYPE_PERSISTENT_AGENTS",
+        "USAGE_LIMITS_TYPE_CONCURRENT_RUNNING",
+        "USAGE_LIMITS_TYPE_SANDBOX_MEMORY_MB",
+        "USAGE_LIMITS_TYPE_MESSAGES_MONTHLY",
+        "USAGE_LIMITS_TYPE_CHANNEL_BINDINGS",
+        "USAGE_LIMITS_TYPE_SPAWN_DEPTH",
+        "USAGE_LIMITS_TYPE_SESSION_RETENTION_DAYS"
+      ],
+      "default": "USAGE_LIMITS_TYPE_UNSPECIFIED",
+      "title": "- USAGE_LIMITS_TYPE_AGENTS: Agent-related limits (added for unified agent/trooper model)"
+    },
+    "v1UsageReport": {
+      "type": "object",
+      "properties": {
+        "totalRequests": {
+          "type": "string",
+          "format": "int64",
+          "title": "Total requests in this reporting period"
+        },
+        "inputTokens": {
+          "type": "string",
+          "format": "int64",
+          "title": "Token metrics"
+        },
+        "outputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "estimatedCostUsd": {
+          "type": "number",
+          "format": "double",
+          "title": "Cost metrics (in USD)"
+        },
+        "cacheSavingsUsd": {
+          "type": "number",
+          "format": "double"
+        },
+        "cacheHits": {
+          "type": "string",
+          "format": "int64",
+          "title": "Cache performance"
+        },
+        "cacheMisses": {
+          "type": "string",
+          "format": "int64"
+        },
+        "peakRpm": {
+          "type": "string",
+          "format": "int64",
+          "title": "Rate metrics (peak values in period)"
+        },
+        "peakRps": {
+          "type": "string",
+          "format": "int64"
+        },
+        "peakRph": {
+          "type": "string",
+          "format": "int64"
+        },
+        "periodStart": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Reporting period"
+        },
+        "periodEnd": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "agentsCount": {
+          "type": "string",
+          "format": "int64",
+          "description": "Resource counts at the time of reporting (per-instance snapshot).\nUsed to populate billing.usage_snapshots for historical charts."
+        },
+        "persistentAgentsCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "concurrentRunningCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "datasetItemsCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "evalRunsMonthlyCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "annotationQueuesCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "channelBindingsCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "messagesMonthlyCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "storageBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cumulativeTotalTokens": {
+          "type": "string",
+          "format": "int64",
+          "description": "Cumulative flow metrics for the current period (since last reset).\nDistinct from the delta fields above (total_requests, total_tokens, etc.\nwhich carry per-report deltas for Stripe metering). These cumulative\nvalues populate usage_totals for the period headline numbers.\nCosts are micro-dollars (USD * 1_000_000)."
+        },
+        "cumulativeTotalRequests": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cumulativeInputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cumulativeOutputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cumulativeCostMicros": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cumulativeCacheSavingsMicros": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cumulativeCacheHits": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cumulativeCacheMisses": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cumulativeNetworkRxBytes": {
+          "type": "string",
+          "format": "int64",
+          "description": "Cumulative sandbox network data transfer this period (bytes), summed\nacross the instance's sandboxes from the usage ledger."
+        },
+        "cumulativeNetworkTxBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cumulativeSandboxComputeSeconds": {
+          "type": "string",
+          "format": "int64",
+          "description": "Lifetime-monotonic sandbox compute meters. The billing service keeps a\nper-instance watermark and charges only the positive delta, so retries\nand out-of-order reports cannot double bill. The first observation is a\nnon-billable rollout baseline."
+        },
+        "cumulativeSandboxComputeCostMicros": {
+          "type": "string",
+          "format": "int64"
+        },
+        "concurrentSandboxesCount": {
+          "type": "string",
+          "format": "int64",
+          "description": "Sandboxes that currently reserve compute capacity for this instance.\nPending creates and in-flight stops count; sleeping/archived rows do not."
+        },
+        "cumulativeBrowserRuntimeSeconds": {
+          "type": "string",
+          "format": "int64",
+          "description": "Lifetime-monotonic hosted-browser lease meters. Idle pool pods are not\nincluded. Central billing applies only positive deltas against the same\ndurable per-instance watermark contract used for sandbox compute."
+        },
+        "cumulativeBrowserRuntimeCostMicros": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "title": "UsageReport contains aggregated usage metrics for a reporting period"
+    },
+    "v1ValidateLicenseResponse": {
+      "type": "object",
+      "properties": {
+        "valid": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

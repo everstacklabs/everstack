@@ -1,0 +1,79 @@
+# Everstack Platform Configuration (Production Defaults)
+# ======================================================
+# This is the single source of truth for all service URLs and settings.
+# It is embedded into the binary at build time via go:embed.
+#
+# Users download and run without configuration - these defaults just work.
+# Developers can override via:
+#   - config/local.yaml (for local dev, gitignored)
+#   - Environment variables (EVS_SERVICES_LICENSE_URL, etc.)
+#
+# Priority: default.yaml < local.yaml < environment variables
+
+# =============================================================================
+# Cloud Services (Hosted by Everstack)
+# =============================================================================
+# These URLs point to Everstack Cloud services. End users never need to change these.
+# Developers override via EVS_SERVICES_<SERVICE>_URL environment variables.
+
+services:
+  # License Service - handles activation, license validation, usage tracking
+  license:
+    url: https://license.everstack.ai
+    enabled: true
+
+  # Auth Service (Future) - user authentication and authorization
+  auth:
+    url: https://auth.everstack.ai
+    enabled: false
+
+  # Functions Service (Future) - serverless function execution
+  functions:
+    url: https://functions.everstack.ai
+    enabled: false
+
+  # Prompts Service (Future) - prompt management and versioning
+  prompts:
+    url: https://prompts.everstack.ai
+    enabled: false
+
+  # =============================================================================
+  # Security Policy (under services.security for policy.FromGlobal())
+  # =============================================================================
+  # API key bypass rules for internal services
+  security:
+    policy:
+      # Services that bypass API key requirements (minimal — bootstrap only)
+      bypass_services:
+        - "everstack.health.v1.HealthService"
+
+      # Specific endpoints that bypass API key requirements (minimal — bootstrap only)
+      # See POR-53 for full auth-on-startup plan to eliminate these entirely
+      bypass_prefixes:
+        - "/everstack.gateway.v1.GatewayService/ActivateGatewayInstance"
+        - "/everstack.gateway.v1.GatewayService/GetGatewayInstanceStatus"
+        - "/everstack.gateway.v1.GatewayService/GetTrialStatus"
+        - "/everstack.gateway.v1.GatewayService/ActivationCallback"
+        - "/everstack.gateway.v1.GatewayService/SubscriptionStatusCallback"
+
+# =============================================================================
+# Security Settings (root level for backward compatibility)
+# =============================================================================
+security:
+  # License enforcement settings
+  license_enforcement:
+    enabled: true # Enabled by default for production
+    dry_run: false
+    cache_ttl: "24h" # Sync once per day to reduce license service calls
+
+# =============================================================================
+# Activation Settings
+# =============================================================================
+# Gateway activation configuration (connects to license service)
+
+activation:
+  platform_url: "${services.license.url}" # Derived from services.license.url
+  platform_api_key: ""
+  instance_salt: ""
+  interval: "30s"
+  timeout: "5s"

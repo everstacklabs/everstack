@@ -1,0 +1,27 @@
+{
+  "name": "everstack-mini-app",
+  "version": "1.0.0",
+  "description": "Standalone mini app to test the @everstack/node SDK",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "chat": "tsx src/chat.ts",
+    "stream": "tsx src/stream.ts",
+    "models": "tsx src/models.ts",
+    "agents": "tsx src/agents.ts",
+    "repl": "tsx src/repl.ts"
+  },
+  "dependencies": {
+    "@everstack/node": "^0.2.1",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

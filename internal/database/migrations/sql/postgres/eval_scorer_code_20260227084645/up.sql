@@ -1,0 +1,3 @@
+ALTER TABLE score_configs ADD COLUMN IF NOT EXISTS scorer_code TEXT DEFAULT '';
+ALTER TABLE score_configs ADD COLUMN IF NOT EXISTS scorer_language VARCHAR(20) DEFAULT '';
+ALTER TABLE score_configs ADD COLUMN IF NOT EXISTS use_sandbox BOOLEAN NOT NULL DEFAULT false;

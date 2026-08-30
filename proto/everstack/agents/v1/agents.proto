@@ -1,0 +1,2731 @@
+syntax = "proto3";
+
+package everstack.agents.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "validate/validate.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/agents/v1;agents";
+
+// SessionStatus tracks the lifecycle of an agent session.
+enum SessionStatus {
+  SESSION_STATUS_UNSPECIFIED = 0;
+  SESSION_STATUS_CREATED = 1;
+  SESSION_STATUS_RUNNING = 2;
+  SESSION_STATUS_WAITING_FOR_INPUT = 3;
+  SESSION_STATUS_WAITING_FOR_APPROVAL = 4;
+  SESSION_STATUS_COMPLETED = 5;
+  SESSION_STATUS_FAILED = 6;
+  SESSION_STATUS_CANCELLED = 7;
+  SESSION_STATUS_HIBERNATED = 8;
+}
+
+// TurnStatus tracks the lifecycle of a single turn.
+enum TurnStatus {
+  TURN_STATUS_UNSPECIFIED = 0;
+  TURN_STATUS_PENDING = 1;
+  TURN_STATUS_RUNNING = 2;
+  TURN_STATUS_COMPLETED = 3;
+  TURN_STATUS_FAILED = 4;
+}
+
+// AgentMode controls whether an agent is user-facing or delegation-only.
+enum AgentMode {
+  AGENT_MODE_UNSPECIFIED = 0;
+  AGENT_MODE_PRIMARY = 1;
+  AGENT_MODE_SUBAGENT = 2;
+}
+
+// TaskPermissionMode controls delegation behavior for task/spawn execution.
+enum TaskPermissionMode {
+  TASK_PERMISSION_MODE_UNSPECIFIED = 0;
+  TASK_PERMISSION_MODE_ASK = 1;
+  TASK_PERMISSION_MODE_ALWAYS = 2;
+  TASK_PERMISSION_MODE_DENY = 3;
+}
+
+// AgentLifecycleMode distinguishes ephemeral (session-scoped) from persistent (always-on) agents.
+enum AgentLifecycleMode {
+  AGENT_LIFECYCLE_MODE_UNSPECIFIED = 0;
+  AGENT_LIFECYCLE_MODE_EPHEMERAL = 1;
+  AGENT_LIFECYCLE_MODE_PERSISTENT = 2;
+}
+
+// AgentLifecycleStatus tracks the lifecycle of a persistent agent.
+enum AgentLifecycleStatus {
+  AGENT_LIFECYCLE_STATUS_UNSPECIFIED = 0;
+  AGENT_LIFECYCLE_STATUS_CREATED = 1;
+  AGENT_LIFECYCLE_STATUS_PROVISIONING = 2;
+  AGENT_LIFECYCLE_STATUS_RUNNING = 3;
+  AGENT_LIFECYCLE_STATUS_SLEEPING = 4;
+  AGENT_LIFECYCLE_STATUS_WAKING = 5;
+  AGENT_LIFECYCLE_STATUS_FAILED = 6;
+  AGENT_LIFECYCLE_STATUS_TERMINATED = 7;
+  AGENT_LIFECYCLE_STATUS_IDLE = 8;
+}
+
+// AgentLinkType describes the relationship between linked agents.
+enum AgentLinkType {
+  AGENT_LINK_TYPE_UNSPECIFIED = 0;
+  AGENT_LINK_TYPE_COLLABORATOR = 1;
+  AGENT_LINK_TYPE_SUPERVISOR = 2;
+  AGENT_LINK_TYPE_SUBORDINATE = 3;
+  AGENT_LINK_TYPE_PEER = 4;
+}
+
+// AgentLinkProtocol describes how linked agents communicate.
+enum AgentLinkProtocol {
+  AGENT_LINK_PROTOCOL_UNSPECIFIED = 0;
+  AGENT_LINK_PROTOCOL_INTERNAL = 1;
+  AGENT_LINK_PROTOCOL_CHANNEL = 2;
+  AGENT_LINK_PROTOCOL_WEBHOOK = 3;
+}
+
+// AgentLinkStatus tracks whether an agent link is active.
+enum AgentLinkStatus {
+  AGENT_LINK_STATUS_UNSPECIFIED = 0;
+  AGENT_LINK_STATUS_ACTIVE = 1;
+  AGENT_LINK_STATUS_PAUSED = 2;
+  AGENT_LINK_STATUS_REVOKED = 3;
+}
+
+// AgentIdentity holds identity markdown files for persistent agents.
+message AgentIdentity {
+  string soul_md = 1;
+  string identity_md = 2;
+  string user_md = 3;
+  string role_md = 4;
+}
+
+// AgentSandboxConfig holds sandbox resource configuration for persistent agents.
+message AgentSandboxConfig {
+  string image = 1;
+  double cpu_limit = 2;
+  int64 memory_mb = 3;
+  int64 disk_mb = 4;
+  int32 timeout_seconds = 5;
+  string network_mode = 6;
+  repeated string allowed_hosts = 7;
+  map<string, string> env_vars = 8;
+  bool ssh_enabled = 9;
+  string git_repo_url = 10;
+  string git_branch = 11;
+  // When set, links the agent to an existing sandbox instead of creating a new one.
+  optional string linked_session_id = 12;
+}
+
+// AgentDatabaseConfig holds paths for agent-local databases within the sandbox.
+message AgentDatabaseConfig {
+  string sqlite_path = 1;
+  string lancedb_path = 2;
+  string redb_path = 3;
+}
+
+// AgentWorkersConfig holds worker pool settings for persistent agents.
+message AgentWorkersConfig {
+  int32 max_concurrent_workers = 1;
+  google.protobuf.Struct pool_config = 2;
+}
+
+// AgentLink represents a connection between an agent and another entity.
+message AgentLink {
+  string id = 1;
+  string tenant_id = 2;
+  string source_agent_id = 3;
+  string target_type = 4;
+  string target_id = 5;
+  string target_name = 6;
+  AgentLinkType link_type = 7;
+  AgentLinkProtocol protocol = 8;
+  AgentLinkStatus status = 9;
+  google.protobuf.Struct config = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// AgentChannelBinding represents a channel bound to an agent.
+message AgentChannelBinding {
+  string id = 1;
+  string agent_id = 2;
+  string channel_config_id = 3;
+  bool enabled = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+// AgentDefinition is the blueprint/config for an agent.
+message AgentDefinition {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  string model = 5;
+  string system_prompt = 6;
+  repeated string tools = 7;
+  google.protobuf.Struct config = 8; // temperature, max_tokens, etc.
+  int32 max_turns = 9;
+  int32 max_tool_calls_per_turn = 10;
+  bool enabled = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+  AgentMode mode = 14;
+  optional int32 max_steps = 15;
+  TaskPermissionMode task_permission_mode = 16;
+  bool hidden = 17;
+  optional string color = 18;
+  optional string working_directory = 19;
+  optional string mention_alias = 20;
+  AgentExecutionPolicy execution_policy = 21;
+  optional AgentMemoryConfig memory_config = 22;
+  // Persistent agent fields (lifecycle_mode = PERSISTENT)
+  AgentLifecycleMode lifecycle_mode = 23;
+  AgentLifecycleStatus lifecycle_status = 24;
+  optional string icon = 25;
+  AgentIdentity identity = 26;
+  AgentSandboxConfig sandbox_config = 27;
+  AgentDatabaseConfig database_config = 28;
+  AgentWorkersConfig workers_config = 29;
+  string sandbox_id = 30;
+  string primary_session_id = 31;
+  string active_revision_id = 32;
+}
+
+// AgentSession is an execution instance of an agent.
+message AgentSession {
+  string id = 1;
+  string tenant_id = 2;
+  string agent_id = 3;
+  SessionStatus status = 4;
+  int32 turn_count = 5;
+  int32 total_tokens = 6;
+  google.protobuf.Struct metadata = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  google.protobuf.Timestamp completed_at = 10;
+  repeated AgentSessionTurn turns = 11;
+  // Short summary derived from the first user message in this session.
+  string summary = 12;
+  string revision_id = 13;
+}
+
+// AgentSessionTurn is a single conversation turn within a session.
+message AgentSessionTurn {
+  string id = 1;
+  string session_id = 2;
+  int32 turn_number = 3;
+  TurnStatus status = 4;
+  string user_input = 5;
+  string assistant_output = 6;
+  string tool_calls = 7; // JSON-encoded tool calls
+  // prompt_tokens is the inclusive input total (cached + fresh). The
+  // cache_*_input_tokens fields below are non-overlapping subsets so
+  // consumers can compute the fresh portion as
+  //   prompt_tokens − cache_read_input_tokens − cache_write_input_tokens
+  // and apply per-bucket billing rates. See gw.TokenDetails for the
+  // dual-track design rationale.
+  int32 prompt_tokens = 8;
+  int32 completion_tokens = 9;
+  int32 total_tokens = 10;
+  int64 latency_ms = 11;
+  string error = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp completed_at = 14;
+  int32 cache_read_input_tokens = 15;
+  int32 cache_write_input_tokens = 16;
+  // JSON-encoded ordered turn timeline: interleaved assistant text, tool
+  // calls, and HITL exchanges in true execution order. Empty for turns
+  // recorded before this field existed (UI falls back to the flat fields).
+  string timeline = 17;
+}
+
+// ToolCallResult is the result of executing a tool call.
+message ToolCallResult {
+  string tool_call_id = 1;
+  string name = 2;
+  string result = 3;
+  bool success = 4;
+  string error = 5;
+}
+
+// AgentExecutionPolicy is a typed policy container for runtime controls.
+message AgentExecutionPolicy {
+  TaskPermissionMode task_permission_mode = 1;
+  optional int32 max_steps = 2;
+  optional string working_directory = 3;
+}
+
+// --- Agent CRUD ---
+
+message CreateAgentRequest {
+  string tenant_id = 1;
+  string name = 2;
+  optional string description = 3;
+  string model = 4;
+  optional string system_prompt = 5;
+  repeated string tools = 6;
+  optional google.protobuf.Struct config = 7;
+  optional int32 max_turns = 8;
+  optional int32 max_tool_calls_per_turn = 9;
+  AgentMode mode = 10;
+  optional int32 max_steps = 11;
+  TaskPermissionMode task_permission_mode = 12;
+  optional bool hidden = 13;
+  optional string color = 14;
+  optional string working_directory = 15;
+  optional string mention_alias = 16;
+  AgentExecutionPolicy execution_policy = 17;
+  optional AgentMemoryConfig memory_config = 18;
+  AgentLifecycleMode lifecycle_mode = 19;
+  AgentIdentity identity = 20;
+  AgentSandboxConfig sandbox_config = 21;
+  AgentDatabaseConfig database_config = 22;
+  AgentWorkersConfig workers_config = 23;
+  optional string icon = 24;
+  bool auto_provision = 25;
+}
+
+message CreateAgentResponse {
+  AgentDefinition agent = 1;
+}
+
+message GetAgentRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message GetAgentResponse {
+  AgentDefinition agent = 1;
+}
+
+message ListAgentsRequest {
+  string tenant_id = 1;
+  optional bool enabled = 2;
+  optional int32 limit = 3;
+  optional int32 offset = 4;
+  bool include_hidden = 5;
+  AgentMode mode = 6;
+  AgentLifecycleMode lifecycle_mode = 7;
+}
+
+message ListAgentsResponse {
+  repeated AgentDefinition agents = 1;
+  int32 total = 2;
+}
+
+message UpdateAgentRequest {
+  string tenant_id = 1;
+  string id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional string model = 5;
+  optional string system_prompt = 6;
+  repeated string tools = 7;
+  optional google.protobuf.Struct config = 8;
+  optional int32 max_turns = 9;
+  optional int32 max_tool_calls_per_turn = 10;
+  optional bool enabled = 11;
+  optional AgentMode mode = 12;
+  optional int32 max_steps = 13;
+  optional TaskPermissionMode task_permission_mode = 14;
+  optional bool hidden = 15;
+  optional string color = 16;
+  optional string working_directory = 17;
+  optional string mention_alias = 18;
+  AgentExecutionPolicy execution_policy = 19;
+  optional AgentMemoryConfig memory_config = 20;
+  AgentIdentity identity = 21;
+  AgentSandboxConfig sandbox_config = 22;
+  AgentDatabaseConfig database_config = 23;
+  AgentWorkersConfig workers_config = 24;
+  optional string icon = 25;
+  optional AgentLifecycleMode lifecycle_mode = 26;
+  // Explicitly clears tools. Repeated fields do not preserve presence when
+  // encoded empty, so clients cannot otherwise distinguish clear from omit.
+  optional bool clear_tools = 27;
+}
+
+message UpdateAgentResponse {
+  AgentDefinition agent = 1;
+}
+
+message DeleteAgentRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message DeleteAgentResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ImportAgentFromOpencodeRequest {
+  string tenant_id = 1;
+  string opencode_agent_json = 2;
+  bool dry_run = 3;
+}
+
+message ImportAgentFromOpencodeResponse {
+  bool valid = 1;
+  repeated string warnings = 2;
+  AgentDefinition agent = 3;
+}
+
+message ExportAgentToOpencodeRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message ExportAgentToOpencodeResponse {
+  string opencode_agent_json = 1;
+  repeated string warnings = 2;
+}
+
+// --- Session Management ---
+
+message CreateSessionRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+  optional google.protobuf.Struct metadata = 3;
+}
+
+message CreateSessionResponse {
+  AgentSession session = 1;
+}
+
+message GetSessionRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message GetSessionResponse {
+  AgentSession session = 1;
+}
+
+message ListSessionsRequest {
+  string tenant_id = 1;
+  optional string agent_id = 2;
+  optional SessionStatus status = 3;
+  optional int32 limit = 4;
+  optional int32 offset = 5;
+  optional string trooper_id = 6;
+}
+
+message ListSessionsResponse {
+  repeated AgentSession sessions = 1;
+  int32 total = 2;
+}
+
+// --- Runtime ---
+
+message RunTurnRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+  string user_input = 3;
+}
+
+message RunTurnResponse {
+  AgentSessionTurn turn = 1;
+  SessionStatus session_status = 2;
+}
+
+message CancelSessionRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+}
+
+message CancelSessionResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message CompleteSessionRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+}
+
+message CompleteSessionResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// --- Streaming Runtime ---
+
+message RunTurnStreamRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+  string user_input = 3;
+  bool enable_streaming = 4;
+  bool enable_web_search = 5;
+}
+
+message AgentEvent {
+  string type = 1;
+  string session_id = 2;
+  int32 turn_number = 3;
+  string text_delta = 4;
+  string tool_call_id = 5;
+  string tool_name = 6;
+  string tool_args = 7;
+  string tool_result = 8;
+  bool tool_success = 9;
+  int64 tool_duration_ms = 10;
+  string finish_reason = 11;
+  string error = 12;
+  int32 prompt_tokens = 13;
+  int32 completion_tokens = 14;
+  int32 total_tokens = 15;
+  AgentSessionTurn turn = 16; // Populated on turn.end events
+
+  // HITL approval gate fields
+  string review_id = 17;
+  repeated PendingToolCall pending_tool_calls = 18;
+  string approval_action = 19;
+
+  // Sandbox execution fields
+  string sandbox_id = 20;
+  int32 sandbox_exit_code = 21;
+  int64 sandbox_duration_ms = 22;
+
+  // Fallback fields
+  string fallback_from_model = 23;
+  string fallback_to_model = 24;
+  int32 fallback_attempt = 25;
+
+  // User input (ask_user) fields
+  string user_input_id = 26;
+
+  // Cache token breakdown — non-overlapping subsets of prompt_tokens.
+  // Consumers compute fresh = prompt_tokens − cache_read_tokens − cache_write_tokens.
+  int32 cache_read_tokens = 27;
+  int32 cache_write_tokens = 28;
+}
+
+message SteerSessionRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+  string role = 3;    // "user" or "system"
+  string content = 4;
+}
+
+message SteerSessionResponse {
+  bool accepted = 1;
+  string message = 2;
+}
+
+// --- HITL Approval Gate ---
+
+// ApprovalReviewStatus tracks the lifecycle of an approval review.
+enum ApprovalReviewStatus {
+  APPROVAL_REVIEW_STATUS_UNSPECIFIED = 0;
+  APPROVAL_REVIEW_STATUS_PENDING = 1;
+  APPROVAL_REVIEW_STATUS_APPROVED = 2;
+  APPROVAL_REVIEW_STATUS_DENIED = 3;
+  APPROVAL_REVIEW_STATUS_EXPIRED = 4;
+  APPROVAL_REVIEW_STATUS_CANCELLED = 5;
+}
+
+// ApprovalAction is the action to take on a review.
+enum ApprovalAction {
+  APPROVAL_ACTION_UNSPECIFIED = 0;
+  APPROVAL_ACTION_APPROVE = 1;
+  APPROVAL_ACTION_DENY = 2;
+}
+
+// PendingToolCall describes a tool call awaiting approval.
+message PendingToolCall {
+  string tool_call_id = 1;
+  string tool_name = 2;
+  string tool_args = 3;
+}
+
+// ToolCallDecision is a per-tool approval decision (v2: per-tool overrides).
+message ToolCallDecision {
+  string tool_call_id = 1;
+  ApprovalAction action = 2;
+  string reason = 3;
+}
+
+// ApprovalReview represents a HITL approval review for tool calls.
+// V1 is single-instance; multi-instance via Redis pub/sub is v2.
+message ApprovalReview {
+  string id = 1;
+  string session_id = 2;
+  string tenant_id = 3;
+  string agent_id = 4;
+  int32 turn_number = 5;
+  int32 iteration = 6;
+  ApprovalReviewStatus status = 7;
+  repeated PendingToolCall tool_calls = 8;
+  repeated ToolCallDecision decisions = 9;
+  string default_action = 10;
+  google.protobuf.Timestamp requested_at = 11;
+  google.protobuf.Timestamp expires_at = 12;
+  google.protobuf.Timestamp resolved_at = 13;
+  string resolved_by = 14;
+  string resolution_reason = 15;
+}
+
+message SubmitReviewRequest {
+  string tenant_id = 1;
+  string review_id = 2;
+  ApprovalAction action = 3;
+  repeated ToolCallDecision decisions = 4;  // v2: per-tool override
+  string reason = 5;
+  string resolved_by = 6;
+}
+
+message SubmitReviewResponse {
+  bool accepted = 1;
+  string message = 2;
+  ApprovalReview review = 3;
+}
+
+message GetReviewRequest {
+  string tenant_id = 1;
+  string review_id = 2;
+}
+
+message GetReviewResponse {
+  ApprovalReview review = 1;
+}
+
+message ListReviewsRequest {
+  string tenant_id = 1;
+  optional string session_id = 2;
+  optional ApprovalReviewStatus status = 3;
+  optional int32 limit = 4;
+  optional int32 offset = 5;
+}
+
+message ListReviewsResponse {
+  repeated ApprovalReview reviews = 1;
+  int32 total = 2;
+}
+
+// --- Sandbox Management ---
+
+// SandboxStatus tracks the lifecycle of a sandbox instance.
+enum SandboxStatus {
+  SANDBOX_STATUS_UNSPECIFIED = 0;
+  SANDBOX_STATUS_PENDING = 1;
+  SANDBOX_STATUS_RUNNING = 2;
+  SANDBOX_STATUS_STOPPED = 3;
+  SANDBOX_STATUS_FAILED = 4;
+}
+
+// SandboxInstance represents a running sandbox environment.
+message SandboxInstance {
+  string id = 1;
+  string session_id = 2;
+  string tenant_id = 3;
+  string backend = 4;
+  string container_id = 5;
+  string image = 6;
+  SandboxStatus status = 7;
+  google.protobuf.Struct config = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp expires_at = 10;
+  // destroy_reason indicates why the sandbox was destroyed: manual, expired, error, system.
+  string destroy_reason = 11;
+  // Friendly name for the sandbox (if set).
+  string name = 12;
+  google.protobuf.Timestamp last_used_at = 13;
+  int32 idle_retention_secs = 14;
+  bool keep_warm = 15;
+
+  // Git source info (Phase 2)
+  string git_repo_url = 20;
+  string git_branch = 21;
+  string git_commit_sha = 22;
+
+  // Lifecycle state (Phase 3): running, stopping, stopped, reviving, terminating, terminated, failed
+  string lifecycle_state = 30;
+  google.protobuf.Timestamp revivable_until = 31;
+  google.protobuf.Timestamp stopped_at = 32;
+
+  // SSH info (Phase 4)
+  bool ssh_enabled = 40;
+
+  // Persistent trooper fields (Phase 5)
+  bool persistent = 50;
+  string agent_id = 51;
+
+  // Public short code (Phase 6) — bitly-style 8-char identifier used as
+  // the SSH username and the preview URL subdomain on *.evs.run. Stable
+  // for the sandbox's lifetime. Empty for legacy rows that predate the
+  // backfill.
+  string short_code = 60;
+
+  // agent_healthy mirrors the isolated-sandbox backend's health monitor
+  // result at response-assembly time. true when the most recent in-
+  // guest /health probe returned 204 within timeout; false when the
+  // agent has stopped answering. The admin UI renders this as a small
+  // green/red dot next to each sandbox label so an unresponsive sandbox
+  // is visible at a glance, without needing to open Shell or Logs to
+  // discover the failure.
+  //
+  // Other backends (Docker, K8s) always set true: they don't
+  // run the in-guest probe, so this field carries the strongest signal
+  // we have rather than an unhelpful "unknown."
+  bool agent_healthy = 70;
+
+  // Arbitrary key-value labels for this sandbox. Agents use these to
+  // tag sandboxes by run ID, agent ID, repo, PR number, etc. Setting
+  // labels via UpdateSandbox replaces the full set (PATCH semantics).
+  // ListSandboxInstances supports filtering by label containment.
+  map<string, string> labels = 80;
+
+  // Auto-lifecycle fields (Phase 7 / POR-72).
+  int32 auto_archive_after_days = 81;
+  int32 auto_delete_after_days = 82;
+  google.protobuf.Timestamp archived_at = 83;
+  // snapshot_id records which named snapshot this sandbox was created from (if any).
+  // Renumbered 81->84 to avoid collision with the auto-lifecycle fields above.
+  string snapshot_id = 84;
+
+  // state is the PUBLIC lifecycle label (Daytona-style vocabulary):
+  // creating, starting, started, stopping, stopped, archiving,
+  // archived, destroying, destroyed, error. Derived from
+  // lifecycle_state; clients should branch on this rather than the
+  // internal names (lifecycle_state stays for backward compatibility).
+  string state = 90;
+  // desired_state is what the system is converging the sandbox toward:
+  // running, sleeping, archived, terminated.
+  string desired_state = 91;
+  // error_reason is set when state == "error" (e.g. "vm_not_found",
+  // "stuck_creating"). Recover re-enters convergence.
+  string error_reason = 92;
+  // Daytona-style auto-lifecycle intervals, in minutes.
+  //   auto_stop_interval:    0 = disabled; omitted at create = plan-tier default
+  //   auto_archive_interval: 0 = disabled
+  //   auto_delete_interval:  -1 = never, 0 = ephemeral (delete on stop)
+  int32 auto_stop_interval = 93;
+  int32 auto_archive_interval = 94;
+  int32 auto_delete_interval = 95;
+
+  // Start of the current allocated-compute billing window. This is
+  // intentionally separate from created_at because the same sandbox identity
+  // can sleep and revive many times. It remains present briefly while a closed
+  // window is being committed to the immutable usage ledger.
+  google.protobuf.Timestamp billing_started_at = 96;
+  // Server-calculated age and cost of this billing window at response
+  // assembly time. A pinned billing_ended_at freezes both values while the
+  // immutable ledger close is retried.
+  int64 current_compute_seconds = 97;
+  double current_compute_cost_usd = 98;
+  // First backend-confirmed end of this window. When present, compute has
+  // stopped accruing even if the ledger close is still being finalized.
+  google.protobuf.Timestamp billing_ended_at = 99;
+}
+
+// SandboxExecution represents a single command execution within a sandbox.
+message SandboxExecution {
+  string id = 1;
+  string sandbox_id = 2;
+  string session_id = 3;
+  string tool_name = 4;
+  string tool_call_id = 5;
+  string language = 6;
+  string command = 7;
+  int32 exit_code = 8;
+  string stdout = 9;
+  string stderr = 10;
+  int64 duration_ms = 11;
+  bool timed_out = 12;
+  google.protobuf.Timestamp created_at = 13;
+}
+
+// SandboxStats holds a point-in-time resource usage snapshot.
+message SandboxStats {
+  double cpu_percent = 1;
+  int64 memory_usage = 2;
+  int64 memory_limit = 3;
+  double memory_percent = 4;
+  int64 network_rx_bytes = 5;
+  int64 network_tx_bytes = 6;
+  int64 block_read = 7;
+  int64 block_write = 8;
+  int32 pids = 9;
+  google.protobuf.Timestamp timestamp = 10;
+}
+
+// SandboxOverview provides a summary of the sandbox subsystem.
+message SandboxOverview {
+  int32 total_instances = 1;
+  int32 running_instances = 2;
+  // Customer plan concurrency for this Everstack instance. -1 means a custom
+  // enterprise limit. This is not the runtime host's safety ceiling.
+  int32 max_sandboxes = 3;
+  string backend = 4;
+  double max_cpu = 5;
+  int64 max_memory_mb = 6;
+  bool healthy = 7;
+  // Aggregate resource usage across this tenant's running instances.
+  double aggregate_cpu_percent = 8;
+  int64 aggregate_memory_usage = 9;
+  int64 aggregate_memory_limit = 10;
+  double aggregate_memory_percent = 11;
+  int64 aggregate_network_rx_bytes = 12;
+  int64 aggregate_network_tx_bytes = 13;
+  int64 aggregate_block_read = 14;
+  int64 aggregate_block_write = 15;
+  int32 aggregate_pids = 16;
+  // Execution metrics from the database.
+  int32 total_executions = 17;
+  double avg_execution_duration_ms = 18;
+  // Lifetime billing aggregates from sandbox_usage_records — the
+  // immutable ledger that's also pushed to Stripe meters. These are
+  // monotonically increasing across the tenant's whole history; they
+  // never rewind when a sandbox is terminated. The "Cost so far" tile
+  // in the admin overview should read these instead of recomputing
+  // from the (filtered, paginated) in-memory instance list.
+  double lifetime_cost_usd = 19;
+  int64 lifetime_compute_seconds = 20;
+  // Currently-open allocated-compute windows only. These are server-side
+  // snapshots and never derive from sandbox created_at in the client.
+  int64 active_compute_seconds = 21;
+  double active_cost_usd = 22;
+}
+
+message CreateSandboxRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+  string image = 3;
+  double cpu_limit = 4;
+  int64 memory_mb = 5;
+  int64 disk_mb = 6;
+  int32 timeout_seconds = 7;
+  string network_mode = 8;
+  // Idle retention in seconds. 0 means no expiration (pro/enterprise).
+  // When omitted, the server resolves retention from the tenant's plan tier.
+  int32 idle_retention_seconds = 9;
+  // If set, use template config as base. Individual fields override template defaults.
+  string template_id = 10;
+  // Optional friendly name for the sandbox.
+  string name = 11;
+  // Arbitrary key-value labels for this sandbox. Agents use these to tag
+  // sandboxes by run ID, agent ID, repo, PR number, etc.
+  map<string, string> labels = 12;
+  // Auto-archive: days after which a stopped sandbox is archived. 0=disabled. Default: 7.
+  int32 auto_archive_after_days = 13;
+  // Auto-delete: days after which a stopped/archived sandbox is deleted. -1=never. Default: -1.
+  int32 auto_delete_after_days = 14;
+  // snapshot_id, when set, uses the named snapshot's base_image as the sandbox image.
+  // Takes precedence over the image field. Renumbered 13->15 to avoid collision
+  // with the auto-lifecycle fields above.
+  string snapshot_id = 15;
+  // network_block_all blocks all outbound egress when true.
+  // Always-allowed: loopback, link-local, DNS, fcagent TAP range.
+  // Overrides network_mode. Default: false. Renumbered 13->16 to avoid collision.
+  bool network_block_all = 16;
+  // network_allow_cidrs lists CIDR blocks to permit when network_block_all is true.
+  // Max 10 entries. Example: ["10.0.0.0/8", "192.168.1.5/32"]. Renumbered 14->17.
+  repeated string network_allow_cidrs = 17;
+
+  // Git import fields (Phase 2)
+  string git_repo_url = 20;
+  string git_branch = 21;
+  int64 git_installation_id = 22;
+
+  // SSH toggle (Phase 4)
+  bool ssh_enabled = 30;
+
+  // Tailscale VPN: join the customer's Tailnet at boot (POR-87).
+  // Pass a Tailscale auth key (ephemeral recommended); the sandbox
+  // appears as a device on the Tailnet with its own IP.
+  string tailscale_auth_key = 31;
+  // External storage mounts (POR-88, POR-89).
+  // Each mount is FUSE-mounted at boot by the sandbox-agent.
+  repeated StorageMount mounts = 32;
+  // Computer Use: enable Xvfb + XFCE4 desktop at boot (POR-91).
+  // When true, SANDBOX_COMPUTER_USE=1 is injected and the /computer/*
+  // endpoints (screenshot, mouse/keyboard, screen recording) become available.
+  bool computer_use = 33;
+
+  // Daytona-style auto-lifecycle intervals, in minutes. These are the
+  // canonical knobs going forward; the day/second-granularity fields
+  // above remain accepted for backward compatibility (when both are
+  // supplied, the minute fields win).
+  //   auto_stop_interval:    0 = omitted (plan-tier default, 15m),
+  //                          negative = disabled
+  //   auto_archive_interval: 0 = omitted (default 7 days), negative = disabled
+  //   auto_delete_interval:  0 = ephemeral (delete on stop),
+  //                          negative = never, omitted = never
+  // Note on zero values: proto3 cannot distinguish 0 from absent, so
+  // each field documents its own zero semantics above, mirroring
+  // Daytona's API.
+  int32 auto_stop_interval = 40;
+  int32 auto_archive_interval = 41;
+  // auto_delete_interval uses optional so 0 (ephemeral) is
+  // distinguishable from absent (never).
+  optional int32 auto_delete_interval = 42;
+}
+
+// StorageMount configures a FUSE-based external storage mount inside a sandbox.
+message StorageMount {
+  // Type: "s3" | "r2" | "gcs" | "azure"
+  string type = 1;
+  // Bucket (S3/R2/GCS) or container (Azure) name.
+  string bucket = 2;
+  // Absolute path inside the sandbox where the storage is mounted.
+  string mount_path = 3;
+  // Optional endpoint override (for R2, MinIO, or custom S3-compatible).
+  string endpoint = 4;
+  // Subpath within the bucket to expose (optional, for isolation).
+  string subpath = 5;
+  // Mount as read-only (default: false).
+  bool read_only = 6;
+}
+
+message CreateSandboxResponse {
+  string id = 1;
+  string session_id = 2;
+  string tenant_id = 3;
+  string container_id = 4;
+  string status = 5;
+  string backend = 6;
+  string image = 7;
+  string created_at = 8;
+  string expires_at = 9;
+  // Friendly name for the sandbox (if set).
+  string name = 10;
+}
+
+message GetSandboxOverviewRequest {
+  string tenant_id = 1;
+}
+
+message GetSandboxOverviewResponse {
+  SandboxOverview overview = 1;
+}
+
+message ListSandboxInstancesRequest {
+  string tenant_id = 1;
+  optional SandboxStatus status = 2;
+  optional int32 limit = 3;
+  optional int32 offset = 4;
+  // Filter by label containment. Only sandboxes that have ALL supplied
+  // key=value pairs are returned. Example: {"agent_id":"agt_123","env":"prod"}
+  map<string, string> label_filter = 5;
+}
+
+message ListSandboxInstancesResponse {
+  repeated SandboxInstance instances = 1;
+  int32 total = 2;
+}
+
+message GetSandboxInstanceRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;
+}
+
+message GetSandboxInstanceResponse {
+  SandboxInstance instance = 1;
+}
+
+message DestroySandboxRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+}
+
+message DestroySandboxResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListSandboxExecutionsRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;
+  optional int32 limit = 3;
+  optional int32 offset = 4;
+}
+
+message ListSandboxExecutionsResponse {
+  repeated SandboxExecution executions = 1;
+  int32 total = 2;
+}
+
+message GetSandboxStatsRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+}
+
+message GetSandboxStatsResponse {
+  SandboxStats stats = 1;
+}
+
+// --- Spawn Tree ---
+
+// SpawnTreeNode represents a node in an agent spawn hierarchy.
+message SpawnTreeNode {
+  string id = 1;
+  string tree_id = 2;
+  string parent_node_id = 3;
+  string agent_id = 4;
+  int32 depth = 5;
+  string status = 6;
+  string task = 7;
+  string result = 8;
+  int32 prompt_tokens = 9;
+  int32 completion_tokens = 10;
+  int32 total_tokens = 11;
+  google.protobuf.Timestamp started_at = 12;
+  google.protobuf.Timestamp completed_at = 13;
+  string execution_id = 14;
+  string tenant_id = 15;
+}
+
+message GetSpawnTreeRequest {
+  string tenant_id = 1;
+  string tree_id = 2;
+}
+
+message GetSpawnTreeResponse {
+  repeated SpawnTreeNode nodes = 1;
+  int32 total = 2;
+}
+
+message ListSpawnNodesRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+  optional int32 limit = 3;
+  optional int32 offset = 4;
+}
+
+message ListSpawnNodesResponse {
+  repeated SpawnTreeNode nodes = 1;
+  int32 total = 2;
+}
+
+// --- Sandbox Recreate ---
+
+message RecreateSandboxRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;  // ID of the expired sandbox to clone config from
+  string session_id = 3;  // New session ID (optional, auto-generated if empty)
+}
+
+// --- Sandbox Templates (read-only, code-defined catalog) ---
+
+message SandboxTemplate {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  string description = 4;
+  string icon = 5;
+  string icon_color = 6;
+  string image = 7;
+  double cpu_limit = 8;
+  int64 memory_mb = 9;
+  int64 disk_mb = 10;
+  int32 timeout_seconds = 11;
+  string network_mode = 12;
+  map<string, string> env_vars = 13;
+  string work_dir = 14;
+  repeated string tags = 15;
+}
+
+message ListSandboxTemplatesRequest {}
+
+message ListSandboxTemplatesResponse {
+  repeated SandboxTemplate templates = 1;
+}
+
+message GetSandboxTemplateRequest {
+  string template_id = 1;  // ID or slug
+}
+
+message GetSandboxTemplateResponse {
+  SandboxTemplate template = 1;
+}
+
+// --- Sandbox Events (Timeline) ---
+
+message SandboxEvent {
+  int64 id = 1;
+  string sandbox_id = 2;
+  string session_id = 3;
+  string tenant_id = 4;
+  string event_type = 5;
+  string message = 6;
+  google.protobuf.Struct metadata = 7;
+  int64 duration_ms = 8;
+  string error = 9;
+  google.protobuf.Timestamp created_at = 10;
+}
+
+message ListSandboxEventsRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;
+  optional string event_type = 3;
+  optional int32 limit = 4;
+  optional int32 offset = 5;
+}
+
+message ListSandboxEventsResponse {
+  repeated SandboxEvent events = 1;
+  int32 total = 2;
+}
+
+// --- Sandbox Port Exposure ---
+
+message SandboxPortMapping {
+  int64 id = 1;
+  string sandbox_id = 2;
+  int32 port = 3;
+  string protocol = 4;
+  string subdomain = 5;
+  string url = 6;
+  string status = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message ExposePortRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+  int32 port = 3;
+  string protocol = 4;
+}
+
+message ExposePortResponse {
+  SandboxPortMapping mapping = 1;
+}
+
+message UnexposePortRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+  int32 port = 3;
+}
+
+message UnexposePortResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListExposedPortsRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+}
+
+message ListExposedPortsResponse {
+  repeated SandboxPortMapping ports = 1;
+}
+
+// --- Sandbox Crons ---
+
+message SandboxCron {
+  int64 id = 1;
+  string tenant_id = 2;
+  string sandbox_id = 3;
+  string session_id = 4;
+  string name = 5;
+  string schedule = 6;
+  string command = 7;
+  string work_dir = 8;
+  int32 timeout_seconds = 9;
+  bool enabled = 10;
+  google.protobuf.Timestamp last_run_at = 11;
+  google.protobuf.Timestamp next_run_at = 12;
+  int32 run_count = 13;
+  int32 error_count = 14;
+  string last_error = 15;
+  bool auto_recreate = 16;
+  google.protobuf.Struct sandbox_config = 17;
+  google.protobuf.Timestamp created_at = 18;
+  google.protobuf.Timestamp updated_at = 19;
+}
+
+message CreateCronRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;
+  string session_id = 3;
+  string name = 4;
+  string schedule = 5;
+  string command = 6;
+  string work_dir = 7;
+  int32 timeout_seconds = 8;
+  bool auto_recreate = 9;
+  google.protobuf.Struct sandbox_config = 10;
+}
+
+message CreateCronResponse {
+  SandboxCron cron = 1;
+}
+
+message UpdateCronRequest {
+  string tenant_id = 1;
+  int64 id = 2;
+  optional string name = 3;
+  optional string schedule = 4;
+  optional string command = 5;
+  optional bool enabled = 6;
+  optional int32 timeout_seconds = 7;
+}
+
+message UpdateCronResponse {
+  SandboxCron cron = 1;
+}
+
+message DeleteCronRequest {
+  string tenant_id = 1;
+  int64 id = 2;
+}
+
+message DeleteCronResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListCronsRequest {
+  string tenant_id = 1;
+  optional string sandbox_id = 2;
+  optional int32 limit = 3;
+  optional int32 offset = 4;
+}
+
+message ListCronsResponse {
+  repeated SandboxCron crons = 1;
+  int32 total = 2;
+}
+
+// --- Sandbox Webhooks ---
+
+message SandboxWebhookDef {
+  int64 id = 1;
+  string tenant_id = 2;
+  string sandbox_id = 3;
+  string session_id = 4;
+  string name = 5;
+  string path = 6;
+  string url = 7;
+  string command = 8;
+  string work_dir = 9;
+  int32 timeout_seconds = 10;
+  bool enabled = 11;
+  int32 rate_limit_rpm = 12;
+  google.protobuf.Timestamp last_triggered_at = 13;
+  int32 trigger_count = 14;
+  int32 error_count = 15;
+  string last_error = 16;
+  bool auto_recreate = 17;
+  google.protobuf.Struct sandbox_config = 18;
+  google.protobuf.Timestamp created_at = 19;
+  google.protobuf.Timestamp updated_at = 20;
+}
+
+message CreateWebhookRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;
+  string session_id = 3;
+  string name = 4;
+  string path = 5;
+  string command = 6;
+  string work_dir = 7;
+  int32 timeout_seconds = 8;
+  int32 rate_limit_rpm = 9;
+  bool auto_recreate = 10;
+  google.protobuf.Struct sandbox_config = 11;
+}
+
+message CreateWebhookResponse {
+  SandboxWebhookDef webhook = 1;
+  string secret = 2;
+}
+
+message DeleteWebhookRequest {
+  string tenant_id = 1;
+  int64 id = 2;
+}
+
+message DeleteWebhookResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListWebhooksRequest {
+  string tenant_id = 1;
+  optional string sandbox_id = 2;
+  optional int32 limit = 3;
+  optional int32 offset = 4;
+}
+
+message ListWebhooksResponse {
+  repeated SandboxWebhookDef webhooks = 1;
+  int32 total = 2;
+}
+
+// --- Sandbox Triggers (shared history for cron + webhook) ---
+
+message SandboxTrigger {
+  int64 id = 1;
+  string trigger_type = 2;
+  int64 trigger_id = 3;
+  string sandbox_id = 4;
+  string execution_id = 5;
+  string status = 6;
+  string error = 7;
+  int64 duration_ms = 8;
+  string webhook_method = 9;
+  google.protobuf.Struct webhook_headers = 10;
+  string webhook_body = 11;
+  google.protobuf.Timestamp created_at = 12;
+}
+
+message ListTriggersRequest {
+  string tenant_id = 1;
+  optional string sandbox_id = 2;
+  optional string trigger_type = 3;
+  optional int32 limit = 4;
+  optional int32 offset = 5;
+}
+
+message ListTriggersResponse {
+  repeated SandboxTrigger triggers = 1;
+  int32 total = 2;
+}
+
+// --- Sandbox Port Detection ---
+
+message DetectedPort {
+  int32 port = 1;
+  string protocol = 2;   // "tcp" or "tcp6"
+  string address = 3;    // "0.0.0.0", "127.0.0.1", "::"
+  int32 pid = 4;
+  string process = 5;
+  bool is_exposed = 6;   // true if already exposed via ExposePort
+}
+
+message DetectListeningPortsRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+}
+
+message DetectListeningPortsResponse {
+  repeated DetectedPort ports = 1;
+}
+
+// --- Memory Setup ---
+
+message SetupMemoryRequest {}
+
+message SetupMemoryResponse {
+  bool success = 1;
+  string message = 2;
+  string backend = 3;
+}
+
+// --- GitHub Integration ---
+
+message GitHubInstallation {
+  int64 id = 1;
+  string tenant_id = 2;
+  int64 installation_id = 3;
+  string account_login = 4;
+  string account_type = 5;
+  int64 app_id = 6;
+  string repository_selection = 7;
+  string status = 8;
+  string installed_by = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message ListGitHubInstallationsRequest {
+  string tenant_id = 1;
+}
+
+message ListGitHubInstallationsResponse {
+  repeated GitHubInstallation installations = 1;
+}
+
+message RemoveGitHubInstallationRequest {
+  string tenant_id = 1;
+  int64 installation_id = 2;
+}
+
+message RemoveGitHubInstallationResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message LinkGitHubInstallationRequest {
+  string tenant_id = 1;
+  int64 installation_id = 2;
+}
+
+message LinkGitHubInstallationResponse {
+  GitHubInstallation installation = 1;
+}
+
+message GitHubRepository {
+  int64 id = 1;
+  string name = 2;
+  string full_name = 3;
+  string description = 4;
+  bool private = 5;
+  string default_branch = 6;
+  string language = 7;
+  int32 size_kb = 8;
+  string html_url = 9;
+}
+
+message ListGitHubRepositoriesRequest {
+  string tenant_id = 1;
+  int64 installation_id = 2;
+  optional string query = 3;
+  optional int32 page = 4;
+  optional int32 per_page = 5;
+}
+
+message ListGitHubRepositoriesResponse {
+  repeated GitHubRepository repositories = 1;
+  int32 total = 2;
+}
+
+message GitHubBranch {
+  string name = 1;
+  bool protected = 2;
+  string commit_sha = 3;
+}
+
+message ListGitHubBranchesRequest {
+  string tenant_id = 1;
+  int64 installation_id = 2;
+  string owner = 3;
+  string repo = 4;
+  optional int32 page = 5;
+  optional int32 per_page = 6;
+}
+
+message ListGitHubBranchesResponse {
+  repeated GitHubBranch branches = 1;
+}
+
+// --- Sandbox Lifecycle ---
+
+message StopSandboxRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;
+}
+
+message StopSandboxResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ReviveSandboxRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;
+}
+
+message ReviveSandboxResponse {
+  SandboxInstance instance = 1;
+}
+
+message TerminateSandboxRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;
+}
+
+message TerminateSandboxResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// UpdateSandboxAutoIntervalsRequest changes the Daytona-style
+// auto-lifecycle intervals on a live sandbox. Only supplied fields
+// change (each is optional); values are minutes with the same
+// semantics as on CreateSandboxRequest.
+message UpdateSandboxAutoIntervalsRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;
+  optional int32 auto_stop_interval = 3;    // 0 = disabled
+  optional int32 auto_archive_interval = 4; // 0 = disabled
+  optional int32 auto_delete_interval = 5;  // -1 = never, 0 = ephemeral
+}
+
+message UpdateSandboxAutoIntervalsResponse {
+  SandboxInstance instance = 1;
+}
+
+// --- SSH Key Management ---
+
+message SSHKey {
+  int64 id = 1;
+  string user_id = 2;
+  string name = 3;
+  string fingerprint = 4;
+  string key_type = 5;
+  google.protobuf.Timestamp last_used_at = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message AddSSHKeyRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+  string name = 3;
+  string public_key = 4;
+}
+
+message AddSSHKeyResponse {
+  SSHKey key = 1;
+}
+
+message ListSSHKeysRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+}
+
+message ListSSHKeysResponse {
+  repeated SSHKey keys = 1;
+}
+
+message DeleteSSHKeyRequest {
+  string tenant_id = 1;
+  int64 key_id = 2;
+}
+
+message DeleteSSHKeyResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GrantSandboxSSHAccessRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;
+  string user_id = 3;
+  string granted_by = 4;
+}
+
+message GrantSandboxSSHAccessResponse {
+  bool success = 1;
+}
+
+message RevokeSandboxSSHAccessRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;
+  string user_id = 3;
+}
+
+message RevokeSandboxSSHAccessResponse {
+  bool success = 1;
+}
+
+message GetSandboxSSHInfoRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;
+}
+
+message GetSandboxSSHInfoResponse {
+  bool enabled = 1;
+  string connection_string = 2;
+  string host = 3;
+  int32 port = 4;
+  string host_fingerprint = 5;
+  string sandbox_id = 6;
+  string session_id = 7;
+  string name = 8;
+  string status = 9;
+  string lifecycle_state = 10;
+  string disabled_reason = 11;
+  // Region slug (e.g. "eu-fra-1") this gateway pod serves. Lets the FE
+  // render the connection alongside a region label like "Frankfurt
+  // (eu-fra-1)" without a second lookup.
+  string region = 12;
+  // Public short code copy (mirrors SandboxInstance.short_code) so the
+  // SSH info card can render the bitly-style identifier without
+  // joining against the instance.
+  string short_code = 13;
+}
+
+// SandboxSSHToken is the non-secret metadata for a temporary SSH bearer token.
+// The raw token is returned only from CreateSandboxSSHTokenResponse.raw_token.
+message SandboxSSHToken {
+  string id = 1;
+  string sandbox_id = 2;
+  string tenant_id = 3;
+  string token_prefix = 4;
+  string created_by = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp expires_at = 7;
+  google.protobuf.Timestamp revoked_at = 8;
+  google.protobuf.Timestamp last_used_at = 9;
+  string last_used_ip = 10;
+  string organization_id = 11;
+  string instance_id = 12;
+}
+
+message CreateSandboxSSHTokenRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;
+  // Token lifetime in minutes. Defaults to 60. Maximum is 1440 (24h).
+  int32 expires_in_minutes = 3;
+}
+
+message CreateSandboxSSHTokenResponse {
+  SandboxSSHToken token = 1;
+  // Raw token. Store safely; it is not retrievable again.
+  string raw_token = 2;
+  string connection_string = 3;
+}
+
+message ListSandboxSSHTokensRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;
+}
+
+message ListSandboxSSHTokensResponse {
+  repeated SandboxSSHToken tokens = 1;
+}
+
+message RevokeSandboxSSHTokenRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;
+  string token_id = 3;
+}
+
+message RevokeSandboxSSHTokenResponse {
+  bool success = 1;
+}
+
+// --- Signed Preview URLs ---
+
+message GetSandboxPreviewUrlRequest {
+  string tenant_id = 1;
+  string sandbox_id = 2;
+  // Port to generate the preview URL for (e.g. 3000).
+  int32 port = 3;
+  // How long the signed URL should remain valid (1–86400 seconds). Default: 3600.
+  int32 expires_in_seconds = 4;
+}
+
+message GetSandboxPreviewUrlResponse {
+  // Signed URL embedding the auth token -- no custom headers required.
+  // Share directly or embed in iframes.
+  string url = 1;
+  // RFC 3339 expiry timestamp.
+  string expires_at = 2;
+}
+
+// ResizeSandboxRequest dynamically updates a sandbox's resource allocation (POR-83).
+message ResizeSandboxRequest {
+  string sandbox_id = 1;
+  // New CPU allocation in millicores (e.g. 1000 = 1 vCPU). 0 = unchanged. Max 4000.
+  int64 cpu_millicores = 2;
+  // New memory in MB. 0 = unchanged. Max 8192.
+  int64 memory_mb = 3;
+  // New disk in MB. Any change requires the sandbox to be stopped first.
+  int64 disk_mb = 4;
+}
+
+message ResizeSandboxResponse {
+  string sandbox_id = 1;
+  double cpu_limit = 2;
+  int64 memory_mb = 3;
+  bool is_running = 4;
+  // "immediately" or "on next start".
+  string effective_at = 5;
+  // RFC 3339 timestamp.
+  string updated_at = 6;
+  string note = 7;
+}
+
+// Persistent sandbox volume (POR-77). Object-storage-backed; usage-metered.
+message SandboxVolume {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  // Optional capacity quota in bytes (0 = unlimited).
+  int64 size_bytes = 4;
+  // Last measured bytes stored under the volume's object-storage prefix.
+  int64 used_bytes = 5;
+  // RFC 3339 timestamp.
+  string created_at = 6;
+  // RFC 3339 timestamp.
+  string updated_at = 7;
+  // RFC 3339 timestamp of the last usage measurement (empty if never measured).
+  string usage_measured_at = 8;
+}
+
+message ListSandboxVolumesRequest {
+  // Optional; defaults to the caller's tenant resolved from context.
+  string tenant_id = 1;
+}
+
+message ListSandboxVolumesResponse {
+  repeated SandboxVolume volumes = 1;
+  int32 total = 2;
+}
+
+message CreateSandboxVolumeRequest {
+  string name = 1;
+  // Optional; defaults to the caller's tenant resolved from context.
+  string tenant_id = 2;
+  // Optional capacity quota in GiB (0 = unlimited). Volumes are usage-billed
+  // regardless of quota; this only caps how large the volume may grow.
+  int64 size_gb = 3;
+}
+
+message CreateSandboxVolumeResponse {
+  SandboxVolume volume = 1;
+}
+
+message DeleteSandboxVolumeRequest {
+  string volume_id = 1;
+  // Optional; defaults to the caller's tenant resolved from context.
+  string tenant_id = 2;
+}
+
+message DeleteSandboxVolumeResponse {}
+
+// ContentSearch greps file contents inside a sandbox (POR-?? / #290).
+message ContentSearchRequest {
+  string sandbox_id = 1;
+  // Regex/literal pattern to search for.
+  string pattern = 2;
+  // Directory to search in (default ".").
+  string path = 3;
+}
+
+message SearchMatch {
+  string path = 1;
+  int32 line = 2;
+  string match_text = 3;
+}
+
+message ContentSearchResponse {
+  repeated SearchMatch matches = 1;
+  int32 total = 2;
+  string pattern = 3;
+  string path = 4;
+}
+
+// GlobalReplace performs find-and-replace across files in a sandbox (#290).
+message GlobalReplaceRequest {
+  string sandbox_id = 1;
+  // Directory to operate in (default ".").
+  string path = 2;
+  string pattern = 3;
+  string replacement = 4;
+  bool recursive = 5;
+  // When true, returns a preview without modifying files.
+  bool dry_run = 6;
+}
+
+message GlobalReplaceResponse {
+  bool dry_run = 1;
+  string pattern = 2;
+  string replacement = 3;
+  string path = 4;
+  string output = 5;
+  int32 exit_code = 6;
+}
+
+// SandboxLSP runs an exec-based language-server operation (#295). The op output
+// is tool-dependent freeform JSON (diagnostics array, symbols array, etc.), so
+// it is returned as a raw JSON string rather than a fixed schema.
+message SandboxLSPRequest {
+  string sandbox_id = 1;
+  // "python" | "typescript" | "javascript".
+  string lang = 2;
+  // "diagnostics" | "symbols" | "document-symbols" | "workspace-symbols".
+  string op = 3;
+  // File path the op targets (required for diagnostics/symbols).
+  string path = 4;
+  // Query string (workspace-symbols).
+  string query = 5;
+}
+
+message SandboxLSPResponse {
+  // Raw JSON produced by the underlying tool (array or object).
+  string result_json = 1;
+}
+
+message SandboxLSPInfoRequest {
+  string sandbox_id = 1;
+}
+
+message LSPLanguageInfo {
+  string language = 1;
+  repeated string endpoints = 2;
+}
+
+message SandboxLSPInfoResponse {
+  string sandbox_id = 1;
+  repeated LSPLanguageInfo languages = 2;
+  string note = 3;
+}
+
+// Sandbox resource metrics time-series (#292).
+message MetricSnapshot {
+  string sandbox_id = 1;
+  double cpu_percent = 2;
+  int64 memory_usage = 3;
+  int64 memory_limit = 4;
+  int64 disk_used_mb = 5;
+  // RFC 3339 collection timestamp.
+  string collected_at = 6;
+}
+
+message SandboxMetricsHistoryRequest {
+  string sandbox_id = 1;
+  // Max snapshots to return (default 120).
+  int32 limit = 2;
+}
+
+message SandboxMetricsHistoryResponse {
+  repeated MetricSnapshot snapshots = 1;
+  int32 total = 2;
+}
+
+message SandboxMetricsBatchRequest {
+  // Sandbox IDs to fetch the latest snapshot for (capped at 50).
+  repeated string ids = 1;
+}
+
+message SandboxMetricsBatchResponse {
+  // Latest snapshot keyed by sandbox_id.
+  map<string, MetricSnapshot> metrics = 1;
+}
+
+// Computer Use (#300): screenshot, mouse/keyboard control, screen recording.
+// A single op-multiplexed RPC mirroring the original handler; fields are
+// per-op and optional. screenshot returns image bytes (base64 over REST).
+message ComputerUseRequest {
+  string sandbox_id = 1;
+  // screenshot | displays | mouse/click | mouse/move | mouse/scroll |
+  // mouse/drag | keyboard/type | keyboard/key | recording/start | recording/stop
+  string op = 2;
+  string format = 3;        // screenshot (jpeg|png), default jpeg
+  int32 quality = 4;        // screenshot, default 85
+  int32 x = 5;              // mouse ops / drag "from"
+  int32 y = 6;
+  string button = 7;        // mouse/click (left|right|middle)
+  bool double_click = 8;    // mouse/click
+  string text = 9;          // keyboard/type
+  string key = 10;          // keyboard/key
+  string direction = 11;    // mouse/scroll (up|down)
+  int32 amount = 12;        // mouse/scroll
+  int32 to_x = 13;          // mouse/drag "to"
+  int32 to_y = 14;
+  int32 fps = 15;           // recording/start, default 15
+  string label = 16;        // recording/start
+  string recording_id = 17; // recording/stop
+}
+
+message DisplayInfo {
+  int32 id = 1;
+  string display = 2;
+  int32 width = 3;
+  int32 height = 4;
+  bool is_primary = 5;
+}
+
+message ComputerUseResponse {
+  string status = 1;                // "ok" for action ops
+  bytes image = 2;                  // screenshot (base64-encoded in REST JSON)
+  string format = 3;                // screenshot image format
+  repeated DisplayInfo displays = 4;
+  string recording_id = 5;          // recording/start
+  string file = 6;                  // recording/start
+}
+
+message ComputerUseInfoRequest {
+  string sandbox_id = 1;
+}
+
+message ComputerUseInfoResponse {
+  string sandbox_id = 1;
+  repeated string operations = 2;
+  string note = 3;
+}
+
+// --- Persistent Agent Memory ---
+
+// AgentMemoryConfig configures persistent memory for an agent.
+message AgentMemoryConfig {
+  bool enabled = 1;
+  string scope = 2;              // "agent" | "user" | "global"
+  bool auto_retrieve = 3;
+  int32 auto_retrieve_top_k = 4; // default: 10
+  bool auto_extract = 5;
+}
+
+// AgentMemoryEntry represents a single persistent memory entry.
+message AgentMemoryEntry {
+  string id = 1;
+  string agent_id = 2;
+  string tenant_id = 3;
+  string memory_type = 4;       // fact | instruction | session_summary | document
+  string content = 5;
+  optional string fact_key = 6;
+  float confidence = 7;
+  string source = 8;            // auto_extracted | user_explicit | tool_stored | consolidation
+  string scope = 9;
+  optional string user_id = 10;
+  int32 access_count = 11;
+  bool is_active = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+  optional string source_session_id = 15;
+  optional int32 source_turn_number = 16;
+  optional string superseded_by = 17;
+  optional google.protobuf.Timestamp last_accessed_at = 18;
+}
+
+message ListAgentMemoriesRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+  optional string memory_type = 3;
+  optional string scope = 4;
+  optional bool active_only = 5;
+  optional int32 limit = 6;
+  optional int32 offset = 7;
+}
+
+message ListAgentMemoriesResponse {
+  repeated AgentMemoryEntry memories = 1;
+  int32 total = 2;
+}
+
+message CreateAgentMemoryRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+  string memory_type = 3;
+  string content = 4;
+  optional string fact_key = 5;
+  float confidence = 6;
+  string scope = 7;
+}
+
+message CreateAgentMemoryResponse {
+  AgentMemoryEntry memory = 1;
+}
+
+message UpdateAgentMemoryRequest {
+  string tenant_id = 1;
+  string memory_id = 2;
+  string content = 3;
+  optional string fact_key = 4;
+  float confidence = 5;
+}
+
+message UpdateAgentMemoryResponse {
+  AgentMemoryEntry memory = 1;
+}
+
+message DeactivateAgentMemoryRequest {
+  string tenant_id = 1;
+  string memory_id = 2;
+}
+
+message DeactivateAgentMemoryResponse {
+  bool success = 1;
+}
+
+message DeleteAgentMemoryRequest {
+  string tenant_id = 1;
+  string memory_id = 2;
+}
+
+message DeleteAgentMemoryResponse {
+  bool success = 1;
+}
+
+// ─── Agent Deployments (Agent-as-API) ──────────────────────────────
+
+message AgentDeployment {
+  string id = 1;
+  string tenant_id = 2;
+  string agent_id = 3;
+  string name = 4;
+  int32 version = 5;
+  string status = 6;
+  string description = 7;
+  string changelog = 8;
+  int32 rate_limit_rpm = 9;
+  int32 max_concurrent_sessions = 10;
+  int32 max_turns_per_session = 11;
+  int32 session_timeout_seconds = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+  string deployed_by = 15;
+  bool disable_session_tracking = 16;  // when true, API invocations do NOT create agent_sessions entries
+}
+
+message DeploymentKey {
+  string id = 1;
+  string deployment_id = 2;
+  string name = 3;
+  string key_prefix = 4;
+  bool is_active = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  google.protobuf.Timestamp last_used_at = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message DeploymentInvocation {
+  string id = 1;
+  string deployment_id = 2;
+  string status = 3;
+  int32 turns = 4;
+  int32 prompt_tokens = 5;
+  int32 completion_tokens = 6;
+  int32 duration_ms = 7;
+  string error_message = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp completed_at = 10;
+}
+
+// Deploy Agent
+message DeployAgentRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+  string name = 3;
+  string description = 4;
+  string changelog = 5;
+  int32 rate_limit_rpm = 6;
+  int32 max_concurrent_sessions = 7;
+  int32 max_turns_per_session = 8;
+  int32 session_timeout_seconds = 9;
+  bool disable_session_tracking = 10;  // when true, API invocations are private (no agent_sessions entries)
+}
+message DeployAgentResponse {
+  AgentDeployment deployment = 1;
+}
+
+// List Deployments
+message ListDeploymentsRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+message ListDeploymentsResponse {
+  repeated AgentDeployment deployments = 1;
+  int32 total = 2;
+}
+
+// Get Deployment
+message GetDeploymentRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+message GetDeploymentResponse {
+  AgentDeployment deployment = 1;
+}
+
+// Update Deployment
+message UpdateDeploymentRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string status = 3;
+  int32 rate_limit_rpm = 4;
+  int32 max_concurrent_sessions = 5;
+  int32 max_turns_per_session = 6;
+  int32 session_timeout_seconds = 7;
+  optional bool disable_session_tracking = 8;
+}
+message UpdateDeploymentResponse {
+  AgentDeployment deployment = 1;
+}
+
+// Deployment Keys
+message CreateDeploymentKeyRequest {
+  string tenant_id = 1;
+  string deployment_id = 2;
+  string name = 3;
+  google.protobuf.Timestamp expires_at = 4;
+}
+message CreateDeploymentKeyResponse {
+  DeploymentKey key = 1;
+  string raw_key = 2;
+}
+
+message ListDeploymentKeysRequest {
+  string tenant_id = 1;
+  string deployment_id = 2;
+}
+message ListDeploymentKeysResponse {
+  repeated DeploymentKey keys = 1;
+}
+
+message RevokeDeploymentKeyRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+}
+message RevokeDeploymentKeyResponse {}
+
+// Deployment Invocations
+message ListDeploymentInvocationsRequest {
+  string tenant_id = 1;
+  string deployment_id = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+message ListDeploymentInvocationsResponse {
+  repeated DeploymentInvocation invocations = 1;
+  int32 total = 2;
+}
+
+// ─── Agent Triggers ──────────────────────────────────────────────────
+
+message AgentTrigger {
+  string id = 1;
+  string tenant_id = 2;
+  string agent_id = 3;
+  string name = 4;
+  string trigger_type = 5;       // cron | webhook | event
+  bool enabled = 6;
+  string cron_expression = 7;
+  string cron_timezone = 8;
+  string webhook_path = 9;
+  string event_source_agent_id = 10;
+  string event_type = 11;
+  string input_template = 12;
+  int32 max_retries = 13;
+  int32 timeout_seconds = 14;
+  int32 max_concurrent = 15;
+  string circuit_state = 16;
+  int32 consecutive_failures = 17;
+  google.protobuf.Timestamp created_at = 18;
+  google.protobuf.Timestamp updated_at = 19;
+  int32 retry_delay_seconds = 20;
+  google.protobuf.Struct event_filter = 21;
+}
+
+message AgentTriggerExecution {
+  string id = 1;
+  string trigger_id = 2;
+  string session_id = 3;
+  string status = 4;
+  string input_rendered = 5;
+  string output_preview = 6;
+  string error_message = 7;
+  int32 attempt = 8;
+  int32 duration_ms = 9;
+  google.protobuf.Timestamp started_at = 10;
+  google.protobuf.Timestamp completed_at = 11;
+}
+
+// Create Agent Trigger
+message CreateAgentTriggerRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+  string name = 3;
+  string trigger_type = 4;
+  string cron_expression = 5;
+  string cron_timezone = 6;
+  string event_source_agent_id = 7;
+  string event_type = 8;
+  google.protobuf.Struct event_filter = 9;
+  string input_template = 10;
+  int32 max_retries = 11;
+  int32 retry_delay_seconds = 12;
+  int32 timeout_seconds = 13;
+  int32 max_concurrent = 14;
+}
+message CreateAgentTriggerResponse {
+  AgentTrigger trigger = 1;
+  string webhook_secret = 2;    // only set for webhook triggers (raw secret, shown once)
+  string webhook_url = 3;       // full URL for webhook triggers
+}
+
+// List Agent Triggers
+message ListAgentTriggersRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+}
+message ListAgentTriggersResponse {
+  repeated AgentTrigger triggers = 1;
+}
+
+// Get Agent Trigger
+message GetAgentTriggerRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+message GetAgentTriggerResponse {
+  AgentTrigger trigger = 1;
+}
+
+// Update Agent Trigger
+message UpdateAgentTriggerRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string name = 3;
+  bool enabled = 4;
+  string cron_expression = 5;
+  string cron_timezone = 6;
+  string event_source_agent_id = 7;
+  string event_type = 8;
+  google.protobuf.Struct event_filter = 9;
+  string input_template = 10;
+  int32 max_retries = 11;
+  int32 retry_delay_seconds = 12;
+  int32 timeout_seconds = 13;
+  int32 max_concurrent = 14;
+}
+message UpdateAgentTriggerResponse {
+  AgentTrigger trigger = 1;
+}
+
+// Delete Agent Trigger
+message DeleteAgentTriggerRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+message DeleteAgentTriggerResponse {}
+
+// Test Agent Trigger
+message TestAgentTriggerRequest {
+  string tenant_id = 1;
+  string id = 2;
+  google.protobuf.Struct test_payload = 3;
+}
+message TestAgentTriggerResponse {
+  AgentTriggerExecution execution = 1;
+}
+
+// List Agent Trigger Executions
+message ListAgentTriggerExecutionsRequest {
+  string tenant_id = 1;
+  string trigger_id = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+message ListAgentTriggerExecutionsResponse {
+  repeated AgentTriggerExecution executions = 1;
+  int32 total = 2;
+}
+
+// ─── Agent Lifecycle (Persistent) ────────────────────────────────
+
+message ProvisionAgentRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+}
+
+message ProvisionAgentResponse {
+  AgentDefinition agent = 1;
+}
+
+message SleepAgentRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+}
+
+message SleepAgentResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message WakeAgentRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+}
+
+message WakeAgentResponse {
+  AgentDefinition agent = 1;
+}
+
+// ─── Agent Links ─────────────────────────────────────────────────
+
+message CreateAgentLinkRequest {
+  string tenant_id = 1;
+  string source_agent_id = 2;
+  string target_type = 3;
+  string target_id = 4;
+  optional string target_name = 5;
+  AgentLinkType link_type = 6;
+  AgentLinkProtocol protocol = 7;
+  optional google.protobuf.Struct config = 8;
+}
+
+message CreateAgentLinkResponse {
+  AgentLink link = 1;
+}
+
+message ListAgentLinksRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+}
+
+message ListAgentLinksResponse {
+  repeated AgentLink links = 1;
+  int32 total = 2;
+}
+
+message DeleteAgentLinkRequest {
+  string tenant_id = 1;
+  string link_id = 2;
+}
+
+message DeleteAgentLinkResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ─── Agent Channel Bindings ──────────────────────────────────────
+
+message BindAgentChannelRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+  string channel_config_id = 3;
+}
+
+message BindAgentChannelResponse {
+  AgentChannelBinding binding = 1;
+}
+
+message UnbindAgentChannelRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+  string channel_config_id = 3;
+}
+
+message UnbindAgentChannelResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListAgentChannelBindingsRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+}
+
+message ListAgentChannelBindingsResponse {
+  repeated AgentChannelBinding bindings = 1;
+  int32 total = 2;
+}
+
+// ─── Troopers ─────────────────────────────────────────────────────
+
+// TrooperStatus tracks the lifecycle of a trooper.
+enum TrooperStatus {
+  TROOPER_STATUS_UNSPECIFIED = 0;
+  TROOPER_STATUS_CREATED = 1;
+  TROOPER_STATUS_PROVISIONING = 2;
+  TROOPER_STATUS_RUNNING = 3;
+  TROOPER_STATUS_SLEEPING = 4;
+  TROOPER_STATUS_WAKING = 5;
+  TROOPER_STATUS_FAILED = 6;
+  TROOPER_STATUS_TERMINATED = 7;
+}
+
+// TrooperLinkType describes the relationship between linked entities.
+enum TrooperLinkType {
+  TROOPER_LINK_TYPE_UNSPECIFIED = 0;
+  TROOPER_LINK_TYPE_COLLABORATOR = 1;
+  TROOPER_LINK_TYPE_SUPERVISOR = 2;
+  TROOPER_LINK_TYPE_SUBORDINATE = 3;
+  TROOPER_LINK_TYPE_PEER = 4;
+}
+
+// TrooperLinkProtocol describes how linked entities communicate.
+enum TrooperLinkProtocol {
+  TROOPER_LINK_PROTOCOL_UNSPECIFIED = 0;
+  TROOPER_LINK_PROTOCOL_INTERNAL = 1;
+  TROOPER_LINK_PROTOCOL_CHANNEL = 2;
+  TROOPER_LINK_PROTOCOL_WEBHOOK = 3;
+}
+
+// TrooperLinkStatus tracks whether a link is active.
+enum TrooperLinkStatus {
+  TROOPER_LINK_STATUS_UNSPECIFIED = 0;
+  TROOPER_LINK_STATUS_ACTIVE = 1;
+  TROOPER_LINK_STATUS_PAUSED = 2;
+  TROOPER_LINK_STATUS_REVOKED = 3;
+}
+
+// TrooperIdentity holds the identity markdown files for a trooper.
+message TrooperIdentity {
+  string soul_md = 1;
+  string identity_md = 2;
+  string user_md = 3;
+  string role_md = 4;
+}
+
+// TrooperSandboxConfig holds sandbox resource configuration.
+message TrooperSandboxConfig {
+  string image = 1;
+  double cpu_limit = 2;
+  int64 memory_mb = 3;
+  int64 disk_mb = 4;
+  int32 timeout_seconds = 5;
+  string network_mode = 6;
+  repeated string allowed_hosts = 7;
+  map<string, string> env_vars = 8;
+  bool ssh_enabled = 9;
+  string git_repo_url = 10;
+  string git_branch = 11;
+}
+
+// TrooperDatabaseConfig holds paths for trooper-local databases.
+message TrooperDatabaseConfig {
+  string sqlite_path = 1;
+  string lancedb_path = 2;
+  string redb_path = 3;
+}
+
+// TrooperWorkersConfig holds worker pool settings.
+message TrooperWorkersConfig {
+  int32 max_concurrent_workers = 1;
+  google.protobuf.Struct pool_config = 2;
+}
+
+// Trooper is a first-class intelligent agent environment.
+message Trooper {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  TrooperStatus status = 5;
+
+  // Embedded agent config
+  string model = 6;
+  string system_prompt = 7;
+  repeated string tools = 8;
+  google.protobuf.Struct agent_config = 9;
+  int32 max_turns = 10;
+  int32 max_tool_calls_per_turn = 11;
+  optional int32 max_steps = 12;
+
+  // Identity
+  TrooperIdentity identity = 13;
+
+  // Sandbox
+  TrooperSandboxConfig sandbox = 14;
+  string sandbox_id = 15;
+
+  // Databases
+  TrooperDatabaseConfig databases = 16;
+
+  // Workers
+  TrooperWorkersConfig workers = 17;
+
+  // Display
+  optional string color = 18;
+  optional string icon = 19;
+
+  google.protobuf.Timestamp created_at = 20;
+  google.protobuf.Timestamp updated_at = 21;
+}
+
+// TrooperLink represents a connection between a trooper and another entity.
+message TrooperLink {
+  string id = 1;
+  string tenant_id = 2;
+  string source_trooper_id = 3;
+  string target_type = 4;
+  string target_id = 5;
+  string target_name = 6;
+  TrooperLinkType link_type = 7;
+  TrooperLinkProtocol protocol = 8;
+  TrooperLinkStatus status = 9;
+  google.protobuf.Struct config = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// TrooperChannelBinding represents a channel bound to a trooper.
+message TrooperChannelBinding {
+  string id = 1;
+  string trooper_id = 2;
+  string channel_config_id = 3;
+  bool enabled = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+// --- Trooper CRUD ---
+
+message CreateTrooperRequest {
+  string tenant_id = 1;
+  string name = 2;
+  optional string description = 3;
+  string model = 4;
+  optional string system_prompt = 5;
+  repeated string tools = 6;
+  optional google.protobuf.Struct agent_config = 7;
+  optional int32 max_turns = 8;
+  optional int32 max_tool_calls_per_turn = 9;
+  optional int32 max_steps = 10;
+  TrooperIdentity identity = 11;
+  TrooperSandboxConfig sandbox = 12;
+  TrooperDatabaseConfig databases = 13;
+  TrooperWorkersConfig workers = 14;
+  optional string color = 15;
+  optional string icon = 16;
+  bool auto_provision = 17;
+}
+
+message CreateTrooperResponse {
+  Trooper trooper = 1;
+}
+
+message GetTrooperRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message GetTrooperResponse {
+  Trooper trooper = 1;
+}
+
+message ListTroopersRequest {
+  string tenant_id = 1;
+  optional TrooperStatus status = 2;
+  optional int32 limit = 3;
+  optional int32 offset = 4;
+}
+
+message ListTroopersResponse {
+  repeated Trooper troopers = 1;
+  int32 total = 2;
+}
+
+message UpdateTrooperRequest {
+  string tenant_id = 1;
+  string id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional string model = 5;
+  optional string system_prompt = 6;
+  repeated string tools = 7;
+  optional google.protobuf.Struct agent_config = 8;
+  optional int32 max_turns = 9;
+  optional int32 max_tool_calls_per_turn = 10;
+  optional int32 max_steps = 11;
+  TrooperIdentity identity = 12;
+  TrooperSandboxConfig sandbox = 13;
+  TrooperDatabaseConfig databases = 14;
+  TrooperWorkersConfig workers = 15;
+  optional string color = 16;
+  optional string icon = 17;
+}
+
+message UpdateTrooperResponse {
+  Trooper trooper = 1;
+}
+
+message DeleteTrooperRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message DeleteTrooperResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// --- Trooper Lifecycle ---
+
+message ProvisionTrooperRequest {
+  string tenant_id = 1;
+  string trooper_id = 2;
+}
+
+message ProvisionTrooperResponse {
+  Trooper trooper = 1;
+}
+
+message SleepTrooperRequest {
+  string tenant_id = 1;
+  string trooper_id = 2;
+}
+
+message SleepTrooperResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message WakeTrooperRequest {
+  string tenant_id = 1;
+  string trooper_id = 2;
+}
+
+message WakeTrooperResponse {
+  Trooper trooper = 1;
+}
+
+// --- Trooper Links ---
+
+message CreateTrooperLinkRequest {
+  string tenant_id = 1;
+  string source_trooper_id = 2;
+  string target_type = 3;
+  string target_id = 4;
+  optional string target_name = 5;
+  TrooperLinkType link_type = 6;
+  TrooperLinkProtocol protocol = 7;
+  optional google.protobuf.Struct config = 8;
+}
+
+message CreateTrooperLinkResponse {
+  TrooperLink link = 1;
+}
+
+message ListTrooperLinksRequest {
+  string tenant_id = 1;
+  string trooper_id = 2;
+}
+
+message ListTrooperLinksResponse {
+  repeated TrooperLink links = 1;
+  int32 total = 2;
+}
+
+message DeleteTrooperLinkRequest {
+  string tenant_id = 1;
+  string link_id = 2;
+}
+
+message DeleteTrooperLinkResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// --- Trooper Channel Bindings ---
+
+message BindChannelToTrooperRequest {
+  string tenant_id = 1;
+  string trooper_id = 2;
+  string channel_config_id = 3;
+}
+
+message BindChannelToTrooperResponse {
+  TrooperChannelBinding binding = 1;
+}
+
+message UnbindChannelFromTrooperRequest {
+  string tenant_id = 1;
+  string trooper_id = 2;
+  string channel_config_id = 3;
+}
+
+message UnbindChannelFromTrooperResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListTrooperChannelBindingsRequest {
+  string tenant_id = 1;
+  string trooper_id = 2;
+}
+
+message ListTrooperChannelBindingsResponse {
+  repeated TrooperChannelBinding bindings = 1;
+  int32 total = 2;
+}
+
+// --- Immutable agent source revisions ---
+
+// AgentRevisionFile is one immutable source file stored with a revision.
+message AgentRevisionFile {
+  string path = 1 [(validate.rules).string = {
+    min_bytes: 1
+    max_bytes: 4096
+    pattern: "^[^\\\\\\x00-\\x1F\\x7F]+$"
+  }];
+  bytes content = 2 [(validate.rules).bytes.max_len = 2097152];
+  string sha256 = 3 [(validate.rules).string = {
+    pattern: "^$|^[0-9a-f]{64}$"
+  }];
+  int32 mode = 4 [(validate.rules).int32 = {
+    gte: 0
+    lte: 511
+  }];
+  int64 size_bytes = 5 [(validate.rules).int64 = {
+    gte: 0
+    lte: 2097152
+  }];
+}
+
+// AgentProjectFunction exposes one source file export as an agent tool.
+message AgentProjectFunction {
+  string name = 1 [(validate.rules).string = {
+    pattern: "^[a-z][a-z0-9_]{1,63}$"
+  }];
+  string description = 2 [(validate.rules).string.max_bytes = 4096];
+  string path = 3 [(validate.rules).string = {
+    min_bytes: 1
+    max_bytes: 4096
+    pattern: "^[^\\\\\\x00-\\x1F\\x7F]+$"
+  }];
+  string export_name = 4 [(validate.rules).string = {
+    max_bytes: 128
+    pattern: "^$|^[A-Za-z_$][A-Za-z0-9_$]{0,127}$"
+  }];
+  string runtime = 5 [(validate.rules).string = {
+    in: [
+      "deno",
+      "nodejs20",
+      "python3"
+    ]
+  }];
+  google.protobuf.Struct parameters = 6;
+}
+
+// AgentRevision is an immutable, content-addressed agent source project.
+message AgentRevision {
+  string id = 1;
+  string tenant_id = 2;
+  string agent_id = 3;
+  int32 number = 4;
+  string digest = 5;
+  int32 format = 6;
+  repeated AgentRevisionFile files = 7;
+  repeated AgentProjectFunction functions = 8;
+  string created_by = 9;
+  google.protobuf.Timestamp created_at = 10;
+}
+
+message CreateAgentRevisionRequest {
+  string tenant_id = 1;
+  string agent_id = 2 [(validate.rules).string = {
+    min_bytes: 1
+    max_bytes: 128
+  }];
+  repeated AgentRevisionFile files = 3 [(validate.rules).repeated = {
+    min_items: 1
+    max_items: 512
+    items: {
+      message: {required: true}
+    }
+  }];
+  repeated AgentProjectFunction functions = 4 [(validate.rules).repeated = {
+    max_items: 128
+    items: {
+      message: {required: true}
+    }
+  }];
+}
+
+message CreateAgentRevisionResponse {
+  AgentRevision revision = 1;
+  bool created = 2;
+}
+
+message GetActiveAgentRevisionRequest {
+  string tenant_id = 1;
+  string agent_id = 2 [(validate.rules).string = {
+    min_bytes: 1
+    max_bytes: 128
+  }];
+}
+
+message GetActiveAgentRevisionResponse {
+  AgentRevision revision = 1;
+}
+
+message GetAgentRevisionRequest {
+  string tenant_id = 1;
+  string revision_id = 2 [(validate.rules).string = {
+    min_bytes: 1
+    max_bytes: 128
+  }];
+}
+
+message GetAgentRevisionResponse {
+  AgentRevision revision = 1;
+}

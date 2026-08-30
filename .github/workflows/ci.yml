@@ -1,0 +1,141 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Community Edition backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Validate public repository boundary
+        run: |
+          python3 .github/scripts/test_validate_public_repo.py
+          python3 .github/scripts/validate-public-repo.py .
+          bash build/install.sh --check-version v0.1.25
+          if bash build/install.sh --check-version v0.1.24; then
+            echo "legacy release unexpectedly passed the installer floor" >&2
+            exit 1
+          fi
+
+      - name: Install protobuf tools
+        run: make install_grpc_dependencies
+
+      - name: Verify generated Go API
+        run: |
+          make core_api
+          git diff --exit-code -- pkg/grpc openapi
+
+      - name: Test Community Edition
+        run: go test -tags=ce ./...
+
+      - name: Build Community Edition
+        run: |
+          go build ./...
+          go build -tags=ce ./...
+
+      - name: Validate quickstart Compose file
+        run: docker compose -f examples/quickstart/compose.yaml config --quiet
+
+  frontend:
+    name: Community Edition frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.5.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type-check
+        run: pnpm check-types
+
+      - name: Verify generated TypeScript API
+        run: |
+          rm -rf packages/proto/cjs packages/proto/es packages/proto/esquery packages/proto/types
+          pnpm --filter @everstack/proto build
+          git diff --exit-code -- packages/proto
+
+      - name: Build admin application
+        run: pnpm --filter @everstack/admin... build
+
+      - name: Build documentation
+        run: pnpm --filter @everstack/docs build
+
+  quickstart:
+    name: Clean-machine quickstart
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and start exact quickstart
+        run: docker compose -f examples/quickstart/compose.yaml up -d --build
+
+      - name: Verify health, embedded UI, and authentication boundary
+        run: |
+          curl --fail --retry 90 --retry-delay 2 --retry-all-errors \
+            http://localhost:8089/debug/healthz
+          curl --fail http://localhost:8089/ | grep -q '<html'
+
+          status=$(curl --silent --output /tmp/response.json --write-out '%{http_code}' \
+            http://localhost:8089/v1/chat/completions \
+            -H 'content-type: application/json' \
+            -H 'Origin: http://localhost:8089' \
+            -H 'Referer: http://localhost:8089/' \
+            -H 'Sec-Fetch-Site: same-origin' \
+            -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"hello"}]}')
+          test "$status" = "401"
+
+          logs=$(docker compose -f examples/quickstart/compose.yaml logs everstack)
+          echo "$logs" | grep -q \
+            'community edition: cloud license, trial, activation, and usage sync disabled'
+          if echo "$logs" | grep -Ei \
+            'trial: initialized|trial mode initialized|will use trial mode|license_proxy: created|license_enforcer: M2M'; then
+            echo 'Community Edition started cloud licensing components' >&2
+            exit 1
+          fi
+
+      - name: Print logs on failure
+        if: failure()
+        run: docker compose -f examples/quickstart/compose.yaml logs --no-color
+
+      - name: Stop quickstart
+        if: always()
+        run: docker compose -f examples/quickstart/compose.yaml down --volumes

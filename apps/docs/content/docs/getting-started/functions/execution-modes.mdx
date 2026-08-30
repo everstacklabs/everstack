@@ -1,0 +1,112 @@
+---
+title: Execution Modes
+description: Choose between webhook, proxy, and isolated execution for your functions.
+icon: Settings
+---
+
+Every function runs in one of three execution modes:
+
+- `webhook`
+- `proxy`
+- `isolated`
+
+Each mode is useful, but they fit different jobs.
+
+## Quick decision guide
+
+- choose `webhook` when you already have a backend endpoint
+- choose `proxy` when you want to wrap an upstream API as a tool
+- choose `isolated` when you need lightweight custom code in a bounded runtime
+
+## Webhook
+
+Webhook mode is the best starting point for most teams.
+
+Use it when you already have an API route or internal service and want Everstack to call it as a tool.
+
+### Best for
+
+- customer lookup
+- order history
+- ticket creation
+- account actions
+- approval workflows
+- internal service calls
+
+### Why teams like it
+
+- easy to connect to existing systems
+- keeps business logic in your backend
+- easiest mode to understand operationally
+
+### When not to use it
+
+Do not use webhook mode if the main thing you need is inline custom code and you do not already have a service to call.
+
+## Proxy
+
+Proxy mode is for wrapping an upstream API behind a cleaner function interface.
+
+Use it when you want Everstack to front an API and map input or output fields rather than building a custom webhook adapter yourself.
+
+### Best for
+
+- simplifying noisy third-party APIs
+- exposing only part of an upstream API surface
+- normalizing request and response shapes
+- building reusable integration wrappers
+
+### Why teams like it
+
+- reduces custom glue code
+- gives a cleaner tool contract to agents
+- useful for platform-style integration layers
+
+### When not to use it
+
+Do not use proxy mode if a simple webhook to your backend is easier or if you need arbitrary custom logic instead of request mapping.
+
+## Isolated
+
+Isolated mode runs custom code in a bounded isolated runtime.
+
+Use it when you need a small execution unit for transformations, calculations, validation, or integration glue logic.
+
+### Best for
+
+- tax calculation
+- field normalization
+- payload validation
+- lightweight enrichment
+- format conversion
+- custom scoring or routing logic
+
+### Why teams like it
+
+- no separate service required
+- narrower than a full sandbox
+- good for repeatable utility logic
+
+### When not to use it
+
+Do not use isolated functions when you really need a live environment with shell access, files, port exposure, or long-running processes. That is a sandbox use case.
+
+## Comparison table
+
+| Mode       | Best fit                 | What you provide        | Typical user value                     |
+| ---------- | ------------------------ | ----------------------- | -------------------------------------- |
+| `webhook`  | existing backend actions | an endpoint you control | fast path from AI to business systems  |
+| `proxy`    | upstream API wrapping    | base URL plus mappings  | cleaner contracts for integrations     |
+| `isolated` | bounded custom logic     | runtime and code        | utility compute without a full service |
+
+## Recommended default
+
+If you are unsure where to start, start with `webhook`.
+
+It is usually the fastest path to production value because most teams already have business logic living in a service they can call.
+
+## Related guidance
+
+- Read [Functions Overview](/getting-started/functions/overview) for the product framing.
+- Read [Examples](/getting-started/functions/examples) for concrete patterns.
+- Read [Functions vs Sandboxes](/getting-started/functions-vs-sandboxes) to understand when isolated functions stop being the right tool.

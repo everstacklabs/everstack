@@ -1,0 +1,3 @@
+ALTER TABLE sandbox_usage_records
+    ADD COLUMN IF NOT EXISTS network_rx_bytes BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS network_tx_bytes BIGINT NOT NULL DEFAULT 0;

@@ -1,0 +1,18 @@
+{
+  "pages": [
+    "list-workflows",
+    "create-workflow",
+    "get-a-single-workflow-execution-by-id",
+    "replay-a-past-workflow-execution-with-the-same-inputs",
+    "get-workflow",
+    "update-workflow",
+    "delete-workflow",
+    "save-workflow-draft-without-creating-a-version-event",
+    "publish-workflow-creating-a-version-snapshot",
+    "unpublish-workflow-move-back-to-draft",
+    "get-version-history-for-a-workflow",
+    "get-reconstructed-workflow-state-at-a-specific-version",
+    "execute-a-workflow-with-streaming-events",
+    "list-execution-history-for-a-workflow"
+  ]
+}

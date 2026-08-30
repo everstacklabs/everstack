@@ -1,0 +1,20 @@
+name: "mistral.mistral-large-2407-v1:0"
+display_name: "Mistral Large 2407"
+family: "mistral"
+status: "deprecated"
+
+cost:
+  input_per_1k: 0.003
+  output_per_1k: 0.009
+
+limits:
+  max_tokens: 128000
+  max_completion_tokens: 8192
+
+capabilities:
+  - chat
+  - function_calling
+
+modalities:
+  input: ["text"]
+  output: ["text"]

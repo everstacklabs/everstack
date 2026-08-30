@@ -1,0 +1,175 @@
+---
+title: Snapshots & Volumes
+description: Pre-built environments and persistent storage for sandboxes.
+icon: Database
+---
+
+Two features that fundamentally change how you think about sandbox startup cost and statefulness:
+
+- **Snapshots** -- save a pre-built environment once, spin up identical sandboxes instantly
+- **Volumes** -- persistent storage that survives sandbox restarts and is shareable across parallel runs
+
+## Snapshots
+
+A snapshot is a named environment template. Instead of reinstalling dependencies on every sandbox creation (which can take minutes), you build once and reference by name.
+
+### Create from a public image
+
+```bash
+POST /v1/snapshots
+{
+  "name": "my-python-env",
+  "image": "ghcr.io/everstacklabs/sandbox:python"
+}
+```
+
+The snapshot is immediately `active`. Cold start for sandboxes created from it is under 3 seconds.
+
+### Create from an existing sandbox
+
+```bash
+POST /v1/snapshots
+{
+  "name": "my-custom-env",
+  "from_sandbox_id": "sbx_abc123"
+}
+```
+
+This captures the sandbox's base image as the snapshot reference. Full filesystem snapshotting (Firecracker-level) is coming in a follow-up release.
+
+### Use a snapshot when creating sandboxes
+
+```bash
+POST /v1/sandbox
+{
+  "snapshotId": "snap_def456"
+}
+```
+
+The sandbox starts from the snapshot's base image.
+
+### Catalog images
+
+Everstack maintains pre-built catalog images rebuilt weekly:
+
+| Image | Contents |
+|-------|----------|
+| `everstack-base` | Debian bookworm-slim, git, curl, wget, tmux, ripgrep, python3 |
+| `everstack-python` | Base + pylsp, pylint, numpy, pandas, requests, black, mypy |
+| `everstack-node` | Base + Node.js 20, pnpm, typescript, typescript-language-server |
+| `everstack-fullstack` | Python + Node + both LSP servers |
+
+Reference them by image name in `CreateSnapshot` or directly as the `image` field on `CreateSandbox`.
+
+### Snapshot lifecycle
+
+Snapshots have a `state` field: `pending` → `active` | `error`. Inactive after 2 weeks of no use (reactivated on next use, not deleted).
+
+### Managing snapshots
+
+```bash
+GET    /v1/snapshots            # list all snapshots
+GET    /v1/snapshots/{id}       # get a specific snapshot
+DELETE /v1/snapshots/{id}       # delete a snapshot
+```
+
+## Declarative image builder
+
+Build a sandbox environment from a spec in code, without needing a Docker registry:
+
+```json
+POST /v1/images/build
+{
+  "spec": {
+    "base": "debian:bookworm-slim",
+    "apt": ["python3", "git"],
+    "pip": ["numpy", "pandas", "fastapi"],
+    "run": ["pip install -r requirements.txt"],
+    "env": { "PYTHONPATH": "/app" },
+    "workdir": "/app"
+  }
+}
+```
+
+The same spec within 24 hours returns the cached result instantly (`cached: true`). Use the returned `imageRef` as the `image` field on `CreateSandbox`.
+
+> **Preview:** Phase 1 maps specs to the nearest catalog image. Custom package installation via Kaniko is in Phase 2.
+
+---
+
+## Volumes
+
+Volumes are persistent, FUSE-backed storage units that live independently of any sandbox. They are backed by S3-compatible object storage.
+
+### Create a volume
+
+```bash
+POST /v1/volumes
+{
+  "name": "pip-cache"
+}
+```
+
+### List and delete volumes
+
+```bash
+GET    /v1/volumes              # list volumes
+DELETE /v1/volumes/{id}         # delete a volume
+```
+
+### Attach at sandbox creation
+
+Attach one or more volumes via the `mounts` field:
+
+```json
+{
+  "mounts": [
+    {
+      "type": "s3",
+      "bucket": "vol_pip_cache",
+      "mountPath": "/cache/pip"
+    }
+  ]
+}
+```
+
+The volume is FUSE-mounted inside the sandbox at the specified path before the user shell starts. It appears as a regular directory.
+
+### Subpath isolation
+
+Multiple sandboxes can share the same volume at different subpaths:
+
+```json
+{
+  "mounts": [
+    {
+      "type": "s3",
+      "bucket": "shared-data",
+      "mountPath": "/data",
+      "subpath": "tenant-42"
+    }
+  ]
+}
+```
+
+Each sandbox sees only its `subpath` prefix -- no cross-sandbox contamination.
+
+### Performance
+
+FUSE mounts are optimized for large sequential reads and writes (model weights, datasets, build artifacts). They are slower than local disk for random-access workloads. Do not use volumes as database storage.
+
+### Use cases
+
+| Use case | Volume name | Mount path |
+|----------|-------------|------------|
+| Shared pip cache | `pip-cache` | `/root/.cache/pip` |
+| Shared npm cache | `npm-cache` | `/root/.npm` |
+| ML dataset | `training-data` | `/data` |
+| Build artifacts | `build-artifacts` | `/artifacts` |
+
+## Recommendations
+
+- Use catalog snapshots for the fastest cold start
+- Use volumes for caches -- `pip install` from a warm cache is 10x faster
+- Set `autoArchiveAfterDays` on sandboxes that use volumes so the volume outlives the compute
+- Create snapshots from sandboxes that have run `pip install` or `npm install` to bake dependencies in

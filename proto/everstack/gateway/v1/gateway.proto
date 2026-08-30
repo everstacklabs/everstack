@@ -1,0 +1,363 @@
+syntax = "proto3";
+
+package everstack.gateway.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "everstack/license/v1/instance.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/gateway/v1;gateway";
+
+message GetGatewayRequest {
+  string id = 1;
+}
+
+message GetGatewayResponse {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+}
+
+// ProviderModels describes supported models for a provider
+message ProviderModels {
+  string provider = 1;
+  repeated string models = 2;
+}
+
+message ListModelsRequest {}
+message ListModelsResponse {
+  repeated ProviderModels providers = 1;
+}
+
+// Gateway instance activation messages (called by Admin UI)
+message ActivateGatewayInstanceRequest {
+  // The activation token obtained from the cloud portal
+  string activation_token = 1;
+
+  // Optional device fingerprint for additional security
+  string device_fingerprint_hash = 2;
+
+  // Optional instance ID for upgrading existing instance
+  string instance_id = 3;
+}
+
+message ActivateGatewayInstanceResponse {
+  // Activation status
+  string status = 1;
+
+  // Instance ID assigned by the License Service
+  string instance_id = 2;
+
+  // Tenant ID for multi-tenant tracking
+  string tenant_id = 3;
+
+  // Plan tier (free, pro, enterprise)
+  string plan_tier = 4;
+
+  // When the instance was activated
+  google.protobuf.Timestamp activated_at = 5;
+
+  // When the license expires (if applicable)
+  google.protobuf.Timestamp expires_at = 6;
+}
+
+message GetGatewayInstanceStatusRequest {
+  // Empty request - returns current status
+}
+
+message GetGatewayInstanceStatusResponse {
+  // Status: "active" or "inactive"
+  string status = 1;
+
+  // Whether the gateway is activated
+  bool activated = 2;
+
+  // Instance ID (only if activated)
+  string instance_id = 3;
+
+  // When the instance was activated (only if activated)
+  google.protobuf.Timestamp activated_at = 4;
+
+  // Current license state (only if activated)
+  everstack.license.v1.LicenseState license_state = 5;
+
+  // Human-readable message
+  string message = 6;
+}
+
+// Trial mode status messages
+message GetTrialStatusRequest {
+  // Empty request - returns current trial status
+}
+
+message GetTrialStatusResponse {
+  // Operating mode: "trial", "licensed", or "disabled"
+  string mode = 1;
+
+  // Whether trial is currently active
+  bool active = 2;
+
+  // Whether trial has expired
+  bool expired = 3;
+
+  // When the trial was created
+  google.protobuf.Timestamp created_at = 4;
+
+  // When the trial expires
+  google.protobuf.Timestamp expires_at = 5;
+
+  // Days remaining in trial
+  int32 days_remaining = 6;
+
+  // Daily usage tracking
+  int32 daily_used = 7;
+  int32 daily_limit = 8;
+
+  // Total requests made during trial
+  int64 total_requests = 9;
+
+  // Machine fingerprint hash (for debugging)
+  string fingerprint_hash = 10;
+
+  // Human-readable message
+  string message = 11;
+
+  // Token usage tracking
+  int64 tokens_used = 12;
+  int64 token_limit = 13;
+
+  // RPM limit for display
+  int64 rpm_limit = 14;
+}
+
+// =============================================================================
+// License Monitor Messages (Gateway's internal license/usage tracking)
+// =============================================================================
+
+message GetLicenseMonitorStatusRequest {}
+
+message GetLicenseMonitorStatusResponse {
+  LicenseInfo license = 1;
+  UsageInfo usage = 2;
+  GatewayStatus gateway = 3;
+  // Available features for this instance (from license service, evaluated by tier)
+  map<string, FeatureRelease> available_features = 4;
+}
+
+// Feature release metadata from the license service
+message FeatureRelease {
+  string name = 1;                    // Human-readable name
+  string description = 2;             // Feature description  
+  string status = 3;                  // 'development', 'beta', 'released', 'deprecated'
+  repeated string categories = 4;     // ['gateway', 'dashboard', 'api']
+}
+
+message LicenseInfo {
+  bool active = 1;
+  string tier = 2;
+  string status = 3;
+  bool is_paid = 4;
+  google.protobuf.Timestamp expires_at = 5;
+  google.protobuf.Timestamp trial_expires = 6;
+  google.protobuf.Timestamp fetched_at = 7;
+  repeated UsageLimit usage_limits = 8;
+  string tenant_id = 9;      // Organization/tenant ID
+  string instance_id = 10;   // Gateway instance ID
+  // Sandbox compute is always paid, including on the Free platform plan.
+  bool sandbox_billing_enabled = 11;
+}
+
+message UsageLimit {
+  string type = 1;   // e.g., "RPM", "RPS", "RPH", "REQUESTS"
+  int64 limit = 2;   // -1 for unlimited
+}
+
+message UsageInfo {
+  // Request rate metrics
+  int64 rpm = 1;              // Peak requests per minute
+  int64 rps = 2;              // Peak requests per second
+  int64 rph = 3;              // Peak requests per hour
+  int64 total_requests = 4;   // Total requests this period
+  google.protobuf.Timestamp last_reset = 5;
+  int64 requests_in_min = 6;  // Requests in current minute
+  int64 requests_in_sec = 7;  // Requests in current second
+  int64 requests_in_hour = 8; // Requests in current hour
+
+  // Token metrics
+  int64 total_input_tokens = 10;   // Total input tokens processed
+  int64 total_output_tokens = 11;  // Total output tokens generated
+  int64 total_tokens = 12;         // Total tokens (input + output)
+
+  // Cost metrics (in USD)
+  double estimated_cost_usd = 13;  // Estimated total cost
+  double cache_savings_usd = 14;   // Cost savings from cache hits
+
+  // Cache performance metrics
+  int64 cache_hits = 15;           // Number of cache hits
+  int64 cache_misses = 16;         // Number of cache misses
+}
+
+message GatewayStatus {
+  bool locked = 1;
+  string lock_reason = 2;
+  repeated FeatureStatus features = 3;
+  bool spend_blocked = 4;
+  string spend_blocked_reason = 5;
+  // Build edition: "ce" (Community Edition) or "ee" (Enterprise Edition).
+  string edition = 6;
+}
+
+message FeatureStatus {
+  string name = 1;
+  bool enabled = 2;
+  string required_tier = 3;
+  string locked_reason = 4;
+}
+
+message RefreshLicenseMonitorRequest {}
+
+message RefreshLicenseMonitorResponse {
+  LicenseInfo license = 1;
+  UsageInfo usage = 2;
+  GatewayStatus gateway = 3;
+  // Available features for this instance (from license service, evaluated by tier)
+  map<string, FeatureRelease> available_features = 4;
+}
+
+// =============================================================================
+// Activation Token Messages (for self-hosted plan changes)
+// =============================================================================
+
+// Billing period for activation tokens
+enum BillingPeriod {
+  BILLING_PERIOD_UNSPECIFIED = 0;
+  BILLING_PERIOD_MONTHLY = 1;
+  BILLING_PERIOD_YEARLY = 2;
+}
+
+message GenerateActivationTokenRequest {
+  string tenant_id = 1;           // Tenant ID (fixed for self-hosted)
+  string plan_tier = 2;           // Plan tier (free, basic, pro, enterprise)
+  int32 ttl_seconds = 3;          // Token TTL in seconds (default: 600)
+  BillingPeriod billing_period = 4; // Billing period (monthly or yearly)
+}
+
+message GenerateActivationTokenResponse {
+  string activation_token = 1;    // The generated activation token
+  int64 expires_at = 2;           // Unix timestamp when token expires
+}
+
+// =============================================================================
+// Plans Messages
+// =============================================================================
+
+message GetPlansRequest {}
+
+message GetPlansResponse {
+  repeated Plan plans = 1;
+}
+
+message Plan {
+  string tier = 1;
+  string name = 2;
+  string description = 3;
+  int32 trial_duration_days = 4;
+  PlanPricing pricing = 5;
+  bool highlight = 6;
+  repeated PlanFeature features = 7;
+  repeated PlanUsageLimit usage_limits = 8;
+  int32 seat_limit = 9;                 // Max users allowed (0 = unlimited)
+}
+
+message PlanPricing {
+  string monthly = 1;
+  string yearly = 2;
+  PerSeatPricing per_seat = 3; // Per additional seat pricing
+  string discounted = 4;       // Discounted yearly price
+  string suggested = 5;        // Marketing text for suggested option
+}
+
+// Per-seat pricing for additional users beyond included seats
+message PerSeatPricing {
+  string monthly = 1;     // Monthly per-seat price
+  string yearly = 2;      // Yearly per-seat price
+  string sub_text = 3;    // Description e.g. "per additional seat beyond 3 included"
+}
+
+message PlanFeature {
+  string name = 1;
+  bool enabled = 2;
+}
+
+message PlanUsageLimit {
+  string type = 1;
+  int64 value = 2;
+  string sub_text = 3;
+}
+
+// =============================================================================
+// Upgrade Callback Messages (for automatic activation after Stripe checkout)
+// =============================================================================
+
+// Store a callback secret for the upgrade flow
+message StoreUpgradeCallbackSecretRequest {
+  string callback_secret = 1;   // UUID generated by admin UI
+  string plan_tier = 2;         // Target plan tier
+  string billing_period = 3;    // "monthly" or "yearly"
+}
+
+message StoreUpgradeCallbackSecretResponse {
+  bool success = 1;
+  string expires_at = 2;        // ISO timestamp when the secret expires
+}
+
+// Get a stored callback secret (for verification)
+message GetUpgradeCallbackSecretRequest {
+  string callback_secret = 1;
+}
+
+message GetUpgradeCallbackSecretResponse {
+  bool found = 1;
+  string plan_tier = 2;
+  string billing_period = 3;
+  bool expired = 4;
+}
+
+// Activation callback from cloud after successful payment
+message ActivationCallbackRequest {
+  string signed_payload = 1;    // JWT signed by cloud containing activation_token
+  string callback_secret = 2;   // The secret to verify this is the expected callback
+}
+
+message ActivationCallbackResponse {
+  bool success = 1;
+  string instance_id = 2;
+  string plan_tier = 3;
+  string message = 4;
+}
+
+// =============================================================================
+// Subscription Status Callback Messages (for Stripe webhook updates)
+// =============================================================================
+
+// Subscription status callback from billing service after Stripe webhook
+message SubscriptionStatusCallbackRequest {
+  string signed_payload = 1;    // JWT signed by cloud containing subscription status
+}
+
+message SubscriptionStatusCallbackResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// SubscriptionStatusPayload is the payload inside the signed JWT
+// (documented here for reference, actual parsing is in Go code)
+// {
+//   "organization_id": "uuid",
+//   "cancel_at_period_end": true/false,
+//   "current_period_end": "2025-02-01T00:00:00Z",
+//   "status": "active" | "canceled" | "past_due",
+//   "plan_tier": "pro",
+//   "event_type": "subscription.canceled" | "subscription.resumed" | "subscription.updated"
+// }

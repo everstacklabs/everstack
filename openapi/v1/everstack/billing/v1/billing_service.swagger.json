@@ -1,0 +1,823 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/billing/v1/billing_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "BillingService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {},
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AdjustSeatsResponse": {
+      "type": "object",
+      "properties": {
+        "paidSeats": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total paid seats after adjustment. Effective cap on the org is\nplan.seat_limit + paid_seats (auth service reads paid_seats from\nthe local cache so this value matches what InviteMember will see\nimmediately after)."
+        },
+        "unitPriceCents": {
+          "type": "string",
+          "format": "int64",
+          "description": "Per-seat unit price in cents (e.g. 1500 = \\$15.00). Frontend uses\nthis for \"Charged \\$X today, prorated\" copy."
+        },
+        "currency": {
+          "type": "string",
+          "description": "ISO 4217 currency code (e.g. \"usd\")."
+        }
+      }
+    },
+    "v1BillingPeriod": {
+      "type": "string",
+      "enum": [
+        "BILLING_PERIOD_UNSPECIFIED",
+        "BILLING_PERIOD_MONTHLY",
+        "BILLING_PERIOD_YEARLY"
+      ],
+      "default": "BILLING_PERIOD_UNSPECIFIED",
+      "title": "BillingPeriod represents the billing cycle"
+    },
+    "v1CancelSubscriptionResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "subscription": {
+          "$ref": "#/definitions/v1Subscription"
+        }
+      }
+    },
+    "v1CreateBillingPortalSessionResponse": {
+      "type": "object",
+      "properties": {
+        "portalUrl": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateCheckoutSessionResponse": {
+      "type": "object",
+      "properties": {
+        "checkoutUrl": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateInstanceMappingResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1DeleteSpendLimitResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1GetActivationStatusResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "title": "\"pending\", \"processing\", \"activated\", \"unknown\""
+        },
+        "message": {
+          "type": "string"
+        },
+        "hasToken": {
+          "type": "boolean"
+        },
+        "activationToken": {
+          "type": "string"
+        },
+        "gatewayUrl": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "attemptCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "lastAttemptAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1GetInstanceOrganizationResponse": {
+      "type": "object",
+      "properties": {
+        "found": {
+          "type": "boolean"
+        },
+        "organizationId": {
+          "type": "string"
+        },
+        "organizationSlug": {
+          "type": "string"
+        },
+        "organizationName": {
+          "type": "string"
+        },
+        "planTier": {
+          "type": "string"
+        },
+        "hasSubscription": {
+          "type": "boolean"
+        },
+        "billingPortalUrl": {
+          "type": "string"
+        },
+        "gatewayUrl": {
+          "type": "string"
+        }
+      }
+    },
+    "v1GetPendingActivationResponse": {
+      "type": "object",
+      "properties": {
+        "found": {
+          "type": "boolean"
+        },
+        "instanceId": {
+          "type": "string"
+        },
+        "activationToken": {
+          "type": "string"
+        },
+        "gatewayUrl": {
+          "type": "string"
+        },
+        "planTier": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "activations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PendingActivation"
+          },
+          "title": "All activations when instance_id not provided"
+        }
+      }
+    },
+    "v1GetPlansResponse": {
+      "type": "object",
+      "properties": {
+        "synced": {
+          "type": "boolean"
+        },
+        "plans": {
+          "$ref": "#/definitions/v1SyncedPlans"
+        },
+        "plansConfig": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PlanConfig"
+          }
+        }
+      }
+    },
+    "v1GetSpendLimitsResponse": {
+      "type": "object",
+      "properties": {
+        "spendLimits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SpendLimit"
+          }
+        },
+        "totalEstimatedSpend": {
+          "type": "number",
+          "format": "double"
+        },
+        "totalActualSpend": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "v1GetSubscriptionResponse": {
+      "type": "object",
+      "properties": {
+        "subscription": {
+          "$ref": "#/definitions/v1Subscription"
+        }
+      }
+    },
+    "v1GetUsageHistoryResponse": {
+      "type": "object",
+      "properties": {
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UsageHistoryPoint"
+          }
+        }
+      }
+    },
+    "v1GetUsageResponse": {
+      "type": "object",
+      "properties": {
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UsageMetric"
+          }
+        },
+        "periodStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "periodEnd": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "estimatedCostMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Cost \u0026 cache breakdown for the current period (not quota-shaped).\nCosts are in micro-dollars (USD * 1_000_000) to preserve sub-cent precision."
+        },
+        "cacheSavingsMicros": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cacheHits": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cacheMisses": {
+          "type": "string",
+          "format": "int64"
+        },
+        "inputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "outputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "networkRxBytes": {
+          "type": "string",
+          "format": "int64",
+          "description": "Sandbox network data transfer this period (bytes)."
+        },
+        "networkTxBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "sandboxComputeSeconds": {
+          "type": "string",
+          "format": "int64",
+          "description": "Sandbox compute charged in this billing period. Compute accrues per\nsecond while the VM is allocated, including idle time; sleeping and\nstopped sandboxes do not accrue compute."
+        },
+        "sandboxComputeCostMicros": {
+          "type": "string",
+          "format": "int64"
+        },
+        "browserRuntimeSeconds": {
+          "type": "string",
+          "format": "int64",
+          "description": "Hosted-browser time charged in this billing period. Idle pool capacity is\nexcluded; the one-minute minimum and per-second increments are finalized\nby the browser serving plane before this cumulative meter is reported."
+        },
+        "browserRuntimeCostMicros": {
+          "type": "string",
+          "format": "int64"
+        },
+        "sandboxStarterCreditMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "One-time organization starter credit for managed sandbox compute. These\nvalues are lifetime scoped and do not reset with the billing period."
+        },
+        "sandboxStarterCreditUsedMicros": {
+          "type": "string",
+          "format": "int64"
+        },
+        "sandboxStarterCreditRemainingMicros": {
+          "type": "string",
+          "format": "int64"
+        },
+        "sandboxComputeAllowed": {
+          "type": "boolean",
+          "description": "False once the starter credit is exhausted unless active billing (or an\nEnterprise contract) authorizes continued compute."
+        },
+        "sandboxBillingActive": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1Invoice": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
+        },
+        "amountDue": {
+          "type": "string",
+          "format": "int64"
+        },
+        "amountPaid": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "invoicePdfUrl": {
+          "type": "string"
+        },
+        "hostedInvoiceUrl": {
+          "type": "string"
+        },
+        "periodStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "periodEnd": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "paidAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "Invoice represents a billing invoice"
+    },
+    "v1ListInvoicesResponse": {
+      "type": "object",
+      "properties": {
+        "invoices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Invoice"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1MigrateSubscriptionResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "v1PendingActivation": {
+      "type": "object",
+      "properties": {
+        "instanceId": {
+          "type": "string"
+        },
+        "activationToken": {
+          "type": "string"
+        },
+        "gatewayUrl": {
+          "type": "string"
+        },
+        "planTier": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1PlanConfig": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "monthlyPriceCents": {
+          "type": "string",
+          "format": "int64"
+        },
+        "yearlyPriceCents": {
+          "type": "string",
+          "format": "int64"
+        },
+        "limits": {
+          "$ref": "#/definitions/v1PlanLimits"
+        }
+      },
+      "title": "PlanConfig contains the full plan definition"
+    },
+    "v1PlanLimits": {
+      "type": "object",
+      "properties": {
+        "requestsPerMonth": {
+          "type": "string",
+          "format": "int64"
+        },
+        "tokensPerMonth": {
+          "type": "string",
+          "format": "int64"
+        },
+        "maxKeys": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxProviders": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1RegenerateActivationResponse": {
+      "type": "object",
+      "properties": {
+        "activationToken": {
+          "type": "string"
+        },
+        "planTier": {
+          "type": "string"
+        },
+        "expiresIn": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Seconds until expiration"
+        }
+      }
+    },
+    "v1ReportInstanceSnapshotResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1ReportOverageUsageResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "totalTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalRequests": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ReportUsageResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "tokenCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "requestCount": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ResumeSubscriptionResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "subscription": {
+          "$ref": "#/definitions/v1Subscription"
+        }
+      }
+    },
+    "v1RetryActivationResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SetSpendLimitResponse": {
+      "type": "object",
+      "properties": {
+        "spendLimit": {
+          "$ref": "#/definitions/v1SpendLimit"
+        }
+      }
+    },
+    "v1SpendLimit": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
+        },
+        "instanceId": {
+          "type": "string"
+        },
+        "limitType": {
+          "$ref": "#/definitions/v1SpendLimitType"
+        },
+        "limitAmount": {
+          "type": "number",
+          "format": "double",
+          "title": "USD amount"
+        },
+        "period": {
+          "$ref": "#/definitions/v1SpendLimitPeriod"
+        },
+        "actionOnExceed": {
+          "$ref": "#/definitions/v1SpendLimitAction"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "currentSpend": {
+          "type": "number",
+          "format": "double"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "SpendLimit represents a spending limit configuration"
+    },
+    "v1SpendLimitAction": {
+      "type": "string",
+      "enum": [
+        "SPEND_LIMIT_ACTION_UNSPECIFIED",
+        "SPEND_LIMIT_ACTION_BLOCK",
+        "SPEND_LIMIT_ACTION_WARN",
+        "SPEND_LIMIT_ACTION_NOTIFY"
+      ],
+      "default": "SPEND_LIMIT_ACTION_UNSPECIFIED",
+      "title": "SpendLimitAction represents the action to take when limit is exceeded"
+    },
+    "v1SpendLimitPeriod": {
+      "type": "string",
+      "enum": [
+        "SPEND_LIMIT_PERIOD_UNSPECIFIED",
+        "SPEND_LIMIT_PERIOD_DAILY",
+        "SPEND_LIMIT_PERIOD_MONTHLY"
+      ],
+      "default": "SPEND_LIMIT_PERIOD_UNSPECIFIED",
+      "title": "SpendLimitPeriod represents the period for spend limits"
+    },
+    "v1SpendLimitType": {
+      "type": "string",
+      "enum": [
+        "SPEND_LIMIT_TYPE_UNSPECIFIED",
+        "SPEND_LIMIT_TYPE_ESTIMATED_COST",
+        "SPEND_LIMIT_TYPE_ACTUAL_BILLING"
+      ],
+      "default": "SPEND_LIMIT_TYPE_UNSPECIFIED",
+      "title": "SpendLimitType represents the type of spend limit"
+    },
+    "v1Subscription": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
+        },
+        "planTier": {
+          "type": "string",
+          "title": "free, basic, pro, enterprise"
+        },
+        "billingPeriod": {
+          "$ref": "#/definitions/v1BillingPeriod"
+        },
+        "status": {
+          "$ref": "#/definitions/v1SubscriptionStatus"
+        },
+        "currentPeriodStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "currentPeriodEnd": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "cancelAtPeriodEnd": {
+          "type": "boolean"
+        },
+        "canceledAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "Subscription represents an organization's subscription"
+    },
+    "v1SubscriptionStatus": {
+      "type": "string",
+      "enum": [
+        "SUBSCRIPTION_STATUS_UNSPECIFIED",
+        "SUBSCRIPTION_STATUS_ACTIVE",
+        "SUBSCRIPTION_STATUS_PAST_DUE",
+        "SUBSCRIPTION_STATUS_CANCELED",
+        "SUBSCRIPTION_STATUS_TRIALING",
+        "SUBSCRIPTION_STATUS_INCOMPLETE"
+      ],
+      "default": "SUBSCRIPTION_STATUS_UNSPECIFIED",
+      "title": "SubscriptionStatus represents the current state of a subscription"
+    },
+    "v1SyncPlansResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "plans": {
+          "$ref": "#/definitions/v1SyncedPlans"
+        }
+      }
+    },
+    "v1SyncedPlan": {
+      "type": "object",
+      "properties": {
+        "productId": {
+          "type": "string"
+        },
+        "licenseMonthlyId": {
+          "type": "string"
+        },
+        "licenseYearlyId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SyncedPlans": {
+      "type": "object",
+      "properties": {
+        "basic": {
+          "$ref": "#/definitions/v1SyncedPlan"
+        },
+        "pro": {
+          "$ref": "#/definitions/v1SyncedPlan"
+        },
+        "enterprise": {
+          "$ref": "#/definitions/v1SyncedPlan"
+        },
+        "free": {
+          "$ref": "#/definitions/v1SyncedPlan",
+          "description": "Free has no license price; its synced plan contains the usage-only\nsandbox meter product managed by the billing service."
+        }
+      },
+      "title": "SyncedPlans contains the synced plan price IDs from Stripe"
+    },
+    "v1UsageHistoryPoint": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "metricType": {
+          "type": "string"
+        },
+        "instanceId": {
+          "type": "string",
+          "title": "empty when aggregated"
+        },
+        "value": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "title": "UsageHistoryPoint - One daily data point for a metric"
+    },
+    "v1UsageMetric": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "used": {
+          "type": "string",
+          "format": "int64"
+        },
+        "limit": {
+          "type": "string",
+          "format": "int64",
+          "title": "-1 for unlimited"
+        },
+        "unit": {
+          "type": "string",
+          "description": "\"requests\", \"tokens\", etc."
+        }
+      }
+    }
+  }
+}

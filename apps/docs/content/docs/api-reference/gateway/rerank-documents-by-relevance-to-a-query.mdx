@@ -1,0 +1,215 @@
+---
+title: "POST Rerank documents by relevance to a query"
+description: "Rerank documents by relevance to a query"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Rerank documents by relevance to a query</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400">POST</span>
+    <code className="text-sm text-fd-muted-foreground">/v1/rerank</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="post"
+  path="/v1/rerank"
+  parameters={[]}
+  defaultBody={`{
+  "model": "string",
+  "query": "string",
+  "documents": [
+    "string"
+  ],
+  "documentObjects": [
+    {
+      "text": "string"
+    }
+  ],
+  "topN": 0,
+  "returnDocuments": true,
+  "maxTokensPerDoc": 0
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X POST "http://localhost:8089/v1/rerank" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"string","query":"string","documents":["string"],"documentObjects":[{"text":"string"}],"topN":0,"returnDocuments":true,"maxTokensPerDoc":0}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/rerank", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "model": "string",
+  "query": "string",
+  "documents": [
+    "string"
+  ],
+  "documentObjects": [
+    {
+      "text": "string"
+    }
+  ],
+  "topN": 0,
+  "returnDocuments": true,
+  "maxTokensPerDoc": 0
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8089/v1/rerank",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "model": "string",
+  "query": "string",
+  "documents": [
+    "string"
+  ],
+  "documentObjects": [
+    {
+      "text": "string"
+    }
+  ],
+  "topN": 0,
+  "returnDocuments": true,
+  "maxTokensPerDoc": 0
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "id": "string",
+  "model": "string",
+  "results": [
+    {
+      "index": 0,
+      "relevanceScore": 0,
+      "document": "string"
+    }
+  ],
+  "meta": {
+    "version": "string",
+    "isBillable": true,
+    "billedUnits": {
+      "searchUnits": 0,
+      "inputTokens": 0,
+      "outputTokens": 0
+    },
+    "tokens": {
+      "inputTokens": 0,
+      "outputTokens": 0
+    }
+  }
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `model` | `string` | No |  |
+| `query` | `string` | No |  |
+| `documents` | `string[]` | No |  |
+| `documentObjects` | `object[]` | No |  |
+| `topN` | `integer` | No |  |
+| `returnDocuments` | `boolean` | No |  |
+| `maxTokensPerDoc` | `integer` | No |  |
+| `metadata` | `object` | No |  |
+
+
+### Responses
+
+#### 200 Reranked documents
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `string` |  |
+| `model` | `string` |  |
+| `results` | `object[]` |  |
+| `meta` | `object` |  |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

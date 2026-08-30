@@ -1,0 +1,105 @@
+---
+title: evs login
+description: Authenticate the Everstack CLI with your account.
+icon: KeyRound
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+## What it does
+
+`evs login` authenticates your CLI session against an Everstack instance. Interactive login uses browser-based OAuth Authorization Code with PKCE. On a headless machine, `--device` uses the Device Authorization Grant instead. For CI and automation, use `--api-key` to skip the browser.
+
+The first login for a context needs the API URL for the instance you want to manage. Once login succeeds, the CLI saves that endpoint with the context, so subsequent commands do not need `--api-url` or `--api-key`.
+
+Related commands: `evs logout`, `evs whoami`.
+
+## Basic usage
+
+```bash
+# Browser flow (recommended for interactive use)
+evs login --api-url https://api.your-domain.com
+
+# API key (CI / scripts)
+evs login --api-url https://api.your-domain.com --api-key evs_...
+
+# Headless device flow
+evs login --api-url https://api.your-domain.com --device
+
+# After the endpoint has been saved for this context
+evs login
+```
+
+## Device authorization flow
+
+```
+$ evs login --api-url https://api.your-domain.com --device
+
+Open this URL in your browser:
+
+  https://everstack.ai/device
+
+Enter code: ABCD-1234
+
+Waiting for authorization...
+Logged in as you@example.com (your-org)
+```
+
+1. The CLI calls the selected Everstack instance and receives a user code and verification URL.
+2. Your browser opens automatically (or you open the URL manually).
+3. Sign in and enter the code on the page. The CLI polls in the background.
+4. Once approved, your access token is stored in `~/.config/everstack/credentials` with `0600` permissions.
+
+## Flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `--api-key` | | Authenticate with an existing API key instead of the browser flow |
+| `--api-url` | Active context | Everstack instance API endpoint (env: `EVS_API_URL`; required when the context has no saved endpoint) |
+| `--device` | `false` | Use the device authorization flow for a headless environment |
+
+## Environment variables
+
+| Variable | Description |
+|---|---|
+| `EVS_API_KEY` | Equivalent to `--api-key`. Useful in CI without storing the key in shell history. |
+| `EVS_API_URL` | Select the Everstack instance API endpoint. |
+
+## Credential storage
+
+Tokens are stored in `~/.config/everstack/credentials` as JSON with `0600` permissions. Browser login stores a rotating refresh credential and short-lived access token; device and API-key login retain their corresponding credential. The file is keyed by context name (default: `default`). Secrets are never written to `~/.config/everstack/config.yaml`.
+
+<Callout type="info">
+To use a different named profile, set the active context first: `evs config use-context prod`, then run `evs login`.
+</Callout>
+
+## Logout
+
+```bash
+evs logout
+
+# If the server is offline, forget only the local credential
+evs logout --local
+```
+
+For OAuth browser logins, this revokes the refresh credential before removing the active context's local credential. Device and API-key logins perform a best-effort server sign-out and then forget the local credential; logging out does not delete or rotate an API key.
+
+If the server is offline and you intentionally want to skip revocation, use `--local`.
+
+## whoami
+
+```bash
+evs whoami
+```
+
+Prints the authenticated identity without making changes.
+
+```
+FIELD      VALUE
+User       you@example.com
+User ID    usr_abc123
+Org        your-org
+Org ID     org_xyz456
+Endpoint   https://api.your-domain.com
+Context    default
+```

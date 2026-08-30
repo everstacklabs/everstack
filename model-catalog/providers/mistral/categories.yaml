@@ -1,0 +1,49 @@
+# Model categories for Mistral
+# Groups models by their primary capabilities
+
+chat:
+  - mistral-large-latest
+  - mistral-medium-latest
+  - mistral-small-latest
+  - mistral-large-2411
+  - magistral-medium-latest
+  - magistral-small-2509
+  - codestral-latest
+  - devstral-medium-latest
+  - pixtral-large-latest
+  - ministral-8b-latest
+  - ministral-3b-latest
+  - voxtral-small-2507
+
+vision:
+  - mistral-large-latest
+  - mistral-medium-latest
+  - mistral-small-latest
+  - pixtral-large-latest
+  - voxtral-small-2507
+
+function_calling:
+  - mistral-large-latest
+  - mistral-medium-latest
+  - mistral-small-latest
+  - mistral-large-2411
+  - magistral-medium-latest
+  - magistral-small-2509
+  - codestral-latest
+  - devstral-medium-latest
+  - pixtral-large-latest
+  - ministral-8b-latest
+  - ministral-3b-latest
+
+reasoning:
+  - mistral-medium-latest
+  - mistral-small-latest
+  - magistral-medium-latest
+  - magistral-small-2509
+
+coding:
+  - codestral-latest
+  - devstral-medium-latest
+
+embeddings:
+  - mistral-embed

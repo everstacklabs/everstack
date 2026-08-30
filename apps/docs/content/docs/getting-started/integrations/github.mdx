@@ -1,0 +1,125 @@
+---
+title: GitHub
+description: GitHub App integration for repo access, branch discovery, and webhook handling.
+icon: Github
+---
+
+The GitHub integration creates a dedicated GitHub App for your tenant using the manifest-based OAuth flow. This gives you repo access, branch discovery, webhook handling, and PR review capabilities without sharing a single OAuth application across organizations.
+
+<Callout type="info">
+  This integration is in **beta**. It is fully functional, but the API surface may change before the 1.0 release.
+</Callout>
+
+## Why a per-tenant GitHub App
+
+Most platforms use a single shared OAuth app that all customers install. Everstack takes a different approach: each tenant gets its own GitHub App, created through the [manifest flow](https://docs.github.com/en/apps/sharing-github-apps/registering-a-github-app-from-a-manifest).
+
+This matters for three reasons:
+
+1. **Isolation** -- one tenant's credentials, webhook secret, and private key are never shared with another tenant.
+2. **Granular permissions** -- each app requests only the permissions your organization approves.
+3. **Auditability** -- GitHub shows the app in your organization's installed apps list with its own identity, not a generic "Everstack" entry.
+
+## Prerequisites
+
+- Everstack running with authentication enabled
+- A GitHub account with permission to create apps in your organization
+- Feature tier: Basic or above (feature key: `GITHUB_INTEGRATION`)
+
+## Setup
+
+<Steps>
+
+<Step>
+## Start the connection flow
+
+Navigate to **Settings > Integrations** in the admin dashboard. Find **GitHub** in the catalog and click **Connect**.
+
+Everstack generates a manifest describing the GitHub App (name, permissions, webhook URL) and redirects you to GitHub.
+</Step>
+
+<Step>
+## Create the app on GitHub
+
+GitHub shows you the manifest details. Review the requested permissions and click **Create GitHub App**. GitHub creates the app, generates a private key, and redirects back to Everstack.
+
+Everstack stores the app ID, private key, client credentials, and webhook secret. These are encrypted at rest and scoped to your tenant.
+</Step>
+
+<Step>
+## Install the app
+
+After the app is created, install it on one or more organizations or repositories. You control which repos the app can access through GitHub's standard installation UI.
+
+Back in the Everstack dashboard, the installation appears in the **GitHub > Installations** section.
+</Step>
+
+</Steps>
+
+## What you can do after setup
+
+### Repository and branch discovery
+
+Once an installation is linked, Everstack can list repositories and branches through the GitHub API. This powers features like:
+
+- Selecting a repo and branch when configuring an agent's code context
+- Branch format configuration for naming conventions
+- Automatic repo suggestions in the dashboard
+
+### Webhook handling
+
+The GitHub App registers a webhook URL during manifest creation. Everstack receives events such as `push`, `pull_request`, `installation`, and `check_suite`.
+
+Incoming webhooks are verified using HMAC signature verification against the per-tenant webhook secret. The handler enforces a 256KB body size limit and deduplicates deliveries to prevent duplicate processing if GitHub retries.
+
+You can configure which webhook events trigger agent sessions in **Settings > Integrations > GitHub > Webhooks**.
+
+### PR review preferences
+
+The dashboard includes configuration for how agents interact with pull requests:
+
+- Whether to post review comments automatically
+- Branch format patterns for matching
+- Review style preferences
+
+These preferences are stored per tenant and apply to all agents that use the GitHub integration.
+
+## Token management
+
+Everstack caches GitHub installation access tokens and refreshes them automatically. Tokens are refreshed with a 5-minute buffer before expiry, so API calls never fail due to an expired token under normal conditions.
+
+Token caching is in-memory with automatic eviction. You do not need to manage tokens manually.
+
+## Managing installations
+
+### Listing installations
+
+The **GitHub > Installations** section in the dashboard shows all installations linked to your tenant. Each entry shows the organization or user account, the repositories accessible, and the installation status.
+
+### Removing an installation
+
+You can unlink an installation from Everstack through the dashboard. This removes the stored metadata and stops processing webhooks for that installation. It does not uninstall the GitHub App from your organization. To fully remove the app, uninstall it from GitHub's settings as well.
+
+## Security considerations
+
+- **Webhook secrets** are unique per tenant and verified on every incoming request.
+- **Private keys** are stored encrypted and never exposed through the API or dashboard.
+- **Installation tokens** are short-lived (1 hour) and scoped to the repositories the installation has access to.
+- **Body size limits** (256KB) protect against oversized webhook payloads.
+- **Delivery deduplication** prevents replay or retry-induced double processing.
+
+## Limitations
+
+- Only GitHub.com is supported. GitHub Enterprise Server support is not yet available.
+- The manifest flow requires the user to have app creation permissions in the target organization.
+- Webhook event filtering is configured in Everstack, not at the GitHub App level. All subscribed events are delivered, and Everstack filters them on receipt.
+
+## Coming soon
+
+The integration catalog also shows **GitLab** and **Bitbucket** as planned source control integrations. These are on the roadmap but have no backend implementation yet. The UI placeholders are there to signal intent.
+
+## Next steps
+
+- [Channels](/getting-started/integrations/channels) -- connect Slack, Discord, or Telegram
+- [Webhooks](/getting-started/integrations/webhooks) -- trigger agents from any HTTP source
+- [Agents](/getting-started/agents/overview) -- build agents that use the GitHub integration

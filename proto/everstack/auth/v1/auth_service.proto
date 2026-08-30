@@ -1,0 +1,358 @@
+syntax = "proto3";
+
+package everstack.auth.v1;
+
+import "google/api/annotations.proto";
+import "everstack/auth/v1/auth.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/auth/v1;auth";
+
+// AuthService provides authentication endpoints for Cloud and Self-hosted editions
+service AuthService {
+  // GetSession returns the current user session if authenticated
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Current session info"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/auth/session"};
+  }
+  
+  // GetAuthURL returns the SSO provider URL for sign-in redirect (Cloud only)
+  rpc GetAuthURL(GetAuthURLRequest) returns (GetAuthURLResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "SSO auth URL for redirect"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/sso-url"
+      body: "*"
+    };
+  }
+  
+  // Authenticate exchanges an OAuth code for a session (Cloud only)
+  rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Authentication result with session"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/authenticate"
+      body: "*"
+    };
+  }
+  
+  // SignOut invalidates the current session
+  rpc SignOut(SignOutRequest) returns (SignOutResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Sign out result"}
+      }
+    };
+    option (google.api.http) = {post: "/v1/auth/signout"};
+  }
+  
+  // RefreshSession extends the current session
+  rpc RefreshSession(RefreshSessionRequest) returns (RefreshSessionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Refreshed session info"}
+      }
+    };
+    option (google.api.http) = {post: "/v1/auth/refresh"};
+  }
+
+  // CreateInstanceConnectSession creates a short-lived session for connecting
+  // a CE instance to Everstack Cloud.
+  rpc CreateInstanceConnectSession(CreateInstanceConnectSessionRequest) returns (CreateInstanceConnectSessionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Short-lived instance connect session"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/instance-connect-sessions"
+      body: "*"
+    };
+  }
+
+  // GetInstanceConnectSession validates and returns metadata for an instance
+  // connection session.
+  rpc GetInstanceConnectSession(GetInstanceConnectSessionRequest) returns (GetInstanceConnectSessionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Instance connect session details"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/auth/instance-connect-sessions/{session_id}"};
+  }
+
+  // CompleteInstanceConnect binds an authenticated cloud organization to the
+  // instance and returns the redirect URL back to the instance.
+  rpc CompleteInstanceConnect(CompleteInstanceConnectRequest) returns (CompleteInstanceConnectResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Completed instance connection"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/instance-connect-sessions/{session_id}:complete"
+      body: "*"
+    };
+  }
+
+  // ============================================
+  // Device Authorization Grant (RFC 8628) for CLI/desktop auth
+  // ============================================
+
+  // CreateDeviceAuthorization initiates a device authorization flow.
+  // The CLI/desktop calls this to get a user code and verification URL.
+  rpc CreateDeviceAuthorization(CreateDeviceAuthorizationRequest) returns (CreateDeviceAuthorizationResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Device authorization session with user code"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/device/authorize"
+      body: "*"
+    };
+  }
+
+  // ExchangeDeviceCode polls for the result of a device authorization.
+  // Returns pending until the user approves in the browser.
+  rpc ExchangeDeviceCode(ExchangeDeviceCodeRequest) returns (ExchangeDeviceCodeResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Device code exchange result"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/device/token"
+      body: "*"
+    };
+  }
+
+  // ApproveDeviceAuthorization approves a device authorization request.
+  // Called by the browser after the user confirms.
+  rpc ApproveDeviceAuthorization(ApproveDeviceAuthorizationRequest) returns (ApproveDeviceAuthorizationResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Device authorization approval result"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/device/approve"
+      body: "*"
+    };
+  }
+
+  // GetDeviceAuthorizationStatus returns the status of a device authorization by user code.
+  // Used by the browser approval page to validate the code.
+  rpc GetDeviceAuthorizationStatus(GetDeviceAuthorizationStatusRequest) returns (GetDeviceAuthorizationStatusResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Device authorization status"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/auth/device/status/{user_code}"};
+  }
+
+  // ============================================
+  // Self-hosted authentication endpoints
+  // ============================================
+
+  // GetAuthMode returns the authentication mode (cloud vs self-hosted)
+  rpc GetAuthMode(GetAuthModeRequest) returns (GetAuthModeResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Authentication mode and setup status"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/auth/mode"};
+  }
+
+  // Register creates the first admin user (becomes instance owner) - Self-hosted only
+  rpc Register(RegisterRequest) returns (RegisterResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Registration result with session"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/register"
+      body: "*"
+    };
+  }
+
+  // Login authenticates with email and password - Self-hosted only
+  rpc Login(LoginRequest) returns (LoginResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Login result with session"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/login"
+      body: "*"
+    };
+  }
+
+  // RequestMagicLink sends a magic link email for passwordless login - Self-hosted only
+  rpc RequestMagicLink(RequestMagicLinkRequest) returns (RequestMagicLinkResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Magic link request result"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/magic-link"
+      body: "*"
+    };
+  }
+
+  // VerifyMagicLink verifies a magic link token and creates a session - Self-hosted only
+  rpc VerifyMagicLink(VerifyMagicLinkRequest) returns (VerifyMagicLinkResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Magic link verification result with session"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/verify-magic-link"
+      body: "*"
+    };
+  }
+
+  // RequestPasswordReset initiates a password reset by emailing a reset link
+  // to the user. Anti-enumeration: always returns success.
+  rpc RequestPasswordReset(RequestPasswordResetRequest) returns (RequestPasswordResetResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Password reset request result"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/request-password-reset"
+      body: "*"
+    };
+  }
+
+  // CompletePasswordReset finalises a password reset using the token from the
+  // email and creates a session.
+  rpc CompletePasswordReset(CompletePasswordResetRequest) returns (CompletePasswordResetResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Password reset completion with session"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/complete-password-reset"
+      body: "*"
+    };
+  }
+
+  // CompleteEmailVerification finalises email verification using the
+  // pending_authentication_token from a prior auth challenge and the code
+  // delivered by email.
+  rpc CompleteEmailVerification(CompleteEmailVerificationRequest) returns (CompleteEmailVerificationResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Email verification result with session"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/complete-email-verification"
+      body: "*"
+    };
+  }
+
+  // ============================================
+  // Team management endpoints
+  // ============================================
+
+  // InviteTeamMember sends an invitation to join the team (checks seat limit)
+  rpc InviteTeamMember(InviteTeamMemberRequest) returns (InviteTeamMemberResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Invitation result"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/invite"
+      body: "*"
+    };
+  }
+
+  // AcceptInvitation accepts a team invitation and sets up the user account
+  rpc AcceptInvitation(AcceptInvitationRequest) returns (AcceptInvitationResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Invitation acceptance result with session"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/accept-invite"
+      body: "*"
+    };
+  }
+
+  // ListTeamMembers returns all team members and pending invitations
+  rpc ListTeamMembers(ListTeamMembersRequest) returns (ListTeamMembersResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Team members and invitations"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/auth/team"};
+  }
+
+  // RemoveTeamMember removes a user from the team
+  rpc RemoveTeamMember(RemoveTeamMemberRequest) returns (RemoveTeamMemberResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Removal result"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/auth/team/{user_id}"};
+  }
+
+  // RevokeInvitation revokes a pending invitation
+  rpc RevokeInvitation(RevokeInvitationRequest) returns (RevokeInvitationResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Revocation result"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/auth/invite/{invitation_id}"};
+  }
+}

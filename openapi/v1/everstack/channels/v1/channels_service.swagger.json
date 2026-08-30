@@ -1,0 +1,827 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/channels/v1/channels_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "ChannelsService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/channels": {
+      "get": {
+        "operationId": "ChannelsService_ListChannels",
+        "responses": {
+          "200": {
+            "description": "List channel bindings",
+            "schema": {
+              "$ref": "#/definitions/v1ListChannelsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "platform",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "PLATFORM_UNSPECIFIED",
+              "PLATFORM_DISCORD",
+              "PLATFORM_SLACK",
+              "PLATFORM_TELEGRAM"
+            ],
+            "default": "PLATFORM_UNSPECIFIED"
+          },
+          {
+            "name": "agentId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "enabled",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ChannelsService"
+        ]
+      },
+      "post": {
+        "operationId": "ChannelsService_CreateChannel",
+        "responses": {
+          "200": {
+            "description": "Create a new channel binding",
+            "schema": {
+              "$ref": "#/definitions/v1CreateChannelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateChannelRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ChannelsService"
+        ]
+      }
+    },
+    "/v1/channels/statuses": {
+      "get": {
+        "operationId": "ChannelsService_ListChannelStatuses",
+        "responses": {
+          "200": {
+            "description": "List runtime status of all channels",
+            "schema": {
+              "$ref": "#/definitions/v1ListChannelStatusesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ChannelsService"
+        ]
+      }
+    },
+    "/v1/channels/{channelConfigId}/platform-channels": {
+      "get": {
+        "operationId": "ChannelsService_ListPlatformChannels",
+        "responses": {
+          "200": {
+            "description": "List available channels from the connected platform",
+            "schema": {
+              "$ref": "#/definitions/v1ListPlatformChannelsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelConfigId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ChannelsService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/sessions": {
+      "get": {
+        "operationId": "ChannelsService_ListChannelSessions",
+        "responses": {
+          "200": {
+            "description": "List sessions created by a channel",
+            "schema": {
+              "$ref": "#/definitions/v1ListChannelSessionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ChannelsService"
+        ]
+      }
+    },
+    "/v1/channels/{id}": {
+      "get": {
+        "operationId": "ChannelsService_GetChannel",
+        "responses": {
+          "200": {
+            "description": "Get channel by ID",
+            "schema": {
+              "$ref": "#/definitions/v1GetChannelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ChannelsService"
+        ]
+      },
+      "delete": {
+        "operationId": "ChannelsService_DeleteChannel",
+        "responses": {
+          "200": {
+            "description": "Delete a channel binding",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteChannelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ChannelsService"
+        ]
+      },
+      "patch": {
+        "operationId": "ChannelsService_UpdateChannel",
+        "responses": {
+          "200": {
+            "description": "Update a channel binding",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateChannelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ChannelsServiceUpdateChannelBody"
+            }
+          }
+        ],
+        "tags": [
+          "ChannelsService"
+        ]
+      }
+    },
+    "/v1/channels/{id}/test": {
+      "post": {
+        "operationId": "ChannelsService_TestChannel",
+        "responses": {
+          "200": {
+            "description": "Test channel connectivity",
+            "schema": {
+              "$ref": "#/definitions/v1TestChannelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ChannelsServiceTestChannelBody"
+            }
+          }
+        ],
+        "tags": [
+          "ChannelsService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "ChannelsServiceTestChannelBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        }
+      }
+    },
+    "ChannelsServiceUpdateChannelBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "agentId": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "sessionMode": {
+          "$ref": "#/definitions/v1SessionMode"
+        },
+        "credentials": {
+          "type": "object"
+        },
+        "platformConfig": {
+          "type": "object"
+        },
+        "maxMessagesPerMinute": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxSessionsPerUser": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "responseFormat": {
+          "type": "string"
+        },
+        "maxResponseLength": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxTokensPerDay": {
+          "type": "string",
+          "format": "int64"
+        },
+        "idleSessionTtlSeconds": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "coalesceWindowMs": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "instanceAffinity": {
+          "type": "string"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "protobufNullValue": {
+      "type": "string",
+      "enum": [
+        "NULL_VALUE"
+      ],
+      "default": "NULL_VALUE",
+      "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ChannelConfig": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "agentId": {
+          "type": "string"
+        },
+        "platform": {
+          "$ref": "#/definitions/v1Platform"
+        },
+        "name": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "sessionMode": {
+          "$ref": "#/definitions/v1SessionMode"
+        },
+        "credentials": {
+          "type": "object",
+          "description": "Encrypted bot token etc."
+        },
+        "platformConfig": {
+          "type": "object",
+          "description": "Allowed channels, prefixes, etc."
+        },
+        "maxMessagesPerMinute": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxSessionsPerUser": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "responseFormat": {
+          "type": "string",
+          "title": "auto, plain, rich"
+        },
+        "maxResponseLength": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxTokensPerDay": {
+          "type": "string",
+          "format": "int64",
+          "title": "Per-channel budget cap"
+        },
+        "idleSessionTtlSeconds": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Auto-close after idle (default: 3600)"
+        },
+        "coalesceWindowMs": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Batch rapid messages (default: 3000)"
+        },
+        "instanceAffinity": {
+          "type": "string",
+          "title": "Config-based instance pinning"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "ChannelConfig defines a messaging platform binding to an agent.\nWhen agent_id is empty, the channel operates in dispatcher mode —\nmessages are auto-routed to agents via mention or HITL confirmation."
+    },
+    "v1ChannelSessionMapping": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "channelConfigId": {
+          "type": "string"
+        },
+        "platformChannelRef": {
+          "type": "string",
+          "description": "Discord channel ID, Slack channel ID, etc."
+        },
+        "platformUserId": {
+          "type": "string"
+        },
+        "platformUserName": {
+          "type": "string"
+        },
+        "platformThreadRef": {
+          "type": "string",
+          "title": "Thread ID if applicable"
+        },
+        "agentSessionId": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastMessageAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "ChannelSessionMapping maps platform references to agent sessions."
+    },
+    "v1ChannelStatus": {
+      "type": "string",
+      "enum": [
+        "CHANNEL_STATUS_UNSPECIFIED",
+        "CHANNEL_STATUS_CONNECTED",
+        "CHANNEL_STATUS_DISCONNECTED",
+        "CHANNEL_STATUS_ERROR",
+        "CHANNEL_STATUS_CONNECTING"
+      ],
+      "default": "CHANNEL_STATUS_UNSPECIFIED",
+      "description": "ChannelStatus represents the runtime connection status."
+    },
+    "v1ChannelStatusInfo": {
+      "type": "object",
+      "properties": {
+        "channelId": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1ChannelStatus"
+        },
+        "errorMessage": {
+          "type": "string"
+        },
+        "connectedSince": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "messagesReceived": {
+          "type": "string",
+          "format": "int64"
+        },
+        "messagesSent": {
+          "type": "string",
+          "format": "int64"
+        },
+        "activeSessions": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "description": "ChannelStatusInfo is runtime status for a channel connector."
+    },
+    "v1CreateChannelRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "agentId": {
+          "type": "string"
+        },
+        "platform": {
+          "$ref": "#/definitions/v1Platform"
+        },
+        "name": {
+          "type": "string"
+        },
+        "sessionMode": {
+          "$ref": "#/definitions/v1SessionMode"
+        },
+        "credentials": {
+          "type": "object"
+        },
+        "platformConfig": {
+          "type": "object"
+        },
+        "maxMessagesPerMinute": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxSessionsPerUser": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "responseFormat": {
+          "type": "string"
+        },
+        "maxResponseLength": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxTokensPerDay": {
+          "type": "string",
+          "format": "int64"
+        },
+        "idleSessionTtlSeconds": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "coalesceWindowMs": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "instanceAffinity": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateChannelResponse": {
+      "type": "object",
+      "properties": {
+        "channel": {
+          "$ref": "#/definitions/v1ChannelConfig"
+        }
+      }
+    },
+    "v1DeleteChannelResponse": {
+      "type": "object"
+    },
+    "v1GetChannelResponse": {
+      "type": "object",
+      "properties": {
+        "channel": {
+          "$ref": "#/definitions/v1ChannelConfig"
+        }
+      }
+    },
+    "v1ListChannelSessionsResponse": {
+      "type": "object",
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChannelSessionMapping"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListChannelStatusesResponse": {
+      "type": "object",
+      "properties": {
+        "statuses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChannelStatusInfo"
+          }
+        }
+      }
+    },
+    "v1ListChannelsResponse": {
+      "type": "object",
+      "properties": {
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChannelConfig"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListPlatformChannelsResponse": {
+      "type": "object",
+      "properties": {
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PlatformChannelInfo"
+          }
+        }
+      }
+    },
+    "v1Platform": {
+      "type": "string",
+      "enum": [
+        "PLATFORM_UNSPECIFIED",
+        "PLATFORM_DISCORD",
+        "PLATFORM_SLACK",
+        "PLATFORM_TELEGRAM"
+      ],
+      "default": "PLATFORM_UNSPECIFIED",
+      "description": "Platform identifies the messaging platform."
+    },
+    "v1PlatformChannelInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "title": "\"text\", \"public\", \"private\""
+        }
+      },
+      "description": "PlatformChannelInfo represents a channel/room from the connected platform."
+    },
+    "v1SessionMode": {
+      "type": "string",
+      "enum": [
+        "SESSION_MODE_UNSPECIFIED",
+        "SESSION_MODE_SHARED",
+        "SESSION_MODE_PER_USER",
+        "SESSION_MODE_THREAD"
+      ],
+      "default": "SESSION_MODE_UNSPECIFIED",
+      "description": "SessionMode controls how platform messages map to agent sessions.\n\n - SESSION_MODE_SHARED: One session per channel, all users contribute\n - SESSION_MODE_PER_USER: Each user gets own session\n - SESSION_MODE_THREAD: Shared in main, per-user in threads"
+    },
+    "v1TestChannelResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "v1UpdateChannelResponse": {
+      "type": "object",
+      "properties": {
+        "channel": {
+          "$ref": "#/definitions/v1ChannelConfig"
+        }
+      }
+    }
+  }
+}

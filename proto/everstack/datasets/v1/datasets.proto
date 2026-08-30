@@ -1,0 +1,942 @@
+syntax = "proto3";
+
+package everstack.datasets.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/datasets/v1;datasets";
+
+// Dataset represents a collection of test items for evaluation
+message Dataset {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  google.protobuf.Struct metadata = 5;
+  int32 item_count = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  google.protobuf.Timestamp archived_at = 9;
+}
+
+// DatasetItem represents a single test case within a dataset
+message DatasetItem {
+  string id = 1;
+  string dataset_id = 2;
+  string tenant_id = 3;
+  google.protobuf.Struct input = 4;
+  google.protobuf.Struct expected_output = 5;
+  google.protobuf.Struct metadata = 6;
+  string source_trace_id = 7;
+  string source_observation_id = 8;
+  string status = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+// DatasetVersion is an immutable snapshot of a dataset's active items.
+message DatasetVersion {
+  string id = 1;
+  string dataset_id = 2;
+  string tenant_id = 3;
+  int32 version_number = 4;
+  string label = 5;
+  string note = 6;
+  int32 item_count = 7;
+  google.protobuf.Timestamp created_at = 8;
+  string created_by = 9;
+}
+
+// ScoreConfigMessage is a single chat-template message for an LLM-judge scorer.
+// Local copy of prompts/v1.PromptMessage to avoid cross-package wire coupling.
+message ScoreConfigMessage {
+  string role = 1;    // "system" | "user" | "assistant"
+  // Raw text, may contain Mustache vars:
+  // {{input}} {{output}} {{expected_output}} {{context}} {{metadata}}
+  string content = 2;
+}
+
+// ChoiceScore maps one enumerated judge choice to a 0..1 score.
+message ChoiceScore {
+  string choice = 1; // e.g. "A"
+  double score = 2;  // 0..1
+}
+
+// ModelParams mirrors the gateway chat-completions sampling shape so the Go
+// reader maps 1:1. Only fields the /v1/chat/completions path actually honors
+// are included (no penalties / verbosity / reasoning_effort — see design doc).
+message ModelParams {
+  optional double temperature = 1;
+  optional double top_p = 2;
+  optional int32 max_tokens = 3;
+  repeated string stop = 4;
+  optional string tool_choice = 5; // "auto" | "required" | "none"
+}
+
+// ScoreConfig defines how to score/grade evaluation outputs
+message ScoreConfig {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string data_type = 4; // legacy, display-only; see scorer_type/output_type
+  string description = 5;
+  optional double min_value = 6;
+  optional double max_value = 7;
+  google.protobuf.Struct categories = 8;
+  string eval_prompt = 9;
+  string eval_model = 10;
+  bool is_archived = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+  string scorer_code = 14;
+  string scorer_language = 15;  // "python", "javascript", "typescript"
+  bool use_sandbox = 16;
+
+  // --- Braintrust-style scorer fields (additive) ---
+  string slug = 17;                          // url/api handle, slugified from name
+  string scorer_type = 18;                   // manual|llm_judge|typescript|javascript|python|builtin
+  string output_type = 19;                   // numeric|boolean|categorical|choice
+  repeated ScoreConfigMessage messages = 20; // multi-part chat template for llm_judge
+  ModelParams model_params = 21;             // sampling knobs for llm_judge
+  repeated ChoiceScore choice_scores = 22;   // choice -> 0..1 (output_type == choice)
+  bool use_cot = 23;                          // chain-of-thought before the choice
+  optional double pass_threshold = 24;        // 0..1 pass/fail cutoff
+  bytes dag_definition = 25;                  // JSON DAG scorer definition
+}
+
+// EvalRun represents an evaluation run against a dataset
+message EvalRun {
+  string id = 1;
+  string tenant_id = 2;
+  string dataset_id = 3;
+  string name = 4;
+  string description = 5;
+  string status = 6; // pending, running, completed, failed, cancelled
+  string eval_target_type = 7;
+  string eval_target_id = 8;
+  google.protobuf.Struct eval_config = 9;
+  repeated string scorer_config_ids = 10;
+  int32 total_items = 11;
+  int32 completed_items = 12;
+  int32 failed_items = 13;
+  google.protobuf.Struct score_summary = 14;
+  google.protobuf.Timestamp started_at = 15;
+  google.protobuf.Timestamp completed_at = 16;
+  google.protobuf.Timestamp created_at = 17;
+  google.protobuf.Timestamp updated_at = 18;
+  bool is_baseline = 19;
+  string baseline_run_id = 20;
+  google.protobuf.Struct regression_result = 21;
+}
+
+// RetryEvalRunRequest restarts an eval run, optionally retrying all items.
+message RetryEvalRunRequest {
+  string tenant_id = 1;
+  string id = 2;
+  bool retry_all = 3; // true = reset all items, false = reset only failed
+}
+
+message RetryEvalRunResponse {
+  EvalRun eval_run = 1;
+}
+
+// EvalRunItem represents a single item result within an eval run
+message EvalRunItem {
+  string id = 1;
+  string eval_run_id = 2;
+  string dataset_item_id = 3;
+  string tenant_id = 4;
+  string status = 5;
+  google.protobuf.Struct output = 6;
+  string trace_id = 7;
+  int64 latency_ms = 8;
+  double cost = 9;
+  google.protobuf.Struct token_usage = 10;
+  string error = 11;
+  google.protobuf.Struct scores = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+  google.protobuf.Struct input = 15;
+  google.protobuf.Struct expected_output = 16;
+}
+
+// --- Dataset CRUD ---
+
+message CreateDatasetRequest {
+  string tenant_id = 1;
+  string name = 2;
+  optional string description = 3;
+  optional google.protobuf.Struct metadata = 4;
+}
+
+message CreateDatasetResponse {
+  Dataset dataset = 1;
+}
+
+message GetDatasetRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message GetDatasetResponse {
+  Dataset dataset = 1;
+}
+
+message ListDatasetsRequest {
+  string tenant_id = 1;
+  optional int32 limit = 2;
+  optional int32 offset = 3;
+}
+
+message ListDatasetsResponse {
+  repeated Dataset datasets = 1;
+  int32 total = 2;
+}
+
+message UpdateDatasetRequest {
+  string tenant_id = 1;
+  string id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional google.protobuf.Struct metadata = 5;
+}
+
+message UpdateDatasetResponse {
+  Dataset dataset = 1;
+}
+
+message DeleteDatasetRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message DeleteDatasetResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// --- DatasetVersion CRUD ---
+
+message CreateDatasetVersionRequest {
+  string tenant_id = 1;
+  string dataset_id = 2;
+  string label = 3;
+  string note = 4;
+}
+
+message CreateDatasetVersionResponse {
+  DatasetVersion version = 1;
+}
+
+message ListDatasetVersionsRequest {
+  string tenant_id = 1;
+  string dataset_id = 2;
+  optional int32 limit = 3;
+  optional int32 offset = 4;
+}
+
+message ListDatasetVersionsResponse {
+  repeated DatasetVersion versions = 1;
+  int32 total = 2;
+}
+
+message GetDatasetVersionRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message GetDatasetVersionResponse {
+  DatasetVersion version = 1;
+}
+
+// --- DatasetItem CRUD ---
+
+message CreateDatasetItemRequest {
+  string tenant_id = 1;
+  string dataset_id = 2;
+  google.protobuf.Struct input = 3;
+  optional google.protobuf.Struct expected_output = 4;
+  optional google.protobuf.Struct metadata = 5;
+  optional string source_trace_id = 6;
+  optional string source_observation_id = 7;
+}
+
+message CreateDatasetItemResponse {
+  DatasetItem item = 1;
+}
+
+message CreateDatasetItemBatchRequest {
+  string tenant_id = 1;
+  string dataset_id = 2;
+  repeated CreateDatasetItemRequest items = 3;
+}
+
+message CreateDatasetItemBatchResponse {
+  repeated DatasetItem items = 1;
+}
+
+message GenerateDatasetItemsRequest {
+  string tenant_id = 1;
+  string dataset_id = 2;
+  int32 count = 3;
+  string instructions = 4;
+  string context = 5;
+  string style = 6;
+  string model = 7;
+}
+
+message GenerateDatasetItemsResponse {
+  int32 items_created = 1;
+  repeated DatasetItem items = 2;
+}
+
+message GenerateRedTeamDatasetRequest {
+  string tenant_id = 1;
+  string dataset_id = 2;
+  repeated string categories = 3;
+  int32 attacks_per_category = 4;
+  string enhancement = 5;
+}
+
+message GenerateRedTeamDatasetResponse {
+  int32 items_created = 1;
+  repeated string categories_used = 2;
+}
+
+message GetDatasetItemRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message GetDatasetItemResponse {
+  DatasetItem item = 1;
+}
+
+message ListDatasetItemsRequest {
+  string tenant_id = 1;
+  string dataset_id = 2;
+  optional string status = 3;
+  optional int32 limit = 4;
+  optional int32 offset = 5;
+}
+
+message ListDatasetItemsResponse {
+  repeated DatasetItem items = 1;
+  int32 total = 2;
+}
+
+message UpdateDatasetItemRequest {
+  string tenant_id = 1;
+  string id = 2;
+  optional google.protobuf.Struct input = 3;
+  optional google.protobuf.Struct expected_output = 4;
+  optional google.protobuf.Struct metadata = 5;
+  optional string status = 6;
+}
+
+message UpdateDatasetItemResponse {
+  DatasetItem item = 1;
+}
+
+message DeleteDatasetItemRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message DeleteDatasetItemResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// --- ScoreConfig CRUD ---
+
+message CreateScoreConfigRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string data_type = 3;
+  optional string description = 4;
+  optional double min_value = 5;
+  optional double max_value = 6;
+  optional google.protobuf.Struct categories = 7;
+  optional string eval_prompt = 8;
+  optional string eval_model = 9;
+  optional string scorer_code = 10;
+  optional string scorer_language = 11;
+  optional bool use_sandbox = 12;
+  // --- Braintrust-style scorer fields (additive) ---
+  optional string slug = 13;
+  optional string scorer_type = 14;
+  optional string output_type = 15;
+  repeated ScoreConfigMessage messages = 16;
+  optional ModelParams model_params = 17;
+  repeated ChoiceScore choice_scores = 18;
+  optional bool use_cot = 19;
+  optional double pass_threshold = 20;
+  bytes dag_definition = 21;
+}
+
+message CreateScoreConfigResponse {
+  ScoreConfig score_config = 1;
+}
+
+message GetScoreConfigRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message GetScoreConfigResponse {
+  ScoreConfig score_config = 1;
+}
+
+message ListScoreConfigsRequest {
+  string tenant_id = 1;
+  optional int32 limit = 2;
+  optional int32 offset = 3;
+}
+
+message ListScoreConfigsResponse {
+  repeated ScoreConfig score_configs = 1;
+  int32 total = 2;
+}
+
+message UpdateScoreConfigRequest {
+  string tenant_id = 1;
+  string id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional double min_value = 5;
+  optional double max_value = 6;
+  optional google.protobuf.Struct categories = 7;
+  optional string eval_prompt = 8;
+  optional string eval_model = 9;
+  optional bool is_archived = 10;
+  optional string scorer_code = 11;
+  optional string scorer_language = 12;
+  optional bool use_sandbox = 13;
+  // --- Braintrust-style scorer fields (additive) ---
+  optional string data_type = 14; // was missing on update entirely
+  optional string slug = 15;
+  optional string scorer_type = 16;
+  optional string output_type = 17;
+  repeated ScoreConfigMessage messages = 18;
+  optional ModelParams model_params = 19;
+  repeated ChoiceScore choice_scores = 20;
+  optional bool use_cot = 21;
+  optional double pass_threshold = 22;
+  bytes dag_definition = 23;
+}
+
+message UpdateScoreConfigResponse {
+  ScoreConfig score_config = 1;
+}
+
+message DeleteScoreConfigRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message DeleteScoreConfigResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// --- Built-in Metrics ---
+
+message BuiltinMetric {
+  string key = 1;
+  string name = 2;
+  string description = 3;
+  string data_type = 4;
+  string eval_prompt = 5;
+  double min_value = 6;
+  double max_value = 7;
+  string category = 8;
+  // --- full seed definition so a template prefills the editor (additive) ---
+  string scorer_type = 9;
+  string output_type = 10;
+  repeated ScoreConfigMessage messages = 11;
+  repeated ChoiceScore choice_scores = 12;
+  bool use_cot = 13;
+}
+
+message ListBuiltinMetricsRequest {}
+message ListBuiltinMetricsResponse {
+  repeated BuiltinMetric metrics = 1;
+}
+
+// --- EvalRun operations ---
+
+message CreateEvalRunRequest {
+  string tenant_id = 1;
+  string dataset_id = 2;
+  string name = 3;
+  optional string description = 4;
+  string eval_target_type = 5;
+  optional string eval_target_id = 6;
+  optional google.protobuf.Struct eval_config = 7;
+  repeated string scorer_config_ids = 8;
+  string dataset_version_id = 9;
+}
+
+message CreateEvalRunResponse {
+  EvalRun eval_run = 1;
+}
+
+message GetEvalRunRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message GetEvalRunResponse {
+  EvalRun eval_run = 1;
+}
+
+message ListEvalRunsRequest {
+  string tenant_id = 1;
+  optional string dataset_id = 2;
+  optional string status = 3;
+  optional int32 limit = 4;
+  optional int32 offset = 5;
+}
+
+message ListEvalRunsResponse {
+  repeated EvalRun eval_runs = 1;
+  int32 total = 2;
+}
+
+message CancelEvalRunRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message CancelEvalRunResponse {
+  EvalRun eval_run = 1;
+}
+
+message DeleteEvalRunRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message DeleteEvalRunResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetEvalRunItemsRequest {
+  string tenant_id = 1;
+  string eval_run_id = 2;
+  optional string status = 3;
+  optional int32 limit = 4;
+  optional int32 offset = 5;
+}
+
+message GetEvalRunItemsResponse {
+  repeated EvalRunItem items = 1;
+  int32 total = 2;
+}
+
+message GetEvalRunSummaryRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message GetEvalRunSummaryResponse {
+  EvalRun eval_run = 1;
+  google.protobuf.Struct score_breakdown = 2;
+}
+
+message CompareEvalRunsRequest {
+  string tenant_id = 1;
+  repeated string eval_run_ids = 2;
+  // When true, materialize the comparison into the comparisons table
+  // (both runs must be terminal). When false (default), preview only.
+  bool persist = 4;
+}
+
+message CompareEvalRunsResponse {
+  repeated EvalRun eval_runs = 1;
+  // Legacy untyped comparison payload; kept for backward compatibility.
+  google.protobuf.Struct comparison = 2;
+  // Typed per-scorer paired-bootstrap results (candidate vs baseline).
+  repeated ComparisonScorerResult scorer_results = 3;
+  // Composite verdict across scorers, cost, latency, and error rate.
+  ComparisonVerdict overall = 5;
+  // Set when persist=true: id of the materialized comparisons row.
+  string comparison_id = 6;
+  // How items were paired: "hash" | "dataset_item".
+  string match_mode = 7;
+}
+
+// Per-scorer paired-bootstrap comparison result. Deltas are candidate -
+// baseline; a positive mean_diff means the candidate scored higher.
+message ComparisonScorerResult {
+  string name = 1;
+  double baseline_mean = 2;
+  double candidate_mean = 3;
+  double mean_diff = 4;
+  // 95% bootstrap confidence interval on the mean per-item delta.
+  double ci_low = 5;
+  double ci_high = 6;
+  // Two-sided bootstrap p-value for mean_diff != 0.
+  double p_value = 7;
+  // "improvement" | "regression" | "inconclusive" | "insufficient".
+  string verdict = 8;
+  // Number of paired items backing this scorer's comparison.
+  int32 n = 9;
+}
+
+// Composite comparison verdict across scorer quality, cost, latency, and
+// error-rate deltas.
+message ComparisonVerdict {
+  ComparisonGrade grade = 1;
+  // Human-readable explanation naming the drivers of the grade.
+  string rationale = 2;
+  // Mean per-item latency delta in ms (candidate - baseline).
+  double latency_delta = 3;
+  // Mean per-item cost delta (candidate - baseline).
+  double cost_delta = 4;
+  // Failed-item rate delta (candidate - baseline), in [-1, 1].
+  double error_rate_delta = 5;
+  // Fraction of items that were paired: paired / max(baseline, candidate).
+  double coverage = 6;
+}
+
+enum ComparisonGrade {
+  COMPARISON_GRADE_UNSPECIFIED = 0;
+  COMPARISON_GRADE_IMPROVEMENT = 1;
+  COMPARISON_GRADE_REGRESSION = 2;
+  COMPARISON_GRADE_TRADEOFF = 3;
+  COMPARISON_GRADE_TIE = 4;
+  COMPARISON_GRADE_INSUFFICIENT_DATA = 5;
+}
+
+// --- Comparison rows (paginated; full row payloads are never inlined in
+// CompareEvalRunsResponse to stay under gRPC message-size limits) ---
+
+message ListComparisonRowsRequest {
+  string tenant_id = 1;
+  string comparison_id = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+  bool only_regressions = 5;
+}
+
+message ComparisonRow {
+  string input_hash = 1;
+  string input_preview = 2;
+  string baseline_output = 3;
+  string candidate_output = 4;
+  repeated ScorerCellDelta scorer_deltas = 5;
+  bool regression = 6;
+}
+
+message ScorerCellDelta {
+  string name = 1;
+  double baseline = 2;
+  double candidate = 3;
+  double delta = 4;
+}
+
+message ListComparisonRowsResponse {
+  repeated ComparisonRow rows = 1;
+  int32 total = 2;
+}
+
+// --- Baseline ---
+
+message SetBaselineRequest {
+  string tenant_id = 1;
+  string eval_run_id = 2;
+}
+
+message SetBaselineResponse {
+  EvalRun eval_run = 1;
+}
+
+// --- Eval Schedules ---
+
+message EvalSchedule {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  string dataset_id = 5;
+  string eval_target_type = 6;
+  string eval_target_id = 7;
+  google.protobuf.Struct eval_config = 8;
+  repeated string scorer_config_ids = 9;
+  string cron_expression = 10;
+  string timezone = 11;
+  bool enabled = 12;
+  google.protobuf.Timestamp last_run_at = 13;
+  google.protobuf.Timestamp next_run_at = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}
+
+message CreateEvalScheduleRequest {
+  string tenant_id = 1;
+  string name = 2;
+  optional string description = 3;
+  string dataset_id = 4;
+  string eval_target_type = 5;
+  optional string eval_target_id = 6;
+  optional google.protobuf.Struct eval_config = 7;
+  repeated string scorer_config_ids = 8;
+  string cron_expression = 9;
+  optional string timezone = 10;
+  string dataset_version_id = 11;
+}
+
+message CreateEvalScheduleResponse {
+  EvalSchedule schedule = 1;
+}
+
+message GetEvalScheduleRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message GetEvalScheduleResponse {
+  EvalSchedule schedule = 1;
+}
+
+message ListEvalSchedulesRequest {
+  string tenant_id = 1;
+  optional string dataset_id = 2;
+  optional int32 limit = 3;
+  optional int32 offset = 4;
+}
+
+message ListEvalSchedulesResponse {
+  repeated EvalSchedule schedules = 1;
+  int32 total = 2;
+}
+
+message UpdateEvalScheduleRequest {
+  string tenant_id = 1;
+  string id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional string cron_expression = 5;
+  optional string timezone = 6;
+  optional bool enabled = 7;
+  repeated string scorer_config_ids = 8;
+}
+
+message UpdateEvalScheduleResponse {
+  EvalSchedule schedule = 1;
+}
+
+message DeleteEvalScheduleRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message DeleteEvalScheduleResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+
+// --- Sampling Eval Rules (online eval) ---
+
+// SamplingEvalRule continuously samples production traces matching a
+// filter and runs scorers against them. Output lands in otel_trace_scores
+// via the existing score recorder. The polling runner lives in
+// internal/services/eval_runner/sampling.go.
+message SamplingEvalRule {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  // Filter doc using a subset of ListRichTracesRequest fields:
+  // {environment, tags[], user_id, session_id, thread_id, model,
+  // provider, metadata[]}. Empty doc = match all.
+  google.protobuf.Struct filter_predicate = 5;
+  // Sampling fraction, 0..1. Same trace is consistently in/out across
+  // re-runs via stable hash.
+  double sample_rate = 6;
+  // Score configs to apply to each sampled trace.
+  repeated string scorer_config_ids = 7;
+  // How far back the runner looks per tick.
+  int32 lookback_seconds = 8;
+  // Polling interval. 0 = manual-only (use RunSamplingEvalRuleNow).
+  int32 interval_seconds = 9;
+  bool enabled = 10;
+  google.protobuf.Timestamp last_run_at = 11;
+  int32 last_run_trace_count = 12;
+  string last_run_error = 13;
+  google.protobuf.Timestamp last_processed_trace_at = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}
+
+message CreateSamplingEvalRuleRequest {
+  string tenant_id = 1;
+  string name = 2;
+  optional string description = 3;
+  optional google.protobuf.Struct filter_predicate = 4;
+  optional double sample_rate = 5;
+  repeated string scorer_config_ids = 6;
+  optional int32 lookback_seconds = 7;
+  optional int32 interval_seconds = 8;
+  optional bool enabled = 9;
+}
+message CreateSamplingEvalRuleResponse { SamplingEvalRule rule = 1; }
+
+message GetSamplingEvalRuleRequest { string tenant_id = 1; string id = 2; }
+message GetSamplingEvalRuleResponse { SamplingEvalRule rule = 1; }
+
+message ListSamplingEvalRulesRequest {
+  string tenant_id = 1;
+  optional bool enabled_only = 2;
+  optional int32 limit = 3;
+  optional int32 offset = 4;
+}
+message ListSamplingEvalRulesResponse { repeated SamplingEvalRule rules = 1; int32 total = 2; }
+
+message UpdateSamplingEvalRuleRequest {
+  string tenant_id = 1;
+  string id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional google.protobuf.Struct filter_predicate = 5;
+  optional double sample_rate = 6;
+  repeated string scorer_config_ids = 7;
+  optional int32 lookback_seconds = 8;
+  optional int32 interval_seconds = 9;
+  optional bool enabled = 10;
+}
+message UpdateSamplingEvalRuleResponse { SamplingEvalRule rule = 1; }
+
+message DeleteSamplingEvalRuleRequest { string tenant_id = 1; string id = 2; }
+message DeleteSamplingEvalRuleResponse { bool success = 1; string message = 2; }
+
+message RunSamplingEvalRuleNowRequest { string tenant_id = 1; string id = 2; }
+message RunSamplingEvalRuleNowResponse {
+  int32 traces_matched = 1;
+  int32 traces_sampled = 2;
+  int32 scores_recorded = 3;
+  string error = 4;
+}
+
+// --- AI-generated scorers ---
+
+// GenerateScorerRequest asks Claude (via the gateway) to draft an
+// LLM-judge prompt for the user-described evaluation intent.
+//
+// Example payload:
+//   {
+//     "intent": "score how politely the assistant responded",
+//     "data_type": "numeric",
+//     "examples": [
+//       {"input": "...", "output": "...", "label": "1.0"},
+//       {"input": "...", "output": "...", "label": "0.0"},
+//       ...
+//     ]
+//   }
+message GenerateScorerRequest {
+  string tenant_id = 1;
+  // Free-text description of what to evaluate.
+  string intent = 2;
+  // Desired output type: numeric, categorical, boolean. Defaults to numeric.
+  optional string data_type = 3;
+  // Optional examples to ground the prompt.
+  repeated GenerateScorerExample examples = 4;
+}
+
+message GenerateScorerExample {
+  string input = 1;
+  string output = 2;
+  // Free-text label expressing the desired score for this example
+  // (e.g. "1.0", "polite", "false").
+  string label = 3;
+}
+
+message GenerateScorerResponse {
+  // Suggested name for the score config (slug-style, e.g. "politeness").
+  string suggested_name = 1;
+  // The draft LLM-judge prompt template, ready to drop into
+  // ScoreConfig.eval_prompt.
+  string prompt = 2;
+  // Echoed back so the caller can wire to ScoreConfig.data_type.
+  string data_type = 3;
+  // For CATEGORICAL outputs: suggested category values.
+  repeated string suggested_categories = 4;
+  // Anything Claude wanted to flag (ambiguity in examples, etc.).
+  string notes = 5;
+}
+
+// --- Synchronous scoring (playground) ---
+
+// ScoreOutputRequest scores a single (input, output, expected) triple against
+// the named scorer configs. Used by the playground to score a grid cell live.
+message ScoreOutputRequest {
+  // Ignored server-side; tenant is resolved from the authenticated context.
+  string tenant_id = 1;
+  // The generation input (dataset row / prompt variables). Arbitrary JSON.
+  google.protobuf.Value input = 2;
+  // The generated output to score. Arbitrary JSON (string or structured).
+  google.protobuf.Value output = 3;
+  // Optional expected/reference output for scorers that compare against it.
+  google.protobuf.Value expected_output = 4;
+  // Optional row metadata passed through to code scorers.
+  google.protobuf.Struct metadata = 5;
+  // Score configs to run (must belong to the caller's tenant).
+  repeated string scorer_config_ids = 6;
+}
+
+message ScoreOutputResponse {
+  // scores maps score name -> value, plus "<name>_reason" and "<name>_error"
+  // keys, matching the shape written into eval_run_items.scores.
+  google.protobuf.Struct scores = 1;
+}
+
+// --- Playground documents ---
+
+// Playground persists a full playground workspace (tasks, dataset, scorers,
+// grid, view flags) as an opaque JSON config blob so the schema can evolve
+// without migrations.
+message Playground {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  google.protobuf.Struct config = 4;
+  string created_by = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message CreatePlaygroundRequest {
+  string tenant_id = 1; // ignored server-side; tenant from auth context
+  string name = 2;
+  google.protobuf.Struct config = 3;
+}
+message CreatePlaygroundResponse { Playground playground = 1; }
+
+message GetPlaygroundRequest { string tenant_id = 1; string id = 2; }
+message GetPlaygroundResponse { Playground playground = 1; }
+
+message ListPlaygroundsRequest {
+  string tenant_id = 1;
+  optional int32 limit = 2;
+  optional int32 offset = 3;
+}
+message ListPlaygroundsResponse {
+  repeated Playground playgrounds = 1;
+  int32 total = 2;
+}
+
+message UpdatePlaygroundRequest {
+  string tenant_id = 1;
+  string id = 2;
+  optional string name = 3;
+  optional google.protobuf.Struct config = 4;
+}
+message UpdatePlaygroundResponse { Playground playground = 1; }
+
+message DeletePlaygroundRequest { string tenant_id = 1; string id = 2; }
+message DeletePlaygroundResponse { bool success = 1; }

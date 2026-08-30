@@ -1,0 +1,19 @@
+{
+  "pages": [
+    "accept-invitation-accepts-a-team-invitation-and-sets-up-the-user-account",
+    "authenticate-exchanges-an-oauth-code-for-a-session-cloud-only",
+    "invite-team-member-sends-an-invitation-to-join-the-team-checks-seat-limit",
+    "revoke-invitation-revokes-a-pending-invitation",
+    "login-authenticates-with-email-and-password-self-hosted-only",
+    "request-magic-link-sends-a-magic-link-email-for-passwordless-login-self-hosted-only",
+    "get-auth-mode-returns-the-authentication-mode-cloud-vs-self-hosted",
+    "refresh-session-extends-the-current-session",
+    "register-creates-the-first-admin-user-becomes-instance-owner-self-hosted-only",
+    "get-session-returns-the-current-user-session-if-authenticated",
+    "sign-out-invalidates-the-current-session",
+    "get-auth-url-returns-the-sso-provider-url-for-sign-in-redirect-cloud-only",
+    "list-team-members-returns-all-team-members-and-pending-invitations",
+    "remove-team-member-removes-a-user-from-the-team",
+    "verify-magic-link-verifies-a-magic-link-token-and-creates-a-session-self-hosted-only"
+  ]
+}

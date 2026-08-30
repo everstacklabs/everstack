@@ -1,0 +1,1111 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "everstack/providers/providers_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "ProvidersService"
+    }
+  ],
+  "paths": {
+    "/v1/providers/api-keys": {
+      "post": {
+        "summary": "AddProviderAPIKey adds a new API key to a provider configuration",
+        "operationId": "ProvidersService_AddProviderAPIKey",
+        "responses": {
+          "200": {
+            "description": "API key added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1AddProviderAPIKeyResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1AddProviderAPIKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["ProvidersService"]
+      }
+    },
+    "/v1/providers/api-keys/{keyId}": {
+      "delete": {
+        "summary": "DeleteProviderAPIKey deletes an API key",
+        "operationId": "ProvidersService_DeleteProviderAPIKey",
+        "responses": {
+          "200": {
+            "description": "API key deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteProviderAPIKeyResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "keyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["ProvidersService"]
+      }
+    },
+    "/v1/providers/api-keys/{keyId}/toggle": {
+      "patch": {
+        "summary": "ToggleAPIKey activates or deactivates an API key",
+        "operationId": "ProvidersService_ToggleAPIKey",
+        "responses": {
+          "200": {
+            "description": "API key toggled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ToggleAPIKeyResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "keyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProvidersServiceToggleAPIKeyBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["ProvidersService"]
+      }
+    },
+    "/v1/providers/api-keys/{keyId}/weight": {
+      "patch": {
+        "summary": "UpdateAPIKeyWeight updates the weight of an API key for load balancing",
+        "operationId": "ProvidersService_UpdateAPIKeyWeight",
+        "responses": {
+          "200": {
+            "description": "API key weight updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1UpdateAPIKeyWeightResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "keyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProvidersServiceUpdateAPIKeyWeightBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["ProvidersService"]
+      }
+    },
+    "/v1/providers/api-keys/{providerConfigId}": {
+      "get": {
+        "summary": "ListProviderAPIKeys lists all API keys for a provider configuration",
+        "operationId": "ProvidersService_ListProviderAPIKeys",
+        "responses": {
+          "200": {
+            "description": "List of API keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListProviderAPIKeysResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "providerConfigId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["ProvidersService"]
+      }
+    },
+    "/v1/providers/catalog": {
+      "get": {
+        "summary": "ListProviderCatalog returns all available providers from the catalog (defaults)",
+        "operationId": "ProvidersService_ListProviderCatalog",
+        "responses": {
+          "200": {
+            "description": "List of all available providers from catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListProviderCatalogResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["ProvidersService"]
+      }
+    },
+    "/v1/providers/config-yaml": {
+      "get": {
+        "summary": "GetConfigYAML gets the current YAML config content",
+        "operationId": "ProvidersService_GetConfigYAML",
+        "responses": {
+          "200": {
+            "description": "YAML config content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetConfigYAMLResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["ProvidersService"]
+      },
+      "post": {
+        "summary": "SaveConfigYAML saves YAML config and syncs to database",
+        "operationId": "ProvidersService_SaveConfigYAML",
+        "responses": {
+          "200": {
+            "description": "Config saved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1SaveConfigYAMLResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1SaveConfigYAMLRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["ProvidersService"]
+      }
+    },
+    "/v1/providers/configured": {
+      "get": {
+        "summary": "ListConfiguredProviders returns all providers with their status (configured and unconfigured)",
+        "operationId": "ProvidersService_ListConfiguredProviders",
+        "responses": {
+          "200": {
+            "description": "List of all providers with their status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListConfiguredProvidersResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "activeOnly",
+            "description": "Filter to only active providers",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "tags": ["ProvidersService"]
+      }
+    },
+    "/v1/providers/reload": {
+      "post": {
+        "summary": "ReloadConfig syncs YAML to DB and triggers gateway reload",
+        "operationId": "ProvidersService_ReloadConfig",
+        "responses": {
+          "200": {
+            "description": "Config reloaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ReloadConfigResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["ProvidersService"]
+      }
+    },
+    "/v1/providers/sync-status": {
+      "get": {
+        "summary": "GetSyncStatus checks if YAML and DB are in sync",
+        "operationId": "ProvidersService_GetSyncStatus",
+        "responses": {
+          "200": {
+            "description": "Sync status information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetSyncStatusResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["ProvidersService"]
+      }
+    },
+    "/v1/providers/{providerName}": {
+      "get": {
+        "summary": "GetProvider returns detailed information about a specific provider",
+        "operationId": "ProvidersService_GetProvider",
+        "responses": {
+          "200": {
+            "description": "Provider details with catalog and configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetProviderResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "providerName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["ProvidersService"]
+      },
+      "delete": {
+        "summary": "DeleteProviderConfiguration removes a provider configuration",
+        "operationId": "ProvidersService_DeleteProviderConfiguration",
+        "responses": {
+          "200": {
+            "description": "Provider configuration deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteProviderConfigurationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "providerName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["ProvidersService"]
+      }
+    },
+    "/v1/providers/{providerName}/configure": {
+      "post": {
+        "summary": "ConfigureProvider creates or updates a provider configuration",
+        "operationId": "ProvidersService_ConfigureProvider",
+        "responses": {
+          "200": {
+            "description": "Provider configured successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ConfigureProviderResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "providerName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProvidersServiceConfigureProviderBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["ProvidersService"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ProvidersServiceConfigureProviderBody": {
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "type": "string"
+          },
+          "enabledModels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "customBaseUrl": {
+            "type": "string",
+            "title": "Optional"
+          },
+          "customSettings": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Optional"
+          }
+        },
+        "title": "ConfigureProviderRequest - request to configure a provider"
+      },
+      "ProvidersServiceToggleAPIKeyBody": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "title": "ToggleAPIKeyRequest - request to activate/deactivate an API key"
+      },
+      "ProvidersServiceUpdateAPIKeyWeightBody": {
+        "type": "object",
+        "properties": {
+          "weight": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "title": "UpdateAPIKeyWeightRequest - request to update API key weight"
+      },
+      "protobufAny": {
+        "type": "object",
+        "properties": {
+          "@type": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": {}
+      },
+      "rpcStatus": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/protobufAny"
+            }
+          }
+        }
+      },
+      "v1AddProviderAPIKeyRequest": {
+        "type": "object",
+        "properties": {
+          "providerConfigId": {
+            "type": "string"
+          },
+          "keyName": {
+            "type": "string"
+          },
+          "apiKey": {
+            "type": "string",
+            "title": "Full key (will be encrypted)"
+          },
+          "weight": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Default: 1"
+          }
+        },
+        "title": "AddProviderAPIKeyRequest - request to add a new API key to a provider"
+      },
+      "v1AddProviderAPIKeyResponse": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/v1ProviderAPIKey"
+          }
+        },
+        "title": "AddProviderAPIKeyResponse - response after adding API key"
+      },
+      "v1ConfigureProviderResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/v1ProviderStatus"
+          },
+          "syncTriggered": {
+            "type": "boolean",
+            "title": "Whether YAML sync was triggered"
+          }
+        },
+        "title": "ConfigureProviderResponse - response after configuring provider"
+      },
+      "v1DeleteProviderAPIKeyResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "title": "DeleteProviderAPIKeyResponse - response after deleting API key"
+      },
+      "v1DeleteProviderConfigurationResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "syncTriggered": {
+            "type": "boolean"
+          }
+        },
+        "title": "DeleteProviderConfigurationResponse - response after deleting config"
+      },
+      "v1GetConfigYAMLResponse": {
+        "type": "object",
+        "properties": {
+          "yamlContent": {
+            "type": "string",
+            "title": "The YAML config as string"
+          }
+        },
+        "title": "GetConfigYAMLResponse - response with YAML config content"
+      },
+      "v1GetProviderResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/v1ProviderStatus"
+          }
+        },
+        "title": "GetProviderResponse - response with provider details"
+      },
+      "v1GetSyncStatusResponse": {
+        "type": "object",
+        "properties": {
+          "inSync": {
+            "type": "boolean",
+            "title": "Whether YAML and DB are in sync"
+          },
+          "yamlModTime": {
+            "type": "string",
+            "title": "YAML file modification time"
+          },
+          "lastSyncTime": {
+            "type": "string",
+            "title": "Last time DB was synced to YAML"
+          }
+        },
+        "title": "GetSyncStatusResponse - response with sync status information"
+      },
+      "v1ListConfiguredProvidersResponse": {
+        "type": "object",
+        "properties": {
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ProviderStatus"
+            }
+          }
+        },
+        "title": "ListConfiguredProvidersResponse - response with configured providers"
+      },
+      "v1ListProviderAPIKeysResponse": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ProviderAPIKey"
+            }
+          }
+        },
+        "title": "ListProviderAPIKeysResponse - response with list of API keys"
+      },
+      "v1ListProviderCatalogResponse": {
+        "type": "object",
+        "properties": {
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ProviderCatalogEntry"
+            }
+          }
+        },
+        "title": "ListProviderCatalogResponse - response with all providers from catalog"
+      },
+      "v1ModelFamily": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "maxTokens": {
+            "type": "string",
+            "format": "int64"
+          }
+        },
+        "title": "ModelFamily represents a family of models with common characteristics"
+      },
+      "v1ModelMetadata": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "maxTokens": {
+            "type": "string",
+            "format": "int64"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "e.g., [\"chat\", \"function_calling\", \"vision\"]"
+          },
+          "inputCostPer1k": {
+            "type": "number",
+            "format": "double"
+          },
+          "outputCostPer1k": {
+            "type": "number",
+            "format": "double"
+          },
+          "status": {
+            "type": "string",
+            "title": "e.g., \"stable\", \"beta\", \"deprecated\""
+          },
+          "freshness": {
+            "type": "string",
+            "title": "\"new\" (< 8 weeks), \"stable\" (>= 8 weeks)"
+          }
+        },
+        "title": "ModelMetadata represents metadata about a specific model from the catalog"
+      },
+      "v1ProviderAPIKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "UUID"
+          },
+          "providerConfigId": {
+            "type": "string"
+          },
+          "keyName": {
+            "type": "string"
+          },
+          "keyMasked": {
+            "type": "string",
+            "title": "e.g., \"sk-...abc123\""
+          },
+          "weight": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "title": "\"manual\" or \"config\""
+          }
+        },
+        "title": "ProviderAPIKey represents a single API key for a provider with weight for load balancing"
+      },
+      "v1ProviderCapabilities": {
+        "type": "object",
+        "properties": {
+          "chat": {
+            "type": "boolean"
+          },
+          "completions": {
+            "type": "boolean"
+          },
+          "embeddings": {
+            "type": "boolean"
+          },
+          "functionCalling": {
+            "type": "boolean"
+          },
+          "vision": {
+            "type": "boolean"
+          },
+          "streaming": {
+            "type": "boolean"
+          },
+          "fineTuning": {
+            "type": "boolean"
+          },
+          "assistants": {
+            "type": "boolean"
+          }
+        },
+        "title": "ProviderCapabilities represents what features a provider supports"
+      },
+      "v1ProviderCatalogEntry": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "baseUrl": {
+            "type": "string"
+          },
+          "apiVersion": {
+            "type": "string"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/v1ProviderCapabilities"
+          },
+          "modelFamilies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ModelFamily"
+            }
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ModelMetadata"
+            }
+          },
+          "rateLimits": {
+            "$ref": "#/components/schemas/v1RateLimits"
+          },
+          "description": {
+            "type": "string"
+          },
+          "providerType": {
+            "type": "string",
+            "title": "\"static\" or \"meta\""
+          },
+          "supportsModelDiscovery": {
+            "type": "boolean"
+          },
+          "discoveryApiEndpoint": {
+            "type": "string"
+          }
+        },
+        "title": "ProviderCatalogEntry represents a provider's metadata from defaults"
+      },
+      "v1ProviderConfiguration": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "UUID"
+          },
+          "providerName": {
+            "type": "string"
+          },
+          "apiKey": {
+            "type": "string",
+            "title": "Will be encrypted in storage"
+          },
+          "enabledModels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "customBaseUrl": {
+            "type": "string",
+            "title": "Optional override"
+          },
+          "customSettings": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Additional provider-specific settings"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "syncedToYamlAt": {
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "type": "string"
+          }
+        },
+        "title": "ProviderConfiguration represents a user's configuration for a provider"
+      },
+      "v1ProviderStatus": {
+        "type": "object",
+        "properties": {
+          "catalog": {
+            "$ref": "#/components/schemas/v1ProviderCatalogEntry"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/v1ProviderConfiguration"
+          },
+          "isConfigured": {
+            "type": "boolean",
+            "title": "Has API key and enabled models"
+          },
+          "isActive": {
+            "type": "boolean",
+            "title": "Configuration is active"
+          },
+          "configuredModelsCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "availableModelsCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "catalogStatus": {
+            "type": "string",
+            "title": "\"available\", \"configured\", \"active\", \"deprecated\""
+          },
+          "isFromCatalog": {
+            "type": "boolean",
+            "title": "True if synced from catalog"
+          }
+        },
+        "title": "ProviderStatus represents the merged view of catalog + configuration"
+      },
+      "v1RateLimits": {
+        "type": "object",
+        "properties": {
+          "requestsPerMinute": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "tokensPerMinute": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "concurrentRequests": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "title": "RateLimits represents rate limiting configuration for a provider"
+      },
+      "v1ReloadConfigResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "providersSynced": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "title": "ReloadConfigResponse - response after reloading config"
+      },
+      "v1SaveConfigYAMLRequest": {
+        "type": "object",
+        "properties": {
+          "yamlContent": {
+            "type": "string",
+            "title": "The YAML config to save"
+          }
+        },
+        "title": "SaveConfigYAMLRequest - request to save YAML config"
+      },
+      "v1SaveConfigYAMLResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "title": "SaveConfigYAMLResponse - response after saving config"
+      },
+      "v1ToggleAPIKeyResponse": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/v1ProviderAPIKey"
+          }
+        },
+        "title": "ToggleAPIKeyResponse - response after toggling key"
+      },
+      "v1ToggleProviderResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/v1ProviderStatus"
+          }
+        },
+        "title": "ToggleProviderResponse - response after toggling provider"
+      },
+      "v1UpdateAPIKeyWeightResponse": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/v1ProviderAPIKey"
+          }
+        },
+        "title": "UpdateAPIKeyWeightResponse - response after updating weight"
+      }
+    }
+  }
+}

@@ -1,0 +1,346 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/voice/v1/voice_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "VoiceService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/voice/profiles": {
+      "get": {
+        "operationId": "VoiceService_ListVoiceCloneProfiles",
+        "responses": {
+          "200": {
+            "description": "List voice clone profiles",
+            "schema": {
+              "$ref": "#/definitions/v1ListVoiceCloneProfilesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      },
+      "post": {
+        "operationId": "VoiceService_CreateVoiceCloneProfile",
+        "responses": {
+          "200": {
+            "description": "Create a voice clone profile",
+            "schema": {
+              "$ref": "#/definitions/v1CreateVoiceCloneProfileResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateVoiceCloneProfileRequest creates a new voice clone profile.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateVoiceCloneProfileRequest"
+            }
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      }
+    },
+    "/v1/voice/profiles/{id}": {
+      "get": {
+        "operationId": "VoiceService_GetVoiceCloneProfile",
+        "responses": {
+          "200": {
+            "description": "Get a voice clone profile",
+            "schema": {
+              "$ref": "#/definitions/v1GetVoiceCloneProfileResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      },
+      "delete": {
+        "operationId": "VoiceService_DeleteVoiceCloneProfile",
+        "responses": {
+          "200": {
+            "description": "Delete a voice clone profile",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteVoiceCloneProfileResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      },
+      "patch": {
+        "operationId": "VoiceService_UpdateVoiceCloneProfile",
+        "responses": {
+          "200": {
+            "description": "Update a voice clone profile",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateVoiceCloneProfileResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VoiceServiceUpdateVoiceCloneProfileBody"
+            }
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "VoiceServiceUpdateVoiceCloneProfileBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "referenceText": {
+          "type": "string"
+        }
+      },
+      "description": "UpdateVoiceCloneProfileRequest updates an existing voice clone profile."
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "protobufNullValue": {
+      "type": "string",
+      "enum": [
+        "NULL_VALUE"
+      ],
+      "default": "NULL_VALUE",
+      "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1CreateVoiceCloneProfileRequest": {
+      "type": "object",
+      "properties": {
+        "orgId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "referenceAudio": {
+          "type": "string",
+          "format": "byte"
+        },
+        "referenceText": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        }
+      },
+      "description": "CreateVoiceCloneProfileRequest creates a new voice clone profile."
+    },
+    "v1CreateVoiceCloneProfileResponse": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "#/definitions/v1VoiceCloneProfile"
+        }
+      }
+    },
+    "v1DeleteVoiceCloneProfileResponse": {
+      "type": "object"
+    },
+    "v1GetVoiceCloneProfileResponse": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "#/definitions/v1VoiceCloneProfile"
+        }
+      }
+    },
+    "v1ListVoiceCloneProfilesResponse": {
+      "type": "object",
+      "properties": {
+        "profiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1VoiceCloneProfile"
+          }
+        }
+      }
+    },
+    "v1UpdateVoiceCloneProfileResponse": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "#/definitions/v1VoiceCloneProfile"
+        }
+      }
+    },
+    "v1VoiceCloneProfile": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "referenceAudioObjectId": {
+          "type": "string"
+        },
+        "referenceAudioDurationSeconds": {
+          "type": "number",
+          "format": "double"
+        },
+        "referenceText": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "providerVoiceId": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "VoiceCloneProfile represents a cloned voice profile."
+    }
+  }
+}

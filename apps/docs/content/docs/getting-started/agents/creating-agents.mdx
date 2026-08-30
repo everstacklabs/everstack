@@ -1,0 +1,127 @@
+---
+title: Creating Agents
+description: Define, configure, and deploy AI agents.
+icon: Plus
+---
+
+Creating an agent means defining what it can do, how it behaves, and where it runs. Every agent starts as a definition -- a configuration object that specifies the model, system prompt, tools, constraints, and optional features like memory, HITL, and sandbox settings.
+
+You can create agents through the admin UI or programmatically via the API. Both paths produce the same agent definition.
+
+## Core configuration
+
+Every agent definition includes these fields:
+
+**Identity**
+
+- **name** -- a human-readable name displayed in the admin UI and logs
+- **description** -- a short summary of what the agent does
+- **icon** -- an icon identifier for visual distinction in the UI
+- **color** -- a color for the agent's avatar and badges
+- **mention_alias** -- an `@mention` handle other agents can use to address this agent in multi-agent conversations
+
+**Execution**
+
+- **model** -- the language model to use (e.g. `claude-3-opus`, `claude-sonnet-4-20250514`)
+- **system_prompt** -- the core instructions that define the agent's behavior
+- **tools** -- an array of tool names the agent is allowed to call
+- **config** -- additional JSONB configuration for advanced features
+
+**Constraints**
+
+- **max_turns** -- maximum number of user-agent exchanges per session
+- **max_tool_calls_per_turn** -- caps how many tools the agent can call in a single turn
+- **max_steps** -- total iteration budget across the session
+- **working_directory** -- the default directory for sandbox file operations
+
+## Agent mode
+
+Choose the mode based on how the agent will be used:
+
+- **Primary** (`AGENT_MODE_PRIMARY`) -- user-facing agents that receive messages directly. Most agents are primary.
+- **Sub-agent** (`AGENT_MODE_SUBAGENT`) -- agents spawned by other agents for delegated work. Sub-agents are not directly addressable by users and report results back to their parent.
+
+## Lifecycle type
+
+The lifecycle type determines how long the agent's execution environment persists:
+
+**Ephemeral** (`EPHEMERAL`) -- the agent has no persistent environment. Each session starts clean. State is only preserved through the memory system. This is the default and works well for most conversational and task-based agents.
+
+**Persistent** (`PERSISTENT`) -- the agent gets a dedicated, fully isolated sandbox that survives across sessions. The sandbox retains its filesystem, installed packages, running processes, and any local state. When the agent is not actively running a turn, it moves to `idle`. It can be put to `sleeping` to stop the sandbox while preserving state, and wakes automatically when a new message arrives.
+
+Use persistent agents when the agent needs to maintain a development environment, run background processes, keep large datasets loaded, or preserve complex local state between conversations.
+
+## Sandbox configuration
+
+Persistent agents require sandbox configuration:
+
+- **image** -- the base container image for the sandbox environment
+- **cpu_limit** -- CPU allocation (e.g. `1` for one vCPU)
+- **memory_mb** -- memory allocation in megabytes
+- **disk_mb** -- disk allocation in megabytes
+- **timeout_seconds** -- how long the sandbox stays alive without activity before sleeping
+- **network_mode** -- network access policy for the sandbox
+- **env_vars** -- environment variables injected into the sandbox at startup
+- **ssh_enabled** -- whether SSH access is available for debugging
+- **git_repo_url** -- a repository to clone into the sandbox at provision time
+
+These settings give you precise control over the agent's compute environment. Start conservative and scale up based on the agent's workload.
+
+## Memory configuration
+
+Memory lets agents retain and recall information across sessions. When enabled, the agent can store facts, retrieve relevant context, and build knowledge over time.
+
+- **enabled** -- turn memory on or off
+- **scope** -- controls visibility: `agent` (private to this agent), `user` (shared across agents for the same user), or `global` (shared across all agents and users in the tenant)
+- **auto_retrieve** -- automatically query memory at the start of each turn and inject relevant results into context
+- **auto_retrieve_top_k** -- how many memory results to inject (controls context budget)
+- **auto_extract** -- automatically extract and store notable facts from conversation turns
+
+Auto-retrieve and auto-extract make memory work without requiring the agent to explicitly call memory tools. The runtime handles retrieval and extraction behind the scenes, so the agent benefits from accumulated knowledge without prompt engineering.
+
+## Identity documents
+
+Beyond the system prompt, agents support four identity documents that are composed into the agent's context:
+
+- **soul_md** -- personality, values, tone, and behavioral guardrails
+- **identity_md** -- who the agent is, its expertise, and background
+- **user_md** -- context about the user the agent interacts with
+- **role_md** -- the specific role the agent plays in this deployment
+
+These documents let you separate concerns cleanly. The system prompt handles task instructions. Identity documents handle personality and context. This makes it easier to reuse the same base agent across different deployments with different personas.
+
+## HITL configuration
+
+Human-in-the-loop approval gates are configured per agent:
+
+- **tools** -- an array of tool name patterns that require approval before execution
+- **timeout_seconds** -- how long to wait for a reviewer before applying the default action
+- **default_action** -- what happens if no reviewer responds (`approve` or `deny`)
+- **match_mode** -- how tool patterns are matched against tool names
+
+See [Human-in-the-Loop](/getting-started/agents/human-in-the-loop) for a detailed walkthrough of approval flows.
+
+## Creating via the admin UI
+
+The admin UI provides a multi-tab form for agent creation:
+
+1. **General** -- name, description, icon, color, mention alias, mode, and lifecycle type
+2. **Model & Prompt** -- model selection, system prompt, and identity documents
+3. **Tools** -- browse and select from available tools, configure HITL rules
+4. **Constraints** -- turn limits, step limits, tool call caps
+5. **Memory** -- enable and configure memory scope, auto-retrieve, auto-extract
+6. **Sandbox** -- image, resources, environment variables, SSH, git repo (persistent agents only)
+
+The form validates configuration as you go and shows warnings for common misconfigurations.
+
+## Creating via the API
+
+Use the `CreateAgent` endpoint to create agents programmatically. This is useful for automated deployments, templated agent creation, or CI/CD pipelines that provision agents as part of infrastructure.
+
+See the [API Reference](/api-reference/agents) for full endpoint documentation, request schemas, and examples.
+
+## Deployment
+
+Once created, an agent definition is immediately available. Ephemeral agents are ready to receive sessions. Persistent agents begin provisioning their sandbox, moving through `provisioning` to `idle` once the environment is ready.
+
+You can update agent definitions at any time. Updates to tools, constraints, memory config, and identity documents take effect on the next session. Model and system prompt changes also apply to new sessions without requiring redeployment.

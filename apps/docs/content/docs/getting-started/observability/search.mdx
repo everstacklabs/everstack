@@ -1,0 +1,120 @@
+---
+title: Search (ESQL)
+description: Filter traces with ESQL, the Everstack Search Query Language.
+icon: Search
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+ESQL (Everstack Search Query Language) is a compact, filter-only language for finding traces. It is not SQL: there is no `SELECT`, `FROM`, or `JOIN`. You describe the runs you want, and Everstack returns them.
+
+The Traces search bar speaks ESQL two ways:
+
+- **Chips** — committed filters show as neutral chips you can edit or remove.
+- **Editor** — the `Editor` button opens a freeform ESQL editor with syntax highlighting, autocomplete, and a plain-English `Matches:` description of your query.
+
+Clauses combine with spaces (implicit AND). There is no `OR` or `NOT` yet.
+
+## Quick examples
+
+```
+failed
+status:error provider:anthropic
+model:gpt-5.2 cost > 0.05
+tool.error exists duration > 30s
+tokens.total > 15000 prompt contains "refund"
+root.status:error
+@campaign:summer tag:prod
+```
+
+## Grammar
+
+| Form | Example | Meaning |
+| --- | --- | --- |
+| Free text | `checkout failed` | Full-text match on input/output |
+| Equality | `model:gpt-5.2` | Field equals value |
+| Contains | `output contains "refund"` | Substring match |
+| Numeric | `cost > 0.05` | Compare a number (`>`, `>=`, `<`, `<=`) |
+| Duration | `duration > 30s` | Units: `ms`, `s`, `m`, `h` |
+| Existence | `tool.error exists` | The condition is present |
+| Preset | `failed` | A saved shorthand (see below) |
+| Metadata | `@user_id:123` | Match a metadata key/value |
+| Scope | `root.status:error` | Restrict to a span position |
+
+Values with spaces use quotes: `prompt contains "dietary restriction"`.
+
+## Presets
+
+Presets are one-word shorthands for common questions. They also appear as **Lenses** at the top of the search menu.
+
+| Preset | Expands to |
+| --- | --- |
+| `failed` | `status:error` |
+| `slow` | `duration > 30s` |
+| `expensive` | `cost > 0.10` |
+| `no_output` | empty output |
+| `tool_error` | `tool.error exists` |
+| `retry` | a fallback/retry occurred |
+
+## Fields
+
+| Field | Aliases | Example |
+| --- | --- | --- |
+| `status` | `status_code` | `status:error` |
+| `model` | | `model:gpt-5.2` |
+| `provider` | | `provider:anthropic` |
+| `user` | `user_id` | `user:u_123` |
+| `session` | `session_id` | `session:s_9` |
+| `thread` | `thread_id` | `thread:t_4` |
+| `environment` | `env` | `env:production` |
+| `correlation` | | `correlation:abc` |
+| `tag` | | `tag:prod` |
+| `cost` | `price`, `spend` | `cost > 0.05` |
+| `duration` | `latency`, `duration_ms` | `duration > 30s` |
+| `tokens.total` | `tokens` | `tokens.total > 15000` |
+| `ttft` | | `ttft > 5s` |
+| `tool.name` | | `tool.name:db.fetch` |
+| `tool.error` | | `tool.error exists` |
+| `cache.hit` | | `cache.hit exists` |
+| `trace` | `traceId` | `trace:8628cf45` |
+| `agent` | `agentName` | `agent:researcher` |
+| `has` | | `has:sandbox` |
+| `output` | | `output contains "..."` |
+
+### Filter by what ran (`has:`)
+
+`has:<span-type>` matches traces that contain a span of a given kind — the agent-native filter no request log can offer:
+
+```
+has:sandbox     traces that used a sandbox
+has:tool        traces that called a tool
+has:agent       traces with an agent span
+has:memory      traces that read/wrote memory
+has:browser     traces that drove a browser
+has:mcp         traces that called an MCP tool
+has:voice       traces with voice / audio (TTS/STT) spans
+has:vector      traces that hit a vector store / embeddings
+```
+
+## Scopes: filter by span position
+
+By default a filter matches a trace that contains **any** span meeting the condition. Prefix a field to be explicit:
+
+- `any.model:gpt-5.2` — any span used gpt-5.2 (the default).
+- `root.status:error` — the trace's root span errored.
+
+<Callout title="Agent-shaped filtering">
+`tool.error exists`, `cache.hit exists`, and `ttft` let you filter on what the
+agent actually did across its spans -- not just the top-line request. This is
+the difference between a request log and a trace store.
+</Callout>
+
+## Saving and reusing queries
+
+Every query you run is recorded under **Observability -> Saved Queries**, where you can name and pin the ones you reuse. Running a saved query jumps back into Traces with it applied.
+
+## Coming soon
+
+- Boolean `OR` / `NOT`.
+- `sequence(llm -> tool:error -> llm)` — match traces by the ordered shape of the run.
+- Parent/child span relationships.

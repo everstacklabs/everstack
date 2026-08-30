@@ -1,0 +1,3199 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/traces/v1/traces_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "TracesService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/traces/analytics": {
+      "post": {
+        "summary": "GetTraceAnalytics retrieves pre-aggregated trace statistics",
+        "operationId": "TracesService_GetTraceAnalytics",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetTraceAnalyticsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetTraceAnalyticsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/annotations": {
+      "post": {
+        "summary": "CreateTraceAnnotation appends a note to a trace or observation",
+        "operationId": "TracesService_CreateTraceAnnotation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateTraceAnnotationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateTraceAnnotationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/annotations/list": {
+      "post": {
+        "summary": "ListTraceAnnotations lists notes for a trace",
+        "operationId": "TracesService_ListTraceAnnotations",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListTraceAnnotationsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ListTraceAnnotationsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/classification-rules": {
+      "post": {
+        "summary": "AddClassificationRule adds a SpanName-pattern -\u003e kind rule.",
+        "operationId": "TracesService_AddClassificationRule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AddClassificationRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1AddClassificationRuleRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/classification-rules/delete": {
+      "post": {
+        "summary": "DeleteClassificationRule removes a classification rule.",
+        "operationId": "TracesService_DeleteClassificationRule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteClassificationRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1DeleteClassificationRuleRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/classification-rules/list": {
+      "post": {
+        "summary": "ListClassificationRules returns the tenant's classification rules.",
+        "operationId": "TracesService_ListClassificationRules",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListClassificationRulesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ListClassificationRulesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/custom-columns": {
+      "post": {
+        "summary": "UpsertCustomColumn creates or updates a custom column definition.",
+        "operationId": "TracesService_UpsertCustomColumn",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpsertCustomColumnResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpsertCustomColumnRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/custom-columns/delete": {
+      "post": {
+        "summary": "DeleteCustomColumn removes a custom column definition by key.",
+        "operationId": "TracesService_DeleteCustomColumn",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteCustomColumnResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1DeleteCustomColumnRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/custom-columns/list": {
+      "post": {
+        "summary": "ListCustomColumns returns the tenant's registered custom columns.",
+        "operationId": "TracesService_ListCustomColumns",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCustomColumnsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ListCustomColumnsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/get": {
+      "post": {
+        "summary": "GetTrace retrieves a single aggregated Trace by ID",
+        "operationId": "TracesService_GetTrace",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetTraceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetTraceRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/logs": {
+      "post": {
+        "summary": "GetTraceLogs returns the OTLP log records correlated to a trace (by\nTraceId, with an optional session-id fallback for SDKs that don't stamp\ntrace context on their log records, e.g. coding agents).",
+        "operationId": "TracesService_GetTraceLogs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetTraceLogsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "GetTraceLogsRequest requests the log records correlated to a trace.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetTraceLogsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/observations/custom": {
+      "post": {
+        "summary": "CreateCustomObservation appends a user/API observation to a trace",
+        "operationId": "TracesService_CreateCustomObservation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateCustomObservationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateCustomObservationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/observations/custom/batch": {
+      "post": {
+        "summary": "BatchCreateCustomObservations appends several user/API observations",
+        "operationId": "TracesService_BatchCreateCustomObservations",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BatchCreateCustomObservationsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BatchCreateCustomObservationsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/observations/custom/list": {
+      "post": {
+        "summary": "ListCustomObservations lists user/API observations for a trace",
+        "operationId": "TracesService_ListCustomObservations",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCustomObservationsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ListCustomObservationsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/overlay": {
+      "post": {
+        "summary": "UpdateTraceOverlay appends a new overlay version for a trace",
+        "operationId": "TracesService_UpdateTraceOverlay",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateTraceOverlayResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdateTraceOverlayRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/overlay/get": {
+      "post": {
+        "summary": "GetTraceOverlay retrieves the latest user/API overlay for a trace",
+        "operationId": "TracesService_GetTraceOverlay",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetTraceOverlayResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetTraceOverlayRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/performance": {
+      "post": {
+        "summary": "GetPerformanceBreakdown retrieves detailed performance analysis",
+        "operationId": "TracesService_GetPerformanceBreakdown",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetPerformanceBreakdownResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetPerformanceBreakdownRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/resources": {
+      "post": {
+        "summary": "GetResourceUtilization retrieves resource usage over time",
+        "operationId": "TracesService_GetResourceUtilization",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetResourceUtilizationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetResourceUtilizationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/rich/get": {
+      "post": {
+        "summary": "GetRichTrace retrieves a Langfuse-compatible trace with full details",
+        "operationId": "TracesService_GetRichTrace",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetRichTraceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetRichTraceRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/rich/list": {
+      "post": {
+        "summary": "ListRichTraces retrieves Langfuse-compatible traces with filtering",
+        "operationId": "TracesService_ListRichTraces",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRichTracesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ListRichTracesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/scores": {
+      "post": {
+        "summary": "CreateScore creates a new score for a trace",
+        "operationId": "TracesService_CreateScore",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateScoreResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateScoreRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/scores/delete": {
+      "post": {
+        "summary": "DeleteScore deletes a score",
+        "operationId": "TracesService_DeleteScore",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteScoreResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1DeleteScoreRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/scores/list": {
+      "post": {
+        "summary": "GetTraceScores retrieves all scores for a trace",
+        "operationId": "TracesService_GetTraceScores",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetTraceScoresResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetTraceScoresRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/semantic-mappings": {
+      "post": {
+        "summary": "AddSemanticMapping adds an attribute-key alias for a field.",
+        "operationId": "TracesService_AddSemanticMapping",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AddSemanticMappingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1AddSemanticMappingRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/semantic-mappings/delete": {
+      "post": {
+        "summary": "DeleteSemanticMapping removes an attribute-key alias for a field.",
+        "operationId": "TracesService_DeleteSemanticMapping",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteSemanticMappingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1DeleteSemanticMappingRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/semantic-mappings/list": {
+      "post": {
+        "summary": "ListSemanticMappings returns the tenant's field aliases.",
+        "operationId": "TracesService_ListSemanticMappings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSemanticMappingsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ListSemanticMappingsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/spans": {
+      "post": {
+        "summary": "GetTraceByID retrieves all spans for a specific trace",
+        "operationId": "TracesService_GetTraceByID",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetTraceByIDResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetTraceByIDRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/tree": {
+      "post": {
+        "summary": "GetTraceTree retrieves a trace in hierarchical tree structure",
+        "operationId": "TracesService_GetTraceTree",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetTraceTreeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetTraceTreeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/views": {
+      "post": {
+        "summary": "UpsertTraceView creates or updates a saved view.",
+        "operationId": "TracesService_UpsertTraceView",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpsertTraceViewResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpsertTraceViewRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/views/delete": {
+      "post": {
+        "summary": "DeleteTraceView removes a saved view by id.",
+        "operationId": "TracesService_DeleteTraceView",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteTraceViewResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1DeleteTraceViewRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    },
+    "/v1/traces/views/list": {
+      "post": {
+        "summary": "ListTraceViews returns the tenant's saved views.",
+        "operationId": "TracesService_ListTraceViews",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListTraceViewsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ListTraceViewsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TracesService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AddClassificationRuleRequest": {
+      "type": "object",
+      "properties": {
+        "pattern": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        }
+      }
+    },
+    "v1AddClassificationRuleResponse": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "$ref": "#/definitions/v1ClassificationRule"
+        }
+      }
+    },
+    "v1AddSemanticMappingRequest": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string"
+        },
+        "attrKey": {
+          "type": "string"
+        }
+      }
+    },
+    "v1AddSemanticMappingResponse": {
+      "type": "object",
+      "properties": {
+        "mapping": {
+          "$ref": "#/definitions/v1SemanticMapping"
+        }
+      }
+    },
+    "v1BatchCreateCustomObservationsRequest": {
+      "type": "object",
+      "properties": {
+        "observations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CreateCustomObservationRequest"
+          }
+        }
+      }
+    },
+    "v1BatchCreateCustomObservationsResponse": {
+      "type": "object",
+      "properties": {
+        "observations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CustomObservation"
+          }
+        }
+      }
+    },
+    "v1ClassificationRule": {
+      "type": "object",
+      "properties": {
+        "pattern": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        }
+      },
+      "description": "ClassificationRule assigns kind to spans whose name is LIKE pattern. pattern\nis a SpanName LIKE pattern (e.g. \"retriever.%\"); kind is the label shown in\nthe Type column."
+    },
+    "v1CreateCustomObservationRequest": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        },
+        "parentObservationId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "title": "SPAN, GENERATION, EVENT, CHAIN, TOOL"
+        },
+        "source": {
+          "type": "string",
+          "title": "USER, API, SDK"
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "duration": {
+          "type": "string",
+          "format": "int64"
+        },
+        "level": {
+          "type": "string",
+          "title": "DEBUG, DEFAULT, WARNING, ERROR"
+        },
+        "statusMessage": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "inputData": {
+          "type": "string"
+        },
+        "outputData": {
+          "type": "string"
+        },
+        "inputMimeType": {
+          "type": "string"
+        },
+        "outputMimeType": {
+          "type": "string"
+        },
+        "inputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "outputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "inputCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "outputCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "totalCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "id": {
+          "type": "string",
+          "description": "Optional client-supplied id. SDKs use this so nested custom spans can\nreference parent observations before the parent write has completed."
+        }
+      }
+    },
+    "v1CreateCustomObservationResponse": {
+      "type": "object",
+      "properties": {
+        "observation": {
+          "$ref": "#/definitions/v1CustomObservation"
+        }
+      }
+    },
+    "v1CreateScoreRequest": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        },
+        "observationId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string",
+          "title": "ANNOTATION, API, EVAL"
+        },
+        "dataType": {
+          "type": "string",
+          "title": "NUMERIC, CATEGORICAL, BOOLEAN"
+        },
+        "numericValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "stringValue": {
+          "type": "string"
+        },
+        "booleanValue": {
+          "type": "boolean"
+        },
+        "comment": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateScoreResponse": {
+      "type": "object",
+      "properties": {
+        "score": {
+          "$ref": "#/definitions/v1Score"
+        }
+      }
+    },
+    "v1CreateTraceAnnotationRequest": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        },
+        "observationId": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1CreateTraceAnnotationResponse": {
+      "type": "object",
+      "properties": {
+        "annotation": {
+          "$ref": "#/definitions/v1TraceAnnotation"
+        }
+      }
+    },
+    "v1CustomColumnDef": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "valueType": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "sourceRef": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "description": "CustomColumnDef is a user-defined trace column. value_type is one of\nstring|number|bool|date; source is one of metadata_path|attribute_path|\nscore_name; source_ref is the dotted metadata path, span-attribute key, or\nscore name depending on source."
+    },
+    "v1CustomObservation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        },
+        "parentObservationId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "title": "SPAN, GENERATION, EVENT, CHAIN, TOOL"
+        },
+        "source": {
+          "type": "string",
+          "title": "USER, API, SDK"
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "duration": {
+          "type": "string",
+          "format": "int64"
+        },
+        "level": {
+          "type": "string",
+          "title": "DEBUG, DEFAULT, WARNING, ERROR"
+        },
+        "statusMessage": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "inputData": {
+          "type": "string"
+        },
+        "outputData": {
+          "type": "string"
+        },
+        "inputMimeType": {
+          "type": "string"
+        },
+        "outputMimeType": {
+          "type": "string"
+        },
+        "inputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "outputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "inputCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "outputCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "totalCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "authorUserId": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "CustomObservation is a user/API-authored observation appended to a trace.\nIt renders alongside raw spans but is marked by source and author metadata."
+    },
+    "v1DeleteClassificationRuleRequest": {
+      "type": "object",
+      "properties": {
+        "pattern": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DeleteClassificationRuleResponse": {
+      "type": "object"
+    },
+    "v1DeleteCustomColumnRequest": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DeleteCustomColumnResponse": {
+      "type": "object"
+    },
+    "v1DeleteScoreRequest": {
+      "type": "object",
+      "properties": {
+        "scoreId": {
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DeleteScoreResponse": {
+      "type": "object"
+    },
+    "v1DeleteSemanticMappingRequest": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string"
+        },
+        "attrKey": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DeleteSemanticMappingResponse": {
+      "type": "object"
+    },
+    "v1DeleteTraceViewRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DeleteTraceViewResponse": {
+      "type": "object"
+    },
+    "v1EnhancedObservation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "title": "SPAN, GENERATION, EVENT, CHAIN, TOOL"
+        },
+        "name": {
+          "type": "string"
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "model": {
+          "type": "string"
+        },
+        "level": {
+          "type": "string",
+          "title": "DEBUG, DEFAULT, WARNING, ERROR"
+        },
+        "statusMessage": {
+          "type": "string"
+        },
+        "parentObservationId": {
+          "type": "string"
+        },
+        "latency": {
+          "type": "number",
+          "format": "double",
+          "title": "in seconds"
+        },
+        "inputTokens": {
+          "type": "string",
+          "format": "int64",
+          "title": "Token usage"
+        },
+        "outputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "inputCost": {
+          "type": "number",
+          "format": "double",
+          "title": "Costs"
+        },
+        "outputCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "totalCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "step": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Execution step number",
+          "title": "Enhanced fields"
+        },
+        "node": {
+          "type": "string",
+          "title": "Workflow node name"
+        },
+        "io": {
+          "$ref": "#/definitions/v1ObservationIO",
+          "title": "Input/output data"
+        },
+        "performance": {
+          "$ref": "#/definitions/v1PerformanceMetrics",
+          "title": "Performance breakdown"
+        },
+        "resources": {
+          "$ref": "#/definitions/v1ResourceMetrics",
+          "title": "Resource utilization"
+        },
+        "workflow": {
+          "$ref": "#/definitions/v1WorkflowMetadata",
+          "title": "Workflow context"
+        },
+        "tags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Custom tags for filtering"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Additional metadata"
+        }
+      },
+      "title": "EnhancedObservation extends RichObservation with workflow and performance data"
+    },
+    "v1GetObservationIOResponse": {
+      "type": "object",
+      "properties": {
+        "observationIo": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/v1ObservationIO"
+          },
+          "title": "Key: observation_id"
+        }
+      }
+    },
+    "v1GetPerformanceBreakdownRequest": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        },
+        "observationId": {
+          "type": "string",
+          "title": "If specified, breakdown for single observation"
+        },
+        "groupByNode": {
+          "type": "boolean"
+        },
+        "groupByType": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1GetPerformanceBreakdownResponse": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PerformanceBreakdownEntry"
+          }
+        },
+        "totalMetrics": {
+          "$ref": "#/definitions/v1PerformanceMetrics"
+        }
+      }
+    },
+    "v1GetResourceUtilizationRequest": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        },
+        "fromTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "toTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "granularityMs": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Time bucket size in milliseconds"
+        }
+      }
+    },
+    "v1GetResourceUtilizationResponse": {
+      "type": "object",
+      "properties": {
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ResourceUtilizationPoint"
+          }
+        },
+        "peakUtilization": {
+          "$ref": "#/definitions/v1ResourceMetrics"
+        },
+        "averageUtilization": {
+          "$ref": "#/definitions/v1ResourceMetrics"
+        }
+      }
+    },
+    "v1GetRichTraceRequest": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1GetRichTraceResponse": {
+      "type": "object",
+      "properties": {
+        "trace": {
+          "$ref": "#/definitions/v1RichTrace"
+        }
+      }
+    },
+    "v1GetTraceAnalyticsRequest": {
+      "type": "object",
+      "properties": {
+        "traceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fromTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "toTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "offset": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1GetTraceAnalyticsResponse": {
+      "type": "object",
+      "properties": {
+        "analytics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TraceAnalytics"
+          }
+        },
+        "totalCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1GetTraceByIDRequest": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        }
+      },
+      "title": "GetTraceByIDRequest requests all spans for a specific trace"
+    },
+    "v1GetTraceByIDResponse": {
+      "type": "object",
+      "properties": {
+        "spans": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Span"
+          }
+        }
+      },
+      "title": "GetTraceByIDResponse returns all spans for a trace"
+    },
+    "v1GetTraceLogsRequest": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "description": "Optional: when set, log records carrying this session id (in any of the\nrecognised session attribute keys) within the trace window are included\neven if they don't carry the trace id."
+        }
+      },
+      "description": "GetTraceLogsRequest requests the log records correlated to a trace."
+    },
+    "v1GetTraceLogsResponse": {
+      "type": "object",
+      "properties": {
+        "records": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TraceLogRecord"
+          }
+        }
+      },
+      "description": "GetTraceLogsResponse returns the correlated log records in time order."
+    },
+    "v1GetTraceOverlayRequest": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1GetTraceOverlayResponse": {
+      "type": "object",
+      "properties": {
+        "overlay": {
+          "$ref": "#/definitions/v1TraceOverlay"
+        }
+      }
+    },
+    "v1GetTraceRequest": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        }
+      },
+      "title": "GetTraceRequest requests a single aggregated Trace by ID"
+    },
+    "v1GetTraceResponse": {
+      "type": "object",
+      "properties": {
+        "trace": {
+          "$ref": "#/definitions/v1Trace"
+        }
+      },
+      "title": "GetTraceResponse returns a single aggregated Trace"
+    },
+    "v1GetTraceScoresRequest": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1GetTraceScoresResponse": {
+      "type": "object",
+      "properties": {
+        "scores": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Score"
+          }
+        }
+      }
+    },
+    "v1GetTraceTreeRequest": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        }
+      },
+      "title": "GetTraceTreeRequest requests a hierarchical tree structure"
+    },
+    "v1GetTraceTreeResponse": {
+      "type": "object",
+      "properties": {
+        "root": {
+          "$ref": "#/definitions/v1SpanTreeNode"
+        }
+      },
+      "title": "GetTraceTreeResponse returns the root of the span tree"
+    },
+    "v1GetWorkflowMetricsResponse": {
+      "type": "object",
+      "properties": {
+        "workflows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorkflowPerformance"
+          }
+        },
+        "totalCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListClassificationRulesRequest": {
+      "type": "object"
+    },
+    "v1ListClassificationRulesResponse": {
+      "type": "object",
+      "properties": {
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ClassificationRule"
+          }
+        }
+      }
+    },
+    "v1ListCustomColumnsRequest": {
+      "type": "object"
+    },
+    "v1ListCustomColumnsResponse": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CustomColumnDef"
+          }
+        }
+      }
+    },
+    "v1ListCustomObservationsRequest": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListCustomObservationsResponse": {
+      "type": "object",
+      "properties": {
+        "observations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CustomObservation"
+          }
+        }
+      }
+    },
+    "v1ListObservationsByStepResponse": {
+      "type": "object",
+      "properties": {
+        "observations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1EnhancedObservation"
+          }
+        },
+        "totalCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListRichTracesRequest": {
+      "type": "object",
+      "properties": {
+        "traceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sessionId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fromTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "toTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "model": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "threadId": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "offset": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "ListRichTracesRequest filters rich traces"
+    },
+    "v1ListRichTracesResponse": {
+      "type": "object",
+      "properties": {
+        "traces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RichTrace"
+          }
+        },
+        "totalCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "ListRichTracesResponse returns paginated rich traces"
+    },
+    "v1ListSemanticMappingsRequest": {
+      "type": "object"
+    },
+    "v1ListSemanticMappingsResponse": {
+      "type": "object",
+      "properties": {
+        "mappings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SemanticMapping"
+          }
+        }
+      }
+    },
+    "v1ListTraceAnnotationsRequest": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListTraceAnnotationsResponse": {
+      "type": "object",
+      "properties": {
+        "annotations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TraceAnnotation"
+          }
+        }
+      }
+    },
+    "v1ListTraceViewsRequest": {
+      "type": "object"
+    },
+    "v1ListTraceViewsResponse": {
+      "type": "object",
+      "properties": {
+        "views": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TraceView"
+          }
+        }
+      }
+    },
+    "v1ObservationIO": {
+      "type": "object",
+      "properties": {
+        "inputData": {
+          "type": "string",
+          "title": "JSON string of input"
+        },
+        "outputData": {
+          "type": "string",
+          "title": "JSON string of output"
+        },
+        "inputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "outputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "inputMimeType": {
+          "type": "string",
+          "title": "e.g., \"application/json\", \"text/plain\""
+        },
+        "outputMimeType": {
+          "type": "string"
+        },
+        "tokenBreakdown": {
+          "$ref": "#/definitions/v1TokenBreakdown",
+          "title": "Detailed token breakdown"
+        }
+      },
+      "title": "ObservationIO represents input/output data for an observation"
+    },
+    "v1PerformanceBreakdownEntry": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "type": "string"
+        },
+        "observationType": {
+          "type": "string"
+        },
+        "observationId": {
+          "type": "string"
+        },
+        "metrics": {
+          "$ref": "#/definitions/v1PerformanceMetrics"
+        },
+        "percentageOfTotal": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "v1PerformanceMetrics": {
+      "type": "object",
+      "properties": {
+        "queueTimeNs": {
+          "type": "string",
+          "format": "int64",
+          "title": "Time spent in queue (nanoseconds)"
+        },
+        "processingTimeNs": {
+          "type": "string",
+          "format": "int64",
+          "title": "Actual processing time"
+        },
+        "networkLatencyNs": {
+          "type": "string",
+          "format": "int64",
+          "title": "Network round-trip time"
+        },
+        "serializationTimeNs": {
+          "type": "string",
+          "format": "int64",
+          "title": "Time spent serializing/deserializing"
+        },
+        "dbQueryTimeNs": {
+          "type": "string",
+          "format": "int64",
+          "title": "Database query time"
+        },
+        "cacheLookupTimeNs": {
+          "type": "string",
+          "format": "int64",
+          "title": "Cache lookup time"
+        },
+        "llmTimeToFirstTokenNs": {
+          "type": "string",
+          "format": "int64",
+          "title": "Time to first token for LLM calls"
+        },
+        "llmTimePerTokenNs": {
+          "type": "string",
+          "format": "int64",
+          "title": "Average time per token"
+        }
+      },
+      "title": "PerformanceMetrics represents detailed timing breakdown"
+    },
+    "v1ResourceMetrics": {
+      "type": "object",
+      "properties": {
+        "memoryUsedBytes": {
+          "type": "string",
+          "format": "int64",
+          "title": "Memory used during observation"
+        },
+        "memoryAllocatedBytes": {
+          "type": "string",
+          "format": "int64",
+          "title": "Memory allocated"
+        },
+        "cpuUsagePercent": {
+          "type": "number",
+          "format": "double",
+          "title": "CPU usage percentage"
+        },
+        "networkBytesSent": {
+          "type": "string",
+          "format": "int64",
+          "title": "Network bytes sent"
+        },
+        "networkBytesReceived": {
+          "type": "string",
+          "format": "int64",
+          "title": "Network bytes received"
+        },
+        "diskReadBytes": {
+          "type": "string",
+          "format": "int64",
+          "title": "Disk read bytes"
+        },
+        "diskWriteBytes": {
+          "type": "string",
+          "format": "int64",
+          "title": "Disk write bytes"
+        },
+        "threadCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Number of threads used"
+        }
+      },
+      "title": "ResourceMetrics represents resource utilization"
+    },
+    "v1ResourceUtilizationPoint": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "metrics": {
+          "$ref": "#/definitions/v1ResourceMetrics"
+        },
+        "activeObservations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "IDs of observations active at this time"
+        }
+      }
+    },
+    "v1RichObservation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "title": "SPAN, GENERATION, EVENT"
+        },
+        "name": {
+          "type": "string"
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "model": {
+          "type": "string"
+        },
+        "level": {
+          "type": "string",
+          "title": "DEBUG, DEFAULT, WARNING, ERROR"
+        },
+        "statusMessage": {
+          "type": "string"
+        },
+        "parentObservationId": {
+          "type": "string"
+        },
+        "latency": {
+          "type": "number",
+          "format": "double",
+          "title": "in seconds"
+        },
+        "inputTokens": {
+          "type": "string",
+          "format": "int64",
+          "title": "Token usage"
+        },
+        "outputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "inputCost": {
+          "type": "number",
+          "format": "double",
+          "title": "Costs"
+        },
+        "outputCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "totalCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "step": {
+          "type": "integer",
+          "format": "int64",
+          "title": "Enhanced fields"
+        },
+        "node": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RichTrace": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "name": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "release": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "latency": {
+          "type": "number",
+          "format": "double",
+          "title": "in seconds"
+        },
+        "totalCost": {
+          "type": "number",
+          "format": "double",
+          "title": "in USD"
+        },
+        "observations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RichObservation"
+          }
+        },
+        "threadId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1Score": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        },
+        "observationId": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string",
+          "title": "ANNOTATION, API, EVAL"
+        },
+        "dataType": {
+          "type": "string",
+          "title": "NUMERIC, CATEGORICAL, BOOLEAN"
+        },
+        "numericValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "stringValue": {
+          "type": "string"
+        },
+        "booleanValue": {
+          "type": "boolean"
+        },
+        "comment": {
+          "type": "string"
+        },
+        "authorUserId": {
+          "type": "string"
+        }
+      },
+      "title": "Score represents a quality/evaluation score for a trace or observation"
+    },
+    "v1SemanticMapping": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string"
+        },
+        "attrKey": {
+          "type": "string"
+        }
+      },
+      "description": "SemanticMapping aliases a tenant attribute key into a typed field. field is\none of model|provider|session|user|cost|input|output|input_tokens|\noutput_tokens|total_tokens; attr_key is the tenant's span-attribute name."
+    },
+    "v1Span": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        },
+        "spanId": {
+          "type": "string"
+        },
+        "parentSpanId": {
+          "type": "string"
+        },
+        "spanName": {
+          "type": "string"
+        },
+        "spanKind": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "duration": {
+          "type": "string",
+          "format": "int64"
+        },
+        "statusCode": {
+          "type": "string"
+        },
+        "statusMessage": {
+          "type": "string"
+        },
+        "spanAttributes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "resourceAttributes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "serviceName": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "description": "LLM, TOOL, AGENT, etc."
+        },
+        "step": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Execution step number for ordering",
+          "title": "Enhanced observability fields"
+        },
+        "node": {
+          "type": "string",
+          "title": "Workflow node name (e.g., \"translator\", \"orchestrator\")"
+        },
+        "observationType": {
+          "type": "string",
+          "title": "SPAN, GENERATION, EVENT, CHAIN, TOOL"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SpanEvent"
+          },
+          "title": "Events that occurred during the span"
+        }
+      },
+      "title": "Span represents a single span in a distributed trace"
+    },
+    "v1SpanEvent": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "name": {
+          "type": "string"
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "title": "SpanEvent represents an event that occurred during a span's lifetime"
+    },
+    "v1SpanTreeNode": {
+      "type": "object",
+      "properties": {
+        "span": {
+          "$ref": "#/definitions/v1Span"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SpanTreeNode"
+          }
+        }
+      },
+      "title": "SpanTreeNode represents a span with its children in a hierarchical tree"
+    },
+    "v1StepPerformance": {
+      "type": "object",
+      "properties": {
+        "stepNumber": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "nodeName": {
+          "type": "string"
+        },
+        "observationType": {
+          "type": "string"
+        },
+        "durationNs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cost": {
+          "type": "number",
+          "format": "double"
+        },
+        "tokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "status": {
+          "type": "string",
+          "title": "\"success\", \"error\", \"pending\""
+        }
+      },
+      "title": "StepPerformance represents performance for a single step"
+    },
+    "v1TokenBreakdown": {
+      "type": "object",
+      "properties": {
+        "inputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "outputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "promptDetails": {
+          "$ref": "#/definitions/v1TokenDetails",
+          "title": "Detailed breakdown of prompt/input tokens"
+        },
+        "completionDetails": {
+          "$ref": "#/definitions/v1TokenDetails",
+          "title": "Detailed breakdown of completion/output tokens"
+        },
+        "perMessageTokens": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": "Estimated tokens per message in request"
+        }
+      },
+      "title": "TokenBreakdown represents comprehensive token usage breakdown"
+    },
+    "v1TokenDetails": {
+      "type": "object",
+      "properties": {
+        "cachedTokens": {
+          "type": "string",
+          "format": "int64",
+          "title": "Tokens served from prompt cache (OpenAI/Anthropic)"
+        },
+        "reasoningTokens": {
+          "type": "string",
+          "format": "int64",
+          "title": "Reasoning tokens (o1/o3, Gemini Thinking)"
+        },
+        "audioTokens": {
+          "type": "string",
+          "format": "int64",
+          "title": "Audio tokens for multimodal"
+        },
+        "imageTokens": {
+          "type": "string",
+          "format": "int64",
+          "title": "Image tokens for vision models"
+        },
+        "textTokens": {
+          "type": "string",
+          "format": "int64",
+          "title": "Text-only tokens"
+        }
+      },
+      "title": "TokenDetails represents detailed breakdown of token usage per category"
+    },
+    "v1Trace": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "totalDuration": {
+          "type": "string",
+          "format": "int64"
+        },
+        "errorCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "requestedModel": {
+          "type": "string"
+        },
+        "servedModel": {
+          "type": "string"
+        },
+        "llmModel": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "spanCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "title": "\"success\" or \"error\""
+        },
+        "traceInput": {
+          "type": "string",
+          "title": "Rich trace fields"
+        },
+        "traceOutput": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string"
+        },
+        "totalCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "modelParameters": {
+          "type": "string",
+          "title": "JSON string of model parameters"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Additional metadata"
+        },
+        "tokenBreakdown": {
+          "$ref": "#/definitions/v1TokenBreakdown",
+          "description": "Detailed token usage breakdown",
+          "title": "Token breakdown"
+        },
+        "threadId": {
+          "type": "string",
+          "description": "Conversational thread id, distinct from session_id. A session is a\nproduct-level grouping (often a user-visible chat session); a thread is\nthe conversational continuation within or across sessions. Langfuse\nconflates these via sessionId; we keep them separate so users can\nobserve multi-turn flows independently of session boundaries."
+        },
+        "traceKinds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Trace kinds present in the trace, e.g. [\"agent\"], [\"workflow\", \"agent\"],\n[\"agent\", \"sandbox\"]. Derived from the span taxonomy so the traces list can\nshow what a trace actually is (agent run, workflow, sandbox work, a combo)\ninstead of a coarse chat/embeddings method. Empty for a plain gateway call."
+        },
+        "customColumns": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Resolved values for the tenant's user-defined custom columns, keyed by the\ncolumn key. Lets the traces table render dimensions a tenant defined\n(e.g. a metadata field) instead of only our fixed columns."
+        },
+        "isOperational": {
+          "type": "boolean",
+          "description": "True for operational/noise traces: no model, no tokens, no cost, and no\nrecognized execution kind (e.g. tenant health checks, external interaction\nwrappers). Hidden from the list by default; a toggle can show them."
+        }
+      },
+      "title": "Trace represents a trace summary with aggregated data"
+    },
+    "v1TraceAnalytics": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "totalDurationNs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalObservations": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "errorCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "p50LatencyNs": {
+          "type": "string",
+          "format": "int64",
+          "title": "Performance statistics"
+        },
+        "p95LatencyNs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "p99LatencyNs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "avgLatencyNs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "maxLatencyNs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "minLatencyNs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalMemoryBytes": {
+          "type": "string",
+          "format": "int64",
+          "title": "Resource statistics"
+        },
+        "peakMemoryBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "avgCpuPercent": {
+          "type": "number",
+          "format": "double"
+        },
+        "peakCpuPercent": {
+          "type": "number",
+          "format": "double"
+        },
+        "totalInputTokens": {
+          "type": "string",
+          "format": "int64",
+          "title": "Token and cost statistics"
+        },
+        "totalOutputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "observationTypeCounts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": "Observation type breakdown"
+        },
+        "observationTypeDurations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "format": "int64"
+          }
+        }
+      },
+      "title": "TraceAnalytics represents pre-aggregated trace statistics"
+    },
+    "v1TraceAnnotation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        },
+        "observationId": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "authorUserId": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "TraceAnnotation is an append-only note attached to a trace or observation."
+    },
+    "v1TraceFilterClause": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "type": "string",
+          "title": "\"any\" | \"root\""
+        },
+        "field": {
+          "type": "string",
+          "title": "logical esql field id: model, provider, user, session, thread, correlation, status, tool.name, tokens.total, or metadata.\u003ckey\u003e"
+        },
+        "op": {
+          "type": "string",
+          "title": "\"=\", \"!=\", \"\u003e\", \"\u003e=\", \"\u003c\", \"\u003c=\", \"exists\""
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "v1TraceLogRecord": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "severityText": {
+          "type": "string"
+        },
+        "severityNumber": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "body": {
+          "type": "string"
+        },
+        "spanId": {
+          "type": "string"
+        },
+        "scopeName": {
+          "type": "string"
+        },
+        "serviceName": {
+          "type": "string"
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "TraceLogRecord is one OTLP log record correlated to a trace."
+    },
+    "v1TraceOverlay": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "authorUserId": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "inputOverride": {
+          "type": "string"
+        },
+        "outputOverride": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "hiddenSpanIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "TraceOverlay contains user/API-authored presentation changes for a trace.\nIt is stored separately from raw OTEL spans so runtime telemetry remains\nimmutable and auditable."
+    },
+    "v1TraceView": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "configJson": {
+          "type": "string"
+        },
+        "authorUserId": {
+          "type": "string"
+        }
+      },
+      "description": "TraceView is a saved traces-table view. config_json is an opaque blob owned\nby the client: { visibleColumns, filters, sort, ... }."
+    },
+    "v1UpdateTraceOverlayRequest": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "inputOverride": {
+          "type": "string"
+        },
+        "outputOverride": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "hiddenSpanIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1UpdateTraceOverlayResponse": {
+      "type": "object",
+      "properties": {
+        "overlay": {
+          "$ref": "#/definitions/v1TraceOverlay"
+        }
+      }
+    },
+    "v1UpsertCustomColumnRequest": {
+      "type": "object",
+      "properties": {
+        "column": {
+          "$ref": "#/definitions/v1CustomColumnDef"
+        }
+      }
+    },
+    "v1UpsertCustomColumnResponse": {
+      "type": "object",
+      "properties": {
+        "column": {
+          "$ref": "#/definitions/v1CustomColumnDef"
+        }
+      }
+    },
+    "v1UpsertTraceViewRequest": {
+      "type": "object",
+      "properties": {
+        "view": {
+          "$ref": "#/definitions/v1TraceView"
+        }
+      }
+    },
+    "v1UpsertTraceViewResponse": {
+      "type": "object",
+      "properties": {
+        "view": {
+          "$ref": "#/definitions/v1TraceView"
+        }
+      }
+    },
+    "v1WorkflowMetadata": {
+      "type": "object",
+      "properties": {
+        "workflowId": {
+          "type": "string",
+          "title": "Unique workflow instance ID"
+        },
+        "workflowType": {
+          "type": "string",
+          "title": "Type of workflow (e.g., \"langgraph\", \"custom\")"
+        },
+        "workflowName": {
+          "type": "string",
+          "title": "Human-readable workflow name"
+        },
+        "workflowVersion": {
+          "type": "string",
+          "title": "Workflow version"
+        },
+        "context": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Additional workflow context"
+        },
+        "executionMode": {
+          "type": "string",
+          "title": "e.g., \"sync\", \"async\", \"streaming\""
+        },
+        "triggerSource": {
+          "type": "string",
+          "title": "What triggered this workflow"
+        }
+      },
+      "title": "WorkflowMetadata represents workflow execution context"
+    },
+    "v1WorkflowPerformance": {
+      "type": "object",
+      "properties": {
+        "workflowId": {
+          "type": "string"
+        },
+        "workflowType": {
+          "type": "string"
+        },
+        "workflowName": {
+          "type": "string"
+        },
+        "totalSteps": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "completedSteps": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "failedSteps": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalDurationNs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "successRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1StepPerformance"
+          },
+          "title": "Step-level statistics"
+        },
+        "slowestStep": {
+          "type": "string",
+          "title": "Bottleneck analysis"
+        },
+        "slowestStepDurationNs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "mostExpensiveStep": {
+          "type": "string"
+        },
+        "mostExpensiveStepCost": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "WorkflowPerformance represents workflow-level performance metrics"
+    }
+  }
+}

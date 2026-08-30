@@ -1,0 +1,83 @@
+---
+title: Lifecycle Webhooks
+description: Outgoing notifications when sandbox state changes.
+---
+
+# Sandbox Lifecycle Webhooks
+
+Outgoing HTTP callbacks that notify your system when a sandbox state changes.
+
+> These are **outgoing** lifecycle events. For incoming trigger webhooks (invoking sandboxes), see [Incoming Webhooks](./webhooks).
+
+## Create Endpoint
+
+`POST /v1/sandbox-webhooks`
+
+```json
+{
+  "url": "https://your-system.com/webhooks/sandbox",
+  "events": ["sandbox.started", "sandbox.stopped"],
+  "secret": "your-signing-secret"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `url` | string | HTTPS endpoint to deliver events to |
+| `events` | string[] | Events to subscribe to. Omit for all events. |
+| `secret` | string | Used to sign delivery payloads |
+
+**Events:** `sandbox.started`, `sandbox.stopped`, `sandbox.archived`, `sandbox.deleted`, `sandbox.error`
+
+## List Endpoints
+
+`GET /v1/sandbox-webhooks`
+
+## Delete Endpoint
+
+`DELETE /v1/sandbox-webhooks/{id}` → `204 No Content`
+
+## Delivery Log
+
+`GET /v1/sandbox-webhooks/{id}/deliveries`
+
+Returns the last 100 delivery attempts with status code, duration, and error (if any).
+
+## Test Endpoint
+
+`POST /v1/sandbox-webhooks/{id}/test`
+
+Sends a test `sandbox.started` payload to your endpoint immediately.
+
+## Payload format
+
+```json
+{
+  "event": "sandbox.started",
+  "timestamp": "2026-06-01T12:00:00Z",
+  "sandbox_id": "sbx_abc123",
+  "tenant_id": "org_456",
+  "state": "running",
+  "status": "running"
+}
+```
+
+## Signature verification
+
+Each delivery includes `X-Everstack-Signature: sha256=<hmac-sha256-hex>`.
+
+```python
+import hmac, hashlib
+
+def is_valid(body: bytes, header: str, secret: str) -> bool:
+    expected = "sha256=" + hmac.new(
+        secret.encode(), body, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, header)
+```
+
+## Reliability
+
+- At-least-once delivery
+- 3 retries with 0s → 5s → 30s backoff
+- Your endpoint must respond with `2xx` within 5 seconds

@@ -1,0 +1,42 @@
+name: "open-mistral-nemo"
+display_name: "Open Mistral Nemo"
+family: "mistral-nemo"
+status: "deprecated"
+release_date: "2024-07-01"
+
+cost:
+  input_per_1k: 0.00015
+  output_per_1k: 0.00015
+
+limits:
+  max_tokens: 128000
+  max_completion_tokens: 128000
+
+capabilities:
+  - chat
+  - function_calling
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+
+knowledge_cutoff: "2024-07"
+notes: "Legacy model retained for compatibility with older integrations"
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 128000
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true

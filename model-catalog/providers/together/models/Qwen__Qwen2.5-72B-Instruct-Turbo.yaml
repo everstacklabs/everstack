@@ -1,0 +1,20 @@
+name: "Qwen/Qwen2.5-72B-Instruct-Turbo"
+display_name: "Qwen 2.5 72B Instruct Turbo"
+family: "qwen"
+status: "deprecated"
+
+cost:
+  input_per_1k: 0.0012
+  output_per_1k: 0.0012
+
+limits:
+  max_tokens: 131072
+  max_completion_tokens: 16384
+
+capabilities:
+  - chat
+  - function_calling
+
+modalities:
+  input: ["text"]
+  output: ["text"]

@@ -1,0 +1,311 @@
+syntax = "proto3";
+
+package everstack.gateway.v1;
+
+import "google/api/annotations.proto";
+import "everstack/gateway/v1/audio.proto";
+import "everstack/gateway/v1/chat.proto";
+import "everstack/gateway/v1/embedding.proto";
+import "everstack/gateway/v1/gateway.proto";
+import "everstack/gateway/v1/images.proto";
+import "everstack/gateway/v1/moderations.proto";
+import "everstack/gateway/v1/rerank.proto";
+import "everstack/gateway/v1/responses.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/gateway/v1;gateway";
+
+service GatewayService {
+  rpc GetGateway(GetGatewayRequest) returns (GetGatewayResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "The created application"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/gateway/{id}"};
+  }
+
+  rpc ListModels(ListModelsRequest) returns (ListModelsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Provider model catalog"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/gateway/models"};
+  }
+
+  rpc ChatCompletion(ChatCompletionRequest) returns (stream ChatCompletionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "The chat completion"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/chat/completions"
+      body: "*"
+    };
+  }
+
+  rpc Embeddings(EmbeddingsRequest) returns (stream EmbeddingsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "The embeddings"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/embeddings"
+      body: "*"
+    };
+  }
+
+  // Admin endpoints for Gateway instance management
+  rpc ActivateGatewayInstance(ActivateGatewayInstanceRequest) returns (ActivateGatewayInstanceResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Gateway instance activated successfully"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/gateway/instance/activate"
+      body: "*"
+    };
+  }
+
+  rpc GetGatewayInstanceStatus(GetGatewayInstanceStatusRequest) returns (GetGatewayInstanceStatusResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { 
+        key: "200"
+        value: {description: "Gateway instance status"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/gateway/instance/status"};
+  }
+
+  rpc GetTrialStatus(GetTrialStatusRequest) returns (GetTrialStatusResponse) {}
+
+  // License monitor endpoints (Gateway's internal license/usage state)
+  rpc GetLicenseMonitorStatus(GetLicenseMonitorStatusRequest) returns (GetLicenseMonitorStatusResponse) {}
+  rpc RefreshLicenseMonitor(RefreshLicenseMonitorRequest) returns (RefreshLicenseMonitorResponse) {}
+
+  // Plans endpoint
+  rpc GetPlans(GetPlansRequest) returns (GetPlansResponse) {}
+
+  // Upgrade callback endpoints (for automatic activation after Stripe checkout)
+  rpc StoreUpgradeCallbackSecret(StoreUpgradeCallbackSecretRequest) returns (StoreUpgradeCallbackSecretResponse) {}
+  rpc GetUpgradeCallbackSecret(GetUpgradeCallbackSecretRequest) returns (GetUpgradeCallbackSecretResponse) {}
+  
+  // Activation callback from cloud (called by cloud after successful payment)
+  rpc ActivationCallback(ActivationCallbackRequest) returns (ActivationCallbackResponse) {
+    option (google.api.http) = {
+      post: "/v1/gateway/activation-callback"
+      body: "*"
+    };
+  }
+
+  // Subscription status callback from billing service (called after Stripe webhooks)
+  rpc SubscriptionStatusCallback(SubscriptionStatusCallbackRequest) returns (SubscriptionStatusCallbackResponse) {
+    option (google.api.http) = {
+      post: "/v1/gateway/subscription-status-callback"
+      body: "*"
+    };
+  }
+
+  // =============================================================================
+  // Audio API - Text-to-Speech and Speech-to-Text
+  // =============================================================================
+
+  // Text-to-Speech: Generate audio from text
+  rpc Speech(SpeechRequest) returns (SpeechResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Generated audio file"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/audio/speech"
+      body: "*"
+    };
+  }
+
+  // Speech-to-Text: Transcribe audio to text
+  rpc Transcription(TranscriptionRequest) returns (TranscriptionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Transcribed text"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/audio/transcriptions"
+      body: "*"
+    };
+  }
+
+  // Audio Translation: Translate audio to English text
+  rpc Translation(TranslationRequest) returns (TranslationResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Translated text"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/audio/translations"
+      body: "*"
+    };
+  }
+
+  // =============================================================================
+  // Images API - Image Generation and Editing
+  // =============================================================================
+
+  // Generate images from text prompts
+  rpc ImageGeneration(ImageGenerationRequest) returns (ImageGenerationResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Generated images"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/images/generations"
+      body: "*"
+    };
+  }
+
+  // Edit an existing image
+  rpc ImageEdit(ImageEditRequest) returns (ImageEditResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Edited images"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/images/edits"
+      body: "*"
+    };
+  }
+
+  // Create variations of an image
+  rpc ImageVariation(ImageVariationRequest) returns (ImageVariationResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Image variations"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/images/variations"
+      body: "*"
+    };
+  }
+
+  // =============================================================================
+  // Moderations API - Content Classification
+  // =============================================================================
+
+  // Classify content for policy violations
+  rpc Moderation(ModerationRequest) returns (ModerationResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Moderation results"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/moderations"
+      body: "*"
+    };
+  }
+
+  // =============================================================================
+  // Rerank API - Document Reranking for RAG
+  // =============================================================================
+
+  // Rerank documents by relevance to a query
+  rpc Rerank(RerankRequest) returns (RerankResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Reranked documents"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/rerank"
+      body: "*"
+    };
+  }
+
+  // =============================================================================
+  // Responses API - Agentic Orchestration
+  // =============================================================================
+
+  // Create a response (agentic loop with auto tool calling)
+  rpc CreateResponse(CreateResponseRequest) returns (stream CreateResponseResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Generated response with tool calls"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/responses"
+      body: "*"
+    };
+  }
+
+  // Get a response by ID
+  rpc GetResponse(GetResponseRequest) returns (GetResponseResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "The response"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/responses/{response_id}"};
+  }
+
+  // Cancel an in-progress response
+  rpc CancelResponse(CancelResponseRequest) returns (CancelResponseResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Cancelled response"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/responses/{response_id}/cancel"
+      body: "*"
+    };
+  }
+
+  // Delete a response
+  rpc DeleteResponse(DeleteResponseRequest) returns (DeleteResponseResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Deleted response"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/responses/{response_id}"};
+  }
+
+  // List responses
+  rpc ListResponses(ListResponsesRequest) returns (ListResponsesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List of responses"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/responses"};
+  }
+
+}

@@ -1,0 +1,97 @@
+---
+title: Agents Overview
+description: Autonomous AI agents with tool use, memory, and human-in-the-loop approval.
+icon: Bot
+---
+
+Agents are the core runtime in Everstack for autonomous, multi-step AI work. An agent is a session-based execution loop where a language model reasons about a goal, calls tools, observes results, and repeats until the task is done or a constraint is reached.
+
+Unlike a single function call or a fixed workflow, an agent decides its own path. It chooses which tools to invoke, in what order, and how to respond to intermediate results. You define the boundaries -- the model, the available tools, the turn limits, the approval gates -- and the agent operates within them.
+
+## What agents give you
+
+- **Tool chaining.** Agents can call any combination of 45+ built-in tools across sandbox execution, browser automation, web search, file management, memory, and storage. Each tool result feeds back into the model context for the next decision.
+
+- **Persistent or ephemeral execution.** Ephemeral agents spin up for a single session and tear down when done. Persistent agents get a dedicated, fully isolated sandbox that survives across sessions, with configurable CPU, memory, disk, networking, and SSH access.
+
+- **Memory.** Agents can store and retrieve knowledge across sessions. Memory is scoped (per-agent, per-user, or global) and supports automatic extraction and retrieval so the agent builds context over time without manual prompt engineering.
+
+- **Human-in-the-loop approval.** Any tool call can be gated behind reviewer approval. The agent pauses, a human inspects the payload, and the agent resumes only after explicit sign-off. This keeps agents autonomous for routine work while reserving human judgment for high-risk actions.
+
+- **Multi-agent coordination.** Agents can spawn sub-agents, delegate jobs asynchronously, send messages to other agents, and check for replies. A primary agent can orchestrate a team of specialized sub-agents, each with its own tools and constraints.
+
+- **Streaming.** Every session streams events in real time over SSE: text deltas from the model, tool call start and end markers, approval lifecycle events, and sandbox state changes. Clients get a live, granular view of agent reasoning and execution.
+
+## Why agents exist
+
+Functions and workflows handle structured, predictable tasks well. But many real problems are open-ended. A developer debugging a production issue needs to read logs, form a hypothesis, check code, run a test, and iterate. A research task might require searching the web, reading documents, synthesizing findings, and deciding what to investigate next.
+
+Agents handle this kind of work because the execution path is not known ahead of time. The model decides what to do at each step based on what it has learned so far.
+
+Everstack agents are not a thin wrapper around a chat completion API. The runtime manages the full execution lifecycle: sandbox provisioning, tool dispatch, HITL gating, context window compaction, token tracking, session state persistence, and streaming. You bring the goal and the guardrails. The runtime handles everything else.
+
+## Ephemeral vs persistent
+
+The two agent modes serve different operational patterns.
+
+**Ephemeral agents** are session-scoped. They start, do their work, and clean up. There is no state between sessions beyond what is stored in memory. Use ephemeral agents for on-demand tasks like code review, data analysis, content generation, or answering questions.
+
+**Persistent agents** get a dedicated sandbox that lives across sessions. The sandbox has a filesystem, installed packages, cloned repos, and running processes that survive between conversations. Use persistent agents for long-running workloads like monitoring, scheduled jobs, development environments, or agents that need to maintain complex local state.
+
+Persistent agents follow a lifecycle state machine:
+
+- `active` -- the agent definition exists and is ready
+- `provisioning` -- sandbox is being created
+- `idle` -- sandbox is alive, no active turn
+- `running` -- a turn is actively in progress
+- `sleeping` -- sandbox is stopped, state preserved
+- wake -- a sleeping agent is brought back to `idle` automatically when it receives a message
+
+## When to use agents vs workflows vs functions
+
+**Use a function** when the task is a single, well-defined operation with clear inputs and outputs. Structured data transformations, API calls, validation checks.
+
+**Use a workflow** when the task is a fixed sequence of steps that does not require model reasoning between them. ETL pipelines, approval chains, notification sequences.
+
+**Use an agent** when the task is open-ended, requires reasoning about intermediate results, or needs to adapt its approach based on what it discovers. Debugging, research, code generation, multi-step analysis, anything where the model needs to think and act in a loop.
+
+## Agent modes
+
+Agents operate in one of two modes:
+
+- **Primary** agents are user-facing. They receive messages directly from users or external triggers and run the main task.
+
+- **Sub-agents** are spawned by other agents to handle delegated work. They report results back to their parent and are not directly addressable by users.
+
+## Key constraints
+
+Every agent has configurable limits that bound its execution:
+
+- **max_turns** -- the maximum number of user-agent exchanges in a session
+- **max_tool_calls_per_turn** -- caps tool invocations within a single turn
+- **max_steps** -- total iterations (tool call plus result cycles) across the session
+- **turn timeout** -- 30 minutes per turn by default
+- **iteration limit** -- 200 tool-result cycles per turn
+
+These constraints prevent runaway execution and keep costs predictable. When a limit is reached, the agent completes its current output and stops.
+
+## Identity and personality
+
+Agents support rich identity configuration beyond the system prompt:
+
+- **system_prompt** -- the core instructions for the agent
+- **soul_md** -- defines the agent's personality, values, and behavioral traits
+- **identity_md** -- establishes who the agent is, its role, and its expertise
+- **user_md** -- context about the user the agent is interacting with
+- **role_md** -- the specific role the agent plays in a given deployment
+
+These identity documents are composed into the agent's context, giving you fine-grained control over tone, expertise, and behavior without overloading the system prompt.
+
+## Next steps
+
+- [Creating Agents](/getting-started/agents/creating-agents) -- define and configure your first agent
+- [Tools](/getting-started/agents/tools) -- explore the built-in tool catalog and add custom tools
+- [Sessions](/getting-started/agents/sessions) -- understand the execution lifecycle and streaming events
+- [Human-in-the-Loop](/getting-started/agents/human-in-the-loop) -- set up approval gates for sensitive actions
+- [Advanced](/getting-started/agents/advanced) -- spawn trees, forks, context compaction, and digest bulletins
+- [API Reference](/api-reference/agents) -- full endpoint documentation for programmatic agent management

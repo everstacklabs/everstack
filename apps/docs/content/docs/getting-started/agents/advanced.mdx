@@ -1,0 +1,82 @@
+---
+title: Advanced
+description: Spawn trees, forks, context compaction, and digest bulletins.
+icon: Cpu
+---
+
+Everstack's agent runtime includes four advanced capabilities that extend what a single agent can do. Each is opt-in through agent configuration, so you only pay for the complexity you need.
+
+## Job delegation
+
+Job delegation lets an agent hand off work to a sub-agent asynchronously. The parent agent continues its own work and checks back on the result later.
+
+This is useful when:
+
+- a task can be broken into independent pieces that run in parallel
+- the parent needs to stay responsive while a long-running sub-task completes
+- you want to specialize agents for different domains and compose them
+
+The parent uses `delegate_job` to queue structured work for another agent, then calls `check_job` to poll for completion. Results flow back through the `JobResultCh` channel into the parent's next loop iteration.
+
+Configure with `spawn.async: true` and `spawn.maxConcurrentJobs` in the agent config.
+
+## Forking
+
+Forking creates independent branches of an agent's execution. Each fork starts with a copy of the current conversation context and runs autonomously from that point forward.
+
+Use forks when:
+
+- you want to explore multiple approaches to a problem simultaneously
+- a decision point has several viable paths and you want to evaluate all of them
+- you need to test different strategies before committing to one
+
+Fork results are collected and returned to the originating agent for synthesis.
+
+Configure with `fork.enabled: true` in the agent config.
+
+## Context compaction
+
+Long agent sessions accumulate conversation history that eventually exceeds the model's context window. Context compaction manages this automatically using a three-tier system.
+
+The tiers activate based on how full the context window is:
+
+- **Background** (80% utilization): summarizes the oldest 30% of non-system messages using a lightweight summarization model
+- **Aggressive** (85% utilization): summarizes the oldest 60% of non-system messages
+- **Emergency** (95% utilization): hard-truncates to the system prompt plus the last 20 user messages, without an LLM call
+
+The summarization model is configurable (defaults to a fast, inexpensive model). System messages are always preserved across all tiers.
+
+Compaction is transparent to the agent. It sees the summarized context as part of its normal conversation history, so it can reference earlier work without knowing a summary replaced the raw messages.
+
+Configure with `monitor.enabled: true` in the agent config.
+
+## Digest bulletins
+
+When multiple agents run concurrently in the same workspace, digest bulletins keep each agent informed about what the others are doing. A DigestManager aggregates activity across all active sessions and injects a short bulletin into each agent's context at the start of its next loop iteration.
+
+This is valuable when:
+
+- several agents work on related parts of a larger task
+- coordination matters but direct message passing would create too much overhead
+- you want situational awareness without tight coupling between agents
+
+Bulletins are lightweight summaries, not full message histories. They give each agent enough context to avoid duplicating work or conflicting with another agent's actions.
+
+Configure with `digest.enabled: true` in the agent config.
+
+## Configuration summary
+
+All four features are opt-in. Enable them individually based on your use case:
+
+- `spawn.async: true` and `spawn.maxConcurrentJobs: N` for job delegation
+- `fork.enabled: true` for forking
+- `monitor.enabled: true` for context compaction
+- `digest.enabled: true` for digest bulletins
+
+These features compose well together. A persistent agent might use all four: delegating jobs to specialized sub-agents, forking to explore alternatives, compacting its own context as sessions grow long, and receiving digests about what its peers are doing.
+
+## Next steps
+
+- Review [Tools](/getting-started/agents/tools) for the delegation and fork tool interfaces.
+- See [Sessions](/getting-started/agents/sessions) for how these features affect session state and streaming events.
+- Use the [Agents API](/api-reference/agents) to configure these features programmatically.

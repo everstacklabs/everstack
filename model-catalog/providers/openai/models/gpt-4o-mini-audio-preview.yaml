@@ -1,0 +1,17 @@
+name: gpt-4o-mini-audio-preview
+display_name: Gpt 4o Mini Audio Preview
+family: gpt-4
+status: stable
+limits:
+    max_tokens: 128000
+    max_completion_tokens: 16384
+capabilities:
+    - chat
+    - function_calling
+    - vision
+modalities:
+    input:
+        - text
+        - image
+    output:
+        - text

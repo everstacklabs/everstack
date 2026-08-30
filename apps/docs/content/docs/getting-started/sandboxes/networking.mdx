@@ -1,0 +1,177 @@
+---
+title: Networking
+description: Port exposure, edge access, signed preview URLs, and outbound network controls for sandboxes.
+icon: Wifi
+---
+
+Sandbox networking has two sides:
+
+- **inbound access** -- you deliberately expose a service running inside the sandbox
+- **outbound access** -- you control which hosts the sandbox can reach
+
+Together, those capabilities let you run edge-style workloads safely.
+
+## Exposing a service at the edge
+
+If your sandbox runs a web server, API, dashboard, or preview app, you can expose a listening port and get a public URL.
+
+Typical flow:
+
+1. Start a process inside the sandbox, such as `npm run dev`, `python app.py`, or `uvicorn main:app --port 8080`.
+2. Detect or manually expose the listening port.
+3. Open the generated URL to test, demo, or share the service.
+
+This works well for:
+
+- preview environments
+- QA and product review links
+- internal tools and temporary dashboards
+- customer-specific demos
+- isolated callback handlers
+
+## Port exposure
+
+The **Ports** tab in the admin UI is the runtime control surface for edge exposure.
+
+You can:
+
+- see detected listening ports
+- expose a port over TCP
+- copy the generated public URL
+- generate a signed shareable URL (see below)
+- open the URL directly in a browser
+- close the port again when you are done
+
+Only expose the ports you actually need. Everything else remains private inside the sandbox.
+
+## Signed preview URLs
+
+Standard preview URLs require an `x-everstack-preview-token` header. This works for programmatic callers (the SDK sets it automatically) but not for:
+
+- shareable links you send via chat or email
+- iframe embeds
+- third-party tools that can't set custom headers
+
+**Signed preview URLs** solve this. The auth token is embedded in the URL itself, so no headers are needed.
+
+Generate one via the API or the **Share** button in the Ports tab:
+
+```bash
+POST /v1/sandbox/instances/{sandboxId}/preview-url
+{
+  "port": 3000,
+  "expires_in_seconds": 3600
+}
+```
+
+Response:
+```json
+{
+  "url": "https://xK3p9q2A-3000.preview.everstack.ai?_preview_token=...",
+  "expires_at": "2026-06-01T13:00:00Z"
+}
+```
+
+- Expiry: 1 second to 24 hours (default 1 hour)
+- The token is HMAC-SHA256 signed -- tamper-proof
+- A short-lived browser cookie is set after the first validation so subsequent same-tab requests (JS imports, images) don't re-verify on every hit
+
+## Outbound network policy
+
+Every sandbox can have an egress policy set at creation time:
+
+### Standard modes
+
+- `allow` (default) -- all outbound traffic permitted
+- `whitelist` -- only explicitly approved hostnames allowed
+- `deny` -- most outbound blocked (allows package registries by default)
+
+### Block-all mode with CIDR allow-list
+
+For complete egress isolation with surgical exceptions:
+
+```json
+{
+  "networkBlockAll": true,
+  "networkAllowCidrs": ["10.0.0.0/8", "192.168.1.100/32"]
+}
+```
+
+Always-allowed even with `networkBlockAll: true`: loopback (127.0.0.0/8), link-local (169.254.0.0/16), and DNS (port 53). These are needed for the sandbox-agent itself to function.
+
+### When to use block-all
+
+- sandboxed code execution (prevent data exfiltration)
+- data processing pipelines with sensitive inputs
+- enterprise compliance requirements
+- any workload where the exact egress surface must be declared
+
+## Tailscale VPN
+
+For access to private services (databases, internal APIs, self-hosted LLMs) by IP, join the sandbox to your Tailnet at creation:
+
+```json
+{
+  "tailscaleAuthKey": "tskey-auth-xxxx"
+}
+```
+
+The sandbox runs `tailscale up` at boot and gets a Tailscale IP. Use ephemeral auth keys so the device auto-removes from your Tailnet when the sandbox is destroyed.
+
+## External storage mounts
+
+Mount S3, Cloudflare R2, GCS, or Azure Blob as local directories inside the sandbox:
+
+```json
+{
+  "mounts": [
+    {
+      "type": "s3",
+      "bucket": "my-models",
+      "mountPath": "/models",
+      "endpoint": "https://xxx.r2.cloudflarestorage.com"
+    }
+  ]
+}
+```
+
+Credentials are passed via environment variables (`AWS_ACCESS_KEY_ID`, etc.) on the same `CreateSandbox` request. The mount appears as a normal directory -- existing tools and scripts work without modification.
+
+FUSE mounts are optimized for large sequential reads (model weights, datasets). They are slower than local disk and not suitable for random-access workloads like databases.
+
+## Observing egress
+
+The **Network** tab gives you visibility into DNS egress activity so you can see:
+
+- which domains the sandbox tried to reach
+- whether the request was allowed or blocked
+- the query type and timestamp
+
+This is especially useful for debugging webhook handlers, scheduled jobs, agents, and customer-specific integrations.
+
+## Edge examples
+
+### Shareable preview link
+
+Run a React app, expose port `3000`, click **Share** in the Ports tab. Send the signed URL to a stakeholder -- they open it in a browser with no headers or extensions required.
+
+### Isolated API callback handler
+
+Run a small API service inside the sandbox, expose a single port, and let a third-party system call it while keeping the rest of the environment private.
+
+### Air-gapped data processing
+
+Set `networkBlockAll: true` and allow only your data warehouse IP (`networkAllowCidrs: ["10.0.1.50/32"]`). The sandbox can reach the warehouse but nothing else -- no accidental exfiltration.
+
+### ML inference with private model weights
+
+Mount your S3 bucket at `/models`, enable Tailscale to reach your inference endpoint, and block all other egress. The sandbox reads model weights from S3 and sends results only to your private service.
+
+## Recommendations
+
+- Prefer `whitelist` mode for real workloads; use `networkBlockAll` when you need full control.
+- Expose the smallest number of ports possible.
+- Use signed preview URLs for any link you share externally.
+- Terminate preview sandboxes after use, or set `autoDeleteAfterDays: 1` to auto-clean.
+- Check egress events when debugging blocked outbound calls.
+- Use ephemeral Tailscale auth keys so devices auto-remove on sandbox destroy.

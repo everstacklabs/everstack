@@ -1,0 +1,1560 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/auth/v1/auth_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "AuthService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/auth/accept-invite": {
+      "post": {
+        "summary": "AcceptInvitation accepts a team invitation and sets up the user account",
+        "operationId": "AuthService_AcceptInvitation",
+        "responses": {
+          "200": {
+            "description": "Invitation acceptance result with session",
+            "schema": {
+              "$ref": "#/definitions/v1AcceptInvitationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1AcceptInvitationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/authenticate": {
+      "post": {
+        "summary": "Authenticate exchanges an OAuth code for a session (Cloud only)",
+        "operationId": "AuthService_Authenticate",
+        "responses": {
+          "200": {
+            "description": "Authentication result with session",
+            "schema": {
+              "$ref": "#/definitions/v1AuthenticateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1AuthenticateRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/complete-email-verification": {
+      "post": {
+        "summary": "CompleteEmailVerification finalises email verification using the\npending_authentication_token from a prior auth challenge and the code\ndelivered by email.",
+        "operationId": "AuthService_CompleteEmailVerification",
+        "responses": {
+          "200": {
+            "description": "Email verification result with session",
+            "schema": {
+              "$ref": "#/definitions/v1CompleteEmailVerificationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CompleteEmailVerificationRequest - Verify an email address using the\npending_authentication_token returned from a prior auth attempt and the\n6-digit code emailed to the user.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CompleteEmailVerificationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/complete-password-reset": {
+      "post": {
+        "summary": "CompletePasswordReset finalises a password reset using the token from the\nemail and creates a session.",
+        "operationId": "AuthService_CompletePasswordReset",
+        "responses": {
+          "200": {
+            "description": "Password reset completion with session",
+            "schema": {
+              "$ref": "#/definitions/v1CompletePasswordResetResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CompletePasswordResetRequest - Set a new password using a reset token from the email.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CompletePasswordResetRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/device/approve": {
+      "post": {
+        "summary": "ApproveDeviceAuthorization approves a device authorization request.\nCalled by the browser after the user confirms.",
+        "operationId": "AuthService_ApproveDeviceAuthorization",
+        "responses": {
+          "200": {
+            "description": "Device authorization approval result",
+            "schema": {
+              "$ref": "#/definitions/v1ApproveDeviceAuthorizationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ApproveDeviceAuthorizationRequest is called by the browser to approve.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ApproveDeviceAuthorizationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/device/authorize": {
+      "post": {
+        "summary": "CreateDeviceAuthorization initiates a device authorization flow.\nThe CLI/desktop calls this to get a user code and verification URL.",
+        "operationId": "AuthService_CreateDeviceAuthorization",
+        "responses": {
+          "200": {
+            "description": "Device authorization session with user code",
+            "schema": {
+              "$ref": "#/definitions/v1CreateDeviceAuthorizationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateDeviceAuthorizationRequest initiates a device flow.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateDeviceAuthorizationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/device/status/{userCode}": {
+      "get": {
+        "summary": "GetDeviceAuthorizationStatus returns the status of a device authorization by user code.\nUsed by the browser approval page to validate the code.",
+        "operationId": "AuthService_GetDeviceAuthorizationStatus",
+        "responses": {
+          "200": {
+            "description": "Device authorization status",
+            "schema": {
+              "$ref": "#/definitions/v1GetDeviceAuthorizationStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userCode",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/device/token": {
+      "post": {
+        "summary": "ExchangeDeviceCode polls for the result of a device authorization.\nReturns pending until the user approves in the browser.",
+        "operationId": "AuthService_ExchangeDeviceCode",
+        "responses": {
+          "200": {
+            "description": "Device code exchange result",
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeDeviceCodeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ExchangeDeviceCodeRequest polls for device authorization result.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeDeviceCodeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/instance-connect-sessions": {
+      "post": {
+        "summary": "CreateInstanceConnectSession creates a short-lived session for connecting\na CE instance to Everstack Cloud.",
+        "operationId": "AuthService_CreateInstanceConnectSession",
+        "responses": {
+          "200": {
+            "description": "Short-lived instance connect session",
+            "schema": {
+              "$ref": "#/definitions/v1CreateInstanceConnectSessionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateInstanceConnectSessionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/instance-connect-sessions/{sessionId}": {
+      "get": {
+        "summary": "GetInstanceConnectSession validates and returns metadata for an instance\nconnection session.",
+        "operationId": "AuthService_GetInstanceConnectSession",
+        "responses": {
+          "200": {
+            "description": "Instance connect session details",
+            "schema": {
+              "$ref": "#/definitions/v1GetInstanceConnectSessionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/instance-connect-sessions/{sessionId}:complete": {
+      "post": {
+        "summary": "CompleteInstanceConnect binds an authenticated cloud organization to the\ninstance and returns the redirect URL back to the instance.",
+        "operationId": "AuthService_CompleteInstanceConnect",
+        "responses": {
+          "200": {
+            "description": "Completed instance connection",
+            "schema": {
+              "$ref": "#/definitions/v1CompleteInstanceConnectResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AuthServiceCompleteInstanceConnectBody"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/invite": {
+      "post": {
+        "summary": "InviteTeamMember sends an invitation to join the team (checks seat limit)",
+        "operationId": "AuthService_InviteTeamMember",
+        "responses": {
+          "200": {
+            "description": "Invitation result",
+            "schema": {
+              "$ref": "#/definitions/v1InviteTeamMemberResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1InviteTeamMemberRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/invite/{invitationId}": {
+      "delete": {
+        "summary": "RevokeInvitation revokes a pending invitation",
+        "operationId": "AuthService_RevokeInvitation",
+        "responses": {
+          "200": {
+            "description": "Revocation result",
+            "schema": {
+              "$ref": "#/definitions/v1RevokeInvitationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "summary": "Login authenticates with email and password - Self-hosted only",
+        "operationId": "AuthService_Login",
+        "responses": {
+          "200": {
+            "description": "Login result with session",
+            "schema": {
+              "$ref": "#/definitions/v1LoginResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1LoginRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/magic-link": {
+      "post": {
+        "summary": "RequestMagicLink sends a magic link email for passwordless login - Self-hosted only",
+        "operationId": "AuthService_RequestMagicLink",
+        "responses": {
+          "200": {
+            "description": "Magic link request result",
+            "schema": {
+              "$ref": "#/definitions/v1RequestMagicLinkResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RequestMagicLinkRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/mode": {
+      "get": {
+        "summary": "GetAuthMode returns the authentication mode (cloud vs self-hosted)",
+        "operationId": "AuthService_GetAuthMode",
+        "responses": {
+          "200": {
+            "description": "Authentication mode and setup status",
+            "schema": {
+              "$ref": "#/definitions/v1GetAuthModeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "summary": "RefreshSession extends the current session",
+        "operationId": "AuthService_RefreshSession",
+        "responses": {
+          "200": {
+            "description": "Refreshed session info",
+            "schema": {
+              "$ref": "#/definitions/v1RefreshSessionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/register": {
+      "post": {
+        "summary": "Register creates the first admin user (becomes instance owner) - Self-hosted only",
+        "operationId": "AuthService_Register",
+        "responses": {
+          "200": {
+            "description": "Registration result with session",
+            "schema": {
+              "$ref": "#/definitions/v1RegisterResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RegisterRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/request-password-reset": {
+      "post": {
+        "summary": "RequestPasswordReset initiates a password reset by emailing a reset link\nto the user. Anti-enumeration: always returns success.",
+        "operationId": "AuthService_RequestPasswordReset",
+        "responses": {
+          "200": {
+            "description": "Password reset request result",
+            "schema": {
+              "$ref": "#/definitions/v1RequestPasswordResetResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "RequestPasswordResetRequest - Initiate a password reset for the given email.\nAnti-enumeration: the response is identical for known + unknown emails.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RequestPasswordResetRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/session": {
+      "get": {
+        "summary": "GetSession returns the current user session if authenticated",
+        "operationId": "AuthService_GetSession",
+        "responses": {
+          "200": {
+            "description": "Current session info",
+            "schema": {
+              "$ref": "#/definitions/v1GetSessionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/signout": {
+      "post": {
+        "summary": "SignOut invalidates the current session",
+        "operationId": "AuthService_SignOut",
+        "responses": {
+          "200": {
+            "description": "Sign out result",
+            "schema": {
+              "$ref": "#/definitions/v1SignOutResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/sso-url": {
+      "post": {
+        "summary": "GetAuthURL returns the SSO provider URL for sign-in redirect (Cloud only)",
+        "operationId": "AuthService_GetAuthURL",
+        "responses": {
+          "200": {
+            "description": "SSO auth URL for redirect",
+            "schema": {
+              "$ref": "#/definitions/v1GetAuthURLResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetAuthURLRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/team": {
+      "get": {
+        "summary": "ListTeamMembers returns all team members and pending invitations",
+        "operationId": "AuthService_ListTeamMembers",
+        "responses": {
+          "200": {
+            "description": "Team members and invitations",
+            "schema": {
+              "$ref": "#/definitions/v1ListTeamMembersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/team/{userId}": {
+      "delete": {
+        "summary": "RemoveTeamMember removes a user from the team",
+        "operationId": "AuthService_RemoveTeamMember",
+        "responses": {
+          "200": {
+            "description": "Removal result",
+            "schema": {
+              "$ref": "#/definitions/v1RemoveTeamMemberResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/verify-magic-link": {
+      "post": {
+        "summary": "VerifyMagicLink verifies a magic link token and creates a session - Self-hosted only",
+        "operationId": "AuthService_VerifyMagicLink",
+        "responses": {
+          "200": {
+            "description": "Magic link verification result with session",
+            "schema": {
+              "$ref": "#/definitions/v1VerifyMagicLinkResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1VerifyMagicLinkRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "AuthServiceCompleteInstanceConnectBody": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AcceptInvitationRequest": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "title": "AcceptInvitationRequest - Accept a team invitation"
+    },
+    "v1AcceptInvitationResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "user": {
+          "$ref": "#/definitions/v1UserWithOrganizations"
+        },
+        "sessionToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ApproveDeviceAuthorizationRequest": {
+      "type": "object",
+      "properties": {
+        "userCode": {
+          "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
+        }
+      },
+      "description": "ApproveDeviceAuthorizationRequest is called by the browser to approve."
+    },
+    "v1ApproveDeviceAuthorizationResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1AuthMode": {
+      "type": "string",
+      "enum": [
+        "AUTH_MODE_UNSPECIFIED",
+        "AUTH_MODE_CLOUD",
+        "AUTH_MODE_SELF_HOSTED"
+      ],
+      "default": "AUTH_MODE_UNSPECIFIED",
+      "description": "- AUTH_MODE_CLOUD: WorkOS SSO (Cloud edition)\n - AUTH_MODE_SELF_HOSTED: Email/password + magic link (Self-hosted)",
+      "title": "AuthMode represents the authentication mode for the instance"
+    },
+    "v1AuthenticateRequest": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "title": "OAuth code from callback"
+        },
+        "state": {
+          "type": "string"
+        }
+      },
+      "title": "AuthenticateRequest - Exchange auth code for session"
+    },
+    "v1AuthenticateResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "user": {
+          "$ref": "#/definitions/v1UserWithOrganizations"
+        },
+        "sessionToken": {
+          "type": "string",
+          "title": "Used for cookie"
+        }
+      }
+    },
+    "v1CompleteEmailVerificationRequest": {
+      "type": "object",
+      "properties": {
+        "pendingAuthenticationToken": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        }
+      },
+      "description": "CompleteEmailVerificationRequest - Verify an email address using the\npending_authentication_token returned from a prior auth attempt and the\n6-digit code emailed to the user."
+    },
+    "v1CompleteEmailVerificationResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "user": {
+          "$ref": "#/definitions/v1UserWithOrganizations"
+        },
+        "sessionToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CompleteInstanceConnectResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "redirectUrl": {
+          "type": "string"
+        },
+        "organizationSlug": {
+          "type": "string"
+        },
+        "workspaceId": {
+          "type": "string"
+        },
+        "workspaceSlug": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CompletePasswordResetRequest": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string"
+        },
+        "newPassword": {
+          "type": "string"
+        }
+      },
+      "description": "CompletePasswordResetRequest - Set a new password using a reset token from the email."
+    },
+    "v1CompletePasswordResetResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "user": {
+          "$ref": "#/definitions/v1UserWithOrganizations"
+        },
+        "sessionToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateDeviceAuthorizationRequest": {
+      "type": "object",
+      "properties": {
+        "clientId": {
+          "type": "string",
+          "title": "\"evs-cli\" or another public client identifier"
+        },
+        "scope": {
+          "type": "string",
+          "title": "e.g., \"cli:full\""
+        }
+      },
+      "description": "CreateDeviceAuthorizationRequest initiates a device flow."
+    },
+    "v1CreateDeviceAuthorizationResponse": {
+      "type": "object",
+      "properties": {
+        "deviceCode": {
+          "type": "string",
+          "title": "opaque token for polling"
+        },
+        "userCode": {
+          "type": "string",
+          "title": "short human-readable code (e.g., \"ABCD-EFGH\")"
+        },
+        "verificationUri": {
+          "type": "string",
+          "title": "browser URL (e.g., \"https://platform.everstack.ai/device\")"
+        },
+        "expiresIn": {
+          "type": "integer",
+          "format": "int32",
+          "title": "seconds until expiry (900 = 15 min)"
+        },
+        "interval": {
+          "type": "integer",
+          "format": "int32",
+          "title": "polling interval in seconds (5)"
+        }
+      }
+    },
+    "v1CreateInstanceConnectSessionRequest": {
+      "type": "object",
+      "properties": {
+        "instanceName": {
+          "type": "string"
+        },
+        "instanceUrl": {
+          "type": "string"
+        },
+        "instanceId": {
+          "type": "string"
+        },
+        "ownerEmail": {
+          "type": "string"
+        },
+        "fingerprint": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateInstanceConnectSessionResponse": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresInSeconds": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ExchangeDeviceCodeRequest": {
+      "type": "object",
+      "properties": {
+        "deviceCode": {
+          "type": "string"
+        },
+        "clientId": {
+          "type": "string"
+        }
+      },
+      "description": "ExchangeDeviceCodeRequest polls for device authorization result."
+    },
+    "v1ExchangeDeviceCodeResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "Backward-compatible state: \"pending\" (or legacy \"authorization_pending\"\nin self-hosted mode), \"authorized\", \"expired\", or \"denied\"."
+        },
+        "accessToken": {
+          "type": "string",
+          "description": "M2M signed JWT (long-lived)",
+          "title": "Only populated when status == \"authorized\":"
+        },
+        "tokenType": {
+          "type": "string",
+          "title": "\"Bearer\""
+        },
+        "orgId": {
+          "type": "string"
+        },
+        "orgSlug": {
+          "type": "string"
+        },
+        "userEmail": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "oauthError": {
+          "type": "string",
+          "description": "RFC 8628 token error when status is not authorized: \"authorization_pending\",\n\"slow_down\", \"expired_token\", or \"access_denied\"."
+        }
+      }
+    },
+    "v1GetAuthModeResponse": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "$ref": "#/definitions/v1AuthMode"
+        },
+        "hasUsers": {
+          "type": "boolean",
+          "title": "True if any users exist (determines if registration is allowed)"
+        }
+      }
+    },
+    "v1GetAuthURLRequest": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "title": "SSO provider (google, microsoft, etc.)"
+        },
+        "connectionId": {
+          "type": "string",
+          "title": "WorkOS connection ID for enterprise SSO"
+        },
+        "redirectUri": {
+          "type": "string",
+          "title": "Where to redirect after auth"
+        },
+        "state": {
+          "type": "string",
+          "title": "State to preserve through OAuth flow (e.g., return URL)"
+        }
+      },
+      "title": "GetAuthURLRequest - Get SSO auth URL for sign-in redirect"
+    },
+    "v1GetAuthURLResponse": {
+      "type": "object",
+      "properties": {
+        "authUrl": {
+          "type": "string"
+        }
+      }
+    },
+    "v1GetDeviceAuthorizationStatusResponse": {
+      "type": "object",
+      "properties": {
+        "valid": {
+          "type": "boolean"
+        },
+        "expired": {
+          "type": "boolean"
+        },
+        "clientId": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "description": "Browser-facing status: \"pending\", \"authorized\", \"expired\", or \"denied\"."
+        }
+      }
+    },
+    "v1GetInstanceConnectSessionResponse": {
+      "type": "object",
+      "properties": {
+        "valid": {
+          "type": "boolean"
+        },
+        "expired": {
+          "type": "boolean"
+        },
+        "notFound": {
+          "type": "boolean"
+        },
+        "instanceName": {
+          "type": "string"
+        },
+        "instanceUrl": {
+          "type": "string"
+        },
+        "instanceId": {
+          "type": "string"
+        },
+        "ownerEmail": {
+          "type": "string"
+        },
+        "fingerprint": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1GetSessionResponse": {
+      "type": "object",
+      "properties": {
+        "authenticated": {
+          "type": "boolean"
+        },
+        "user": {
+          "$ref": "#/definitions/v1UserWithOrganizations"
+        }
+      }
+    },
+    "v1Invitation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/v1OrganizationRole"
+        },
+        "invitedByEmail": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "accepted": {
+          "type": "boolean"
+        }
+      },
+      "title": "Invitation represents a pending team invitation"
+    },
+    "v1InviteTeamMemberRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/v1OrganizationRole"
+        }
+      },
+      "title": "InviteTeamMemberRequest - Invite a new team member"
+    },
+    "v1InviteTeamMemberResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "invitation": {
+          "$ref": "#/definitions/v1Invitation"
+        },
+        "upgradeMessage": {
+          "type": "string",
+          "title": "Set if seat limit reached"
+        }
+      }
+    },
+    "v1ListTeamMembersResponse": {
+      "type": "object",
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TeamMember"
+          }
+        },
+        "pendingInvitations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Invitation"
+          }
+        },
+        "seatLimit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "seatsUsed": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1LoginRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "title": "LoginRequest - Login with email and password"
+    },
+    "v1LoginResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "user": {
+          "$ref": "#/definitions/v1UserWithOrganizations"
+        },
+        "sessionToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1Organization": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/v1OrganizationRole"
+        }
+      },
+      "title": "Organization represents a user's organization membership"
+    },
+    "v1OrganizationRole": {
+      "type": "string",
+      "enum": [
+        "ORGANIZATION_ROLE_UNSPECIFIED",
+        "ORGANIZATION_ROLE_OWNER",
+        "ORGANIZATION_ROLE_ADMIN",
+        "ORGANIZATION_ROLE_MEMBER",
+        "ORGANIZATION_ROLE_VIEWER"
+      ],
+      "default": "ORGANIZATION_ROLE_UNSPECIFIED",
+      "title": "OrganizationRole represents a user's role in an organization"
+    },
+    "v1RefreshSessionResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1RegisterRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "title": "RegisterRequest - Register the first admin user (becomes instance owner)"
+    },
+    "v1RegisterResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "user": {
+          "$ref": "#/definitions/v1UserWithOrganizations"
+        },
+        "sessionToken": {
+          "type": "string"
+        },
+        "requiresEmailVerification": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1RemoveTeamMemberResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1RequestMagicLinkRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        }
+      },
+      "title": "RequestMagicLinkRequest - Request a magic link for passwordless login"
+    },
+    "v1RequestMagicLinkResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string",
+          "title": "User-facing message (e.g., \"Check your email\")"
+        }
+      }
+    },
+    "v1RequestPasswordResetRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        }
+      },
+      "description": "RequestPasswordResetRequest - Initiate a password reset for the given email.\nAnti-enumeration: the response is identical for known + unknown emails."
+    },
+    "v1RequestPasswordResetResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string",
+          "title": "User-facing message (always generic for anti-enumeration)"
+        }
+      }
+    },
+    "v1RevokeInvitationResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1SignOutResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1TeamMember": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1User"
+        },
+        "role": {
+          "$ref": "#/definitions/v1OrganizationRole"
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "TeamMember represents a user in the team"
+    },
+    "v1User": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "avatarUrl": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "User represents an authenticated user"
+    },
+    "v1UserWithOrganizations": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1User"
+        },
+        "organizations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Organization"
+          }
+        }
+      },
+      "title": "UserWithOrganizations includes user data with their org memberships"
+    },
+    "v1VerifyMagicLinkRequest": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        }
+      },
+      "title": "VerifyMagicLinkRequest - Verify a magic link token"
+    },
+    "v1VerifyMagicLinkResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "user": {
+          "$ref": "#/definitions/v1UserWithOrganizations"
+        },
+        "sessionToken": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

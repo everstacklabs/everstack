@@ -1,0 +1,45 @@
+name: "deepseek-v4-flash-vision-exp"
+display_name: "DeepSeek V4 Flash Vision Exp"
+family: "deepseek-flash"
+status: "beta"
+release_date: "2026-08-21"
+
+cost:
+  input_per_1k: 0.00014
+  output_per_1k: 0.00028
+  cache_read_per_1k: 0.0000028
+
+limits:
+  max_tokens: 1000000
+  max_completion_tokens: 384000
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image"]
+  output: ["text"]
+
+notes: "Experimental multimodal DeepSeek V4 Flash model for image understanding, coding, and agentic work"
+
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 384000
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true

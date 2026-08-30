@@ -1,0 +1,518 @@
+syntax = "proto3";
+
+package everstack.datasets.v1;
+
+import "google/api/annotations.proto";
+import "everstack/datasets/v1/datasets.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/datasets/v1;datasets";
+
+service DatasetService {
+  // --- Datasets ---
+
+  rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a new dataset"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/datasets"
+      body: "*"
+    };
+  }
+
+  rpc GetDataset(GetDatasetRequest) returns (GetDatasetResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get dataset by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/datasets/{id}"};
+  }
+
+  rpc ListDatasets(ListDatasetsRequest) returns (ListDatasetsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List all datasets for tenant"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/datasets"};
+  }
+
+  rpc UpdateDataset(UpdateDatasetRequest) returns (UpdateDatasetResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update dataset"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/datasets/{id}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteDataset(DeleteDatasetRequest) returns (DeleteDatasetResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete dataset"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/datasets/{id}"};
+  }
+
+  // --- Dataset Versions ---
+
+  rpc CreateDatasetVersion(CreateDatasetVersionRequest) returns (CreateDatasetVersionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create an immutable dataset version"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/datasets/{dataset_id}/versions"
+      body: "*"
+    };
+  }
+
+  rpc ListDatasetVersions(ListDatasetVersionsRequest) returns (ListDatasetVersionsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List immutable versions for a dataset"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/datasets/{dataset_id}/versions"};
+  }
+
+  rpc GetDatasetVersion(GetDatasetVersionRequest) returns (GetDatasetVersionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get dataset version by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/datasets/versions/{id}"};
+  }
+
+  // --- Dataset Items ---
+
+  rpc CreateDatasetItem(CreateDatasetItemRequest) returns (CreateDatasetItemResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a new dataset item"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/datasets/{dataset_id}/items"
+      body: "*"
+    };
+  }
+
+  rpc CreateDatasetItemBatch(CreateDatasetItemBatchRequest) returns (CreateDatasetItemBatchResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create dataset items in batch"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/datasets/{dataset_id}/items/batch"
+      body: "*"
+    };
+  }
+
+  rpc GenerateDatasetItems(GenerateDatasetItemsRequest) returns (GenerateDatasetItemsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Generate dataset items with an LLM"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/datasets/{dataset_id}/items/generate"
+      body: "*"
+    };
+  }
+
+  rpc GenerateRedTeamDataset(GenerateRedTeamDatasetRequest) returns (GenerateRedTeamDatasetResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Generate adversarial red-team dataset items"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/datasets/{dataset_id}/items/generate-redteam"
+      body: "*"
+    };
+  }
+
+  rpc GetDatasetItem(GetDatasetItemRequest) returns (GetDatasetItemResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get dataset item by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/datasets/items/{id}"};
+  }
+
+  rpc ListDatasetItems(ListDatasetItemsRequest) returns (ListDatasetItemsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List items in a dataset"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/datasets/{dataset_id}/items"};
+  }
+
+  rpc UpdateDatasetItem(UpdateDatasetItemRequest) returns (UpdateDatasetItemResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update dataset item"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/datasets/items/{id}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteDatasetItem(DeleteDatasetItemRequest) returns (DeleteDatasetItemResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete dataset item"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/datasets/items/{id}"};
+  }
+
+  // --- Score Configs ---
+
+  rpc CreateScoreConfig(CreateScoreConfigRequest) returns (CreateScoreConfigResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a new score config"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/score-configs"
+      body: "*"
+    };
+  }
+
+  rpc GetScoreConfig(GetScoreConfigRequest) returns (GetScoreConfigResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get score config by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/score-configs/{id}"};
+  }
+
+  rpc ListScoreConfigs(ListScoreConfigsRequest) returns (ListScoreConfigsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List all score configs for tenant"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/score-configs"};
+  }
+
+  rpc UpdateScoreConfig(UpdateScoreConfigRequest) returns (UpdateScoreConfigResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update score config"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/score-configs/{id}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteScoreConfig(DeleteScoreConfigRequest) returns (DeleteScoreConfigResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete score config"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/score-configs/{id}"};
+  }
+
+  // --- Built-in Metrics ---
+
+  rpc ListBuiltinMetrics(ListBuiltinMetricsRequest) returns (ListBuiltinMetricsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List available built-in evaluation metrics"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/builtin-metrics"};
+  }
+}
+
+service EvalService {
+  rpc CreateEvalRun(CreateEvalRunRequest) returns (CreateEvalRunResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a new evaluation run"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/eval-runs"
+      body: "*"
+    };
+  }
+
+  rpc GetEvalRun(GetEvalRunRequest) returns (GetEvalRunResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get eval run by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/eval-runs/{id}"};
+  }
+
+  rpc ListEvalRuns(ListEvalRunsRequest) returns (ListEvalRunsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List eval runs"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/eval-runs"};
+  }
+
+  rpc CancelEvalRun(CancelEvalRunRequest) returns (CancelEvalRunResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Cancel a running eval run"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/eval-runs/{id}/cancel"
+      body: "*"
+    };
+  }
+
+  rpc DeleteEvalRun(DeleteEvalRunRequest) returns (DeleteEvalRunResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete an eval run"}
+      }
+    };
+    option (google.api.http) = {
+      delete: "/v1/eval-runs/{id}"
+    };
+  }
+
+  rpc RetryEvalRun(RetryEvalRunRequest) returns (RetryEvalRunResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Retry an eval run"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/eval-runs/{id}/retry"
+      body: "*"
+    };
+  }
+
+  rpc GetEvalRunItems(GetEvalRunItemsRequest) returns (GetEvalRunItemsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get items for an eval run"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/eval-runs/{eval_run_id}/items"};
+  }
+
+  rpc GetEvalRunSummary(GetEvalRunSummaryRequest) returns (GetEvalRunSummaryResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get eval run summary with score breakdown"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/eval-runs/{id}/summary"};
+  }
+
+  rpc CompareEvalRuns(CompareEvalRunsRequest) returns (CompareEvalRunsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Compare multiple eval runs"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/eval-runs/compare"
+      body: "*"
+    };
+  }
+
+  rpc ListComparisonRows(ListComparisonRowsRequest) returns (ListComparisonRowsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List paginated per-item rows for a materialized comparison"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/comparisons/{comparison_id}/rows"};
+  }
+
+  rpc SetBaseline(SetBaselineRequest) returns (SetBaselineResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Set an eval run as the baseline for regression detection"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/eval-runs/{eval_run_id}/baseline"
+      body: "*"
+    };
+  }
+
+  // --- Eval Schedules ---
+
+  rpc CreateEvalSchedule(CreateEvalScheduleRequest) returns (CreateEvalScheduleResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a new eval schedule"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/eval-schedules"
+      body: "*"
+    };
+  }
+
+  rpc GetEvalSchedule(GetEvalScheduleRequest) returns (GetEvalScheduleResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get eval schedule by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/eval-schedules/{id}"};
+  }
+
+  rpc ListEvalSchedules(ListEvalSchedulesRequest) returns (ListEvalSchedulesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List eval schedules"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/eval-schedules"};
+  }
+
+  rpc UpdateEvalSchedule(UpdateEvalScheduleRequest) returns (UpdateEvalScheduleResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update eval schedule"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/eval-schedules/{id}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteEvalSchedule(DeleteEvalScheduleRequest) returns (DeleteEvalScheduleResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete eval schedule"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/eval-schedules/{id}"};
+  }
+
+  // --- Sampling Eval Rules (online eval on production traces) ---
+
+  rpc CreateSamplingEvalRule(CreateSamplingEvalRuleRequest) returns (CreateSamplingEvalRuleResponse) {
+    option (google.api.http) = {post: "/v1/sampling-eval-rules" body: "*"};
+  }
+  rpc GetSamplingEvalRule(GetSamplingEvalRuleRequest) returns (GetSamplingEvalRuleResponse) {
+    option (google.api.http) = {get: "/v1/sampling-eval-rules/{id}"};
+  }
+  rpc ListSamplingEvalRules(ListSamplingEvalRulesRequest) returns (ListSamplingEvalRulesResponse) {
+    option (google.api.http) = {post: "/v1/sampling-eval-rules/list" body: "*"};
+  }
+  rpc UpdateSamplingEvalRule(UpdateSamplingEvalRuleRequest) returns (UpdateSamplingEvalRuleResponse) {
+    option (google.api.http) = {patch: "/v1/sampling-eval-rules/{id}" body: "*"};
+  }
+  rpc DeleteSamplingEvalRule(DeleteSamplingEvalRuleRequest) returns (DeleteSamplingEvalRuleResponse) {
+    option (google.api.http) = {delete: "/v1/sampling-eval-rules/{id}"};
+  }
+  rpc RunSamplingEvalRuleNow(RunSamplingEvalRuleNowRequest) returns (RunSamplingEvalRuleNowResponse) {
+    option (google.api.http) = {post: "/v1/sampling-eval-rules/{id}/run" body: "*"};
+  }
+
+  // --- AI-generated scorers ---
+
+  // GenerateScorer asks Claude to draft an LLM-judge prompt + rubric for
+  // the user's evaluation intent. Returns a draft scorer config the
+  // caller can edit and save via CreateScoreConfig.
+  rpc GenerateScorer(GenerateScorerRequest) returns (GenerateScorerResponse) {
+    option (google.api.http) = {post: "/v1/scorers/generate" body: "*"};
+  }
+
+  // --- Synchronous scoring (playground) ---
+
+  // ScoreOutput scores a single output synchronously against the given
+  // scorer configs and returns the scores immediately. This is the
+  // interactive counterpart to the background eval-run scorer loop: the
+  // playground uses it to fill in per-cell scores live as outputs stream.
+  // Tenant is resolved from the authenticated context, never from the
+  // request body.
+  rpc ScoreOutput(ScoreOutputRequest) returns (ScoreOutputResponse) {
+    option (google.api.http) = {post: "/v1/score-output" body: "*"};
+  }
+}
+
+service PlaygroundService {
+  rpc CreatePlayground(CreatePlaygroundRequest) returns (CreatePlaygroundResponse) {
+    option (google.api.http) = {post: "/v1/playgrounds" body: "*"};
+  }
+  rpc GetPlayground(GetPlaygroundRequest) returns (GetPlaygroundResponse) {
+    option (google.api.http) = {get: "/v1/playgrounds/{id}"};
+  }
+  rpc ListPlaygrounds(ListPlaygroundsRequest) returns (ListPlaygroundsResponse) {
+    option (google.api.http) = {get: "/v1/playgrounds"};
+  }
+  rpc UpdatePlayground(UpdatePlaygroundRequest) returns (UpdatePlaygroundResponse) {
+    option (google.api.http) = {patch: "/v1/playgrounds/{id}" body: "*"};
+  }
+  rpc DeletePlayground(DeletePlaygroundRequest) returns (DeletePlaygroundResponse) {
+    option (google.api.http) = {delete: "/v1/playgrounds/{id}"};
+  }
+}

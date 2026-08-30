@@ -1,0 +1,12 @@
+enterprise_default:
+  name: "Enterprise Default"
+  description: "Balanced Bedrock settings for production traffic"
+  settings:
+    timeout: 60s
+    retry_attempts: 3
+
+claude_routing:
+  name: "Claude Routing"
+  recommended_models:
+    - anthropic.claude-3-7-sonnet-20250219-v1:0
+    - anthropic.claude-sonnet-4-20250514-v1:0

@@ -1,0 +1,39 @@
+name: "nvidia-nim"
+display_name: "NVIDIA NIM"
+base_url: "https://integrate.api.nvidia.com/v1"
+api_version: "2024-01-01"
+
+provider_type: "meta"
+supports_model_discovery: false
+
+auth:
+  type: "api_key"
+  header_name: "Authorization"
+  header_format: "Bearer {api_key}"
+  env_var: "NVIDIA_API_KEY"
+
+rate_limits:
+  requests_per_minute: 1500
+  tokens_per_minute: 300000
+  concurrent_requests: 40
+
+capabilities:
+  chat: true
+  completions: true
+  embeddings: true
+  function_calling: true
+  vision: false
+  streaming: true
+  fine_tuning: false
+  assistants: false
+
+model_families:
+  llama:
+    description: "Meta Llama via NVIDIA NIM"
+    capabilities: ["chat", "function_calling"]
+  nemotron:
+    description: "NVIDIA Nemotron via NIM"
+    capabilities: ["chat", "function_calling"]
+  embedding:
+    description: "Embedding models via NIM"
+    capabilities: ["embeddings"]

@@ -1,0 +1,157 @@
+---
+title: Sandboxes Overview
+description: Isolated runtimes for code, jobs, apps, agents, and automations.
+icon: Container
+---
+
+Sandboxes are isolated runtimes you can create on demand to run code, host temporary services, execute scheduled jobs, receive webhooks, and give agents a safe place to work.
+
+The important framing is this: agents are one consumer of sandboxes, not the definition of sandboxes.
+
+## What a sandbox is
+
+A sandbox is a disposable or semi-persistent compute environment with its own:
+
+- container image, template, or named snapshot
+- CPU, memory, disk, and timeout limits
+- shell access and filesystem
+- outbound network policy with CIDR-level egress control
+- optional SSH access and temporary SSH tokens
+- exposed ports with signed shareable preview URLs
+- optional full desktop (Xvfb + XFCE4) for Computer Use
+- optional Tailscale VPN to join your private network
+- optional external storage mounts (S3, R2, GCS, Azure)
+- scheduled crons, inbound webhooks, and outgoing lifecycle events
+
+In practice, that makes a sandbox feel like a lightweight, isolated dev box or worker.
+
+## Why sandboxes exist
+
+Sandboxes let you run untrusted, experimental, tenant-scoped, or transient workloads without giving them access to your host machine or main application runtime.
+
+Use them when you need:
+
+- safe code execution for AI agents or users
+- per-task or per-customer isolation
+- temporary app hosting for previews or QA
+- event-driven or scheduled automation without provisioning a full service
+- a controlled place to debug, inspect logs, and terminate cleanly
+- IDE-quality code intelligence (LSP diagnostics and symbols) inside the runtime
+- GUI automation for browser testing or visual agent workflows
+
+## Product narrative
+
+Think of sandboxes as a small compute control plane built into Everstack.
+
+- **Overview** shows fleet health, utilization, and capacity.
+- **Instances** gives lifecycle control over each runtime.
+- **Snapshots** lets you save and reuse pre-built environments instantly.
+- **Volumes** gives persistent shared storage across sandbox restarts and parallel runs.
+- **Shell**, **Logs**, and **Metrics** make every sandbox debuggable.
+- **Events** gives you an audit trail of what happened.
+- **Ports** pushes a service to the edge with a public URL; signed URLs let you share them.
+- **Computer Use** gives agents screenshot and GUI control.
+- **LSP** gives agents structured code diagnostics without parsing terminal output.
+- **Crons** turns a sandbox into a scheduled worker.
+- **Webhooks** turns it into an HTTP-triggered worker.
+- **Lifecycle Webhooks** notify your system when sandbox state changes.
+- **Network** makes outbound policy and DNS activity visible; block-all mode isolates completely.
+
+## The edge story
+
+Sandboxes are useful at the edge because they can run a process and expose only the surface you choose.
+
+For example, you can:
+
+- start a Next.js, FastAPI, or Express app inside a sandbox
+- expose port `3000` or `8080`
+- generate a signed preview URL to share with your team (no auth headers needed)
+- lock outbound traffic to specific CIDRs with `networkBlockAll`
+- inspect all DNS egress events and close access when you are done
+
+## Examples
+
+### Preview app for QA
+
+Create a Node.js sandbox, run your app, expose port `3000`, and generate a signed preview URL to share with your team. The URL is valid for 1 hour (configurable) and embeds auth in the link itself, so no custom headers are needed for iframes or link sharing. When QA is done, stop or terminate the sandbox.
+
+### Scheduled data sync
+
+Create a Python sandbox, install your dependencies, and add a cron to pull data from an API every hour. Keep network access whitelisted to only the required domains.
+
+### Webhook-driven worker
+
+Create a sandbox that accepts incoming webhooks, verifies the signature, and runs a command such as `python process_event.py`. This is a good fit for GitHub, Stripe, or internal event handlers.
+
+### Safe agent execution
+
+Run an agent with sandbox access so tool calls, code execution, file writes, and shell commands stay inside the sandbox boundary instead of your host environment. Use labels to tag sandboxes by run ID or agent ID for easy filtering.
+
+### Coding agent with IDE intelligence
+
+Run a coding agent in a sandbox with LSP enabled. The agent can call `sandbox_lsp_diagnostics` to get structured error lists, `sandbox_lsp_symbols` to understand file structure, and `sandbox_screenshot` to verify GUI output -- all as native tool calls.
+
+### Reproducible bug investigation
+
+Spin up a sandbox with the same image, dependencies, and limits as production-adjacent workloads. Use shell, logs, metrics, and events to reproduce the issue in isolation.
+
+### Customer-isolated compute
+
+Use one sandbox per tenant workflow for stronger isolation. This works well for file processing, report generation, or customer-specific connectors. Use labels (`{ "customer_id": "cust_123" }`) to group sandboxes and lifecycle webhooks to receive alerts when they finish.
+
+### Long-running agent with cost control
+
+Set `autoArchiveAfterDays: 7` so stopped sandboxes archive automatically after a week (VM terminated, workspace preserved). Set `autoDeleteAfterDays: 30` so old archived sandboxes clean up. Fire-and-forget agent runs can use `autoDeleteAfterDays: 0` to self-destruct on stop.
+
+## Lifecycle model
+
+Sandboxes have an extended lifecycle with archive support:
+
+| State | Description |
+|-------|-------------|
+| `running` | Active and reachable |
+| `sleeping` | VM stopped, workspace preserved. Can be revived. |
+| `archived` | VM terminated, workspace in cold storage. Restorable. |
+| `terminated` | Permanently deleted |
+
+- **Stop** → `sleeping`. Workspace is preserved. Revivable.
+- **Revive** → back to `running` from `sleeping`.
+- **Auto-archive** → `archived` after `autoArchiveAfterDays` (default 7). Restorable via `/restore`.
+- **Restore** → back to `running` from `archived`.
+- **Auto-delete** → `terminated` after `autoDeleteAfterDays` (default never).
+- **Terminate** → permanently destroys the sandbox.
+
+## Creation options
+
+When creating a sandbox, you typically choose:
+
+- a **template** (Node.js, Python, Go, Rust, Ubuntu) or **snapshot** (your pre-built environment)
+- a custom Docker image or declarative build spec when you need your own runtime
+- machine sizing for CPU, memory, and disk
+- timeout and retention behavior
+- network mode: `allow`, `whitelist`, `deny`, or `networkBlockAll` with specific CIDRs
+- optional SSH access and labels for tagging
+- optional Computer Use (`computerUse: true`) for GUI automation
+- optional Tailscale VPN (`tailscaleAuthKey`) for private network access
+- optional storage mounts for S3, R2, GCS, or Azure Blob
+
+## Snapshots and volumes
+
+**Snapshots** are named, reusable environment templates. Create one from a public image and reference it by name when creating sandboxes. The `everstack-python` and `everstack-node` catalog images include pre-installed LSP servers.
+
+**Volumes** are persistent FUSE-backed storage shared across sandbox restarts and parallel runs. Use them for pip/npm caches, datasets, or shared artifacts.
+
+## Sandboxes and functions
+
+Use sandboxes when you need a live environment with shell access, stateful inspection, port exposure, or long-running workflows.
+
+Use functions when you want a narrower, reusable action with a clearer contract.
+
+Read [Functions vs Sandboxes](/getting-started/functions-vs-sandboxes) for the full comparison.
+
+## Next steps
+
+- Use [Automation](/getting-started/sandboxes/automation) to design cron-driven and webhook-driven workers.
+- Use [Networking](/getting-started/sandboxes/networking) to expose ports, use signed URLs, and understand egress policy.
+- Use [Shell & Files](/getting-started/sandboxes/shell-and-files) to work interactively inside a sandbox.
+- Use the [Sandbox API](/api-reference/sandbox) to automate lifecycle, snapshots, volumes, ports, events, and more.

@@ -1,0 +1,170 @@
+syntax = "proto3";
+
+package everstack.gateway.v1;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/gateway/v1;gateway";
+
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+  ROLE_SYSTEM = 1;
+  ROLE_USER = 2;
+  ROLE_ASSISTANT = 3;
+  ROLE_FUNCTION = 4;
+  ROLE_TOOL = 5;
+}
+
+message ContentPart {
+  string type = 1; // "text", "image_url"
+  oneof data {
+    string text = 2;
+    string image_url = 3;
+    string file_id = 4;
+    string tool_call_id = 5;
+    string function_call = 6;
+  }
+  string provider_json = 7;
+}
+
+// Tool call function details
+message ToolCallFunction {
+  string name = 1;
+  string arguments = 2; // JSON string of arguments
+}
+
+// Tool call made by the assistant
+message ToolCall {
+  string id = 1;
+  string type = 2; // "function"
+  ToolCallFunction function = 3;
+}
+
+// Tool definition for chat requests
+message ToolFunctionDef {
+  string name = 1;
+  string description = 2;
+  google.protobuf.Struct parameters = 3; // JSON Schema
+}
+
+message Tool {
+  string type = 1; // "function"
+  ToolFunctionDef function = 2;
+}
+
+// Tool choice can be "auto", "none", "required", or a specific tool
+message ToolChoice {
+  oneof choice {
+    string mode = 1; // "auto", "none", "required"
+    Tool specific_tool = 2; // specific tool to use
+  }
+}
+
+message Message {
+  Role role = 1;
+  repeated ContentPart content = 2;
+  // Tool calls made by assistant (when role=assistant)
+  repeated ToolCall tool_calls = 3;
+  // Tool call ID this message responds to (when role=tool)
+  string tool_call_id = 4;
+  // Optional name for tool responses
+  string name = 5;
+}
+
+message SamplingParams {
+  optional float temperature = 1;
+  optional float top_p = 2;
+  optional int32 max_tokens = 3;
+  repeated string stop = 4;
+  optional int32 max_completion_tokens = 5;
+  optional string reasoning_effort = 6;
+  optional int32 reasoning_budget_tokens = 7;
+  optional bool reasoning_enabled = 8;
+  optional float frequency_penalty = 9;
+  optional float presence_penalty = 10;
+  optional int32 top_k = 11;
+  optional int64 seed = 12;
+  optional string verbosity = 13;
+}
+
+message Usage {
+  int32 prompt_tokens = 1;
+  int32 completion_tokens = 2;
+  int32 total_tokens = 3;
+}
+
+message Choice {
+  int32 index = 1;
+  Message message = 2;
+  string finish_reason = 3; // "stop", "length", etc.
+}
+
+message ChoiceDelta {
+  int32 index = 1;
+  Message delta = 2; // partial assistant content (typically a text chunk)
+  string finish_reason = 3;
+}
+
+message ChatResponseChunk {
+  string id = 1;
+  int64 created = 2;
+  string model = 3;
+  repeated ChoiceDelta choices = 4;
+}
+
+message ChatCompletionRequest {
+  // Model name as shown in gateway.yaml (e.g., "gpt-4o-mini")
+  string model = 1;
+
+  // Required conversation context
+  repeated Message messages = 2;
+
+  // Optional per-call overrides (override gateway.yaml defaults)
+  SamplingParams sampling = 3;
+
+  // Optional: request JSON response shaping (future-friendly)
+  google.protobuf.Struct response_format = 4;
+
+  // Streaming hint; use ChatStream for true streaming. Optional to allow presence detection.
+  optional bool stream = 5;
+
+  // Optional per-call metadata/tags
+  google.protobuf.Struct metadata = 6;
+
+  // Tools available for the model to call
+  repeated Tool tools = 7;
+
+  // Controls how the model uses tools: "auto", "none", "required", or specific tool
+  ToolChoice tool_choice = 8;
+
+  // Whether to run parallel tool calls (default: true)
+  optional bool parallel_tool_calls = 9;
+}
+
+message FallbackInfo {
+  // Whether this response was served via fallback (requested model failed/unavailable)
+  bool fallback_used = 1;
+  
+  // The model that was originally requested
+  string requested_model = 2;
+  
+  // The model that actually served the response (may differ if fallback_used = true)
+  string actual_model = 3;
+  
+  // Reason for fallback (e.g., "model_unavailable", "rate_limit", "timeout")
+  string fallback_reason = 4;
+  
+  // Number of fallback attempts before success
+  int32 fallback_attempts = 5;
+}
+
+message ChatCompletionResponse {
+  string id = 1;
+  int64 created = 2; // epoch seconds
+  string model = 3;
+  repeated Choice choices = 4;
+  Usage usage = 5;
+  
+  // Information about fallback routing (if applicable)
+  FallbackInfo fallback_info = 6;
+}

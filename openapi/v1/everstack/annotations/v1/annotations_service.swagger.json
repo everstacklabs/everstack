@@ -1,0 +1,1054 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/annotations/v1/annotations_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "AnnotationService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/annotation-queues": {
+      "get": {
+        "operationId": "AnnotationService_ListQueues",
+        "responses": {
+          "200": {
+            "description": "List annotation queues for tenant",
+            "schema": {
+              "$ref": "#/definitions/v1ListQueuesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "QUEUE_STATUS_UNSPECIFIED",
+              "QUEUE_STATUS_ACTIVE",
+              "QUEUE_STATUS_PAUSED",
+              "QUEUE_STATUS_ARCHIVED"
+            ],
+            "default": "QUEUE_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "AnnotationService"
+        ]
+      },
+      "post": {
+        "operationId": "AnnotationService_CreateQueue",
+        "responses": {
+          "200": {
+            "description": "Create a new annotation queue",
+            "schema": {
+              "$ref": "#/definitions/v1CreateQueueResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateQueueRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AnnotationService"
+        ]
+      }
+    },
+    "/v1/annotation-queues/items/{itemId}/skip": {
+      "post": {
+        "operationId": "AnnotationService_SkipItem",
+        "responses": {
+          "200": {
+            "description": "Skip an annotation queue item",
+            "schema": {
+              "$ref": "#/definitions/v1SkipItemResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AnnotationServiceSkipItemBody"
+            }
+          }
+        ],
+        "tags": [
+          "AnnotationService"
+        ]
+      }
+    },
+    "/v1/annotation-queues/items/{itemId}/submit": {
+      "post": {
+        "operationId": "AnnotationService_SubmitAnnotation",
+        "responses": {
+          "200": {
+            "description": "Submit annotation scores for a queue item",
+            "schema": {
+              "$ref": "#/definitions/v1SubmitAnnotationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AnnotationServiceSubmitAnnotationBody"
+            }
+          }
+        ],
+        "tags": [
+          "AnnotationService"
+        ]
+      }
+    },
+    "/v1/annotation-queues/{id}": {
+      "get": {
+        "operationId": "AnnotationService_GetQueue",
+        "responses": {
+          "200": {
+            "description": "Get annotation queue by ID",
+            "schema": {
+              "$ref": "#/definitions/v1GetQueueResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AnnotationService"
+        ]
+      },
+      "delete": {
+        "operationId": "AnnotationService_DeleteQueue",
+        "responses": {
+          "200": {
+            "description": "Delete annotation queue",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteQueueResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AnnotationService"
+        ]
+      },
+      "patch": {
+        "operationId": "AnnotationService_UpdateQueue",
+        "responses": {
+          "200": {
+            "description": "Update annotation queue",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateQueueResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AnnotationServiceUpdateQueueBody"
+            }
+          }
+        ],
+        "tags": [
+          "AnnotationService"
+        ]
+      }
+    },
+    "/v1/annotation-queues/{queueId}/items": {
+      "get": {
+        "operationId": "AnnotationService_ListQueueItems",
+        "responses": {
+          "200": {
+            "description": "List items in an annotation queue",
+            "schema": {
+              "$ref": "#/definitions/v1ListQueueItemsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "queueId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "QUEUE_ITEM_STATUS_UNSPECIFIED",
+              "QUEUE_ITEM_STATUS_PENDING",
+              "QUEUE_ITEM_STATUS_IN_PROGRESS",
+              "QUEUE_ITEM_STATUS_COMPLETED",
+              "QUEUE_ITEM_STATUS_SKIPPED"
+            ],
+            "default": "QUEUE_ITEM_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "assignedTo",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "AnnotationService"
+        ]
+      },
+      "post": {
+        "operationId": "AnnotationService_AddItemToQueue",
+        "responses": {
+          "200": {
+            "description": "Add a single item to an annotation queue",
+            "schema": {
+              "$ref": "#/definitions/v1AddItemToQueueResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "queueId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AnnotationServiceAddItemToQueueBody"
+            }
+          }
+        ],
+        "tags": [
+          "AnnotationService"
+        ]
+      }
+    },
+    "/v1/annotation-queues/{queueId}/items/batch": {
+      "post": {
+        "operationId": "AnnotationService_AddItemsToQueueBatch",
+        "responses": {
+          "200": {
+            "description": "Add multiple items to an annotation queue",
+            "schema": {
+              "$ref": "#/definitions/v1AddItemsToQueueBatchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "queueId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AnnotationServiceAddItemsToQueueBatchBody"
+            }
+          }
+        ],
+        "tags": [
+          "AnnotationService"
+        ]
+      }
+    },
+    "/v1/annotation-queues/{queueId}/items/next": {
+      "get": {
+        "operationId": "AnnotationService_GetNextItem",
+        "responses": {
+          "200": {
+            "description": "Get the next pending item from the queue",
+            "schema": {
+              "$ref": "#/definitions/v1GetNextItemResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "queueId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "annotatorId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AnnotationService"
+        ]
+      }
+    },
+    "/v1/annotation-queues/{queueId}/populate": {
+      "post": {
+        "operationId": "AnnotationService_PopulateFromTraces",
+        "responses": {
+          "200": {
+            "description": "Populate queue items from trace data",
+            "schema": {
+              "$ref": "#/definitions/v1PopulateFromTracesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "queueId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AnnotationServicePopulateFromTracesBody"
+            }
+          }
+        ],
+        "tags": [
+          "AnnotationService"
+        ]
+      }
+    },
+    "/v1/annotation-queues/{queueId}/stats": {
+      "get": {
+        "operationId": "AnnotationService_GetQueueStats",
+        "responses": {
+          "200": {
+            "description": "Get statistics for an annotation queue",
+            "schema": {
+              "$ref": "#/definitions/v1GetQueueStatsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "queueId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AnnotationService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "AnnotationServiceAddItemToQueueBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        },
+        "observationId": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "AnnotationServiceAddItemsToQueueBatchBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AddItemToQueueBatchEntry"
+          }
+        }
+      }
+    },
+    "AnnotationServicePopulateFromTracesBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "traceFilter": {
+          "type": "string",
+          "title": "JSON filter criteria"
+        },
+        "maxItems": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "AnnotationServiceSkipItemBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "skippedBy": {
+          "type": "string"
+        }
+      }
+    },
+    "AnnotationServiceSubmitAnnotationBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "completedBy": {
+          "type": "string"
+        },
+        "scores": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AnnotationScoreEntry"
+          }
+        }
+      }
+    },
+    "AnnotationServiceUpdateQueueBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1QueueStatus"
+        },
+        "scoreConfigIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "assignmentMode": {
+          "$ref": "#/definitions/v1AssignmentMode"
+        },
+        "annotators": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "autoPopulateConfig": {
+          "type": "string"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AddItemToQueueBatchEntry": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        },
+        "observationId": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1AddItemToQueueResponse": {
+      "type": "object",
+      "properties": {
+        "item": {
+          "$ref": "#/definitions/v1AnnotationQueueItem"
+        }
+      }
+    },
+    "v1AddItemsToQueueBatchResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AnnotationQueueItem"
+          }
+        },
+        "addedCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1AnnotationQueue": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1QueueStatus"
+        },
+        "scoreConfigIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "assignmentMode": {
+          "$ref": "#/definitions/v1AssignmentMode"
+        },
+        "annotators": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "autoPopulateConfig": {
+          "type": "string",
+          "title": "JSON string"
+        },
+        "itemsPending": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "itemsCompleted": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "AnnotationQueue represents a queue for annotation work."
+    },
+    "v1AnnotationQueueItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "queueId": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        },
+        "observationId": {
+          "type": "string"
+        },
+        "assignedTo": {
+          "type": "string"
+        },
+        "assignedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "$ref": "#/definitions/v1QueueItemStatus"
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "completedBy": {
+          "type": "string"
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "AnnotationQueueItem represents a single item in an annotation queue."
+    },
+    "v1AnnotationScoreEntry": {
+      "type": "object",
+      "properties": {
+        "scoreConfigId": {
+          "type": "string"
+        },
+        "scoreId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1AssignmentMode": {
+      "type": "string",
+      "enum": [
+        "ASSIGNMENT_MODE_UNSPECIFIED",
+        "ASSIGNMENT_MODE_MANUAL",
+        "ASSIGNMENT_MODE_ROUND_ROBIN",
+        "ASSIGNMENT_MODE_RANDOM"
+      ],
+      "default": "ASSIGNMENT_MODE_UNSPECIFIED",
+      "description": "AssignmentMode defines how items are assigned to annotators."
+    },
+    "v1CreateQueueRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1QueueStatus"
+        },
+        "scoreConfigIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "assignmentMode": {
+          "$ref": "#/definitions/v1AssignmentMode"
+        },
+        "annotators": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "autoPopulateConfig": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateQueueResponse": {
+      "type": "object",
+      "properties": {
+        "queue": {
+          "$ref": "#/definitions/v1AnnotationQueue"
+        }
+      }
+    },
+    "v1DeleteQueueResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "v1GetNextItemResponse": {
+      "type": "object",
+      "properties": {
+        "item": {
+          "$ref": "#/definitions/v1AnnotationQueueItem"
+        }
+      }
+    },
+    "v1GetQueueResponse": {
+      "type": "object",
+      "properties": {
+        "queue": {
+          "$ref": "#/definitions/v1AnnotationQueue"
+        }
+      }
+    },
+    "v1GetQueueStatsResponse": {
+      "type": "object",
+      "properties": {
+        "stats": {
+          "$ref": "#/definitions/v1QueueStats"
+        }
+      }
+    },
+    "v1ListQueueItemsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AnnotationQueueItem"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListQueuesResponse": {
+      "type": "object",
+      "properties": {
+        "queues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AnnotationQueue"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1PopulateFromTracesResponse": {
+      "type": "object",
+      "properties": {
+        "addedCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1QueueItemStatus": {
+      "type": "string",
+      "enum": [
+        "QUEUE_ITEM_STATUS_UNSPECIFIED",
+        "QUEUE_ITEM_STATUS_PENDING",
+        "QUEUE_ITEM_STATUS_IN_PROGRESS",
+        "QUEUE_ITEM_STATUS_COMPLETED",
+        "QUEUE_ITEM_STATUS_SKIPPED"
+      ],
+      "default": "QUEUE_ITEM_STATUS_UNSPECIFIED",
+      "description": "QueueItemStatus defines the lifecycle state of an annotation queue item."
+    },
+    "v1QueueStats": {
+      "type": "object",
+      "properties": {
+        "queueId": {
+          "type": "string"
+        },
+        "totalItems": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pendingItems": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "inProgressItems": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "completedItems": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "skippedItems": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "description": "QueueStats provides aggregate statistics for a queue."
+    },
+    "v1QueueStatus": {
+      "type": "string",
+      "enum": [
+        "QUEUE_STATUS_UNSPECIFIED",
+        "QUEUE_STATUS_ACTIVE",
+        "QUEUE_STATUS_PAUSED",
+        "QUEUE_STATUS_ARCHIVED"
+      ],
+      "default": "QUEUE_STATUS_UNSPECIFIED",
+      "description": "QueueStatus defines the lifecycle state of an annotation queue."
+    },
+    "v1SkipItemResponse": {
+      "type": "object",
+      "properties": {
+        "item": {
+          "$ref": "#/definitions/v1AnnotationQueueItem"
+        }
+      }
+    },
+    "v1SubmitAnnotationResponse": {
+      "type": "object",
+      "properties": {
+        "item": {
+          "$ref": "#/definitions/v1AnnotationQueueItem"
+        }
+      }
+    },
+    "v1UpdateQueueResponse": {
+      "type": "object",
+      "properties": {
+        "queue": {
+          "$ref": "#/definitions/v1AnnotationQueue"
+        }
+      }
+    }
+  }
+}

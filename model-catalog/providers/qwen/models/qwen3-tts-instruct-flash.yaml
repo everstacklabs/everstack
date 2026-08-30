@@ -1,0 +1,19 @@
+name: "qwen3-tts-instruct-flash"
+display_name: "Qwen3 TTS Instruct Flash"
+family: "qwen-tts"
+status: "stable"
+
+cost:
+  input_per_1k: 0.00015
+  output_per_1k: 0.0
+
+limits:
+  max_tokens: 4096
+  max_completion_tokens: 0
+
+capabilities:
+  - audio
+
+modalities:
+  input: ["text"]
+  output: ["audio"]

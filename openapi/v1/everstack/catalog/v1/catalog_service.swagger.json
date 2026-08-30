@@ -1,0 +1,213 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/catalog/v1/catalog_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "CatalogService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {},
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1CatalogStatus": {
+      "type": "object",
+      "properties": {
+        "currentVersion": {
+          "type": "string"
+        },
+        "remoteVersion": {
+          "type": "string"
+        },
+        "lastCheck": {
+          "type": "string"
+        },
+        "syncEnabled": {
+          "type": "boolean"
+        },
+        "syncUrl": {
+          "type": "string"
+        },
+        "newModelsCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "newProvidersCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "lastSync": {
+          "type": "string"
+        },
+        "hasUpdates": {
+          "type": "boolean"
+        }
+      },
+      "title": "Data messages"
+    },
+    "v1Changelog": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChangelogEntry"
+          }
+        }
+      }
+    },
+    "v1ChangelogEntry": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "newModels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "newProviders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "updatedModels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "deprecatedModels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pricingChanges": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1NewModel": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "maxTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "inputCostPer1k": {
+          "type": "number",
+          "format": "double"
+        },
+        "outputCostPer1k": {
+          "type": "number",
+          "format": "double"
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "v1NewModels": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1NewModel"
+          }
+        },
+        "totalCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1SyncStatus": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "newModelsCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "newProvidersCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    }
+  }
+}

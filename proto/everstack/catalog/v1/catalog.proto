@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package everstack.catalog.v1;
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/catalog/v1;catalog";
+
+// Request messages
+message GetCatalogStatusRequest {}
+
+message GetChangelogRequest {
+  string from_version = 1; // Optional: get changelog from specific version
+}
+
+message GetNewModelsRequest {
+  string provider = 1; // Optional: filter by provider
+}
+
+message TriggerSyncRequest {
+  bool force = 1; // Force sync even if no updates available
+}
+
+// Data messages
+message CatalogStatus {
+  string current_version = 1;
+  string remote_version = 2;
+  string last_check = 3;
+  bool sync_enabled = 4;
+  string sync_url = 5;
+  int32 new_models_count = 6;
+  int32 new_providers_count = 7;
+  string last_sync = 8;
+  bool has_updates = 9;
+}
+
+message ChangelogEntry {
+  string version = 1;
+  string date = 2;
+  string description = 3;
+  repeated string new_models = 4;
+  repeated string new_providers = 5;
+  repeated string updated_models = 6;
+  repeated string deprecated_models = 7;
+  repeated string pricing_changes = 8;
+}
+
+message Changelog {
+  repeated ChangelogEntry entries = 1;
+}
+
+message NewModel {
+  string provider = 1;
+  string name = 2;
+  string display_name = 3;
+  int64 max_tokens = 4;
+  double input_cost_per_1k = 5;
+  double output_cost_per_1k = 6;
+  repeated string capabilities = 7;
+  string status = 8;
+}
+
+message NewModels {
+  repeated NewModel models = 1;
+  int32 total_count = 2;
+}
+
+message SyncStatus {
+  bool success = 1;
+  string message = 2;
+  string version = 3;
+  int32 new_models_count = 4;
+  int32 new_providers_count = 5;
+}

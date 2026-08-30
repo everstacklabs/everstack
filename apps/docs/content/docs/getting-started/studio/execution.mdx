@@ -1,0 +1,142 @@
+---
+title: Execution
+description: Running, triggering, and monitoring workflow executions.
+icon: Play
+---
+
+This page covers how the workflow execution engine works, how to trigger workflow runs, how to monitor them in real time, and how error handling, versioning, and observability fit together.
+
+## Execution model
+
+The engine processes a workflow graph in topological order. It starts with nodes that have no upstream dependencies (entry points) and works forward along the directed edges until all reachable nodes have completed.
+
+When the DAG structure allows it, independent branches run in parallel. If two nodes have no dependency between them, the engine starts both at the same time rather than waiting for one to finish. You do not need to configure this -- parallelism is automatic wherever the graph permits it.
+
+Each node receives an `ExecutionContext` that carries:
+
+- Variables from upstream nodes, resolved through named handles.
+- Metadata about the current execution (run ID, workflow version, trigger source).
+- Configuration values set in the node's config panel.
+
+When a node completes, its output is written to the context and becomes available to any downstream node connected to that output handle.
+
+## Trigger types
+
+Workflows can be triggered three ways. Each trigger type passes input data that flows into the workflow's entry nodes.
+
+### Webhook triggers
+
+A deployed workflow with a webhook trigger exposes an HTTP endpoint. When a POST request hits that endpoint, the engine starts a new execution with the request body as input.
+
+Webhook triggers are good for event-driven pipelines: a payment webhook from Stripe, a push event from GitHub, or a notification from an internal service.
+
+Each webhook trigger has a configurable secret for signature verification. This prevents unauthorized callers from starting workflow runs.
+
+### Cron triggers
+
+A cron trigger runs the workflow on a recurring schedule defined by a cron expression. This is useful for batch processing, periodic data enrichment, nightly report generation, or any pipeline that should run at regular intervals.
+
+Cron executions receive the current timestamp and any static input values configured on the trigger.
+
+### API triggers
+
+You can start a workflow run programmatically through the Everstack SDK or REST API. Pass input variables in the request body. The API returns a run ID that you can use to poll for status or stream events.
+
+API triggers are the right choice when your application code decides when and why to start a workflow, rather than relying on external events or schedules.
+
+See the [Workflows API](/api-reference/workflows) for endpoint details and SDK examples.
+
+## Streaming events
+
+Workflow executions emit events as they progress. You can consume these events in three places:
+
+- **Execution panel** in Studio -- real-time event stream during test runs and live executions.
+- **SDK streaming** -- subscribe to execution events programmatically when triggering via the API.
+- **Observability traces** -- full event history is recorded and viewable after execution completes.
+
+Events include:
+
+| Event | When it fires |
+| --- | --- |
+| `execution.started` | Workflow run begins |
+| `node.started` | A node begins processing |
+| `node.streaming` | A streaming node (LLM, Agent) emits partial output |
+| `node.completed` | A node finishes successfully |
+| `node.failed` | A node fails (before retry, if retries are configured) |
+| `node.retrying` | A node is retrying after a failure |
+| `guardrail.blocked` | A guardrail node produced a block result |
+| `execution.completed` | All nodes finished, workflow run is done |
+| `execution.failed` | The workflow run failed and cannot continue |
+
+## Error handling
+
+Error handling is configured per node. Each node supports three settings:
+
+- **Retry count** -- how many times to retry on failure before giving up. Default is 0 (no retries).
+- **Retry delay** -- how long to wait between retries (fixed or exponential backoff).
+- **Fallback behavior** -- what happens when retries are exhausted:
+  - **Stop** -- the entire workflow execution fails.
+  - **Skip** -- the node is skipped and downstream nodes receive no output from it.
+  - **Route** -- execution routes to a designated error-handling branch (connect an error output handle to your fallback logic).
+
+For critical nodes, use the **Stop** fallback so failures surface immediately. For optional enrichment steps, **Skip** lets the workflow continue without the enriched data. For nodes where you want graceful degradation, **Route** gives you full control over the error path.
+
+When a node fails, the failure details (error message, attempt count, timing) are recorded in the execution trace. This makes debugging straightforward because you can see exactly which node failed, what input it received, and what went wrong.
+
+## Execution history
+
+Every workflow run is recorded. The execution history is accessible from the workflow detail page in Studio and shows:
+
+- Run ID and status (running, completed, failed).
+- Trigger type and source (which webhook, cron schedule, or API call started it).
+- Start time, end time, and duration.
+- Node-by-node execution timeline with individual durations.
+- Input and output payloads for each node.
+
+You can filter execution history by status, trigger type, and time range. Click any run to open its full trace.
+
+## Observability integration
+
+Every workflow execution produces a trace in the Everstack observability layer. The trace captures:
+
+- The complete execution graph with node-level timing.
+- Input and output payloads at each node boundary.
+- Token usage and cost for LLM and Agent nodes.
+- Guardrail evaluation results, including any violations.
+- Error details and retry attempts.
+
+This means workflow executions are not a black box. You can correlate a workflow run with the underlying LLM calls, function executions, and agent turns that it triggered. If an LLM node in a workflow produces an unexpected response, the trace lets you inspect the exact prompt, model parameters, and response.
+
+Traces are accessible from the execution history panel in Studio or from the main observability tab.
+
+## Versioning
+
+Workflows are versioned automatically. Every save creates a new version. This gives you a full history of changes to the workflow definition over time.
+
+Key versioning behaviors:
+
+- **Draft vs deployed** -- editing a workflow creates draft versions. Triggers (webhooks, crons) always execute the currently deployed version, not the latest draft. This means you can iterate on a workflow without affecting live traffic.
+- **Deploy** -- publishing a draft makes it the active version. All triggers switch to the new version on the next execution.
+- **Rollback** -- you can deploy any previous version to roll back a bad change. This restores the full node graph and all configuration.
+- **Comparison** -- the version history panel lets you compare two versions side by side to see what changed.
+
+## Practical patterns
+
+### Safety-wrapped LLM call
+
+Input Guardrails (pass) -> LLM -> Output Guardrails (pass) -> downstream. Both guardrail block handles route to a shared error response node.
+
+### Fan-out classification
+
+A single LLM classifies an input. A Condition node routes to different processing branches based on the classification. Each branch can have its own LLM, HTTP calls, or function executions.
+
+### Periodic enrichment pipeline
+
+A cron trigger fires hourly. An HTTP node fetches new data. A Loop node iterates over the results. Each iteration runs an LLM for summarization, then a Memory Store node persists the summary.
+
+## Related pages
+
+- [Workflow Studio Overview](/getting-started/studio/overview) -- what Studio is and when to use workflows.
+- [Node Reference](/getting-started/studio/node-reference) -- every node type and its configuration.
+- [Building Workflows](/getting-started/studio/building-workflows) -- composing nodes and connecting handles.
+- [Workflows API](/api-reference/workflows) -- programmatic workflow and execution management.

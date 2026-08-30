@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package everstack.modelmetrics.v1;
+
+import "everstack/modelmetrics/v1/model_metrics.proto";
+import "google/api/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/modelmetrics/v1;modelmetrics";
+
+// PublicModelMetricsService exposes aggregate managed-cloud activity for the
+// public model catalog. It never returns tenant-level data.
+service PublicModelMetricsService {
+  rpc GetReport(GetPublicModelMetricsReportRequest) returns (GetPublicModelMetricsReportResponse) {
+    option (google.api.http) = {
+      get: "/api/model-metrics/v1/report"
+    };
+  }
+
+  rpc Compare(ComparePublicModelMetricsRequest) returns (ComparePublicModelMetricsResponse) {
+    option (google.api.http) = {
+      get: "/api/model-metrics/v1/compare"
+    };
+  }
+
+  rpc GetProviderModelBreakdown(GetPublicProviderModelBreakdownRequest) returns (GetPublicProviderModelBreakdownResponse) {
+    option (google.api.http) = {
+      get: "/api/model-metrics/v1/provider-models"
+    };
+  }
+}

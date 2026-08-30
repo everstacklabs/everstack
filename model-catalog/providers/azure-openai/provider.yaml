@@ -1,0 +1,63 @@
+name: "azure-openai"
+display_name: "Azure OpenAI"
+base_url: "https://{resource}.openai.azure.com"
+api_version: "2024-10-21"
+
+provider_type: "static"
+supports_model_discovery: false
+
+auth:
+  type: "api_key"
+  header_name: "api-key"
+  header_format: "{api_key}"
+  env_var: "AZURE_OPENAI_API_KEY"
+
+rate_limits:
+  requests_per_minute: 1800
+  tokens_per_minute: 120000
+  concurrent_requests: 40
+
+capabilities:
+  chat: true
+  completions: true
+  embeddings: true
+  function_calling: true
+  vision: true
+  streaming: true
+  fine_tuning: false
+  assistants: false
+
+model_families:
+  gpt-4o:
+    description: "Azure-hosted GPT-4o family"
+    capabilities: ["chat", "function_calling", "vision"]
+    max_tokens: 128000
+
+  gpt-4.1:
+    description: "Azure-hosted GPT-4.1 family"
+    capabilities: ["chat", "function_calling", "vision"]
+    max_tokens: 1047576
+
+  o-series:
+    description: "Azure-hosted reasoning models"
+    capabilities: ["chat", "function_calling"]
+    max_tokens: 200000
+
+  embedding:
+    description: "Azure-hosted embedding models"
+    capabilities: ["embeddings"]
+    max_tokens: 8191
+
+defaults:
+  temperature: 0.7
+  max_tokens: 1000
+  top_p: 1.0
+  timeout: 60s
+  retry_attempts: 3
+  retry_delay: 1s
+
+error_mapping:
+  "DeploymentNotFound": "model_unavailable"
+  "OperationNotSupported": "model_unavailable"
+  "Unauthorized": "authentication_failed"
+  "TooManyRequests": "rate_limit_exceeded"

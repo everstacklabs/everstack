@@ -1,0 +1,310 @@
+---
+title: evs sandbox
+description: Create, manage, and connect to Everstack sandbox environments from the CLI.
+icon: Container
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+## What it does
+
+`evs sandbox` manages isolated execution environments: creating them from images or templates, inspecting their state, streaming logs, executing commands, and connecting via SSH.
+
+## Authentication
+
+Run `evs login` once and sandbox commands automatically use the active context's saved endpoint and credential. Connection flags remain available as per-command overrides.
+
+```bash
+# After evs login, no flags needed
+evs sandbox list
+
+# Optional one-command override
+evs sandbox list --api-key <key> --api-url https://api.your-domain.com
+```
+
+## Commands
+
+### create
+
+```bash
+evs sandbox create [flags]
+```
+
+Creates a new sandbox instance.
+
+| Flag | Description |
+|---|---|
+| `--name` | Friendly sandbox name |
+| `--template` | Template ID or slug |
+| `--image` | Container image |
+| `--from-github` | GitHub repo (`owner/repo`) to clone into the sandbox |
+| `--git-repo-url` | Git repository URL to clone |
+| `--git-branch` | Git branch to clone |
+| `--git-installation-id` | GitHub App installation ID |
+| `--cpu` | CPU limit |
+| `--memory-mb` | Memory in MB |
+| `--disk-mb` | Disk in MB |
+| `--network-mode` | `deny`, `whitelist`, or `allow` |
+| `--timeout-seconds` | Execution timeout |
+| `--idle-retention-seconds` | Idle retention (0 = plan default) |
+| `--session-id` | Custom session ID (auto-generated when omitted) |
+| `--ssh-enabled` | Request SSH access |
+
+```bash
+evs sandbox create --template node-22 --name my-sandbox
+evs sandbox create --image ubuntu:24.04 --memory-mb 2048
+evs sandbox create --from-github myorg/myrepo --git-branch main
+```
+
+### list
+
+```bash
+evs sandbox list [flags]
+```
+
+Lists sandbox instances.
+
+| Flag | Description |
+|---|---|
+| `--status` | Filter by status: `pending`, `running`, `stopped`, `failed` |
+| `--limit` | Max results (default 50) |
+| `--offset` | Result offset |
+
+```bash
+evs sandbox list
+evs sandbox list --status running
+evs sandbox list --json
+```
+
+### get
+
+```bash
+evs sandbox get <sandbox-id>
+```
+
+Shows full details for a single sandbox.
+
+### overview
+
+```bash
+evs sandbox overview
+```
+
+Shows a summary of the entire sandbox subsystem: counts by status, quota usage, and recent activity.
+
+### logs
+
+```bash
+evs sandbox logs <sandbox-id> [flags]
+```
+
+Streams sandbox logs.
+
+| Flag | Description |
+|---|---|
+| `--follow` | Follow the log stream (default true) |
+| `--session-id` | Session ID override |
+
+```bash
+evs sandbox logs abc123
+evs sandbox logs abc123 --follow=false   # print existing logs and exit
+```
+
+### stats
+
+```bash
+evs sandbox stats <sandbox-id> [flags]
+```
+
+Shows CPU, memory, and network stats for a running sandbox.
+
+| Flag | Description |
+|---|---|
+| `--watch` | Stream stats continuously |
+| `--session-id` | Session ID override |
+
+### events
+
+```bash
+evs sandbox events <sandbox-id> [flags]
+```
+
+Lists or streams lifecycle events for a sandbox.
+
+| Flag | Description |
+|---|---|
+| `--follow` | Stream events as they arrive |
+| `--event-type` | Filter by event type |
+| `--limit` | Max results (default 50) |
+| `--offset` | Result offset |
+
+### exec
+
+```bash
+evs sandbox exec <sandbox-id> -- <command...> [flags]
+```
+
+<Callout type="warn">
+**Coming soon.** The exec endpoint is not yet wired. Use `evs sandbox ssh` to run commands interactively.
+</Callout>
+
+Executes a command inside a running sandbox and returns the output.
+
+| Flag | Description |
+|---|---|
+| `--work-dir` | Working directory inside the sandbox |
+| `--env` | Environment variables (`KEY=VALUE`, repeatable) |
+| `--timeout-seconds` | Command timeout |
+
+```bash
+evs sandbox exec abc123 -- ls /app
+evs sandbox exec abc123 --work-dir /app --env NODE_ENV=test -- npm test
+```
+
+### ssh
+
+```bash
+evs sandbox ssh <sandbox-id-or-name> [flags]
+```
+
+Opens an interactive shell to a sandbox. Connects via WebSocket through the API port by default (firewall-friendly). SSH keys are discovered from the SSH agent and `~/.ssh/id_ed25519`, `~/.ssh/id_ecdsa`, `~/.ssh/id_rsa` automatically.
+
+| Flag | Description |
+|---|---|
+| `--identity-file` | Explicit SSH private key path |
+| `--direct-ssh` | Use the SSH proxy directly (requires TCP access to port 2223) |
+| `--dry-run` | Print the SSH command without running it (only with `--direct-ssh`) |
+
+```bash
+evs sandbox ssh abc123
+evs sandbox ssh my-sandbox --identity-file ~/.ssh/id_ed25519
+evs sandbox ssh abc123 --direct-ssh --dry-run
+```
+
+### ssh-info
+
+```bash
+evs sandbox ssh-info <sandbox-id-or-name>
+```
+
+Prints SSH connection details (host, port, username, key fingerprint) without connecting.
+
+### shell
+
+```bash
+evs sandbox shell <sandbox-id>
+```
+
+<Callout type="warn">
+**Coming soon.** Use `evs sandbox ssh` for interactive shell access today.
+</Callout>
+
+### stop / revive / terminate
+
+```bash
+evs sandbox stop <sandbox-id>
+evs sandbox revive <sandbox-id>
+evs sandbox terminate <sandbox-id>
+```
+
+<Callout type="warn">
+**Coming soon.** These lifecycle commands are not yet wired to the backend. Use `evs sandbox destroy` to remove a sandbox now.
+</Callout>
+
+### destroy
+
+```bash
+evs sandbox destroy <sandbox-id>
+```
+
+Destroys a sandbox and removes its session. Not recoverable.
+
+### recreate
+
+```bash
+evs sandbox recreate <sandbox-id>
+```
+
+Recreates a sandbox from its stored configuration. Useful when a sandbox has expired or been destroyed but you want to restart it with the same settings.
+
+## Port management
+
+### ports list
+
+```bash
+evs sandbox ports list <sandbox-id>
+```
+
+Lists exposed ports for a sandbox.
+
+### ports expose
+
+```bash
+evs sandbox ports expose <sandbox-id> <port> [flags]
+```
+
+Exposes a port on a running sandbox via a public subdomain.
+
+| Flag | Description |
+|---|---|
+| `--protocol` | Protocol: `http` (default) |
+| `--session-id` | Session ID override |
+
+```bash
+evs sandbox ports expose abc123 3000
+evs sandbox ports expose abc123 8080 --protocol http
+```
+
+### ports unexpose
+
+```bash
+evs sandbox ports unexpose <sandbox-id> <port>
+```
+
+Closes a previously exposed port.
+
+### ports detect
+
+```bash
+evs sandbox ports detect <sandbox-id>
+```
+
+Auto-detects ports that are actively listening inside the sandbox.
+
+## SSH key management
+
+### ssh-keys list
+
+```bash
+evs sandbox ssh-keys list
+```
+
+Lists SSH public keys registered for sandbox access.
+
+### ssh-keys add
+
+```bash
+evs sandbox ssh-keys add
+```
+
+Adds an SSH public key for sandbox access.
+
+### ssh-keys delete
+
+```bash
+evs sandbox ssh-keys delete <key-id>
+```
+
+Removes an SSH key.
+
+## Common flags
+
+These flags are available on all `evs sandbox` subcommands:
+
+| Flag | Default | Description |
+|---|---|---|
+| `--api-key` | Active login | API key override (env: `EVS_API_KEY`) |
+| `--api-url` | Active context | API server URL override (env: `EVS_API_URL`) |
+| `--tenant-id` | | Tenant ID override |
+| `--timeout` | `30s` | Request timeout |
+| `--json` | | Output raw JSON |

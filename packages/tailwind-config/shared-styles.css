@@ -1,0 +1,366 @@
+@import "tailwindcss";
+
+/* Theme variants keyed on the html[data-theme] attribute (set pre-paint by the
+   index.html bootstrap script and kept in sync by next-themes). Dark stays the
+   default when the attribute is absent, so `dark:` is rarely needed; `light:`
+   is the override hook for classes tuned to the dark palette. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
+
+@theme {
+  --color-blue-1000: #2a8af6;
+  --color-purple-1000: #a853ba;
+  --color-red-1000: #e92a67;
+
+  /* Brand Shared */
+  --color-brand-main-50: oklch(0.8796 0.0055 275.0906);
+  --color-brand-main-100: oklch(0.7606 0.0088 271.3593);
+  --color-brand-main-200: oklch(0.6383 0.015 276.9631);
+  --color-brand-main-300: oklch(0.5193 0.0207 275.3585);
+  --color-brand-main-400: oklch(0.3988 0.0245 269.7803);
+  --color-brand-main-450: oklch(0.3288 0.0245 269.7803);
+  --color-brand-main-500: oklch(0.2785 0.0309 268.4584);
+  --color-brand-main-600: oklch(0.254 0.0253 271.2464);
+  --color-brand-main-700: oklch(0.2313 0.0203 267.7859);
+  --color-brand-main-800: oklch(0.2091 0.0147 266.8769);
+  --color-brand-main-900: oklch(0.1823 0.0107 268.1014);
+  --color-brand-main-950: oklch(0.1456 0.0088 273.8726);
+
+  --color-brand-secondary-50: oklch(0.958 0.02 292.22);
+  --color-brand-secondary-100: oklch(0.925 0.035 289.26);
+  --color-brand-secondary-200: oklch(0.841 0.078 289.54);
+  --color-brand-secondary-300: oklch(0.768 0.118 288.85);
+  --color-brand-secondary-400: oklch(0.694 0.158 287.83);
+  --color-brand-secondary-500: oklch(0.622 0.197 286.55);
+  --color-brand-secondary-600: oklch(0.545 0.239 284.39);
+  --color-brand-secondary-700: oklch(0.453 0.25 281.95);
+  --color-brand-secondary-800: oklch(0.351 0.194 282.15);
+  --color-brand-secondary-900: oklch(0.25 0.138 281.71);
+  --color-brand-secondary-950: oklch(0.203 0.111 282.03);
+}
+
+/* Light theme
+   Keep dark-theme class semantics but remap them to a Dub-style light UI:
+   white canvas, neutral-50/100/200 surfaces, neutral text, and a restrained
+   Everstack secondary ramp for selected/action states. */
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --color-brand-main-50: #171717;
+  --color-brand-main-100: #262626;
+  --color-brand-main-200: #404040;
+  --color-brand-main-300: #525252;
+  --color-brand-main-400: #737373;
+  --color-brand-main-450: #8a8a8a;
+  --color-brand-main-500: #a3a3a3;
+  --color-brand-main-600: #d4d4d4;
+  --color-brand-main-700: #e5e5e5;
+  --color-brand-main-800: #f5f5f5;
+  --color-brand-main-900: #fafafa;
+  --color-brand-main-950: #ffffff;
+
+  --color-brand-secondary-50: oklch(0.985 0.012 282);
+  --color-brand-secondary-100: oklch(0.965 0.024 282);
+  --color-brand-secondary-200: oklch(0.935 0.045 282);
+  --color-brand-secondary-300: oklch(0.885 0.072 282);
+  --color-brand-secondary-400: oklch(0.795 0.105 282);
+  --color-brand-secondary-500: oklch(0.69 0.135 282);
+  --color-brand-secondary-600: oklch(0.59 0.155 282);
+  --color-brand-secondary-700: oklch(0.49 0.155 282);
+  --color-brand-secondary-800: oklch(0.38 0.125 282);
+  --color-brand-secondary-900: oklch(0.28 0.085 282);
+  --color-brand-secondary-950: oklch(0.2 0.055 282);
+}
+
+/* Light-mode legibility guardrails for dark-first utility classes. Many screens
+   use low-number brand-secondary shades as accent text in dark mode; keep the
+   soft accent surfaces above, but force those text utilities to readable violet
+   on light canvases. */
+[data-theme="light"] :is(
+  .text-brand-secondary-50,
+  .text-brand-secondary-100,
+  .text-brand-secondary-200,
+  .text-brand-secondary-300,
+  .text-brand-secondary-400,
+  .text-brand-secondary-500,
+  .text-brand-secondary-600,
+  .text-brand-secondary-700
+) {
+  color: var(--color-brand-secondary-800) !important;
+}
+
+[data-theme="light"] :is(
+  .hover\:text-brand-secondary-50:hover,
+  .hover\:text-brand-secondary-100:hover,
+  .hover\:text-brand-secondary-200:hover,
+  .hover\:text-brand-secondary-300:hover,
+  .hover\:text-brand-secondary-400:hover,
+  .hover\:text-brand-secondary-500:hover
+) {
+  color: var(--color-brand-secondary-900) !important;
+}
+
+[data-theme="light"] [data-state="active"][class*="text-brand-secondary-"] {
+  color: var(--color-brand-secondary-900) !important;
+}
+
+[data-theme="light"] :is(
+  .text-blue-300,
+  .text-blue-400
+) {
+  color: var(--color-blue-700, #1d4ed8) !important;
+}
+
+[data-theme="light"] :is(
+  .text-green-300,
+  .text-green-400,
+  .text-emerald-300,
+  .text-emerald-400
+) {
+  color: var(--color-emerald-700, #047857) !important;
+}
+
+[data-theme="light"] :is(
+  .text-yellow-300,
+  .text-yellow-400,
+  .text-amber-300,
+  .text-amber-400,
+  .text-orange-300,
+  .text-orange-400
+) {
+  color: var(--color-amber-700, #b45309) !important;
+}
+
+[data-theme="light"] :is(
+  .text-red-300,
+  .text-red-400,
+  .text-rose-300,
+  .text-rose-400
+) {
+  color: var(--color-red-700, #b91c1c) !important;
+}
+
+[data-theme="light"] :is(
+  .text-purple-300,
+  .text-purple-400
+) {
+  color: var(--color-purple-700, #7e22ce) !important;
+}
+
+[data-theme="light"] :is(
+  .text-gray-300,
+  .text-gray-400,
+  .text-zinc-300,
+  .text-zinc-400
+) {
+  color: var(--color-neutral-600, #525252) !important;
+}
+
+[data-theme="light"] :is([class*="bg-brand-main-"], [class*="border-brand-main-"]):is(
+  .text-white,
+  [class~="text-white/95"],
+  [class~="text-white/90"],
+  [class~="text-white/80"],
+  [class~="text-white/75"],
+  [class~="text-white/70"],
+  [class~="text-white/60"],
+  [class~="text-white/55"],
+  [class~="text-white/50"]
+) {
+  color: var(--color-brand-main-50) !important;
+}
+
+[data-theme="light"] :is([class*="bg-brand-main-"], [class*="border-brand-main-"])[class*="hover:text-white"]:hover,
+[data-theme="light"] :is([class*="bg-brand-main-"], [class*="border-brand-main-"])[class*="focus:text-white"]:focus {
+  color: var(--color-brand-main-50) !important;
+}
+
+[data-theme="light"] :is(
+  [data-slot="sheet-content"],
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"],
+  [data-slot="popover-content"],
+  [data-slot="select-content"],
+  [data-slot="tooltip-content"]
+) :is(
+  .text-white,
+  [class~="text-white/95"],
+  [class~="text-white/90"],
+  [class~="text-white/80"],
+  [class~="text-white/75"]
+):not([class*="bg-brand-secondary-"]):not([class*="bg-red-"]):not([class*="bg-rose-"]):not([class*="bg-amber-"]):not([class*="bg-yellow-"]):not([class*="bg-green-"]):not([class*="bg-emerald-"]):not([class*="bg-blue-"]) {
+  color: var(--color-brand-main-50) !important;
+}
+
+[data-theme="light"] :is(
+  [data-slot="sheet-content"],
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"],
+  [data-slot="popover-content"],
+  [data-slot="select-content"],
+  [data-slot="tooltip-content"]
+) :is(
+  [class~="text-white/70"],
+  [class~="text-white/60"],
+  [class~="text-white/55"],
+  [class~="text-white/50"],
+  [class~="text-white/45"],
+  [class~="text-white/40"]
+):not([class*="bg-brand-secondary-"]):not([class*="bg-red-"]):not([class*="bg-rose-"]):not([class*="bg-amber-"]):not([class*="bg-yellow-"]):not([class*="bg-green-"]):not([class*="bg-emerald-"]):not([class*="bg-blue-"]) {
+  color: rgb(23 23 23 / 0.65) !important;
+}
+
+[data-theme="light"] :is(
+  [data-slot="sheet-content"],
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"],
+  [data-slot="popover-content"],
+  [data-slot="select-content"],
+  [data-slot="tooltip-content"]
+) :is(
+  [class~="text-white/35"],
+  [class~="text-white/30"],
+  [class~="text-white/25"],
+  [class~="text-white/20"],
+  [class~="text-white/15"],
+  [class~="text-white/10"]
+):not(:where(
+  [class*="bg-brand-secondary-"],
+  [class*="bg-brand-secondary-"] *,
+  [class*="bg-red-"],
+  [class*="bg-red-"] *,
+  [class*="bg-rose-"],
+  [class*="bg-rose-"] *,
+  [class*="bg-amber-"],
+  [class*="bg-amber-"] *,
+  [class*="bg-yellow-"],
+  [class*="bg-yellow-"] *,
+  [class*="bg-green-"],
+  [class*="bg-green-"] *,
+  [class*="bg-emerald-"],
+  [class*="bg-emerald-"] *,
+  [class*="bg-blue-"],
+  [class*="bg-blue-"] *
+)) {
+  color: rgb(23 23 23 / 0.48) !important;
+}
+
+[data-theme="light"] :is(
+  [data-slot="sheet-content"],
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"],
+  [data-slot="popover-content"],
+  [data-slot="select-content"],
+  [data-slot="tooltip-content"]
+) :is(
+  .text-brand-main-500,
+  [class*="text-brand-main-500/"],
+  .text-brand-main-600,
+  [class*="text-brand-main-600/"],
+  .text-brand-main-700,
+  [class*="text-brand-main-700/"]
+):not(:where(
+  [class*="bg-brand-secondary-"],
+  [class*="bg-brand-secondary-"] *,
+  [class*="bg-red-"],
+  [class*="bg-red-"] *,
+  [class*="bg-rose-"],
+  [class*="bg-rose-"] *,
+  [class*="bg-amber-"],
+  [class*="bg-amber-"] *,
+  [class*="bg-yellow-"],
+  [class*="bg-yellow-"] *,
+  [class*="bg-green-"],
+  [class*="bg-green-"] *,
+  [class*="bg-emerald-"],
+  [class*="bg-emerald-"] *,
+  [class*="bg-blue-"],
+  [class*="bg-blue-"] *
+)) {
+  color: var(--color-brand-main-300) !important;
+}
+
+[data-theme="light"] :is(
+  [data-slot="sheet-content"],
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"],
+  [data-slot="popover-content"],
+  [data-slot="select-content"],
+  [data-slot="tooltip-content"]
+) :is(
+  .text-brand-main-800,
+  [class*="text-brand-main-800/"],
+  .text-brand-main-900,
+  [class*="text-brand-main-900/"],
+  .text-brand-main-950,
+  [class*="text-brand-main-950/"]
+):not(:where(
+  [class*="bg-brand-secondary-"],
+  [class*="bg-brand-secondary-"] *,
+  [class*="bg-red-"],
+  [class*="bg-red-"] *,
+  [class*="bg-rose-"],
+  [class*="bg-rose-"] *,
+  [class*="bg-amber-"],
+  [class*="bg-amber-"] *,
+  [class*="bg-yellow-"],
+  [class*="bg-yellow-"] *,
+  [class*="bg-green-"],
+  [class*="bg-green-"] *,
+  [class*="bg-emerald-"],
+  [class*="bg-emerald-"] *,
+  [class*="bg-blue-"],
+  [class*="bg-blue-"] *
+)) {
+  color: var(--color-brand-main-50) !important;
+}
+
+[data-theme="light"] :is(
+  [data-slot="sheet-content"],
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"],
+  [data-slot="popover-content"],
+  [data-slot="select-content"],
+  [data-slot="tooltip-content"]
+) [class*="hover:text-white"]:hover:not([class*="bg-brand-secondary-"]):not([class*="bg-red-"]):not([class*="bg-rose-"]):not([class*="bg-amber-"]):not([class*="bg-yellow-"]):not([class*="bg-green-"]):not([class*="bg-emerald-"]):not([class*="bg-blue-"]) {
+  color: var(--color-brand-main-50) !important;
+}
+
+[data-theme="light"] :is(
+  [data-slot="sheet-content"],
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"],
+  [data-slot="popover-content"],
+  [data-slot="select-content"],
+  [data-slot="tooltip-content"]
+) [class*="placeholder:text-white"]::placeholder {
+  color: rgb(23 23 23 / 0.4) !important;
+}
+
+/* ── Compact density ───────────────────────────────────────────────────────
+   Tailwind v4 resolves every spacing/sizing utility to calc(var(--spacing)*N)
+   and text-*/
+/* rounded-* to var(--text-*)/var(--radius) at runtime. Overriding
+   these vars under a plain [data-density="compact"] selector (no :root prefix)
+   lets the override apply wherever the attribute lands: a single page subtree
+   for piloting now, or <html> for the global default later. Same rule, both.   */
+[data-density="compact"] {
+  --spacing: 0.235rem; /* default 0.25rem → ~20% tighter padding/gap/height/width */
+  --radius: 0.425rem; /* default 0.625rem → proportional corner radius */
+
+  /* Named type scale (px-literal text-[..] classes are handled by a codemod) */
+  --text-base: 0.875rem; /* 16 → 14 */
+  --text-sm: 0.8125rem; /* 14 → 13 */
+  --text-xs: 0.6875rem; /* 12 → 11 */
+  --text-lg: 1rem; /* 18 → 16 */
+  --text-xl: 1.125rem; /* 20 → 18 */
+}
+
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}

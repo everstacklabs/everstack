@@ -1,0 +1,66 @@
+name: "anthropic"
+display_name: "Anthropic"
+base_url: "https://api.anthropic.com/v1"
+api_version: "2023-06-01"
+
+# Provider type
+provider_type: "static"
+supports_model_discovery: false
+
+# Authentication
+auth:
+  type: "api_key"
+  header_name: "x-api-key"
+  header_format: "{api_key}"
+  env_var: "ANTHROPIC_API_KEY"
+
+# Rate limiting
+rate_limits:
+  requests_per_minute: 1000
+  tokens_per_minute: 50000
+  concurrent_requests: 25
+
+# Supported features
+capabilities:
+  chat: true
+  completions: false
+  embeddings: false
+  function_calling: true
+  vision: true
+  streaming: true
+  fine_tuning: false
+  assistants: false
+
+# Model families
+model_families:
+  claude-4:
+    description: "Claude 4 family models"
+    capabilities: ["chat", "function_calling", "vision"]
+    max_tokens: 200000
+
+  claude-3.5:
+    description: "Claude 3.5 family models"
+    capabilities: ["chat", "function_calling", "vision"]
+    max_tokens: 200000
+
+  claude-3:
+    description: "Claude 3 family models"
+    capabilities: ["chat", "function_calling", "vision"]
+    max_tokens: 200000
+
+# Default settings
+defaults:
+  temperature: 0.7
+  max_tokens: 1000
+  top_p: 1.0
+  top_k: 40
+  timeout: 60s
+  retry_attempts: 3
+  retry_delay: 1s
+
+# Error handling
+error_mapping:
+  "rate_limit_exceeded": "rate_limit_exceeded"
+  "payment_required": "payment_required"
+  "model_not_found": "model_unavailable"
+  "invalid_api_key": "authentication_failed"

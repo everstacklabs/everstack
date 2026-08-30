@@ -1,0 +1,22 @@
+name: "claude-instant-1.2"
+display_name: "Claude Instant 1.2"
+family: "claude-instant"
+status: "deprecated"
+
+cost:
+  input_per_1k: 0.0008
+  output_per_1k: 0.0024
+
+limits:
+  max_tokens: 100000
+  max_completion_tokens: 4096
+
+capabilities:
+  - chat
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+
+notes: "Legacy model - consider using Claude 3 Haiku for fast responses"
+

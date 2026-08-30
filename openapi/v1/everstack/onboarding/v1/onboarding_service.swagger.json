@@ -1,0 +1,92 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/onboarding/v1/onboarding_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "OnboardingService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {},
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1GetOnboardingStateResponse": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "$ref": "#/definitions/v1OnboardingState"
+        }
+      }
+    },
+    "v1OnboardingState": {
+      "type": "object",
+      "properties": {
+        "dismissed": {
+          "type": "boolean",
+          "description": "The user explicitly dismissed the launch center. Not monotonic:\nselecting a path resets it to false."
+        },
+        "celebrationShown": {
+          "type": "boolean",
+          "description": "The \"you're live\" celebration has been acknowledged."
+        },
+        "selectedPath": {
+          "type": "string",
+          "description": "Chosen onboarding path: \"agent\" | \"gateway\" | \"production\" | \"\"."
+        },
+        "sandboxSkipped": {
+          "type": "boolean",
+          "description": "The user skipped the optional sandbox provisioning step."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server-stamped last-write time."
+        }
+      },
+      "description": "OnboardingState is the durable, tenant-scoped slice of launch-center UI\nstate. It deliberately does NOT carry a \"completed\" flag: completion is\nderived live from whether the tenant has providers, agents, and keys, so a\npersisted flag would go stale the moment a user deletes a provider. Only the\ngenuinely-fragile bits that would otherwise live in browser localStorage are\nstored here, so they survive a cleared cache or a fresh device."
+    },
+    "v1UpdateOnboardingStateResponse": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "$ref": "#/definitions/v1OnboardingState"
+        }
+      }
+    }
+  }
+}

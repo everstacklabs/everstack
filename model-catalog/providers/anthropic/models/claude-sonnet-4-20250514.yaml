@@ -1,0 +1,47 @@
+name: "claude-sonnet-4-20250514"
+display_name: "Claude Sonnet 4"
+family: "claude-4"
+status: "stable"
+
+cost:
+  input_per_1k: 0.003
+  output_per_1k: 0.015
+
+limits:
+  max_tokens: 200000
+  max_completion_tokens: 64000
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - extended_thinking
+  - computer_use
+
+modalities:
+  input: ["text", "image"]
+  output: ["text"]
+
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 64000
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true

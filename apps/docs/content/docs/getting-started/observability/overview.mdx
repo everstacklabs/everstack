@@ -1,0 +1,108 @@
+---
+title: Observability Overview
+description: OpenTelemetry-native tracing, logging, and metrics for AI workloads.
+icon: LineChart
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+## Why AI workloads need specialized observability
+
+Traditional APM tools capture HTTP latency and error rates. That is not enough for AI infrastructure. A single gateway request might fan out to multiple providers, retry on fallback models, stream tokens over seconds, and accumulate costs that vary by orders of magnitude depending on the model. Agent sessions compound this further: a single turn can trigger tool calls, sandbox operations, human-in-the-loop gates, and nested LLM invocations.
+
+Everstack ships OpenTelemetry-native observability designed for these patterns. Every gateway request, agent session, and eval run produces structured traces, logs, and metrics that you can query, correlate, and alert on from a single dashboard.
+
+## Architecture
+
+Everstack uses a hybrid storage model:
+
+- **Postgres** stores metadata: project configuration, agent definitions, eval specs, and session records.
+- **ClickHouse** stores high-volume telemetry: traces, spans, structured logs, and aggregated metrics.
+
+This split keeps metadata queries fast and ACID-compliant while giving you columnar analytics over millions of spans and log lines.
+
+### Data collection
+
+Telemetry flows into ClickHouse through two paths:
+
+1. **Embedded collector** -- the gateway and agent runtime emit spans and logs directly to ClickHouse using the OTEL protocol. No external collector infrastructure required.
+2. **External collector** -- for production deployments that already run an OpenTelemetry Collector, Everstack can export via OTLP to your existing pipeline. You control sampling, batching, and routing.
+
+The service name for gateway telemetry is `everstack-gateway`. Agent telemetry is tagged with the agent definition ID and session ID for correlation.
+
+## What gets captured
+
+### Gateway telemetry
+
+Every request that flows through the gateway middleware pipeline emits spans for each processing stage:
+
+- **Routing** -- which provider and model were selected, and why
+- **Cache lookup** -- whether semantic or exact-match caching produced a hit
+- **Context compaction** -- if the request was compacted before forwarding
+- **Provider call** -- the upstream HTTP request to the LLM provider, including latency and status
+- **Response processing** -- token counting, cost calculation, and response transformation
+
+Each span carries token counts and cost attributes, so you can compute per-request economics without a separate billing pipeline.
+
+### Agent telemetry
+
+Agent sessions emit a richer event stream. Each turn in a session creates a parent span containing:
+
+- `llm.start`, `llm.chunk`, `llm.end` -- the full lifecycle of each LLM call, including streaming chunks when detailed tracing is enabled
+- `tool_call.start`, `tool_call.end` -- tool execution with input/output capture
+- `approval.*` -- human-in-the-loop gate events (requested, approved, denied, timed out)
+- `sandbox.*` -- sandbox lifecycle events (create, exec, destroy)
+
+These nest naturally under the session and turn spans, giving you a complete picture of what an agent did and why.
+
+### Eval telemetry
+
+Eval runs link back to the traces they exercised. When an eval suite runs, each test case references the trace ID of the underlying gateway or agent call. This lets you jump from a failing eval directly to the trace that produced the failure.
+
+## Admin dashboard
+
+The admin UI at `/observability` provides three views:
+
+- **Traces** -- search, filter, and drill into distributed traces. See the full span tree for any gateway request or agent session. Filter by latency, cost, model, status, or custom attributes.
+- **Logs** -- query structured logs with ClickHouse-speed full-text search. Correlate logs with traces using shared trace and span IDs.
+- **Metrics** -- real-time dashboards showing request volume, latency percentiles, error rates, token usage, and cost over time.
+
+All three views share a unified time range picker and support filtering by project, agent, model, and provider.
+
+<Callout type="info">
+  The admin dashboard queries ClickHouse directly. For large deployments, you can tune retention and aggregation policies to balance query speed against storage cost.
+</Callout>
+
+## Configuration at a glance
+
+Observability is configured in your gateway configuration under the `observability` block. Key settings include:
+
+| Setting | Default | Purpose |
+|---|---|---|
+| `tracing_granularity` | `"standard"` | Controls span detail: `minimal`, `standard`, or `detailed` |
+| `trace_provider_calls` | `true` | Emit spans for upstream provider HTTP calls |
+| `trace_stream_chunks` | `false` | Emit per-chunk spans during streaming (high volume) |
+| `trace_fallbacks` | `true` | Emit spans when fallback routing activates |
+| `sampling_fraction` | `0.1` | Fraction of requests to trace (0.0 to 1.0) |
+| `enable_request_logging` | `true` | Log every gateway request as a structured log entry |
+| `log_level` | `"info"` | Minimum log level: `debug`, `info`, `warn`, `error` |
+| `log_formatter` | `"json"` | Output format: `json` or `text` |
+
+For full configuration reference, see the [API documentation](/api-reference/gateway).
+
+## When to use each signal
+
+- **Traces** when you need to understand the lifecycle of a single request or agent turn. Start here for debugging latency, unexpected fallbacks, or cost spikes.
+- **Logs** when you need to search across many requests for a pattern. Use logs to find all errors from a specific provider, or all requests that hit a cache miss.
+- **Metrics** when you need aggregate trends. Use metrics dashboards to monitor overall health, set alerts on error rate thresholds, or track cost trends over days and weeks.
+
+## Next steps
+
+<Cards>
+  <Card title="Traces" href="/docs/getting-started/observability/traces">
+    Learn how distributed traces work, configure tracing granularity, and understand span attributes.
+  </Card>
+  <Card title="Logs" href="/docs/getting-started/observability/logs">
+    Set up structured logging, query logs in the admin UI, and correlate logs with traces.
+  </Card>
+</Cards>

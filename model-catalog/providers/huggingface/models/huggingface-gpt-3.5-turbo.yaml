@@ -1,0 +1,21 @@
+name: "huggingface/gpt-3.5-turbo"
+display_name: "GPT-3.5 Turbo"
+family: "gpt-3.5"
+status: "deprecated"
+
+cost:
+  input_per_1k: 0.0005
+  output_per_1k: 0.0015
+
+limits:
+  max_tokens: 16385
+  max_completion_tokens: 4096
+
+capabilities:
+  - chat
+  - function_calling
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+

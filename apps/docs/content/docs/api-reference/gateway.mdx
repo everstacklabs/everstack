@@ -1,0 +1,30 @@
+---
+title: Gateway
+description: Gateway API endpoints
+---
+
+# Gateway API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | [`/v1/audio/speech`](./gateway/text-to-speech-generate-audio-from-text) | Text-to-Speech: Generate audio from text |
+| `POST` | [`/v1/audio/transcriptions`](./gateway/speech-to-text-transcribe-audio-to-text) | Speech-to-Text: Transcribe audio to text |
+| `POST` | [`/v1/audio/translations`](./gateway/audio-translation-translate-audio-to-english-text) | Audio Translation: Translate audio to English text |
+| `POST` | [`/v1/chat/completions`](./gateway/chat-completion) |  |
+| `POST` | [`/v1/embeddings`](./gateway/embeddings) |  |
+| `POST` | [`/v1/gateway/activation-callback`](./gateway/activation-callback-from-cloud-called-by-cloud-after-successful-payment) | Activation callback from cloud (called by cloud after successful payment) |
+| `POST` | [`/v1/gateway/instance/activate`](./gateway/admin-endpoints-for-gateway-instance-management) | Admin endpoints for Gateway instance management |
+| `GET` | [`/v1/gateway/instance/status`](./gateway/get-gateway-instance-status) |  |
+| `GET` | [`/v1/gateway/models`](./gateway/list-models) |  |
+| `POST` | [`/v1/gateway/subscription-status-callback`](./gateway/subscription-status-callback-from-billing-service-called-after-stripe-webhooks) | Subscription status callback from billing service (called after Stripe webhooks) |
+| `GET` | [`/v1/gateway/{id}`](./gateway/get-gateway) |  |
+| `POST` | [`/v1/images/edits`](./gateway/edit-an-existing-image) | Edit an existing image |
+| `POST` | [`/v1/images/generations`](./gateway/generate-images-from-text-prompts) | Generate images from text prompts |
+| `POST` | [`/v1/images/variations`](./gateway/create-variations-of-an-image) | Create variations of an image |
+| `POST` | [`/v1/moderations`](./gateway/classify-content-for-policy-violations) | Classify content for policy violations |
+| `POST` | [`/v1/rerank`](./gateway/rerank-documents-by-relevance-to-a-query) | Rerank documents by relevance to a query |
+| `GET` | [`/v1/responses`](./gateway/list-responses) | List responses |
+| `POST` | [`/v1/responses`](./gateway/create-a-response-agentic-loop-with-auto-tool-calling) | Create a response (agentic loop with auto tool calling) |
+| `GET` | [`/v1/responses/{responseId}`](./gateway/get-a-response-by-id) | Get a response by ID |
+| `DELETE` | [`/v1/responses/{responseId}`](./gateway/delete-a-response) | Delete a response |
+| `POST` | [`/v1/responses/{responseId}/cancel`](./gateway/cancel-an-in-progress-response) | Cancel an in-progress response |

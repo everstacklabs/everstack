@@ -1,0 +1,80 @@
+---
+title: Claude Code
+description: Send Claude Code session traces — LLM requests, tool calls, and sub-agents — to your Everstack instance.
+icon: claude
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<ClaudeIcon /> **Claude Code** (Anthropic) has native OpenTelemetry. Metrics
+and events are emitted out of the box; the full **trace tree** (interaction →
+LLM request / tool → sub-agents) is currently behind a beta flag.
+
+See [Trace Coding Agents](/docs/getting-started/observability/coding-agents) for
+the endpoints, API key, and what Everstack renders. Below is the Claude Code
+setup.
+
+## Environment variables
+
+```bash
+export CLAUDE_CODE_ENABLE_TELEMETRY=1
+export CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1     # trace span tree (beta)
+export OTEL_TRACES_EXPORTER=otlp
+export OTEL_METRICS_EXPORTER=otlp
+export OTEL_LOGS_EXPORTER=otlp
+export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+export OTEL_EXPORTER_OTLP_ENDPOINT=https://<your-instance>
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <your-api-key>"
+export OTEL_LOG_TOOL_DETAILS=1                    # include tool names/args
+export OTEL_LOG_TOOL_CONTENT=1                    # include tool input/output
+```
+
+To apply this to **every** Claude Code session, set the same variables in the
+`env` block of `~/.claude/settings.json`.
+
+<Callout type="warn">
+  Telemetry initializes when Claude Code launches, so only sessions started
+  **after** you add the config will emit. Restart the session — a new prompt in
+  an existing session is not enough.
+</Callout>
+
+## Keep the key out of config (recommended)
+
+Rather than hard-coding the key in `OTEL_EXPORTER_OTLP_HEADERS`, use Claude
+Code's `otelHeadersHelper` so the token lives in a separate file. In
+`~/.claude/settings.json`:
+
+```json
+{
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "CLAUDE_CODE_ENHANCED_TELEMETRY_BETA": "1",
+    "OTEL_TRACES_EXPORTER": "otlp",
+    "OTEL_METRICS_EXPORTER": "otlp",
+    "OTEL_LOGS_EXPORTER": "otlp",
+    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "https://<your-instance>"
+  },
+  "otelHeadersHelper": "/home/you/.claude/otel-headers.sh"
+}
+```
+
+The helper must print the header as **JSON** (not `key=value`):
+
+```bash
+#!/bin/bash
+echo "{\"Authorization\": \"Bearer $(cat ~/.config/everstack/api-key)\"}"
+```
+
+Make it executable (`chmod 700`) and store the key in `~/.config/everstack/api-key`
+(`chmod 600`). Do **not** also set `OTEL_EXPORTER_OTLP_HEADERS` — the two
+conflict.
+
+## Notes
+
+- Claude Code is the only common coding agent that reports a dollar **cost**
+  directly; it's used as-is and never recomputed.
+- Pointing Claude Code at an Anthropic-compatible endpoint for a different model
+  provider keeps this exact telemetry setup — see
+  [GLM](/docs/getting-started/observability/coding-agents/glm) and
+  [Kimi](/docs/getting-started/observability/coding-agents/kimi).

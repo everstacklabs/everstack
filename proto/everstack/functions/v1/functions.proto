@@ -1,0 +1,152 @@
+syntax = "proto3";
+
+package everstack.functions.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/functions/v1;functions";
+
+// ExecutionMode defines how a function is executed
+enum ExecutionMode {
+  EXECUTION_MODE_UNSPECIFIED = 0;
+  EXECUTION_MODE_WEBHOOK = 1;
+  EXECUTION_MODE_PROXY = 2;
+  EXECUTION_MODE_ISOLATED = 3;
+}
+
+// WebhookConfig defines webhook execution settings
+message WebhookConfig {
+  string url = 1;
+  string method = 2;
+  map<string, string> headers = 3;
+  int32 timeout_ms = 4;
+}
+
+// ProxyConfig defines proxy/passthrough execution settings
+message ProxyConfig {
+  string base_url = 1;
+  string path = 2;
+  string method = 3;
+  map<string, string> query_mapping = 4;
+  map<string, string> header_mapping = 5;
+  map<string, string> body_mapping = 6;
+  map<string, string> response_mapping = 7;
+}
+
+// IsolatedConfig defines isolated runtime execution settings (Phase 2)
+message IsolatedConfig {
+  string runtime = 1;
+  string code = 2;
+  repeated string packages = 3;
+  string docker_host = 4;
+}
+
+// Function represents a registered serverless function
+message Function {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  ExecutionMode mode = 5;
+  google.protobuf.Struct parameters = 6;
+  WebhookConfig webhook = 7;
+  ProxyConfig proxy = 8;
+  IsolatedConfig isolated = 9;
+  int32 timeout_ms = 10;
+  int32 memory_mb = 11;
+  int32 max_retries = 12;
+  bool enabled = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+}
+
+// CreateFunctionRequest creates a new function
+message CreateFunctionRequest {
+  string tenant_id = 1;
+  string name = 2;
+  optional string description = 3;
+  ExecutionMode mode = 4;
+  optional google.protobuf.Struct parameters = 5;
+  optional WebhookConfig webhook = 6;
+  optional ProxyConfig proxy = 7;
+  optional IsolatedConfig isolated = 8;
+  optional int32 timeout_ms = 9;
+  optional int32 memory_mb = 10;
+  optional int32 max_retries = 11;
+}
+
+message CreateFunctionResponse {
+  Function function = 1;
+}
+
+message GetFunctionRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message GetFunctionResponse {
+  Function function = 1;
+}
+
+message GetFunctionByNameRequest {
+  string tenant_id = 1;
+  string name = 2;
+}
+
+message GetFunctionByNameResponse {
+  Function function = 1;
+}
+
+message ListFunctionsRequest {
+  string tenant_id = 1;
+  optional ExecutionMode mode = 2;
+  optional bool enabled = 3;
+  optional int32 limit = 4;
+  optional int32 offset = 5;
+}
+
+message ListFunctionsResponse {
+  repeated Function functions = 1;
+  int32 total = 2;
+}
+
+message UpdateFunctionRequest {
+  string tenant_id = 1;
+  string id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional ExecutionMode mode = 5;
+  optional google.protobuf.Struct parameters = 6;
+  optional WebhookConfig webhook = 7;
+  optional ProxyConfig proxy = 8;
+  optional IsolatedConfig isolated = 9;
+  optional int32 timeout_ms = 10;
+  optional int32 memory_mb = 11;
+  optional int32 max_retries = 12;
+  optional bool enabled = 13;
+}
+
+message UpdateFunctionResponse {
+  Function function = 1;
+}
+
+message DeleteFunctionRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message DeleteFunctionResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// GetIsolationStatusRequest requests the isolation backend status (empty message)
+message GetIsolationStatusRequest {}
+
+// GetIsolationStatusResponse returns isolation backend availability
+message GetIsolationStatusResponse {
+  bool available = 1;
+  string docker_host = 2;
+  string message = 3;
+}

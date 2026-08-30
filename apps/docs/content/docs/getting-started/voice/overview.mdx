@@ -1,0 +1,117 @@
+---
+title: Voice Overview
+description: Text-to-speech, speech-to-text, and voice cloning for AI applications.
+icon: Mic
+---
+
+Everstack Voice adds audio capabilities to the gateway. You can generate speech from text, transcribe audio to text, translate spoken audio between languages, and create custom voice profiles from reference recordings. All of it works through the same OpenAI-compatible API surface as the rest of the gateway.
+
+## What Voice includes
+
+Voice is three capabilities behind one set of endpoints:
+
+- **Text-to-Speech (TTS)** converts text into audio. You send a string, pick a model and voice, and get back an audio file in your chosen format. Long text is automatically chunked and stitched together.
+- **Speech-to-Text (STT)** transcribes audio into text. You send an audio file and get back a transcript, optionally with word-level timing, segment boundaries, and language detection.
+- **Voice Cloning** lets you create a custom voice profile from a reference audio sample. Once enrolled, that profile can be used in any TTS request to generate speech that matches the reference voice.
+
+Audio translation is a variant of STT that transcribes and translates the audio into English in one step.
+
+## Why Voice exists
+
+Adding audio to an AI application usually means integrating a separate TTS service, a separate STT service, managing API keys for each, handling audio format conversion, and building your own chunking logic for long text. Voice folds all of that into the gateway so you get:
+
+- one endpoint for TTS, one for STT, one for translation
+- provider abstraction across Qwen/DashScope and OpenAI
+- automatic text chunking for inputs that exceed model limits
+- tenant-scoped voice clone profiles with the same isolation as the rest of Everstack
+- workflow studio integration through dedicated executor nodes
+
+## Providers
+
+Voice ships with two provider backends:
+
+| Provider | TTS | STT | Voice Cloning |
+|----------|-----|-----|---------------|
+| **Qwen / DashScope** | Yes | No | Yes |
+| **OpenAI** | Yes | Yes | No |
+
+Qwen is the primary provider for TTS and the only provider that supports voice cloning. OpenAI covers both TTS and STT through the Whisper model family. Provider selection happens through the model you specify in each request.
+
+## Models
+
+### Text-to-Speech
+
+| Model | Provider | Notes |
+|-------|----------|-------|
+| `qwen3-tts-flash` | Qwen | Fast general-purpose TTS |
+| `qwen3-tts-vc-2026-01-22` | Qwen | Voice clone variant, requires a voice clone profile |
+
+### Speech-to-Text
+
+| Model | Provider | Notes |
+|-------|----------|-------|
+| `whisper-1` | OpenAI | Default STT model, supports language detection |
+
+## How it fits into the gateway
+
+Voice endpoints follow the same pattern as chat completions and embeddings. They live under the gateway's `/v1/audio/` path, authenticate with the same API key, respect the same tenant boundaries, and appear in the same observability pipeline.
+
+The three endpoints are:
+
+- `POST /v1/audio/speech` for text-to-speech
+- `POST /v1/audio/transcriptions` for speech-to-text
+- `POST /v1/audio/translations` for audio translation to English
+
+See the [Gateway API Reference](/api-reference/gateway) for full request and response schemas.
+
+## Workflow studio integration
+
+Voice capabilities are available as nodes inside the workflow studio:
+
+- **TTSExecutor** generates speech from text produced by upstream nodes
+- **STTExecutor** transcribes audio from file references or upstream outputs
+- **VoiceCloneExecutor** runs TTS using a cloned voice profile
+
+These nodes accept the same parameters as their API counterparts and can be wired into any workflow graph alongside LLM calls, function executions, and conditional logic.
+
+## Feature gating
+
+Voice is available on the **Pro tier**. Free-tier deployments will receive a 403 when calling voice endpoints. Upgrade through the Everstack dashboard or contact the team for enterprise pricing.
+
+## Request model
+
+Voice is request/response only. You send a request, wait for the full audio or transcript, and receive the complete result. There is no realtime streaming, no WebSocket connection, and no voice activity detection. This keeps the integration simple and predictable for batch and on-demand use cases.
+
+## Frontend
+
+The Everstack dashboard includes a voice management interface at `/deployments/voice`. From there you can:
+
+- create and manage voice clone profiles
+- upload reference audio samples
+- test TTS output with different models and parameters
+- view profile enrollment status
+
+## Examples
+
+### Generate speech for a notification
+
+Send a short text string to the TTS endpoint with `qwen3-tts-flash`, get back an MP3 file, and play it in your application's notification system.
+
+### Transcribe a customer call
+
+Upload a WAV recording to the STT endpoint with `whisper-1` and `response_format: verbose_json`. You get back the full transcript with word-level timestamps, which you can use for search indexing, summarization, or compliance review.
+
+### Build a branded voice experience
+
+Record a 10-second reference clip, create a voice clone profile, enroll it with Qwen, and then use that profile in all TTS requests. Every audio output sounds like your brand voice instead of a generic model voice.
+
+### Workflow-driven podcast generation
+
+Build a studio workflow that takes a blog post as input, runs it through an LLM to create a conversational script, then pipes each segment through TTSExecutor nodes with different voice profiles for host and guest. The output is a ready-to-publish audio file.
+
+## Next steps
+
+- [Text-to-Speech](/getting-started/voice/text-to-speech) covers models, formats, parameters, and chunking behavior.
+- [Speech-to-Text](/getting-started/voice/speech-to-text) explains transcription, translation, language detection, and timing data.
+- [Voice Cloning](/getting-started/voice/voice-cloning) walks through creating profiles, enrolling with a provider, and using cloned voices in TTS.
+- [Gateway API Reference](/api-reference/gateway) documents the full endpoint contracts.

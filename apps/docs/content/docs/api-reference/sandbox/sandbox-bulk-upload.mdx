@@ -1,0 +1,46 @@
+---
+title: Bulk Upload
+description: Upload multiple files to a sandbox in a single request.
+---
+
+# Bulk Upload
+
+Upload multiple files to a sandbox in one multipart request. Maximum 256MB total.
+
+`POST /v1/sandbox/{sandboxId}/files/bulk-upload`
+
+## Request
+
+`Content-Type: multipart/form-data`
+
+| Field | Description |
+|-------|-------------|
+| `base_dir` | Base directory for files without an explicit path (default: `/repo`) |
+| `{fieldName}` | File content for each file |
+| `path_{fieldName}` | Destination path for the corresponding field (optional) |
+
+## Example
+
+```bash
+curl -X POST "https://.../v1/sandbox/{id}/files/bulk-upload" \
+  -H "Authorization: Bearer $KEY" \
+  -F "base_dir=/workspace" \
+  -F "app=@./src/app.py" \
+  -F "utils=@./src/utils.py" \
+  -F "path_utils=/workspace/lib/utils.py"
+```
+
+`app` → `/workspace/app.py` (using `base_dir`)
+`utils` → `/workspace/lib/utils.py` (using `path_utils`)
+
+## Response
+
+```json
+{
+  "uploaded": ["/workspace/app.py", "/workspace/lib/utils.py"],
+  "failed": [],
+  "total": 2
+}
+```
+
+Failed uploads are reported per-file without failing the entire request.

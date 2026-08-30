@@ -1,0 +1,11 @@
+{
+  "pages": [
+    "list-functions",
+    "create-function",
+    "get-function-by-name",
+    "get-isolation-status",
+    "get-function",
+    "update-function",
+    "delete-function"
+  ]
+}

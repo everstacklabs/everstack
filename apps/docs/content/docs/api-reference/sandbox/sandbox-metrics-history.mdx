@@ -1,0 +1,69 @@
+---
+title: Metrics History
+description: Time-series CPU, memory, and disk metrics for sandboxes.
+---
+
+# Sandbox Metrics History
+
+Per-sandbox resource metrics collected every 30 seconds, retained for 2 hours.
+
+## Point-in-time Snapshot
+
+`GET /v1/sandbox/{sandboxId}/metrics`
+
+Returns current CPU %, memory usage, memory limit, network bytes, and block I/O.
+
+## Stream (SSE)
+
+`GET /v1/sandbox/{sandboxId}/metrics/watch`
+
+Server-sent events stream, updated every 2 seconds. Useful for live dashboards.
+
+## Time-series History
+
+`GET /v1/sandbox/{sandboxId}/metrics/history?limit=120`
+
+Returns stored snapshots in ascending time order.
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `limit` | 120 | Number of snapshots (1 per 30s = 1h at 120). Max 500. |
+
+**Response:**
+```json
+{
+  "snapshots": [
+    {
+      "sandbox_id": "sbx_abc",
+      "cpu_percent": 45.2,
+      "memory_usage": 536870912,
+      "memory_limit": 1073741824,
+      "disk_used_mb": 1024,
+      "collected_at": "2026-06-01T12:00:00Z"
+    }
+  ],
+  "total": 120
+}
+```
+
+## Batch (for list views)
+
+`GET /v1/sandbox/metrics/batch?ids=id1,id2,id3`
+
+Returns the latest snapshot for each sandbox ID. Max 50 IDs per request. Useful for showing gauges in the sandbox list view without N+1 requests.
+
+**Response:**
+```json
+{
+  "metrics": {
+    "sbx_abc": { "cpu_percent": 45.2, "memory_usage": 536870912, ... },
+    "sbx_def": { "cpu_percent": 2.1, "memory_usage": 104857600, ... }
+  }
+}
+```
+
+## Retention
+
+Metrics are collected every 30 seconds and retained for 2 hours. Older data is automatically pruned.
+
+For longer retention, configure [OTLP export](/api-reference/sandbox/sandbox) to forward metrics to your own observability backend (New Relic, Grafana Cloud, Datadog, etc.).

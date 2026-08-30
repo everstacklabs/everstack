@@ -1,0 +1,18 @@
+---
+title: Memory
+description: Memory API endpoints
+---
+
+# Memory API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | [`/v1/memory/analytics`](./memory/get-memory-analytics) |  |
+| `GET` | [`/v1/memory/collections`](./memory/list-collections) |  |
+| `POST` | [`/v1/memory/collections`](./memory/create-collection) |  |
+| `POST` | [`/v1/memory/collections/{collectionName}/documents`](./memory/add-documents) |  |
+| `DELETE` | [`/v1/memory/collections/{collectionName}/documents/{documentId}`](./memory/delete-document) |  |
+| `POST` | [`/v1/memory/collections/{collectionName}/query`](./memory/query-collection) |  |
+| `GET` | [`/v1/memory/collections/{name}`](./memory/get-collection) |  |
+| `DELETE` | [`/v1/memory/collections/{name}`](./memory/delete-collection) |  |
+| `POST` | [`/v1/memory/setup`](./memory/setup-pg-vector) |  |

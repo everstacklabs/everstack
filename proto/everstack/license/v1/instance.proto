@@ -1,0 +1,374 @@
+syntax = "proto3";
+
+package everstack.license.v1;
+
+import "google/protobuf/timestamp.proto";
+import "everstack/license/v1/license.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/license/v1;license";
+
+// id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+// instance_id_hash   TEXT        NOT NULL UNIQUE,
+// signed_payload     JSONB       NOT NULL,
+// instance_signature          TEXT        NOT NULL,
+// instance_kid                TEXT        NOT NULL,
+// instance_status             TEXT        NOT NULL DEFAULT 'uninitialized',
+// retry_count        INT         NOT NULL DEFAULT 0,
+// last_attempt_at    TIMESTAMPTZ,
+// next_attempt_at    TIMESTAMPTZ,
+// error_reason       TEXT,
+// created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+// updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+
+message Instance {
+  string id = 1;
+  string instance_id_hash = 2;
+  string instance_status = 3;
+  bytes signed_payload = 4; // canonical JSON bytes of signed instance payload
+  string instance_signature = 5;
+  string instance_kid = 6;
+  int32 retry_count = 7;
+  google.protobuf.Timestamp last_attempt_at = 8;
+  google.protobuf.Timestamp next_attempt_at = 9;
+  string error_reason = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message CreateInstanceRequest {}
+
+message CreateInstanceResponse {
+  Instance instance = 1;
+}
+
+// LicenseState represents the current state of a license for enforcement
+message LicenseState {
+  string instance_id = 1;
+  string tenant_id = 2;
+  LicenseType plan_tier = 3;
+  repeated FeatureFlag features = 4;
+  repeated UsageLimits usage_limits = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  int32 refresh_interval_secs = 7;
+  int32 grace_period_secs = 8;
+  LicenseStatus status = 9;
+  // True only when this tenant has an active billing arrangement for
+  // sandbox compute. Free is a $0 platform plan, not free compute.
+  bool sandbox_billing_enabled = 10;
+}
+
+// Activation request from gateway with single-use token from portal
+message ActivateInstanceRequest {
+  string activation_token = 1; // JWT from portal (short-lived, single-use)
+  string device_fingerprint_hash = 2; // optional: SHA256(MAC+CPU+Disk)
+  string instance_id = 3; // optional: for upgrading existing instance
+}
+
+// Activation response with instance binding and refresh token
+message ActivateInstanceResponse {
+  string instance_id = 1;
+  string refresh_token = 2; // long-lived token for refresh calls
+  LicenseState license_state = 3;
+  string signing_key = 4; // HMAC key for M2M request signing (base64 encoded)
+
+  // Available feature releases for this instance (evaluated based on tier)
+  map<string, FeatureRelease> available_features = 5;
+
+  string license_jwt = 6;         // Ed25519-signed JWT containing license state
+  string license_public_key = 7;  // Base64-encoded Ed25519 public key for JWT verification
+}
+
+// Refresh request to get updated license state
+message RefreshInstanceRequest {
+  string instance_id = 1;
+  string refresh_token = 2;
+  string device_fingerprint_hash = 3; // optional: must match activation
+}
+
+// Refresh response with updated license state
+message RefreshInstanceResponse {
+  LicenseState license_state = 1;
+
+  // Available feature releases for this instance (evaluated based on tier)
+  // Key is feature key (e.g., "semantic_cache"), value is feature metadata
+  map<string, FeatureRelease> available_features = 2;
+
+  string license_jwt = 3;  // Ed25519-signed JWT containing license state
+}
+
+// FeatureRelease represents a feature's release status and metadata
+message FeatureRelease {
+  string name = 1;                    // Human-readable name
+  string description = 2;             // Feature description
+  string status = 3;                  // 'development', 'beta', 'released', 'deprecated'
+  repeated string categories = 4;     // ['gateway', 'dashboard', 'api'] - can belong to multiple
+}
+
+// Revoke request to disable an instance
+message RevokeInstanceRequest {
+  string instance_id = 1;
+  string reason = 2;
+}
+
+message RevokeInstanceResponse {
+  bool success = 1;
+}
+
+message GetInstanceRequest {
+  string instance_id = 1;
+}
+
+message GetInstanceResponse {
+  Instance instance = 1;
+}
+
+// =============================================================================
+// Usage Reporting Messages
+// =============================================================================
+
+// UsageReport contains aggregated usage metrics for a reporting period
+message UsageReport {
+  // Total requests in this reporting period
+  int64 total_requests = 1;
+  // Token metrics
+  int64 input_tokens = 2;
+  int64 output_tokens = 3;
+  int64 total_tokens = 4;
+  // Cost metrics (in USD)
+  double estimated_cost_usd = 5;
+  double cache_savings_usd = 6;
+  // Cache performance
+  int64 cache_hits = 7;
+  int64 cache_misses = 8;
+  // Rate metrics (peak values in period)
+  int64 peak_rpm = 9;
+  int64 peak_rps = 10;
+  int64 peak_rph = 11;
+  // Reporting period
+  google.protobuf.Timestamp period_start = 12;
+  google.protobuf.Timestamp period_end = 13;
+
+  // Resource counts at the time of reporting (per-instance snapshot).
+  // Used to populate billing.usage_snapshots for historical charts.
+  int64 agents_count = 14;
+  int64 persistent_agents_count = 15;
+  int64 concurrent_running_count = 16;
+  int64 dataset_items_count = 17;
+  int64 eval_runs_monthly_count = 18;
+  int64 annotation_queues_count = 19;
+  int64 channel_bindings_count = 20;
+  int64 messages_monthly_count = 21;
+  int64 storage_bytes = 22;
+
+  // Cumulative flow metrics for the current period (since last reset).
+  // Distinct from the delta fields above (total_requests, total_tokens, etc.
+  // which carry per-report deltas for Stripe metering). These cumulative
+  // values populate usage_totals for the period headline numbers.
+  // Costs are micro-dollars (USD * 1_000_000).
+  int64 cumulative_total_tokens = 23;
+  int64 cumulative_total_requests = 24;
+  int64 cumulative_input_tokens = 25;
+  int64 cumulative_output_tokens = 26;
+  int64 cumulative_cost_micros = 27;
+  int64 cumulative_cache_savings_micros = 28;
+  int64 cumulative_cache_hits = 29;
+  int64 cumulative_cache_misses = 30;
+
+  // Cumulative sandbox network data transfer this period (bytes), summed
+  // across the instance's sandboxes from the usage ledger.
+  int64 cumulative_network_rx_bytes = 31;
+  int64 cumulative_network_tx_bytes = 32;
+
+  // Lifetime-monotonic sandbox compute meters. The billing service keeps a
+  // per-instance watermark and charges only the positive delta, so retries
+  // and out-of-order reports cannot double bill. The first observation is a
+  // non-billable rollout baseline.
+  int64 cumulative_sandbox_compute_seconds = 33;
+  int64 cumulative_sandbox_compute_cost_micros = 34;
+
+  // Sandboxes that currently reserve compute capacity for this instance.
+  // Pending creates and in-flight stops count; sleeping/archived rows do not.
+  int64 concurrent_sandboxes_count = 35;
+
+  // Lifetime-monotonic hosted-browser lease meters. Idle pool pods are not
+  // included. Central billing applies only positive deltas against the same
+  // durable per-instance watermark contract used for sandbox compute.
+  int64 cumulative_browser_runtime_seconds = 36;
+  int64 cumulative_browser_runtime_cost_micros = 37;
+}
+
+// ReportUsageRequest sends usage metrics from gateway to license service
+// For activated instances: use instance_id + refresh_token
+// For free/trial (pre-activation): use fingerprint only
+message ReportUsageRequest {
+  string instance_id = 1;      // Required for activated instances
+  string refresh_token = 2;    // Required for activated instances
+  UsageReport usage = 3;
+  string fingerprint = 4;      // Required for free/trial (pre-activation), used to link historical usage on activation
+  string gateway_version = 5;  // Build version piggybacked on the existing usage report
+}
+
+// ReportUsageResponse confirms receipt of usage metrics
+message ReportUsageResponse {
+  bool accepted = 1;
+  string message = 2;
+  // Next expected report time (for sync interval coordination)
+  google.protobuf.Timestamp next_report_at = 3;
+  
+  // Authoritative limits from License Service (gateway should enforce these)
+  // For trial/free tier, these are the trial limits.
+  // For activated instances, these come from the license plan.
+  EnforcementLimits limits = 4;
+  
+  // Cumulative usage tracked by License Service (for reconciliation)
+  CumulativeUsageStats cumulative_usage = 5;
+  
+  // Whether usage limits have been exceeded (gateway should block new requests)
+  bool limits_exceeded = 6;
+}
+
+// EnforcementLimits defines the authoritative limits the gateway should enforce
+// This is returned by the License Service and overrides any local defaults
+message EnforcementLimits {
+  // Request limits
+  int64 daily_request_limit = 1;      // Max requests per day (0 = unlimited)
+  int64 monthly_request_limit = 2;    // Max requests per month (0 = unlimited)
+  int64 rpm_limit = 3;                // Max requests per minute (0 = unlimited)
+  
+  // Token limits
+  int64 daily_token_limit = 4;        // Max tokens per day (0 = unlimited)
+  int64 monthly_token_limit = 5;      // Max tokens per month (0 = unlimited)
+  
+  // Spend limits (in cents to avoid floating point issues)
+  int64 daily_spend_limit_cents = 6;  // Max spend per day (0 = unlimited)
+  int64 monthly_spend_limit_cents = 7; // Max spend per month (0 = unlimited)
+  
+  // Trial-specific
+  google.protobuf.Timestamp trial_expires_at = 8;  // When trial expires (null if not trial)
+  bool is_trial = 9;                               // Whether this is a trial
+}
+
+// CumulativeUsageStats tracks total usage for the current billing period
+message CumulativeUsageStats {
+  int64 total_requests = 1;
+  int64 total_tokens = 2;
+  int64 total_spend_cents = 3;         // In cents
+  google.protobuf.Timestamp period_start = 4;
+  google.protobuf.Timestamp period_end = 5;
+}
+
+// =============================================================================
+// Activation Token Status Check Messages
+// =============================================================================
+
+// CheckActivationTokenStatusRequest checks if an activation token has been used
+message CheckActivationTokenStatusRequest {
+  string activation_token = 1;
+}
+
+// CheckActivationTokenStatusResponse returns the token's current status
+message CheckActivationTokenStatusResponse {
+  // TokenStatus indicates the current state of an activation token
+  enum TokenStatus {
+    TOKEN_STATUS_UNSPECIFIED = 0;
+    TOKEN_STATUS_AVAILABLE = 1;   // Token exists and has not been used yet
+    TOKEN_STATUS_BOUND = 2;       // Token has been activated/bound to an instance
+    TOKEN_STATUS_EXPIRED = 3;     // Token has expired
+    TOKEN_STATUS_INVALID = 4;     // Token does not exist or is malformed
+  }
+  TokenStatus status = 1;
+  string bound_instance_id = 2;   // If BOUND, the instance ID it's bound to
+  string plan_tier = 3;           // Plan tier from the token (free, basic, pro, enterprise)
+}
+
+// CheckDeviceFingerprintRequest checks if a device fingerprint has any bound instances
+message CheckDeviceFingerprintRequest {
+  string device_fingerprint_hash = 1;  // SHA256 hash of device fingerprint
+}
+
+// CheckDeviceFingerprintResponse returns any instances bound to this device
+message CheckDeviceFingerprintResponse {
+  bool has_bound_instance = 1;      // True if this device has an activated instance
+  string bound_instance_id = 2;     // The instance ID bound to this device
+  string plan_tier = 3;             // Plan tier of the bound instance
+  bool is_revoked = 4;              // True if the instance was revoked
+}
+
+// =============================================================================
+// Device Signing Key Registration (M2M key sync)
+// =============================================================================
+
+// RegisterDeviceSigningKeyRequest registers a device's M2M signing key with the License Service.
+// This allows self-hosted gateways to use M2M authentication without pre-shared keys.
+// The signing key is associated with the device fingerprint for lookup during token validation.
+message RegisterDeviceSigningKeyRequest {
+  string device_fingerprint_hash = 1;  // SHA256 hash of device fingerprint
+  string signing_key = 2;              // Base64-encoded M2M signing key (32 bytes)
+  string instance_id = 3;              // Optional: instance ID if activated
+}
+
+// RegisterDeviceSigningKeyResponse confirms the signing key was registered
+message RegisterDeviceSigningKeyResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// =============================================================================
+// Plan Tier Update Messages (for billing service to notify of plan changes)
+// =============================================================================
+
+// UpdateInstancePlanRequest updates the plan tier for an instance
+// Called by billing service when a subscription is upgraded/downgraded
+message UpdateInstancePlanRequest {
+  string organization_id = 1;       // Organization ID to find instances
+  string plan_tier = 2;             // New plan tier (free, basic, pro, enterprise)
+  string billing_period = 3;        // monthly or yearly
+}
+
+// UpdateInstancePlanResponse confirms the plan update
+message UpdateInstancePlanResponse {
+  bool success = 1;
+  string message = 2;
+  int32 instances_updated = 3;      // Number of instances updated
+}
+
+// =============================================================================
+// Self-Service License Release Messages
+// =============================================================================
+
+// ReleaseInstanceRequest allows a user to release a license from an instance
+// This enables self-service license transfer to a new server/container
+message ReleaseInstanceRequest {
+  string instance_id = 1;           // The instance to release
+  string tenant_id = 2;             // Organization/tenant ID for authorization
+}
+
+// ReleaseInstanceResponse confirms the release and provides a new activation token
+message ReleaseInstanceResponse {
+  bool success = 1;
+  string message = 2;
+  string activation_token = 3;      // New activation token for activating a new instance
+  google.protobuf.Timestamp expires_at = 4; // When the new token expires
+}
+
+// GetInstancesByTenantRequest retrieves all instances for an organization
+// Used by cloud portal to display license management page
+message GetInstancesByTenantRequest {
+  string tenant_id = 1;
+}
+
+// InstanceSummary provides a summary of an instance for the licenses page
+message InstanceSummary {
+  string instance_id = 1;
+  string plan_tier = 2;
+  string status = 3;                // active, released, revoked, expired
+  google.protobuf.Timestamp activated_at = 4;
+  google.protobuf.Timestamp released_at = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  string device_fingerprint_prefix = 7;  // First 8 chars of fingerprint for display
+}
+
+// GetInstancesByTenantResponse returns all instances for the tenant
+message GetInstancesByTenantResponse {
+  repeated InstanceSummary instances = 1;
+}

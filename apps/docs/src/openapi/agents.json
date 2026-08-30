@@ -1,0 +1,7189 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "everstack/agents/v1/agents_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "AgentsService"
+    }
+  ],
+  "paths": {
+    "/v1/agent-triggers/{id}": {
+      "get": {
+        "operationId": "AgentsService_GetAgentTrigger",
+        "responses": {
+          "200": {
+            "description": "Get a trigger by ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetAgentTriggerResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      },
+      "delete": {
+        "operationId": "AgentsService_DeleteAgentTrigger",
+        "responses": {
+          "200": {
+            "description": "Delete a trigger",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteAgentTriggerResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      },
+      "patch": {
+        "operationId": "AgentsService_UpdateAgentTrigger",
+        "responses": {
+          "200": {
+            "description": "Update a trigger",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1UpdateAgentTriggerResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceUpdateAgentTriggerBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agent-triggers/{id}/test": {
+      "post": {
+        "operationId": "AgentsService_TestAgentTrigger",
+        "responses": {
+          "200": {
+            "description": "Test fire a trigger with a synthetic payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1TestAgentTriggerResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceTestAgentTriggerBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agent-triggers/{triggerId}/executions": {
+      "get": {
+        "operationId": "AgentsService_ListAgentTriggerExecutions",
+        "responses": {
+          "200": {
+            "description": "List execution history for a trigger",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListAgentTriggerExecutionsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "triggerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents": {
+      "get": {
+        "operationId": "AgentsService_ListAgents",
+        "responses": {
+          "200": {
+            "description": "List all agents for tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListAgentsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "enabled",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "includeHidden",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "AGENT_MODE_UNSPECIFIED",
+                "AGENT_MODE_PRIMARY",
+                "AGENT_MODE_SUBAGENT"
+              ],
+              "default": "AGENT_MODE_UNSPECIFIED"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      },
+      "post": {
+        "summary": "Agent CRUD",
+        "operationId": "AgentsService_CreateAgent",
+        "responses": {
+          "200": {
+            "description": "Create a new agent definition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreateAgentResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateAgentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/import/opencode": {
+      "post": {
+        "operationId": "AgentsService_ImportAgentFromOpencode",
+        "responses": {
+          "200": {
+            "description": "Import an Opencode-compatible agent payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ImportAgentFromOpencodeResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ImportAgentFromOpencodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/memories/{memoryId}": {
+      "delete": {
+        "operationId": "AgentsService_DeleteAgentMemory",
+        "responses": {
+          "200": {
+            "description": "Delete a persistent memory entry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteAgentMemoryResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "memoryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      },
+      "patch": {
+        "operationId": "AgentsService_UpdateAgentMemory",
+        "responses": {
+          "200": {
+            "description": "Update a persistent memory entry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1UpdateAgentMemoryResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "memoryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceUpdateAgentMemoryBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/memories/{memoryId}/deactivate": {
+      "post": {
+        "operationId": "AgentsService_DeactivateAgentMemory",
+        "responses": {
+          "200": {
+            "description": "Soft-delete (deactivate) a persistent memory entry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeactivateAgentMemoryResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "memoryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceDeactivateAgentMemoryBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/memory/setup": {
+      "post": {
+        "summary": "Memory Setup",
+        "operationId": "AgentsService_SetupMemory",
+        "responses": {
+          "200": {
+            "description": "Setup memory backend (pgvector extension + embeddings)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1SetupMemoryResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1SetupMemoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/reviews": {
+      "get": {
+        "operationId": "AgentsService_ListReviews",
+        "responses": {
+          "200": {
+            "description": "List approval reviews",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListReviewsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APPROVAL_REVIEW_STATUS_UNSPECIFIED",
+                "APPROVAL_REVIEW_STATUS_PENDING",
+                "APPROVAL_REVIEW_STATUS_APPROVED",
+                "APPROVAL_REVIEW_STATUS_DENIED",
+                "APPROVAL_REVIEW_STATUS_EXPIRED",
+                "APPROVAL_REVIEW_STATUS_CANCELLED"
+              ],
+              "default": "APPROVAL_REVIEW_STATUS_UNSPECIFIED"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/reviews/{reviewId}": {
+      "get": {
+        "operationId": "AgentsService_GetReview",
+        "responses": {
+          "200": {
+            "description": "Get an approval review by ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetReviewResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "reviewId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/reviews/{reviewId}/submit": {
+      "post": {
+        "summary": "HITL Approval Gate",
+        "operationId": "AgentsService_SubmitReview",
+        "responses": {
+          "200": {
+            "description": "Submit a review decision for a pending approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1SubmitReviewResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "reviewId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceSubmitReviewBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/sessions": {
+      "get": {
+        "operationId": "AgentsService_ListSessions",
+        "responses": {
+          "200": {
+            "description": "List sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListSessionsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agentId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SESSION_STATUS_UNSPECIFIED",
+                "SESSION_STATUS_CREATED",
+                "SESSION_STATUS_RUNNING",
+                "SESSION_STATUS_WAITING_FOR_INPUT",
+                "SESSION_STATUS_WAITING_FOR_APPROVAL",
+                "SESSION_STATUS_COMPLETED",
+                "SESSION_STATUS_FAILED",
+                "SESSION_STATUS_CANCELLED"
+              ],
+              "default": "SESSION_STATUS_UNSPECIFIED"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      },
+      "post": {
+        "summary": "Session management",
+        "operationId": "AgentsService_CreateSession",
+        "responses": {
+          "200": {
+            "description": "Create a new agent session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreateSessionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/sessions/{id}": {
+      "get": {
+        "operationId": "AgentsService_GetSession",
+        "responses": {
+          "200": {
+            "description": "Get session by ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetSessionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/sessions/{sessionId}/cancel": {
+      "post": {
+        "operationId": "AgentsService_CancelSession",
+        "responses": {
+          "200": {
+            "description": "Cancel a running session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CancelSessionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceCancelSessionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/sessions/{sessionId}/complete": {
+      "post": {
+        "operationId": "AgentsService_CompleteSession",
+        "responses": {
+          "200": {
+            "description": "Explicitly complete a session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CompleteSessionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceCompleteSessionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/sessions/{sessionId}/spawn-nodes": {
+      "get": {
+        "operationId": "AgentsService_ListSpawnNodes",
+        "responses": {
+          "200": {
+            "description": "List spawn nodes for a session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListSpawnNodesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/sessions/{sessionId}/steer": {
+      "post": {
+        "operationId": "AgentsService_SteerSession",
+        "responses": {
+          "200": {
+            "description": "Inject a message into a running session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1SteerSessionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceSteerSessionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/sessions/{sessionId}/turns": {
+      "post": {
+        "summary": "Runtime",
+        "operationId": "AgentsService_RunTurn",
+        "responses": {
+          "200": {
+            "description": "Run a single turn in an agent session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RunTurnResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceRunTurnBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/sessions/{sessionId}/turns/stream": {
+      "post": {
+        "summary": "Streaming runtime",
+        "operationId": "AgentsService_RunTurnStream",
+        "responses": {
+          "200": {
+            "description": "Run a turn with streaming events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {
+                      "$ref": "#/components/schemas/v1AgentEvent"
+                    },
+                    "error": {
+                      "$ref": "#/components/schemas/rpcStatus"
+                    }
+                  },
+                  "title": "Stream result of v1AgentEvent"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceRunTurnStreamBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/spawn-trees/{treeId}": {
+      "get": {
+        "summary": "Spawn Tree",
+        "operationId": "AgentsService_GetSpawnTree",
+        "responses": {
+          "200": {
+            "description": "Get all nodes in a spawn tree",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetSpawnTreeResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "treeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/{agentId}/deploy": {
+      "post": {
+        "operationId": "AgentsService_DeployAgent",
+        "responses": {
+          "200": {
+            "description": "Deploy an agent as an API endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeployAgentResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceDeployAgentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/{agentId}/deployments": {
+      "get": {
+        "operationId": "AgentsService_ListDeployments",
+        "responses": {
+          "200": {
+            "description": "List deployments for an agent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListDeploymentsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/{agentId}/memories": {
+      "get": {
+        "operationId": "AgentsService_ListAgentMemories",
+        "responses": {
+          "200": {
+            "description": "List persistent memories for an agent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListAgentMemoriesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "memoryType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "activeOnly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      },
+      "post": {
+        "operationId": "AgentsService_CreateAgentMemory",
+        "responses": {
+          "200": {
+            "description": "Manually create a persistent memory entry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreateAgentMemoryResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceCreateAgentMemoryBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/{agentId}/triggers": {
+      "get": {
+        "operationId": "AgentsService_ListAgentTriggers",
+        "responses": {
+          "200": {
+            "description": "List triggers for an agent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListAgentTriggersResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      },
+      "post": {
+        "operationId": "AgentsService_CreateAgentTrigger",
+        "responses": {
+          "200": {
+            "description": "Create a trigger for an agent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreateAgentTriggerResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceCreateAgentTriggerBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/{id}": {
+      "get": {
+        "operationId": "AgentsService_GetAgent",
+        "responses": {
+          "200": {
+            "description": "Get agent by ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetAgentResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      },
+      "delete": {
+        "operationId": "AgentsService_DeleteAgent",
+        "responses": {
+          "200": {
+            "description": "Delete agent definition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteAgentResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      },
+      "patch": {
+        "operationId": "AgentsService_UpdateAgent",
+        "responses": {
+          "200": {
+            "description": "Update agent definition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1UpdateAgentResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceUpdateAgentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/agents/{id}/export/opencode": {
+      "get": {
+        "operationId": "AgentsService_ExportAgentToOpencode",
+        "responses": {
+          "200": {
+            "description": "Export an agent as an Opencode-compatible payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ExportAgentToOpencodeResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/deployments/keys/{keyId}": {
+      "delete": {
+        "operationId": "AgentsService_RevokeDeploymentKey",
+        "responses": {
+          "200": {
+            "description": "Revoke an API key for a deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RevokeDeploymentKeyResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "keyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/deployments/{deploymentId}/invocations": {
+      "get": {
+        "operationId": "AgentsService_ListDeploymentInvocations",
+        "responses": {
+          "200": {
+            "description": "List invocation history for a deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListDeploymentInvocationsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "deploymentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/deployments/{deploymentId}/keys": {
+      "get": {
+        "operationId": "AgentsService_ListDeploymentKeys",
+        "responses": {
+          "200": {
+            "description": "List API keys for a deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListDeploymentKeysResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "deploymentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      },
+      "post": {
+        "operationId": "AgentsService_CreateDeploymentKey",
+        "responses": {
+          "200": {
+            "description": "Create an API key for a deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreateDeploymentKeyResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "deploymentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceCreateDeploymentKeyBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/deployments/{id}": {
+      "get": {
+        "operationId": "AgentsService_GetDeployment",
+        "responses": {
+          "200": {
+            "description": "Get a deployment by ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetDeploymentResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      },
+      "patch": {
+        "operationId": "AgentsService_UpdateDeployment",
+        "responses": {
+          "200": {
+            "description": "Update a deployment's status or limits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1UpdateDeploymentResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceUpdateDeploymentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/integrations/github/installations": {
+      "get": {
+        "operationId": "AgentsService_ListGitHubInstallations",
+        "responses": {
+          "200": {
+            "description": "List active GitHub App installations for tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListGitHubInstallationsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/integrations/github/installations/link": {
+      "post": {
+        "operationId": "AgentsService_LinkGitHubInstallation",
+        "responses": {
+          "200": {
+            "description": "Link a pending GitHub App installation to the current tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1LinkGitHubInstallationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1LinkGitHubInstallationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/integrations/github/installations/{installationId}": {
+      "delete": {
+        "operationId": "AgentsService_RemoveGitHubInstallation",
+        "responses": {
+          "200": {
+            "description": "Unlink a GitHub App installation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RemoveGitHubInstallationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/integrations/github/installations/{installationId}/repos": {
+      "get": {
+        "operationId": "AgentsService_ListGitHubRepositories",
+        "responses": {
+          "200": {
+            "description": "Paginated repo listing with search for an installation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListGitHubRepositoriesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/integrations/github/installations/{installationId}/repos/{owner}/{repo}/branches": {
+      "get": {
+        "operationId": "AgentsService_ListGitHubBranches",
+        "responses": {
+          "200": {
+            "description": "List branches for a specific repo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListGitHubBranchesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox": {
+      "post": {
+        "summary": "Sandbox Management",
+        "operationId": "AgentsService_CreateSandbox",
+        "responses": {
+          "200": {
+            "description": "Create a new sandbox instance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreateSandboxResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateSandboxRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/crons": {
+      "get": {
+        "operationId": "AgentsService_ListCrons",
+        "responses": {
+          "200": {
+            "description": "List sandbox cron schedules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListCronsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sandboxId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      },
+      "post": {
+        "summary": "Crons",
+        "operationId": "AgentsService_CreateCron",
+        "responses": {
+          "200": {
+            "description": "Create a sandbox cron schedule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreateCronResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateCronRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/crons/{id}": {
+      "delete": {
+        "operationId": "AgentsService_DeleteCron",
+        "responses": {
+          "200": {
+            "description": "Delete a sandbox cron schedule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteCronResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      },
+      "patch": {
+        "operationId": "AgentsService_UpdateCron",
+        "responses": {
+          "200": {
+            "description": "Update a sandbox cron schedule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1UpdateCronResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceUpdateCronBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/instances": {
+      "get": {
+        "operationId": "AgentsService_ListSandboxInstances",
+        "responses": {
+          "200": {
+            "description": "List sandbox instances",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListSandboxInstancesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SANDBOX_STATUS_UNSPECIFIED",
+                "SANDBOX_STATUS_PENDING",
+                "SANDBOX_STATUS_RUNNING",
+                "SANDBOX_STATUS_STOPPED",
+                "SANDBOX_STATUS_FAILED"
+              ],
+              "default": "SANDBOX_STATUS_UNSPECIFIED"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/instances/{sandboxId}": {
+      "get": {
+        "operationId": "AgentsService_GetSandboxInstance",
+        "responses": {
+          "200": {
+            "description": "Get a sandbox instance by ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetSandboxInstanceResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sandboxId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/overview": {
+      "get": {
+        "operationId": "AgentsService_GetSandboxOverview",
+        "responses": {
+          "200": {
+            "description": "Get sandbox subsystem overview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetSandboxOverviewResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/recreate": {
+      "post": {
+        "operationId": "AgentsService_RecreateSandbox",
+        "responses": {
+          "200": {
+            "description": "Recreate a sandbox from an expired instance's config",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreateSandboxResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1RecreateSandboxRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/templates": {
+      "get": {
+        "summary": "Sandbox Templates (read-only catalog)",
+        "operationId": "AgentsService_ListSandboxTemplates",
+        "responses": {
+          "200": {
+            "description": "List available sandbox templates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListSandboxTemplatesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/templates/{templateId}": {
+      "get": {
+        "operationId": "AgentsService_GetSandboxTemplate",
+        "responses": {
+          "200": {
+            "description": "Get a sandbox template by ID or slug",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetSandboxTemplateResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "templateId",
+            "description": "ID or slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/triggers": {
+      "get": {
+        "summary": "Triggers (shared history)",
+        "operationId": "AgentsService_ListTriggers",
+        "responses": {
+          "200": {
+            "description": "List trigger execution history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListTriggersResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sandboxId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "triggerType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/webhooks": {
+      "get": {
+        "operationId": "AgentsService_ListWebhooks",
+        "responses": {
+          "200": {
+            "description": "List sandbox webhooks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListWebhooksResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sandboxId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      },
+      "post": {
+        "summary": "Webhooks",
+        "operationId": "AgentsService_CreateWebhook",
+        "responses": {
+          "200": {
+            "description": "Create a sandbox webhook",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreateWebhookResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateWebhookRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/webhooks/{id}": {
+      "delete": {
+        "operationId": "AgentsService_DeleteWebhook",
+        "responses": {
+          "200": {
+            "description": "Delete a sandbox webhook",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteWebhookResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/{sandboxId}/events": {
+      "get": {
+        "summary": "Sandbox Events",
+        "operationId": "AgentsService_ListSandboxEvents",
+        "responses": {
+          "200": {
+            "description": "List lifecycle events for a sandbox",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListSandboxEventsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sandboxId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/{sandboxId}/executions": {
+      "get": {
+        "operationId": "AgentsService_ListSandboxExecutions",
+        "responses": {
+          "200": {
+            "description": "List executions for a sandbox",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListSandboxExecutionsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sandboxId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/{sandboxId}/revive": {
+      "post": {
+        "operationId": "AgentsService_ReviveSandbox",
+        "responses": {
+          "200": {
+            "description": "Revive a stopped sandbox from its workspace snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ReviveSandboxResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sandboxId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceReviveSandboxBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/{sandboxId}/ssh/access": {
+      "post": {
+        "operationId": "AgentsService_GrantSandboxSSHAccess",
+        "responses": {
+          "200": {
+            "description": "Grant a user SSH access to a sandbox",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GrantSandboxSSHAccessResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sandboxId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceGrantSandboxSSHAccessBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/{sandboxId}/ssh/access/{userId}": {
+      "delete": {
+        "operationId": "AgentsService_RevokeSandboxSSHAccess",
+        "responses": {
+          "200": {
+            "description": "Revoke SSH access from a sandbox",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RevokeSandboxSSHAccessResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sandboxId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/{sandboxId}/ssh/info": {
+      "get": {
+        "operationId": "AgentsService_GetSandboxSSHInfo",
+        "responses": {
+          "200": {
+            "description": "Get SSH connection info for a sandbox",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetSandboxSSHInfoResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sandboxId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/{sandboxId}/stop": {
+      "post": {
+        "operationId": "AgentsService_StopSandbox",
+        "responses": {
+          "200": {
+            "description": "Stop a running sandbox, preserving workspace snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1StopSandboxResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sandboxId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceStopSandboxBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/{sandboxId}/terminate": {
+      "post": {
+        "operationId": "AgentsService_TerminateSandbox",
+        "responses": {
+          "200": {
+            "description": "Permanently destroy a sandbox (non-revivable)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1TerminateSandboxResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sandboxId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceTerminateSandboxBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/{sessionId}": {
+      "delete": {
+        "operationId": "AgentsService_DestroySandbox",
+        "responses": {
+          "200": {
+            "description": "Destroy a sandbox instance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DestroySandboxResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/{sessionId}/ports": {
+      "get": {
+        "operationId": "AgentsService_ListExposedPorts",
+        "responses": {
+          "200": {
+            "description": "List exposed ports for a sandbox",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListExposedPortsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      },
+      "post": {
+        "summary": "Port Exposure",
+        "operationId": "AgentsService_ExposePort",
+        "responses": {
+          "200": {
+            "description": "Expose a sandbox port via subdomain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ExposePortResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentsServiceExposePortBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/{sessionId}/ports/detect": {
+      "get": {
+        "operationId": "AgentsService_DetectListeningPorts",
+        "responses": {
+          "200": {
+            "description": "Auto-detect listening ports inside a sandbox",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DetectListeningPortsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/{sessionId}/ports/{port}": {
+      "delete": {
+        "operationId": "AgentsService_UnexposePort",
+        "responses": {
+          "200": {
+            "description": "Close an exposed port",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1UnexposePortResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "port",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/sandbox/{sessionId}/stats": {
+      "get": {
+        "operationId": "AgentsService_GetSandboxStats",
+        "responses": {
+          "200": {
+            "description": "Get live stats for a sandbox",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetSandboxStatsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/settings/ssh-keys": {
+      "get": {
+        "operationId": "AgentsService_ListSSHKeys",
+        "responses": {
+          "200": {
+            "description": "List user's SSH keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListSSHKeysResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      },
+      "post": {
+        "operationId": "AgentsService_AddSSHKey",
+        "responses": {
+          "200": {
+            "description": "Upload a user's public SSH key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1AddSSHKeyResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1AddSSHKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["AgentsService"]
+      }
+    },
+    "/v1/settings/ssh-keys/{keyId}": {
+      "delete": {
+        "operationId": "AgentsService_DeleteSSHKey",
+        "responses": {
+          "200": {
+            "description": "Remove an SSH key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteSSHKeyResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "keyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["AgentsService"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AgentsServiceCancelSessionBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentsServiceCompleteSessionBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentsServiceCreateAgentMemoryBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "memoryType": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "factKey": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number",
+            "format": "float"
+          },
+          "scope": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentsServiceCreateAgentTriggerBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "triggerType": {
+            "type": "string"
+          },
+          "cronExpression": {
+            "type": "string"
+          },
+          "cronTimezone": {
+            "type": "string"
+          },
+          "eventSourceAgentId": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "eventFilter": {
+            "type": "object"
+          },
+          "inputTemplate": {
+            "type": "string"
+          },
+          "maxRetries": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "retryDelaySeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxConcurrent": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "title": "Create Agent Trigger"
+      },
+      "AgentsServiceCreateDeploymentKeyBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "title": "Deployment Keys"
+      },
+      "AgentsServiceDeactivateAgentMemoryBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentsServiceDeployAgentBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "changelog": {
+            "type": "string"
+          },
+          "rateLimitRpm": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxConcurrentSessions": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxTurnsPerSession": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sessionTimeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "disableSessionTracking": {
+            "type": "boolean",
+            "title": "when true, API invocations are private (no agent_sessions entries)"
+          }
+        },
+        "title": "Deploy Agent"
+      },
+      "AgentsServiceExposePortBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "protocol": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentsServiceGrantSandboxSSHAccessBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "grantedBy": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentsServiceReviveSandboxBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentsServiceRunTurnBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "userInput": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentsServiceRunTurnStreamBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "userInput": {
+            "type": "string"
+          },
+          "enableStreaming": {
+            "type": "boolean"
+          },
+          "enableWebSearch": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AgentsServiceSteerSessionBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "title": "\"user\" or \"system\""
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentsServiceStopSandboxBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentsServiceSubmitReviewBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "action": {
+            "$ref": "#/components/schemas/v1ApprovalAction"
+          },
+          "decisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ToolCallDecision"
+            },
+            "title": "v2: per-tool override"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "resolvedBy": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentsServiceTerminateSandboxBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentsServiceTestAgentTriggerBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "testPayload": {
+            "type": "object"
+          }
+        },
+        "title": "Test Agent Trigger"
+      },
+      "AgentsServiceUpdateAgentBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "systemPrompt": {
+            "type": "string"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "config": {
+            "type": "object"
+          },
+          "maxTurns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxToolCallsPerTurn": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/v1AgentMode"
+          },
+          "maxSteps": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "taskPermissionMode": {
+            "$ref": "#/components/schemas/v1TaskPermissionMode"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "color": {
+            "type": "string"
+          },
+          "workingDirectory": {
+            "type": "string"
+          },
+          "mentionAlias": {
+            "type": "string"
+          },
+          "executionPolicy": {
+            "$ref": "#/components/schemas/v1AgentExecutionPolicy"
+          },
+          "memoryConfig": {
+            "$ref": "#/components/schemas/v1AgentMemoryConfig"
+          },
+          "clearTools": {
+            "type": "boolean",
+            "description": "Explicitly clears tools. Repeated fields do not preserve presence when encoded empty, so clients cannot otherwise distinguish clear from omit."
+          }
+        }
+      },
+      "AgentsServiceUpdateAgentMemoryBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "factKey": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number",
+            "format": "float"
+          }
+        }
+      },
+      "AgentsServiceUpdateAgentTriggerBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "cronExpression": {
+            "type": "string"
+          },
+          "cronTimezone": {
+            "type": "string"
+          },
+          "eventSourceAgentId": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "eventFilter": {
+            "type": "object"
+          },
+          "inputTemplate": {
+            "type": "string"
+          },
+          "maxRetries": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "retryDelaySeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxConcurrent": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "title": "Update Agent Trigger"
+      },
+      "AgentsServiceUpdateCronBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "schedule": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "AgentsServiceUpdateDeploymentBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "rateLimitRpm": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxConcurrentSessions": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxTurnsPerSession": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sessionTimeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "disableSessionTracking": {
+            "type": "boolean"
+          }
+        },
+        "title": "Update Deployment"
+      },
+      "protobufAny": {
+        "type": "object",
+        "properties": {
+          "@type": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": {}
+      },
+      "protobufNullValue": {
+        "type": "string",
+        "enum": ["NULL_VALUE"],
+        "default": "NULL_VALUE",
+        "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+      },
+      "rpcStatus": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/protobufAny"
+            }
+          }
+        }
+      },
+      "v1AddSSHKeyRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "publicKey": {
+            "type": "string"
+          }
+        }
+      },
+      "v1AddSSHKeyResponse": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/v1SSHKey"
+          }
+        }
+      },
+      "v1AgentDefinition": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "systemPrompt": {
+            "type": "string"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "config": {
+            "type": "object",
+            "description": "temperature, max_tokens, etc."
+          },
+          "maxTurns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxToolCallsPerTurn": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/v1AgentMode"
+          },
+          "maxSteps": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "taskPermissionMode": {
+            "$ref": "#/components/schemas/v1TaskPermissionMode"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "color": {
+            "type": "string"
+          },
+          "workingDirectory": {
+            "type": "string"
+          },
+          "mentionAlias": {
+            "type": "string"
+          },
+          "executionPolicy": {
+            "$ref": "#/components/schemas/v1AgentExecutionPolicy"
+          },
+          "memoryConfig": {
+            "$ref": "#/components/schemas/v1AgentMemoryConfig"
+          }
+        },
+        "description": "AgentDefinition is the blueprint/config for an agent."
+      },
+      "v1AgentDeployment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "agentId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "changelog": {
+            "type": "string"
+          },
+          "rateLimitRpm": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxConcurrentSessions": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxTurnsPerSession": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sessionTimeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deployedBy": {
+            "type": "string"
+          },
+          "disableSessionTracking": {
+            "type": "boolean",
+            "title": "when true, API invocations do NOT create agent_sessions entries"
+          }
+        }
+      },
+      "v1AgentEvent": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "turnNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "textDelta": {
+            "type": "string"
+          },
+          "toolCallId": {
+            "type": "string"
+          },
+          "toolName": {
+            "type": "string"
+          },
+          "toolArgs": {
+            "type": "string"
+          },
+          "toolResult": {
+            "type": "string"
+          },
+          "toolSuccess": {
+            "type": "boolean"
+          },
+          "toolDurationMs": {
+            "type": "string",
+            "format": "int64"
+          },
+          "finishReason": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "promptTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completionTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "turn": {
+            "$ref": "#/components/schemas/v1AgentSessionTurn"
+          },
+          "reviewId": {
+            "type": "string",
+            "title": "HITL approval gate fields"
+          },
+          "pendingToolCalls": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1PendingToolCall"
+            }
+          },
+          "approvalAction": {
+            "type": "string"
+          },
+          "sandboxId": {
+            "type": "string",
+            "title": "Sandbox execution fields"
+          },
+          "sandboxExitCode": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sandboxDurationMs": {
+            "type": "string",
+            "format": "int64"
+          },
+          "fallbackFromModel": {
+            "type": "string",
+            "title": "Fallback fields"
+          },
+          "fallbackToModel": {
+            "type": "string"
+          },
+          "fallbackAttempt": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "userInputId": {
+            "type": "string",
+            "title": "User input (ask_user) fields"
+          }
+        }
+      },
+      "v1AgentExecutionPolicy": {
+        "type": "object",
+        "properties": {
+          "taskPermissionMode": {
+            "$ref": "#/components/schemas/v1TaskPermissionMode"
+          },
+          "maxSteps": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workingDirectory": {
+            "type": "string"
+          }
+        },
+        "description": "AgentExecutionPolicy is a typed policy container for runtime controls."
+      },
+      "v1AgentMemoryConfig": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "scope": {
+            "type": "string",
+            "title": "\"agent\" | \"user\" | \"global\""
+          },
+          "autoRetrieve": {
+            "type": "boolean"
+          },
+          "autoRetrieveTopK": {
+            "type": "integer",
+            "format": "int32",
+            "title": "default: 10"
+          },
+          "autoExtract": {
+            "type": "boolean"
+          }
+        },
+        "description": "AgentMemoryConfig configures persistent memory for an agent."
+      },
+      "v1AgentMemoryEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "agentId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "memoryType": {
+            "type": "string",
+            "title": "fact | instruction | session_summary | document"
+          },
+          "content": {
+            "type": "string"
+          },
+          "factKey": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number",
+            "format": "float"
+          },
+          "source": {
+            "type": "string",
+            "title": "auto_extracted | user_explicit | tool_stored | consolidation"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "accessCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sourceSessionId": {
+            "type": "string"
+          },
+          "sourceTurnNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "supersededBy": {
+            "type": "string"
+          },
+          "lastAccessedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "AgentMemoryEntry represents a single persistent memory entry."
+      },
+      "v1AgentMode": {
+        "type": "string",
+        "enum": [
+          "AGENT_MODE_UNSPECIFIED",
+          "AGENT_MODE_PRIMARY",
+          "AGENT_MODE_SUBAGENT"
+        ],
+        "default": "AGENT_MODE_UNSPECIFIED",
+        "description": "AgentMode controls whether an agent is user-facing or delegation-only."
+      },
+      "v1AgentSession": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "agentId": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/v1SessionStatus"
+          },
+          "turnCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "turns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1AgentSessionTurn"
+            }
+          }
+        },
+        "description": "AgentSession is an execution instance of an agent."
+      },
+      "v1AgentSessionTurn": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "turnNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "$ref": "#/components/schemas/v1TurnStatus"
+          },
+          "userInput": {
+            "type": "string"
+          },
+          "assistantOutput": {
+            "type": "string"
+          },
+          "toolCalls": {
+            "type": "string",
+            "title": "JSON-encoded tool calls"
+          },
+          "promptTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completionTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "latencyMs": {
+            "type": "string",
+            "format": "int64"
+          },
+          "error": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "AgentSessionTurn is a single conversation turn within a session."
+      },
+      "v1AgentTrigger": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "agentId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "triggerType": {
+            "type": "string",
+            "title": "cron | webhook | event"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "cronExpression": {
+            "type": "string"
+          },
+          "cronTimezone": {
+            "type": "string"
+          },
+          "webhookPath": {
+            "type": "string"
+          },
+          "eventSourceAgentId": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "inputTemplate": {
+            "type": "string"
+          },
+          "maxRetries": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxConcurrent": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "circuitState": {
+            "type": "string"
+          },
+          "consecutiveFailures": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "retryDelaySeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "eventFilter": {
+            "type": "object"
+          }
+        }
+      },
+      "v1AgentTriggerExecution": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "triggerId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "inputRendered": {
+            "type": "string"
+          },
+          "outputPreview": {
+            "type": "string"
+          },
+          "errorMessage": {
+            "type": "string"
+          },
+          "attempt": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "durationMs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1ApprovalAction": {
+        "type": "string",
+        "enum": [
+          "APPROVAL_ACTION_UNSPECIFIED",
+          "APPROVAL_ACTION_APPROVE",
+          "APPROVAL_ACTION_DENY"
+        ],
+        "default": "APPROVAL_ACTION_UNSPECIFIED",
+        "description": "ApprovalAction is the action to take on a review."
+      },
+      "v1ApprovalReview": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "agentId": {
+            "type": "string"
+          },
+          "turnNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "iteration": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "$ref": "#/components/schemas/v1ApprovalReviewStatus"
+          },
+          "toolCalls": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1PendingToolCall"
+            }
+          },
+          "decisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ToolCallDecision"
+            }
+          },
+          "defaultAction": {
+            "type": "string"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resolvedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resolvedBy": {
+            "type": "string"
+          },
+          "resolutionReason": {
+            "type": "string"
+          }
+        },
+        "description": "ApprovalReview represents a HITL approval review for tool calls.\nV1 is single-instance; multi-instance via Redis pub/sub is v2."
+      },
+      "v1ApprovalReviewStatus": {
+        "type": "string",
+        "enum": [
+          "APPROVAL_REVIEW_STATUS_UNSPECIFIED",
+          "APPROVAL_REVIEW_STATUS_PENDING",
+          "APPROVAL_REVIEW_STATUS_APPROVED",
+          "APPROVAL_REVIEW_STATUS_DENIED",
+          "APPROVAL_REVIEW_STATUS_EXPIRED",
+          "APPROVAL_REVIEW_STATUS_CANCELLED"
+        ],
+        "default": "APPROVAL_REVIEW_STATUS_UNSPECIFIED",
+        "description": "ApprovalReviewStatus tracks the lifecycle of an approval review."
+      },
+      "v1CancelSessionResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1CompleteSessionResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1CreateAgentMemoryResponse": {
+        "type": "object",
+        "properties": {
+          "memory": {
+            "$ref": "#/components/schemas/v1AgentMemoryEntry"
+          }
+        }
+      },
+      "v1CreateAgentRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "systemPrompt": {
+            "type": "string"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "config": {
+            "type": "object"
+          },
+          "maxTurns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxToolCallsPerTurn": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/v1AgentMode"
+          },
+          "maxSteps": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "taskPermissionMode": {
+            "$ref": "#/components/schemas/v1TaskPermissionMode"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "color": {
+            "type": "string"
+          },
+          "workingDirectory": {
+            "type": "string"
+          },
+          "mentionAlias": {
+            "type": "string"
+          },
+          "executionPolicy": {
+            "$ref": "#/components/schemas/v1AgentExecutionPolicy"
+          },
+          "memoryConfig": {
+            "$ref": "#/components/schemas/v1AgentMemoryConfig"
+          }
+        }
+      },
+      "v1CreateAgentResponse": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "$ref": "#/components/schemas/v1AgentDefinition"
+          }
+        }
+      },
+      "v1CreateAgentTriggerResponse": {
+        "type": "object",
+        "properties": {
+          "trigger": {
+            "$ref": "#/components/schemas/v1AgentTrigger"
+          },
+          "webhookSecret": {
+            "type": "string",
+            "title": "only set for webhook triggers (raw secret, shown once)"
+          },
+          "webhookUrl": {
+            "type": "string",
+            "title": "full URL for webhook triggers"
+          }
+        }
+      },
+      "v1CreateCronRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "sandboxId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "schedule": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "workDir": {
+            "type": "string"
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "autoRecreate": {
+            "type": "boolean"
+          },
+          "sandboxConfig": {
+            "type": "object"
+          }
+        }
+      },
+      "v1CreateCronResponse": {
+        "type": "object",
+        "properties": {
+          "cron": {
+            "$ref": "#/components/schemas/v1SandboxCron"
+          }
+        }
+      },
+      "v1CreateDeploymentKeyResponse": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/v1DeploymentKey"
+          },
+          "rawKey": {
+            "type": "string"
+          }
+        }
+      },
+      "v1CreateSandboxRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "cpuLimit": {
+            "type": "number",
+            "format": "double"
+          },
+          "memoryMb": {
+            "type": "string",
+            "format": "int64"
+          },
+          "diskMb": {
+            "type": "string",
+            "format": "int64"
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "networkMode": {
+            "type": "string"
+          },
+          "idleRetentionSeconds": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Idle retention in seconds. 0 means no expiration (pro/enterprise).\nWhen omitted, the server resolves retention from the tenant's plan tier."
+          },
+          "templateId": {
+            "type": "string",
+            "description": "If set, use template config as base. Individual fields override template defaults."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional friendly name for the sandbox."
+          },
+          "gitRepoUrl": {
+            "type": "string",
+            "title": "Git import fields (Phase 2)"
+          },
+          "gitBranch": {
+            "type": "string"
+          },
+          "gitInstallationId": {
+            "type": "string",
+            "format": "int64"
+          },
+          "sshEnabled": {
+            "type": "boolean",
+            "title": "SSH toggle (Phase 4)"
+          }
+        }
+      },
+      "v1CreateSandboxResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "containerId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "backend": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "Friendly name for the sandbox (if set)."
+          }
+        }
+      },
+      "v1CreateSessionRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "agentId": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        }
+      },
+      "v1CreateSessionResponse": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/v1AgentSession"
+          }
+        }
+      },
+      "v1CreateWebhookRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "sandboxId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "workDir": {
+            "type": "string"
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rateLimitRpm": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "autoRecreate": {
+            "type": "boolean"
+          },
+          "sandboxConfig": {
+            "type": "object"
+          }
+        }
+      },
+      "v1CreateWebhookResponse": {
+        "type": "object",
+        "properties": {
+          "webhook": {
+            "$ref": "#/components/schemas/v1SandboxWebhookDef"
+          },
+          "secret": {
+            "type": "string"
+          }
+        }
+      },
+      "v1DeactivateAgentMemoryResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1DeleteAgentMemoryResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1DeleteAgentResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1DeleteAgentTriggerResponse": {
+        "type": "object"
+      },
+      "v1DeleteCronResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1DeleteSSHKeyResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1DeleteWebhookResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1DeployAgentResponse": {
+        "type": "object",
+        "properties": {
+          "deployment": {
+            "$ref": "#/components/schemas/v1AgentDeployment"
+          }
+        }
+      },
+      "v1DeploymentInvocation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "deploymentId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "turns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "promptTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completionTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "durationMs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "errorMessage": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1DeploymentKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "deploymentId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "keyPrefix": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1DestroySandboxResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1DetectListeningPortsResponse": {
+        "type": "object",
+        "properties": {
+          "ports": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1DetectedPort"
+            }
+          }
+        }
+      },
+      "v1DetectedPort": {
+        "type": "object",
+        "properties": {
+          "port": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "protocol": {
+            "type": "string",
+            "title": "\"tcp\" or \"tcp6\""
+          },
+          "address": {
+            "type": "string",
+            "title": "\"0.0.0.0\", \"127.0.0.1\", \"::\""
+          },
+          "pid": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "process": {
+            "type": "string"
+          },
+          "isExposed": {
+            "type": "boolean",
+            "title": "true if already exposed via ExposePort"
+          }
+        }
+      },
+      "v1ExportAgentToOpencodeResponse": {
+        "type": "object",
+        "properties": {
+          "opencodeAgentJson": {
+            "type": "string"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "v1ExposePortResponse": {
+        "type": "object",
+        "properties": {
+          "mapping": {
+            "$ref": "#/components/schemas/v1SandboxPortMapping"
+          }
+        }
+      },
+      "v1GetAgentResponse": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "$ref": "#/components/schemas/v1AgentDefinition"
+          }
+        }
+      },
+      "v1GetAgentTriggerResponse": {
+        "type": "object",
+        "properties": {
+          "trigger": {
+            "$ref": "#/components/schemas/v1AgentTrigger"
+          }
+        }
+      },
+      "v1GetDeploymentResponse": {
+        "type": "object",
+        "properties": {
+          "deployment": {
+            "$ref": "#/components/schemas/v1AgentDeployment"
+          }
+        }
+      },
+      "v1GetReviewResponse": {
+        "type": "object",
+        "properties": {
+          "review": {
+            "$ref": "#/components/schemas/v1ApprovalReview"
+          }
+        }
+      },
+      "v1GetSandboxInstanceResponse": {
+        "type": "object",
+        "properties": {
+          "instance": {
+            "$ref": "#/components/schemas/v1SandboxInstance"
+          }
+        }
+      },
+      "v1GetSandboxOverviewResponse": {
+        "type": "object",
+        "properties": {
+          "overview": {
+            "$ref": "#/components/schemas/v1SandboxOverview"
+          }
+        }
+      },
+      "v1GetSandboxSSHInfoResponse": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "connectionString": {
+            "type": "string"
+          },
+          "host": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hostFingerprint": {
+            "type": "string"
+          }
+        }
+      },
+      "v1GetSandboxStatsResponse": {
+        "type": "object",
+        "properties": {
+          "stats": {
+            "$ref": "#/components/schemas/v1SandboxStats"
+          }
+        }
+      },
+      "v1GetSandboxTemplateResponse": {
+        "type": "object",
+        "properties": {
+          "template": {
+            "$ref": "#/components/schemas/v1SandboxTemplate"
+          }
+        }
+      },
+      "v1GetSessionResponse": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/v1AgentSession"
+          }
+        }
+      },
+      "v1GetSpawnTreeResponse": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SpawnTreeNode"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1GitHubBranch": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "protected": {
+            "type": "boolean"
+          },
+          "commitSha": {
+            "type": "string"
+          }
+        }
+      },
+      "v1GitHubInstallation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "int64"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "installationId": {
+            "type": "string",
+            "format": "int64"
+          },
+          "accountLogin": {
+            "type": "string"
+          },
+          "accountType": {
+            "type": "string"
+          },
+          "appId": {
+            "type": "string",
+            "format": "int64"
+          },
+          "repositorySelection": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "installedBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1GitHubRepository": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "private": {
+            "type": "boolean"
+          },
+          "defaultBranch": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "sizeKb": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "htmlUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "v1GrantSandboxSSHAccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1ImportAgentFromOpencodeRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "opencodeAgentJson": {
+            "type": "string"
+          },
+          "dryRun": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1ImportAgentFromOpencodeResponse": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "agent": {
+            "$ref": "#/components/schemas/v1AgentDefinition"
+          }
+        }
+      },
+      "v1LinkGitHubInstallationRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "installationId": {
+            "type": "string",
+            "format": "int64"
+          }
+        }
+      },
+      "v1LinkGitHubInstallationResponse": {
+        "type": "object",
+        "properties": {
+          "installation": {
+            "$ref": "#/components/schemas/v1GitHubInstallation"
+          }
+        }
+      },
+      "v1ListAgentMemoriesResponse": {
+        "type": "object",
+        "properties": {
+          "memories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1AgentMemoryEntry"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ListAgentTriggerExecutionsResponse": {
+        "type": "object",
+        "properties": {
+          "executions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1AgentTriggerExecution"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ListAgentTriggersResponse": {
+        "type": "object",
+        "properties": {
+          "triggers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1AgentTrigger"
+            }
+          }
+        }
+      },
+      "v1ListAgentsResponse": {
+        "type": "object",
+        "properties": {
+          "agents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1AgentDefinition"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ListCronsResponse": {
+        "type": "object",
+        "properties": {
+          "crons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SandboxCron"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ListDeploymentInvocationsResponse": {
+        "type": "object",
+        "properties": {
+          "invocations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1DeploymentInvocation"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ListDeploymentKeysResponse": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1DeploymentKey"
+            }
+          }
+        }
+      },
+      "v1ListDeploymentsResponse": {
+        "type": "object",
+        "properties": {
+          "deployments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1AgentDeployment"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ListExposedPortsResponse": {
+        "type": "object",
+        "properties": {
+          "ports": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SandboxPortMapping"
+            }
+          }
+        }
+      },
+      "v1ListGitHubBranchesResponse": {
+        "type": "object",
+        "properties": {
+          "branches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1GitHubBranch"
+            }
+          }
+        }
+      },
+      "v1ListGitHubInstallationsResponse": {
+        "type": "object",
+        "properties": {
+          "installations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1GitHubInstallation"
+            }
+          }
+        }
+      },
+      "v1ListGitHubRepositoriesResponse": {
+        "type": "object",
+        "properties": {
+          "repositories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1GitHubRepository"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ListReviewsResponse": {
+        "type": "object",
+        "properties": {
+          "reviews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ApprovalReview"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ListSSHKeysResponse": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SSHKey"
+            }
+          }
+        }
+      },
+      "v1ListSandboxEventsResponse": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SandboxEvent"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ListSandboxExecutionsResponse": {
+        "type": "object",
+        "properties": {
+          "executions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SandboxExecution"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ListSandboxInstancesResponse": {
+        "type": "object",
+        "properties": {
+          "instances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SandboxInstance"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ListSandboxTemplatesResponse": {
+        "type": "object",
+        "properties": {
+          "templates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SandboxTemplate"
+            }
+          }
+        }
+      },
+      "v1ListSessionsResponse": {
+        "type": "object",
+        "properties": {
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1AgentSession"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ListSpawnNodesResponse": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SpawnTreeNode"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ListTriggersResponse": {
+        "type": "object",
+        "properties": {
+          "triggers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SandboxTrigger"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ListWebhooksResponse": {
+        "type": "object",
+        "properties": {
+          "webhooks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SandboxWebhookDef"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1PendingToolCall": {
+        "type": "object",
+        "properties": {
+          "toolCallId": {
+            "type": "string"
+          },
+          "toolName": {
+            "type": "string"
+          },
+          "toolArgs": {
+            "type": "string"
+          }
+        },
+        "description": "PendingToolCall describes a tool call awaiting approval."
+      },
+      "v1RecreateSandboxRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "sandboxId": {
+            "type": "string",
+            "title": "ID of the expired sandbox to clone config from"
+          },
+          "sessionId": {
+            "type": "string",
+            "title": "New session ID (optional, auto-generated if empty)"
+          }
+        }
+      },
+      "v1RemoveGitHubInstallationResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1ReviveSandboxResponse": {
+        "type": "object",
+        "properties": {
+          "instance": {
+            "$ref": "#/components/schemas/v1SandboxInstance"
+          }
+        }
+      },
+      "v1RevokeDeploymentKeyResponse": {
+        "type": "object"
+      },
+      "v1RevokeSandboxSSHAccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1RunTurnResponse": {
+        "type": "object",
+        "properties": {
+          "turn": {
+            "$ref": "#/components/schemas/v1AgentSessionTurn"
+          },
+          "sessionStatus": {
+            "$ref": "#/components/schemas/v1SessionStatus"
+          }
+        }
+      },
+      "v1SSHKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "int64"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "fingerprint": {
+            "type": "string"
+          },
+          "keyType": {
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1SandboxCron": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "int64"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "sandboxId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "schedule": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "workDir": {
+            "type": "string"
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "lastRunAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "nextRunAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "runCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "errorCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lastError": {
+            "type": "string"
+          },
+          "autoRecreate": {
+            "type": "boolean"
+          },
+          "sandboxConfig": {
+            "type": "object"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1SandboxEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "int64"
+          },
+          "sandboxId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "durationMs": {
+            "type": "string",
+            "format": "int64"
+          },
+          "error": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1SandboxExecution": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sandboxId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "toolName": {
+            "type": "string"
+          },
+          "toolCallId": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "exitCode": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "stdout": {
+            "type": "string"
+          },
+          "stderr": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": "string",
+            "format": "int64"
+          },
+          "timedOut": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "SandboxExecution represents a single command execution within a sandbox."
+      },
+      "v1SandboxInstance": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "backend": {
+            "type": "string"
+          },
+          "containerId": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/v1SandboxStatus"
+          },
+          "config": {
+            "type": "object"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "destroyReason": {
+            "type": "string",
+            "description": "destroy_reason indicates why the sandbox was destroyed: manual, expired, error, system."
+          },
+          "name": {
+            "type": "string",
+            "description": "Friendly name for the sandbox (if set)."
+          },
+          "gitRepoUrl": {
+            "type": "string",
+            "title": "Git source info (Phase 2)"
+          },
+          "gitBranch": {
+            "type": "string"
+          },
+          "gitCommitSha": {
+            "type": "string"
+          },
+          "lifecycleState": {
+            "type": "string",
+            "title": "Lifecycle state (Phase 3): running, stopping, stopped, reviving, terminating, terminated, failed"
+          },
+          "revivableUntil": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "stoppedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sshEnabled": {
+            "type": "boolean",
+            "title": "SSH info (Phase 4)"
+          }
+        },
+        "description": "SandboxInstance represents a running sandbox environment."
+      },
+      "v1SandboxOverview": {
+        "type": "object",
+        "properties": {
+          "totalInstances": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "runningInstances": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxSandboxes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "backend": {
+            "type": "string"
+          },
+          "maxCpu": {
+            "type": "number",
+            "format": "double"
+          },
+          "maxMemoryMb": {
+            "type": "string",
+            "format": "int64"
+          },
+          "healthy": {
+            "type": "boolean"
+          },
+          "aggregateCpuPercent": {
+            "type": "number",
+            "format": "double",
+            "description": "Aggregate resource usage across all running instances."
+          },
+          "aggregateMemoryUsage": {
+            "type": "string",
+            "format": "int64"
+          },
+          "aggregateMemoryLimit": {
+            "type": "string",
+            "format": "int64"
+          },
+          "aggregateMemoryPercent": {
+            "type": "number",
+            "format": "double"
+          },
+          "aggregateNetworkRxBytes": {
+            "type": "string",
+            "format": "int64"
+          },
+          "aggregateNetworkTxBytes": {
+            "type": "string",
+            "format": "int64"
+          },
+          "aggregateBlockRead": {
+            "type": "string",
+            "format": "int64"
+          },
+          "aggregateBlockWrite": {
+            "type": "string",
+            "format": "int64"
+          },
+          "aggregatePids": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalExecutions": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Execution metrics from the database."
+          },
+          "avgExecutionDurationMs": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "description": "SandboxOverview provides a summary of the sandbox subsystem."
+      },
+      "v1SandboxPortMapping": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "int64"
+          },
+          "sandboxId": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "protocol": {
+            "type": "string"
+          },
+          "subdomain": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1SandboxStats": {
+        "type": "object",
+        "properties": {
+          "cpuPercent": {
+            "type": "number",
+            "format": "double"
+          },
+          "memoryUsage": {
+            "type": "string",
+            "format": "int64"
+          },
+          "memoryLimit": {
+            "type": "string",
+            "format": "int64"
+          },
+          "memoryPercent": {
+            "type": "number",
+            "format": "double"
+          },
+          "networkRxBytes": {
+            "type": "string",
+            "format": "int64"
+          },
+          "networkTxBytes": {
+            "type": "string",
+            "format": "int64"
+          },
+          "blockRead": {
+            "type": "string",
+            "format": "int64"
+          },
+          "blockWrite": {
+            "type": "string",
+            "format": "int64"
+          },
+          "pids": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "SandboxStats holds a point-in-time resource usage snapshot."
+      },
+      "v1SandboxStatus": {
+        "type": "string",
+        "enum": [
+          "SANDBOX_STATUS_UNSPECIFIED",
+          "SANDBOX_STATUS_PENDING",
+          "SANDBOX_STATUS_RUNNING",
+          "SANDBOX_STATUS_STOPPED",
+          "SANDBOX_STATUS_FAILED"
+        ],
+        "default": "SANDBOX_STATUS_UNSPECIFIED",
+        "description": "SandboxStatus tracks the lifecycle of a sandbox instance."
+      },
+      "v1SandboxTemplate": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "iconColor": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "cpuLimit": {
+            "type": "number",
+            "format": "double"
+          },
+          "memoryMb": {
+            "type": "string",
+            "format": "int64"
+          },
+          "diskMb": {
+            "type": "string",
+            "format": "int64"
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "networkMode": {
+            "type": "string"
+          },
+          "envVars": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "workDir": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "v1SandboxTrigger": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "int64"
+          },
+          "triggerType": {
+            "type": "string"
+          },
+          "triggerId": {
+            "type": "string",
+            "format": "int64"
+          },
+          "sandboxId": {
+            "type": "string"
+          },
+          "executionId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": "string",
+            "format": "int64"
+          },
+          "webhookMethod": {
+            "type": "string"
+          },
+          "webhookHeaders": {
+            "type": "object"
+          },
+          "webhookBody": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1SandboxWebhookDef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "int64"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "sandboxId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "workDir": {
+            "type": "string"
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "rateLimitRpm": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lastTriggeredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "triggerCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "errorCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lastError": {
+            "type": "string"
+          },
+          "autoRecreate": {
+            "type": "boolean"
+          },
+          "sandboxConfig": {
+            "type": "object"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1SessionStatus": {
+        "type": "string",
+        "enum": [
+          "SESSION_STATUS_UNSPECIFIED",
+          "SESSION_STATUS_CREATED",
+          "SESSION_STATUS_RUNNING",
+          "SESSION_STATUS_WAITING_FOR_INPUT",
+          "SESSION_STATUS_WAITING_FOR_APPROVAL",
+          "SESSION_STATUS_COMPLETED",
+          "SESSION_STATUS_FAILED",
+          "SESSION_STATUS_CANCELLED"
+        ],
+        "default": "SESSION_STATUS_UNSPECIFIED",
+        "description": "SessionStatus tracks the lifecycle of an agent session."
+      },
+      "v1SetupMemoryRequest": {
+        "type": "object"
+      },
+      "v1SetupMemoryResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "backend": {
+            "type": "string"
+          }
+        }
+      },
+      "v1SpawnTreeNode": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "treeId": {
+            "type": "string"
+          },
+          "parentNodeId": {
+            "type": "string"
+          },
+          "agentId": {
+            "type": "string"
+          },
+          "depth": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string"
+          },
+          "task": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "promptTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completionTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "executionId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          }
+        },
+        "description": "SpawnTreeNode represents a node in an agent spawn hierarchy."
+      },
+      "v1SteerSessionResponse": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1StopSandboxResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1SubmitReviewResponse": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "review": {
+            "$ref": "#/components/schemas/v1ApprovalReview"
+          }
+        }
+      },
+      "v1TaskPermissionMode": {
+        "type": "string",
+        "enum": [
+          "TASK_PERMISSION_MODE_UNSPECIFIED",
+          "TASK_PERMISSION_MODE_ASK",
+          "TASK_PERMISSION_MODE_ALWAYS",
+          "TASK_PERMISSION_MODE_DENY"
+        ],
+        "default": "TASK_PERMISSION_MODE_UNSPECIFIED",
+        "description": "TaskPermissionMode controls delegation behavior for task/spawn execution."
+      },
+      "v1TerminateSandboxResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1TestAgentTriggerResponse": {
+        "type": "object",
+        "properties": {
+          "execution": {
+            "$ref": "#/components/schemas/v1AgentTriggerExecution"
+          }
+        }
+      },
+      "v1ToolCallDecision": {
+        "type": "object",
+        "properties": {
+          "toolCallId": {
+            "type": "string"
+          },
+          "action": {
+            "$ref": "#/components/schemas/v1ApprovalAction"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "description": "ToolCallDecision is a per-tool approval decision (v2: per-tool overrides)."
+      },
+      "v1TurnStatus": {
+        "type": "string",
+        "enum": [
+          "TURN_STATUS_UNSPECIFIED",
+          "TURN_STATUS_PENDING",
+          "TURN_STATUS_RUNNING",
+          "TURN_STATUS_COMPLETED",
+          "TURN_STATUS_FAILED"
+        ],
+        "default": "TURN_STATUS_UNSPECIFIED",
+        "description": "TurnStatus tracks the lifecycle of a single turn."
+      },
+      "v1UnexposePortResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1UpdateAgentMemoryResponse": {
+        "type": "object",
+        "properties": {
+          "memory": {
+            "$ref": "#/components/schemas/v1AgentMemoryEntry"
+          }
+        }
+      },
+      "v1UpdateAgentResponse": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "$ref": "#/components/schemas/v1AgentDefinition"
+          }
+        }
+      },
+      "v1UpdateAgentTriggerResponse": {
+        "type": "object",
+        "properties": {
+          "trigger": {
+            "$ref": "#/components/schemas/v1AgentTrigger"
+          }
+        }
+      },
+      "v1UpdateCronResponse": {
+        "type": "object",
+        "properties": {
+          "cron": {
+            "$ref": "#/components/schemas/v1SandboxCron"
+          }
+        }
+      },
+      "v1UpdateDeploymentResponse": {
+        "type": "object",
+        "properties": {
+          "deployment": {
+            "$ref": "#/components/schemas/v1AgentDeployment"
+          }
+        }
+      }
+    }
+  }
+}

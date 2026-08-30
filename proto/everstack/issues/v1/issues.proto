@@ -1,0 +1,183 @@
+syntax = "proto3";
+
+package everstack.issues.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/issues/v1;issues";
+
+// IssueStatus tracks the triage lifecycle of a recurring failure.
+enum IssueStatus {
+  ISSUE_STATUS_UNSPECIFIED = 0;
+  ISSUE_STATUS_UNRESOLVED = 1;
+  ISSUE_STATUS_RESOLVED = 2;
+  ISSUE_STATUS_IGNORED = 3;
+  // REGRESSED: a previously resolved issue that recurred after resolution.
+  ISSUE_STATUS_REGRESSED = 4;
+}
+
+// IssueCategory is an LLM-aware classification of the failure mode.
+enum IssueCategory {
+  ISSUE_CATEGORY_UNSPECIFIED = 0;
+  ISSUE_CATEGORY_RATE_LIMIT = 1;
+  ISSUE_CATEGORY_CONTEXT_LENGTH = 2;
+  ISSUE_CATEGORY_PROVIDER_5XX = 3;
+  ISSUE_CATEGORY_GUARDRAIL_BLOCK = 4;
+  ISSUE_CATEGORY_TOOL_ERROR = 5;
+  ISSUE_CATEGORY_TIMEOUT = 6;
+  ISSUE_CATEGORY_AUTH = 7;
+  ISSUE_CATEGORY_PARSE_ERROR = 8;
+  ISSUE_CATEGORY_OTHER = 9;
+}
+
+// ─── Resources ───────────────────────────────────────────────────────
+
+// Issue is a group of recurring failures sharing one normalized signature.
+message Issue {
+  // Stable fingerprint (hash of the normalized signature); the cluster key.
+  string fingerprint = 1;
+  string tenant_id = 2;
+  // Representative raw error message for display.
+  string title = 3;
+  // Normalized signature (volatile bits stripped) the fingerprint derives from.
+  string signature = 4;
+  IssueCategory category = 5;
+  IssueStatus status = 6;
+  // Occurrence count within the queried time window.
+  int64 count = 7;
+  google.protobuf.Timestamp first_seen = 8;
+  google.protobuf.Timestamp last_seen = 9;
+  string provider = 10;
+  string model = 11;
+  // Up to a handful of example trace ids to drill into.
+  repeated string sample_trace_ids = 12;
+  optional string assignee = 13;
+  optional google.protobuf.Timestamp resolved_at = 14;
+  optional google.protobuf.Timestamp snooze_until = 15;
+  // Fixed-width occurrence histogram across the queried window (oldest to
+  // newest), for an inline list sparkline. Empty when no buckets computed.
+  repeated int32 sparkline = 16;
+}
+
+// Occurrence is a single failure instance belonging to an issue.
+message Occurrence {
+  string trace_id = 1;
+  string span_id = 2;
+  string span_name = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  string message = 5;
+}
+
+// TrendPoint is one bucket of the issue's occurrence sparkline.
+message TrendPoint {
+  google.protobuf.Timestamp timestamp = 1;
+  int64 count = 2;
+}
+
+// EventDetail is a single representative event (latest occurrence) with its
+// full captured attributes, so the issue can be debugged inline without
+// leaving for the raw trace.
+message EventDetail {
+  string trace_id = 1;
+  string span_id = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  string message = 4;
+  // All span attributes for this event (powers the highlights grid).
+  map<string, string> attributes = 5;
+}
+
+// SpanCrumb is one span in the failing occurrence's trace, rendered as a
+// breadcrumb timeline (the call chain into the failure).
+message SpanCrumb {
+  string span_id = 1;
+  string parent_span_id = 2;
+  string name = 3;
+  // Ok / Error / Unset.
+  string status_code = 4;
+  string status_message = 5;
+  google.protobuf.Timestamp timestamp = 6;
+  double duration_ms = 7;
+}
+
+// TagValue is one observed value of a tag and how many of the issue's events
+// carried it.
+message TagValue {
+  string value = 1;
+  int64 count = 2;
+}
+
+// TagDistribution is the breakdown of one attribute across the issue's events
+// (e.g. which models / status codes / routes it spans).
+message TagDistribution {
+  string key = 1;
+  int64 total = 2;
+  repeated TagValue values = 3;
+}
+
+// IssueActivity is one entry in the triage history (status change / assignment).
+message IssueActivity {
+  string actor = 1;
+  // resolved / ignored / reopened / assigned / unassigned.
+  string action = 2;
+  string from_status = 3;
+  string to_status = 4;
+  string note = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+// ─── Request / Response Messages ─────────────────────────────────────
+
+message ListIssuesRequest {
+  google.protobuf.Timestamp from = 1;
+  google.protobuf.Timestamp to = 2;
+  // Filter by lifecycle status; UNSPECIFIED returns all.
+  IssueStatus status_filter = 3;
+  // Optional case-insensitive substring match against the signature/title.
+  string query = 4;
+  int32 limit = 5;
+  int32 offset = 6;
+}
+
+message ListIssuesResponse {
+  repeated Issue issues = 1;
+  int32 total = 2;
+}
+
+message GetIssueRequest {
+  string fingerprint = 1;
+  google.protobuf.Timestamp from = 2;
+  google.protobuf.Timestamp to = 3;
+  // Trend bucket size, e.g. "hour" or "day"; empty lets the server choose.
+  string interval = 4;
+}
+
+message GetIssueResponse {
+  Issue issue = 1;
+  repeated Occurrence occurrences = 2;
+  repeated TrendPoint trend = 3;
+  // Representative (latest) event with full attributes.
+  EventDetail latest_event = 4;
+  // The failing occurrence's span chain (breadcrumb timeline).
+  repeated SpanCrumb breadcrumbs = 5;
+  // Attribute distributions across the issue's events.
+  repeated TagDistribution tags = 6;
+  // Distinct sessions affected (our "users affected" proxy).
+  int64 users = 7;
+  // Triage history (status changes / assignments), newest first.
+  repeated IssueActivity activity = 8;
+}
+
+message UpdateIssueStatusRequest {
+  string fingerprint = 1;
+  IssueStatus status = 2;
+  optional string assignee = 3;
+  optional google.protobuf.Timestamp snooze_until = 4;
+  // Carried so the state row can persist a human-readable title/signature
+  // even if the issue has aged out of the active query window.
+  string signature = 5;
+  string title = 6;
+}
+
+message UpdateIssueStatusResponse {
+  Issue issue = 1;
+}

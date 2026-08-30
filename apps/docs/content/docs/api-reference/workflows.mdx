@@ -1,0 +1,23 @@
+---
+title: Workflows
+description: Workflows API endpoints
+---
+
+# Workflows API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | [`/v1/workflows`](./workflows/list-workflows) |  |
+| `POST` | [`/v1/workflows`](./workflows/create-workflow) |  |
+| `GET` | [`/v1/workflows/executions/{executionId}`](./workflows/get-a-single-workflow-execution-by-id) | Get a single workflow execution by ID |
+| `POST` | [`/v1/workflows/executions/{executionId}/replay`](./workflows/replay-a-past-workflow-execution-with-the-same-inputs) | Replay a past workflow execution with the same inputs |
+| `GET` | [`/v1/workflows/{id}`](./workflows/get-workflow) |  |
+| `PATCH` | [`/v1/workflows/{id}`](./workflows/update-workflow) |  |
+| `DELETE` | [`/v1/workflows/{id}`](./workflows/delete-workflow) |  |
+| `PUT` | [`/v1/workflows/{id}/draft`](./workflows/save-workflow-draft-without-creating-a-version-event) | Save workflow draft without creating a version event |
+| `POST` | [`/v1/workflows/{id}/publish`](./workflows/publish-workflow-creating-a-version-snapshot) | Publish workflow, creating a version snapshot |
+| `POST` | [`/v1/workflows/{id}/unpublish`](./workflows/unpublish-workflow-move-back-to-draft) | Unpublish workflow (move back to draft) |
+| `GET` | [`/v1/workflows/{id}/versions`](./workflows/get-version-history-for-a-workflow) | Get version history for a workflow |
+| `GET` | [`/v1/workflows/{id}/versions/{version}`](./workflows/get-reconstructed-workflow-state-at-a-specific-version) | Get reconstructed workflow state at a specific version |
+| `POST` | [`/v1/workflows/{workflowId}/execute`](./workflows/execute-a-workflow-with-streaming-events) | Execute a workflow with streaming events |
+| `GET` | [`/v1/workflows/{workflowId}/executions`](./workflows/list-execution-history-for-a-workflow) | List execution history for a workflow |

@@ -1,0 +1,210 @@
+# Everstack Platform Configuration (Production Defaults)
+# ======================================================
+# This is the single source of truth for all service URLs and settings.
+# It is embedded into the binary at build time via go:embed.
+#
+# Users download and run without configuration - these defaults just work.
+# Developers can override via:
+#   - config/local.yaml (for local dev, gitignored)
+#   - Environment variables (EVS_SERVICES_LICENSE_URL, etc.)
+#
+# Priority: default.yaml < local.yaml < environment variables
+
+# =============================================================================
+# Cloud Services (Hosted by Everstack)
+# =============================================================================
+# These URLs point to Everstack Cloud services. End users never need to change these.
+# Developers override via EVS_SERVICES_<SERVICE>_URL environment variables.
+
+services:
+  # License Service - handles activation, license validation, usage tracking
+  license:
+    url: https://license.everstack.ai
+    enabled: true
+
+  # Auth Service (Future) - user authentication and authorization
+  auth:
+    url: https://auth.everstack.ai
+    enabled: false
+
+  # Functions Service (Future) - serverless function execution
+  functions:
+    url: https://functions.everstack.ai
+    enabled: false
+
+  # Prompts Service (Future) - prompt management and versioning
+  prompts:
+    url: https://prompts.everstack.ai
+    enabled: false
+
+  # =============================================================================
+  # Security Policy (under services.security for policy.FromGlobal())
+  # =============================================================================
+  # API key bypass rules for internal services
+  security:
+    policy:
+      # Services that bypass API key requirements (minimal — bootstrap only)
+      bypass_services:
+        - "everstack.health.v1.HealthService"
+
+      # Specific endpoints that bypass API key requirements (minimal — bootstrap only)
+      # See POR-53 for full auth-on-startup plan to eliminate these entirely
+      bypass_prefixes:
+        - "/everstack.gateway.v1.GatewayService/ActivateGatewayInstance"
+        - "/everstack.gateway.v1.GatewayService/GetGatewayInstanceStatus"
+        - "/everstack.gateway.v1.GatewayService/GetTrialStatus"
+        - "/everstack.gateway.v1.GatewayService/ActivationCallback"
+        - "/everstack.gateway.v1.GatewayService/SubscriptionStatusCallback"
+
+# =============================================================================
+# Security Settings (root level for backward compatibility)
+# =============================================================================
+security:
+  # License enforcement settings
+  license_enforcement:
+    enabled: true # Enabled by default for production
+    dry_run: false
+    cache_ttl: "24h" # Sync once per day to reduce license service calls
+
+  # =============================================================================
+  # M2M (Machine-to-Machine) Authentication
+  # =============================================================================
+  # The gateway uses M2M authentication AFTER activation (with instance-specific signing keys).
+  # Only ActivateInstance and GetGatewayInstanceStatus are pre-auth; all others require auth.
+  #
+  # This is intentional - embedding bootstrap credentials in binaries creates security risks:
+  # - Credentials can be extracted from binaries
+  # - Rotation requires releasing new binaries
+  # - Compromised credentials affect ALL users
+  #
+  # Instead, the license service protects public endpoints via:
+  # - Rate limiting (per IP, per fingerprint)
+  # - Activation tokens are single-use and short-lived
+  # - Monitoring/alerting for abuse patterns
+  m2m:
+    # Gateway is a CLIENT - it uses M2M tokens to authenticate with license service
+    enabled: true
+    provider: "simple"
+
+    # Simple JWT provider settings
+    # signing_key is auto-generated and encrypted in database if not provided via EVS_M2M_SIGNING_KEY env var
+    simple:
+      signing_key: "" # Auto-generated from database if empty
+      issuer: "everstack"
+      audience: "everstack-services"
+      token_ttl: "5m"
+
+    # Client credentials with scopes
+    clients:
+      # Gateway: needs to report usage and manage instances
+      gateway:
+        client_id: "gateway"
+        scopes:
+          - "license:read"
+          - "instance:read"
+          - "instance:write"
+      # Portal: administrative access for users
+      portal:
+        client_id: "portal"
+        scopes:
+          - "license:read"
+          - "license:write"
+          - "license:admin"
+          - "instance:read"
+          - "billing:read"
+          - "billing:write"
+      # Billing: full billing access, needs to generate activation tokens and update instances
+      billing:
+        client_id: "billing"
+        scopes:
+          - "license:read"
+          - "license:write"
+          - "license:activate"
+          - "instance:write"
+          - "billing:admin"
+      # License: forwards authenticated usage snapshots to billing
+      license:
+        client_id: "license"
+        scopes:
+          - "instance:write"
+
+    # Scope policy for auto-deriving scopes
+    scope_policy:
+      auto_derive: true
+      action_patterns:
+        - prefix: "Get"
+          action: "read"
+        - prefix: "List"
+          action: "read"
+        - prefix: "Check"
+          action: "read"
+        - prefix: "Validate"
+          action: "read"
+        - prefix: "Create"
+          action: "write"
+        - prefix: "Update"
+          action: "write"
+        - prefix: "Report"
+          action: "write"
+        - prefix: "Refresh"
+          action: "write"
+        - prefix: "Store"
+          action: "write"
+        - prefix: "Delete"
+          action: "admin"
+        - prefix: "Revoke"
+          action: "admin"
+        - prefix: "Deactivate"
+          action: "admin"
+        - prefix: "Generate"
+          action: "activate"
+
+    # Policy settings
+    policy:
+      allow_all_authenticated: false
+
+# =============================================================================
+# Activation Settings
+# =============================================================================
+# Gateway activation configuration (connects to license service)
+
+activation:
+  platform_url: "${services.license.url}" # Derived from services.license.url
+  platform_api_key: ""
+  instance_salt: ""
+  interval: "30s"
+  timeout: "5s"
+
+# =============================================================================
+# Ingress Gateway Settings
+# =============================================================================
+# Unified ingress gateway that consolidates sandbox proxy, webhook routing,
+# path-based routing, and session routing into a single listener.
+# These settings are read from features.sandbox.port_exposure for backward
+# compatibility; this section documents the full configuration shape.
+
+# gateway:
+#   listen_addr: ":8443"
+#   base_domain: "evs.run"
+#   max_ports_per_sandbox: 5
+#   require_preview_token: false
+#   request_timeout_seconds: 120
+#   max_request_body_mb: 50
+#   enable_session_routing: false
+#   tls:
+#     enabled: false
+#     cert_path: ""
+#     key_path: ""
+#     autocert: false
+#     autocert_dir: ""
+#   cors:
+#     enabled: true
+#     allowed_origins: ["*"]
+#     allowed_methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+#     allowed_headers: ["*"]
+#     max_age_seconds: 3600
+#   mtls:
+#     enabled: false
+#     cert_path: ""
+#     key_path: ""
+#     ca_path: ""

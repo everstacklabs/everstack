@@ -1,0 +1,115 @@
+---
+title: Traces
+description: Distributed tracing for gateway requests and agent sessions.
+icon: Activity
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+## What a trace contains
+
+Every gateway request and agent turn produces a distributed trace -- a tree of spans that records exactly what happened, how long each step took, and what it cost.
+
+A single trace might look like this for a gateway request:
+
+```
+gateway.request (12ms total, $0.003)
+├── routing.resolve (0.2ms)
+├── cache.lookup (1.1ms, miss)
+├── provider.call (9.8ms, gpt-4o, 312 tokens)
+│   ├── provider.http (9.4ms, 200 OK)
+│   └── provider.response_parse (0.3ms)
+└── response.finalize (0.5ms)
+```
+
+Each span carries structured attributes: model name, token counts (prompt, completion, total), cost, provider, cache status, and any error details. These attributes are indexed in ClickHouse for fast filtering.
+
+## Gateway traces
+
+The gateway middleware pipeline creates spans for each processing stage, in order:
+
+1. **`routing.resolve`** -- Evaluates routing rules and selects the target provider and model. Attributes include the matched route, the selected model, and whether a fallback was activated.
+2. **`cache.lookup`** -- Checks the semantic or exact-match cache. Records hit/miss status and, on a hit, the cache key and age.
+3. **`context.compaction`** -- If the request exceeds the model's context window, this span covers the compaction step. Records the original and compacted token counts.
+4. **`provider.call`** -- The upstream HTTP call to the LLM provider. Contains the full round-trip latency, HTTP status, and any retry attempts.
+5. **`response.finalize`** -- Post-processing: token counting, cost calculation, and response transformation.
+
+When a request triggers a fallback (primary provider error, rate limit, timeout), the trace shows both the failed attempt and the fallback attempt as sibling spans under the parent request. The `trace_fallbacks` option controls whether fallback spans are emitted.
+
+## Agent traces
+
+Agent sessions produce deeper trace trees. Each session creates a root span, and each turn within the session creates a child span. Within a turn, you will see:
+
+- **`llm.start` / `llm.end`** -- Brackets the LLM call. Attributes include model, token usage, and cost. When `tracing_granularity` is set to `detailed`, individual `llm.chunk` spans appear for each streamed token batch.
+- **`tool_call.start` / `tool_call.end`** -- Brackets a tool execution. Captures the tool name, input arguments, output, and execution duration.
+- **`approval.requested` / `approval.resolved`** -- Human-in-the-loop gates. Records what action required approval, who approved or denied it, and how long the gate was open.
+- **`sandbox.create` / `sandbox.exec` / `sandbox.destroy`** -- Sandbox lifecycle events. Records the sandbox ID, command executed, exit code, and resource usage.
+
+This nesting gives you a complete, chronological record of an agent's decision-making process within each turn.
+
+## Tracing granularity
+
+The `tracing_granularity` setting controls how much detail traces capture:
+
+| Level | What it captures | When to use |
+|---|---|---|
+| `minimal` | Request-level spans only. One span per gateway request or agent turn. No internal pipeline spans. | Production workloads where you need basic latency and error tracking with minimal overhead. |
+| `standard` | Pipeline-stage spans (routing, cache, provider call, etc.) plus agent event spans. | Default for most deployments. Good balance of detail and performance. |
+| `detailed` | Everything in `standard`, plus per-chunk streaming spans and full tool input/output capture. | Debugging specific issues. Not recommended for high-throughput production use. |
+
+## Sampling
+
+Not every request needs a full trace. The `sampling_fraction` setting controls what fraction of requests are traced:
+
+```yaml
+observability:
+  sampling_fraction: 0.1  # Trace 10% of requests
+```
+
+A value of `1.0` traces everything. A value of `0.0` disables tracing entirely. The default of `0.1` (10%) works well for most production deployments.
+
+<Callout type="warn">
+  Setting `sampling_fraction` to `1.0` with `tracing_granularity: detailed` on a high-throughput gateway will produce significant ClickHouse write volume. Start with `standard` granularity and 10% sampling, then increase as needed.
+</Callout>
+
+Sampling decisions propagate through the trace. If a gateway request is sampled, the downstream agent session spans are also captured, keeping the trace complete.
+
+## Cost and token tracking
+
+Every LLM-related span carries cost and token attributes:
+
+- `llm.tokens.prompt` -- number of input tokens
+- `llm.tokens.completion` -- number of output tokens
+- `llm.tokens.total` -- sum of prompt and completion tokens
+- `llm.cost.usd` -- estimated cost in USD based on the model's pricing
+
+These attributes are aggregated in the admin dashboard's metrics view, so you can see cost breakdowns by model, provider, agent, or time range without a separate billing system.
+
+## Trace context propagation
+
+Everstack propagates trace context using the [W3C Traceparent](https://www.w3.org/TR/trace-context/) standard. When a gateway request calls an upstream provider, the `traceparent` header is forwarded so external systems can correlate their spans with your Everstack traces.
+
+If your application sends a `traceparent` header to the gateway, Everstack will join that trace context rather than creating a new root trace. This lets you see Everstack spans as part of your application's broader distributed trace.
+
+## Configuration
+
+Full tracing configuration lives under the `observability` block in your gateway config:
+
+```yaml
+observability:
+  tracing_granularity: "standard"
+  trace_provider_calls: true
+  trace_stream_chunks: false
+  trace_fallbacks: true
+  sampling_fraction: 0.1
+```
+
+- **`trace_provider_calls`** (`true`) -- Emit spans for upstream provider HTTP calls. Disable if you only need aggregate request-level data.
+- **`trace_stream_chunks`** (`false`) -- Emit a span for each streamed chunk. Only meaningful when `tracing_granularity` is `detailed`. Generates high span volume.
+- **`trace_fallbacks`** (`true`) -- Emit spans when fallback routing activates, capturing both the failed primary and the successful fallback.
+
+For the full configuration schema, see the [API reference](/api-reference/gateway).
+
+## Searching traces
+
+Filter the trace list with **ESQL**, the Everstack Search Query Language: `status:error provider:anthropic cost > 0.05`, `tool.error exists`, `root.status:error`. See the [ESQL search reference](/getting-started/observability/search).

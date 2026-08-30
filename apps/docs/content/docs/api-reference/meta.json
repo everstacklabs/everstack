@@ -1,0 +1,21 @@
+{
+  "title": "API Reference",
+  "root": true,
+  "pages": [
+    "index",
+    "---Gateway---",
+    "gateway",
+    "---Platform---",
+    "agents",
+    "sandbox",
+    "workflows",
+    "memory",
+    "functions",
+    "providers",
+    "api-keys",
+    "mcp",
+    "---System---",
+    "config",
+    "auth"
+  ]
+}

@@ -1,0 +1,181 @@
+---
+title: "POST Validate YAML validates a YAML configuration string"
+description: "ValidateYAML validates a YAML configuration string"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Validate YAML validates a YAML configuration string</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400">POST</span>
+    <code className="text-sm text-fd-muted-foreground">/api/v1/config/validate</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="post"
+  path="/api/v1/config/validate"
+  parameters={[]}
+  defaultBody={`{
+  "yamlConfig": "string"
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X POST "http://localhost:8089/api/v1/config/validate" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"yamlConfig":"string"}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/api/v1/config/validate", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "yamlConfig": "string"
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8089/api/v1/config/validate",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "yamlConfig": "string"
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "valid": true,
+  "errors": [
+    {
+      "field": "string",
+      "message": "string",
+      "code": "string",
+      "severity": "VALIDATION_SEVERITY_UNSPECIFIED"
+    }
+  ],
+  "warnings": [
+    {
+      "field": "string",
+      "message": "string",
+      "code": "string"
+    }
+  ],
+  "status": {
+    "state": "VALIDATION_STATE_UNSPECIFIED",
+    "message": "string",
+    "errorCount": 0,
+    "warningCount": 0,
+    "lastValidated": "2024-01-01T00:00:00Z",
+    "validatedSections": [
+      "string"
+    ],
+    "failedSections": [
+      "string"
+    ]
+  },
+  "validatedAt": "2024-01-01T00:00:00Z"
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `yamlConfig` | `string` | No |  |
+
+
+### Responses
+
+#### 200 A successful response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `valid` | `boolean` |  |
+| `errors` | `object[]` |  |
+| `warnings` | `object[]` |  |
+| `status` | `object` |  |
+| `validatedAt` | `string` |  |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

@@ -1,0 +1,4 @@
+/* Component-level styles for the UI package */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@everstack/tailwind-config";

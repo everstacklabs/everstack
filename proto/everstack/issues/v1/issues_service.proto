@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package everstack.issues.v1;
+
+import "google/api/annotations.proto";
+import "everstack/issues/v1/issues.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/issues/v1;issues";
+
+// IssuesService is Sentry-style error tracking: recurring failures grouped into
+// triageable issues, derived from error spans in the trace store.
+service IssuesService {
+  // ListIssues returns failure groups ranked by occurrence count.
+  rpc ListIssues(ListIssuesRequest) returns (ListIssuesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "List issues (grouped failures)" } }
+    };
+    option (google.api.http) = { get: "/v1/issues" };
+  }
+
+  // GetIssue returns one issue with its recent occurrences and trend.
+  rpc GetIssue(GetIssueRequest) returns (GetIssueResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Get an issue with occurrences and trend" } }
+    };
+    option (google.api.http) = { get: "/v1/issues/{fingerprint}" };
+  }
+
+  // UpdateIssueStatus changes an issue's triage state (resolve/ignore/reopen).
+  rpc UpdateIssueStatus(UpdateIssueStatusRequest) returns (UpdateIssueStatusResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Update an issue's triage status" } }
+    };
+    option (google.api.http) = { post: "/v1/issues/{fingerprint}/status" body: "*" };
+  }
+}

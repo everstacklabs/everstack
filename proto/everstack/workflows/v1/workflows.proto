@@ -1,0 +1,268 @@
+syntax = "proto3";
+
+package everstack.workflows.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/workflows/v1;workflows";
+
+// WorkflowNodePosition represents a node's position on the canvas
+message WorkflowNodePosition {
+  double x = 1;
+  double y = 2;
+}
+
+// WorkflowNode represents a single node in the workflow
+message WorkflowNode {
+  string id = 1;
+  string type = 2;           // start, auth, rateLimiter, cache, router, loadBalancer, inputGuardrails, outputGuardrails, provider, function, httpRequest, webhook, ifElse, response, agent
+  string label = 3;
+  WorkflowNodePosition position = 4;
+  google.protobuf.Struct config = 5;  // type-specific config as JSON
+}
+
+// WorkflowEdge represents a connection between two nodes
+message WorkflowEdge {
+  string id = 1;
+  string source = 2;
+  string target = 3;
+  string source_handle = 4;
+  string target_handle = 5;
+}
+
+// WorkflowViewport represents the canvas viewport state
+message WorkflowViewport {
+  double x = 1;
+  double y = 2;
+  double zoom = 3;
+}
+
+// Workflow represents a complete workflow pipeline
+message Workflow {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  repeated WorkflowNode nodes = 5;
+  repeated WorkflowEdge edges = 6;
+  WorkflowViewport viewport = 7;
+  bool enabled = 8;
+  int32 version = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+// CreateWorkflowRequest creates a new workflow
+message CreateWorkflowRequest {
+  string tenant_id = 1;
+  string name = 2;
+  optional string description = 3;
+  repeated WorkflowNode nodes = 4;
+  repeated WorkflowEdge edges = 5;
+  optional WorkflowViewport viewport = 6;
+}
+
+message CreateWorkflowResponse {
+  Workflow workflow = 1;
+}
+
+message GetWorkflowRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message GetWorkflowResponse {
+  Workflow workflow = 1;
+}
+
+message ListWorkflowsRequest {
+  string tenant_id = 1;
+  optional bool enabled = 2;
+  optional int32 limit = 3;
+  optional int32 offset = 4;
+}
+
+message ListWorkflowsResponse {
+  repeated Workflow workflows = 1;
+  int32 total = 2;
+}
+
+message UpdateWorkflowRequest {
+  string tenant_id = 1;
+  string id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  repeated WorkflowNode nodes = 5;
+  repeated WorkflowEdge edges = 6;
+  optional WorkflowViewport viewport = 7;
+  optional bool enabled = 8;
+}
+
+message UpdateWorkflowResponse {
+  Workflow workflow = 1;
+}
+
+message DeleteWorkflowRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message DeleteWorkflowResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Chat message for workflow execution
+message ChatMessage {
+  string role = 1;
+  string content = 2;
+}
+
+// Request to execute a workflow
+message ExecuteWorkflowRequest {
+  string tenant_id = 1;
+  string workflow_id = 2;
+  repeated ChatMessage messages = 3;
+  map<string, string> metadata = 4;
+}
+
+// Streaming event emitted during workflow execution
+message ExecuteWorkflowEvent {
+  string type = 1;              // node.started | node.completed | node.error | chunk | done | error | agent.tool_call.start | agent.tool_call.end | agent.turn.start | agent.turn.end | agent.approval.requested
+  string node_id = 2;
+  string node_type = 3;
+  string node_label = 4;
+  string error = 5;
+  int64 duration_ms = 6;
+  int64 timestamp = 7;
+  string chunk_content = 8;     // LLM streamed token content (for type=chunk)
+  map<string, string> data = 9; // Additional metadata
+}
+
+// WorkflowChangeDetail represents a structured change within a version entry
+message WorkflowChangeDetail {
+  string category = 1;       // "nodes", "edges", "name", "description", "status"
+  string summary = 2;        // "5 nodes", "4 connections", "Test 5", "Published"
+  repeated string items = 3; // For nodes: ["Start", "Provider (gpt-4o)", ...]
+  repeated string item_ids = 4; // IDs of affected nodes/edges for canvas highlighting
+}
+
+// WorkflowVersionEntry represents a single version in the workflow history
+message WorkflowVersionEntry {
+  int32 version = 1;
+  string event_type = 2;                // "workflow.created" or "workflow.updated"
+  google.protobuf.Timestamp timestamp = 3;
+  repeated string changes = 4;          // Human-readable summaries
+  repeated WorkflowChangeDetail details = 5;  // Structured change details
+}
+
+message GetWorkflowVersionHistoryRequest {
+  string tenant_id = 1;
+  string id = 2;                        // workflow ID
+}
+
+message GetWorkflowVersionHistoryResponse {
+  repeated WorkflowVersionEntry versions = 1;
+}
+
+message GetWorkflowAtVersionRequest {
+  string tenant_id = 1;
+  string id = 2;        // workflow ID
+  int32 version = 3;    // version number to reconstruct
+}
+
+message GetWorkflowAtVersionResponse {
+  Workflow workflow = 1;                       // reconstructed workflow state at version N
+  repeated WorkflowChangeDetail details = 2;   // what changed in this specific version
+  repeated string changes = 3;                 // human-readable summaries for this version
+}
+
+// SaveWorkflowDraftRequest saves a workflow draft without creating a version event.
+// Only provided fields are updated (partial update).
+message SaveWorkflowDraftRequest {
+  string tenant_id = 1;
+  string id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  repeated WorkflowNode nodes = 5;
+  repeated WorkflowEdge edges = 6;
+  optional WorkflowViewport viewport = 7;
+}
+
+message SaveWorkflowDraftResponse {
+  Workflow workflow = 1;
+}
+
+// PublishWorkflowRequest publishes the current draft, creating a version snapshot.
+message PublishWorkflowRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message PublishWorkflowResponse {
+  Workflow workflow = 1;
+  int32 published_version = 2;
+}
+
+// UnpublishWorkflowRequest moves a published workflow back to draft (enabled=false).
+message UnpublishWorkflowRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message UnpublishWorkflowResponse {
+  Workflow workflow = 1;
+}
+
+// WorkflowExecution represents a single execution of a workflow
+message WorkflowExecution {
+  string id = 1;
+  string workflow_id = 2;
+  string tenant_id = 3;
+  string correlation_id = 4;
+  string trigger_type = 5;           // manual | webhook | schedule | replay
+  string status = 6;                 // running | completed | failed
+  repeated ChatMessage input_messages = 7;
+  string output_content = 8;
+  map<string, string> request_metadata = 9;
+  string resolved_model = 10;
+  string resolved_provider = 11;
+  int32 prompt_tokens = 12;
+  int32 completion_tokens = 13;
+  int32 total_tokens = 14;
+  string error_message = 15;
+  int64 started_at = 16;             // Unix milliseconds
+  int64 completed_at = 17;           // Unix milliseconds
+  int32 duration_ms = 18;
+  string events_json = 19;           // Raw JSON array of events for replay
+  string ledger_json = 20;           // Serialized execution ledger (JSON array of node outputs)
+}
+
+message ListWorkflowExecutionsRequest {
+  string tenant_id = 1;
+  string workflow_id = 2;
+  int32 page_size = 3;
+  int32 offset = 4;
+  string status_filter = 5;          // optional: running | completed | failed
+}
+
+message ListWorkflowExecutionsResponse {
+  repeated WorkflowExecution executions = 1;
+  int32 total = 2;
+}
+
+message GetWorkflowExecutionRequest {
+  string tenant_id = 1;
+  string execution_id = 2;
+}
+
+message GetWorkflowExecutionResponse {
+  WorkflowExecution execution = 1;
+}
+
+message ReplayWorkflowExecutionRequest {
+  string tenant_id = 1;
+  string execution_id = 2;
+}
+// ReplayWorkflowExecutionResponse = stream of ExecuteWorkflowEvent (same as ExecuteWorkflow)

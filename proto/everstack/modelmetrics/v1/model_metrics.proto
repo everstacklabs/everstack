@@ -1,0 +1,226 @@
+syntax = "proto3";
+
+package everstack.modelmetrics.v1;
+
+import "google/protobuf/timestamp.proto";
+import "validate/validate.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/modelmetrics/v1;modelmetrics";
+
+// PublicMetricValues contains privacy-safe aggregate values. Counts are
+// additive; averages and rates are derived from additive samples.
+message PublicMetricValues {
+  uint64 requests = 1;
+  uint64 successes = 2;
+  uint64 errors = 3;
+  uint64 input_tokens = 4;
+  uint64 output_tokens = 5;
+  uint64 reasoning_tokens = 6;
+  uint64 non_reasoning_output_tokens = 7;
+  uint64 cache_read_tokens = 8;
+  uint64 cache_write_tokens = 9;
+  uint64 total_tokens = 10;
+  double cost_usd = 11;
+  double avg_latency_ms = 12;
+  double avg_ttft_ms = 13;
+  double avg_throughput_tps = 14;
+  double success_rate = 15;
+}
+
+message PublicMetricPoint {
+  google.protobuf.Timestamp timestamp = 1;
+  PublicMetricValues increment = 2;
+  PublicMetricValues cumulative = 3;
+}
+
+message PublicMetricsCoverage {
+  uint64 eligible_buckets = 1;
+  uint64 suppressed_buckets = 2;
+  // Privacy-safe lower bound: the maximum distinct-tenant count among
+  // eligible buckets, never a list of tenant identifiers.
+  uint64 contributing_tenants = 3;
+  uint64 sample_requests = 4;
+  uint64 minimum_tenants = 5;
+  uint64 minimum_requests = 6;
+}
+
+message GetPublicModelMetricsReportRequest {
+  // model, provider, or publisher.
+  string kind = 1 [(validate.rules).string = {
+    in: [
+      "model",
+      "provider",
+      "publisher"
+    ]
+  }];
+  string key = 2 [(validate.rules).string = {
+    min_bytes: 1
+    max_bytes: 256
+    pattern: "^[^\\x00-\\x1F\\x7F]+$"
+  }];
+  // 7d, 30d, 90d, 6m, 1y, or all.
+  string window = 3 [(validate.rules).string = {
+    in: [
+      "7d",
+      "30d",
+      "90d",
+      "6m",
+      "1y",
+      "all"
+    ]
+  }];
+  // hour, day, or month.
+  string interval = 4 [(validate.rules).string = {
+    in: [
+      "hour",
+      "day",
+      "month"
+    ]
+  }];
+}
+
+message GetPublicModelMetricsReportResponse {
+  string schema_version = 1;
+  string semantic_version = 2;
+  google.protobuf.Timestamp generated_at = 3;
+  google.protobuf.Timestamp data_since = 4;
+  google.protobuf.Timestamp data_through = 5;
+  // available, insufficient_data, or stale.
+  string status = 6;
+  string kind = 7;
+  string key = 8;
+  string window = 9;
+  string interval = 10;
+  PublicMetricValues summary = 11;
+  repeated PublicMetricPoint points = 12;
+  PublicMetricsCoverage coverage = 13;
+}
+
+message ComparePublicModelMetricsRequest {
+  // model or provider.
+  string kind = 1 [(validate.rules).string = {
+    in: [
+      "model",
+      "provider"
+    ]
+  }];
+  // Between two and four canonical model IDs or provider slugs.
+  repeated string keys = 2 [(validate.rules).repeated = {
+    min_items: 2
+    max_items: 4
+    unique: true
+    items: {
+      string: {
+        min_bytes: 1
+        max_bytes: 256
+        pattern: "^[^\\x00-\\x1F\\x7F]+$"
+      }
+    }
+  }];
+  // tokens, requests, ttft, throughput, or success_rate.
+  string metric = 3 [(validate.rules).string = {
+    in: [
+      "tokens",
+      "requests",
+      "ttft",
+      "throughput",
+      "success_rate"
+    ]
+  }];
+  string window = 4 [(validate.rules).string = {
+    in: [
+      "7d",
+      "30d",
+      "90d",
+      "6m",
+      "1y",
+      "all"
+    ]
+  }];
+  string interval = 5 [(validate.rules).string = {
+    in: [
+      "hour",
+      "day",
+      "month"
+    ]
+  }];
+}
+
+message PublicMetricComparisonPoint {
+  google.protobuf.Timestamp timestamp = 1;
+  double increment = 2;
+  double cumulative = 3;
+}
+
+message PublicMetricComparisonSeries {
+  string key = 1;
+  string status = 2;
+  double total = 3;
+  repeated PublicMetricComparisonPoint points = 4;
+  google.protobuf.Timestamp data_through = 5;
+}
+
+message ComparePublicModelMetricsResponse {
+  string schema_version = 1;
+  string semantic_version = 2;
+  google.protobuf.Timestamp generated_at = 3;
+  string kind = 4;
+  string metric = 5;
+  string window = 6;
+  string interval = 7;
+  repeated PublicMetricComparisonSeries series = 8;
+}
+
+// GetPublicProviderModelBreakdownRequest asks for the model composition of one
+// serving provider. Each returned model/bucket independently passes the public
+// privacy floor before it can appear in a series.
+message GetPublicProviderModelBreakdownRequest {
+  string provider = 1 [(validate.rules).string = {
+    min_bytes: 1
+    max_bytes: 256
+    pattern: "^[^\\x00-\\x1F\\x7F]+$"
+  }];
+  // tokens or requests.
+  string metric = 2 [(validate.rules).string = {
+    in: [
+      "tokens",
+      "requests"
+    ]
+  }];
+  string window = 3 [(validate.rules).string = {
+    in: [
+      "7d",
+      "30d",
+      "90d",
+      "6m",
+      "1y",
+      "all"
+    ]
+  }];
+  string interval = 4 [(validate.rules).string = {
+    in: [
+      "hour",
+      "day",
+      "month"
+    ]
+  }];
+  // Maximum displayed series, including the optional "others" series.
+  // Zero selects the server default.
+  uint32 limit = 5;
+}
+
+message GetPublicProviderModelBreakdownResponse {
+  string schema_version = 1;
+  string semantic_version = 2;
+  google.protobuf.Timestamp generated_at = 3;
+  google.protobuf.Timestamp data_since = 4;
+  google.protobuf.Timestamp data_through = 5;
+  // available, insufficient_data, or stale.
+  string status = 6;
+  string provider = 7;
+  string metric = 8;
+  string window = 9;
+  string interval = 10;
+  repeated PublicMetricComparisonSeries series = 11;
+  PublicMetricsCoverage coverage = 12;
+}

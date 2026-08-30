@@ -1,0 +1,23 @@
+chat:
+  - MiniMax-M2.7
+  - MiniMax-M2.7-highspeed
+  - MiniMax-M2.5
+  - MiniMax-M2.5-highspeed
+  - MiniMax-M2.1
+  - MiniMax-M2
+
+function_calling:
+  - MiniMax-M2.7
+  - MiniMax-M2.7-highspeed
+  - MiniMax-M2.5
+  - MiniMax-M2.5-highspeed
+  - MiniMax-M2.1
+  - MiniMax-M2
+
+reasoning:
+  - MiniMax-M2.7
+  - MiniMax-M2.7-highspeed
+  - MiniMax-M2.5
+  - MiniMax-M2.5-highspeed
+  - MiniMax-M2.1
+  - MiniMax-M2

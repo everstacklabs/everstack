@@ -1,0 +1,25 @@
+{
+  "pages": [
+    "text-to-speech-generate-audio-from-text",
+    "speech-to-text-transcribe-audio-to-text",
+    "audio-translation-translate-audio-to-english-text",
+    "chat-completion",
+    "embeddings",
+    "activation-callback-from-cloud-called-by-cloud-after-successful-payment",
+    "admin-endpoints-for-gateway-instance-management",
+    "get-gateway-instance-status",
+    "list-models",
+    "subscription-status-callback-from-billing-service-called-after-stripe-webhooks",
+    "get-gateway",
+    "edit-an-existing-image",
+    "generate-images-from-text-prompts",
+    "create-variations-of-an-image",
+    "classify-content-for-policy-violations",
+    "rerank-documents-by-relevance-to-a-query",
+    "list-responses",
+    "create-a-response-agentic-loop-with-auto-tool-calling",
+    "get-a-response-by-id",
+    "delete-a-response",
+    "cancel-an-in-progress-response"
+  ]
+}

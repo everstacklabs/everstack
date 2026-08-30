@@ -1,0 +1,56 @@
+---
+title: SSH Tokens
+description: Generate temporary SSH access tokens for sandbox connections.
+---
+
+# SSH Tokens
+
+Temporary SSH access tokens let agents and users SSH into sandboxes without key distribution.
+
+```
+ssh <token>@ssh.everstack.ai
+```
+
+Tokens are time-limited (default 60 minutes) and can be revoked before expiry.
+
+> **Note:** SSH proxy token validation is in development. Token generation and revocation APIs are live; the SSH proxy enforcement ships in a follow-up release.
+
+## Generate Token
+
+`POST /v1/sandbox/instances/{sandboxId}/ssh-token`
+
+```json
+{ "expiresInMinutes": 60 }
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `expiresInMinutes` | integer | Token lifetime. Range: 1–1440 (max 24h). Default: 60. |
+
+**Response:**
+```json
+{
+  "id": "ssht_abc123",
+  "token": "<SSH_TOKEN>",
+  "expiresAt": "2026-06-01T13:00:00Z",
+  "expiresInMinutes": 60,
+  "connectionString": "ssh <SSH_TOKEN>@ssh.everstack.ai"
+}
+```
+
+## List Active Tokens
+
+`GET /v1/sandbox/instances/{sandboxId}/ssh-tokens`
+
+Returns tokens that have not expired and have not been revoked.
+
+## Revoke Token
+
+`DELETE /v1/sandbox/instances/{sandboxId}/ssh-tokens/{tokenId}` → `204 No Content`
+
+## Use cases
+
+- **Debugging handoff** -- agent hits an error, generates a token, sends connection string to a developer
+- **VS Code Remote SSH** -- add the connection string as a remote host
+- **JetBrains Gateway** -- connect to the sandbox as a remote interpreter
+- **Temporary access** -- give a team member access to a running sandbox without permanent key grant

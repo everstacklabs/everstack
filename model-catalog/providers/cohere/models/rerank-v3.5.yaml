@@ -1,0 +1,18 @@
+name: "rerank-v3.5"
+display_name: "Rerank v3.5"
+family: "rerank"
+status: "stable"
+
+cost:
+  input_per_1k: 0.002
+  output_per_1k: 0
+
+limits:
+  max_tokens: 4000
+
+capabilities:
+  - rerank
+
+modalities:
+  input: ["text"]
+  output: ["text"]

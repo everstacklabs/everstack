@@ -1,0 +1,5 @@
+-- The corrected error predicate is a strict superset of the old one and the
+-- inserted error deltas are indistinguishable from facts the materialized
+-- view would have produced had it ever matched the stored span status.
+-- Rollback intentionally leaves both in place rather than restoring a view
+-- that is known to record zero errors.

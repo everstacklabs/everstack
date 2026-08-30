@@ -1,0 +1,5 @@
+{
+  "title": "CLI Reference",
+  "root": true,
+  "pages": ["index", "login", "config", "sandbox", "serve", "migrate"]
+}

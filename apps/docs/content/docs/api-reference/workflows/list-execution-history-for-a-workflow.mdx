@@ -1,0 +1,166 @@
+---
+title: "GET List execution history for a workflow"
+description: "List execution history for a workflow"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">List execution history for a workflow</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-green-500/10 text-green-600 dark:text-green-400">GET</span>
+    <code className="text-sm text-fd-muted-foreground">{"/v1/workflows/{workflowId}/executions"}</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="get"
+  path="/v1/workflows/{workflowId}/executions"
+  parameters={[{"name":"workflowId","in":"path","required":true,"schema":{"type":"string"}},{"name":"tenantId","in":"query","required":false,"schema":{"type":"string"}},{"name":"pageSize","in":"query","required":false,"schema":{"type":"integer"}},{"name":"offset","in":"query","required":false,"schema":{"type":"integer"}},{"name":"statusFilter","in":"query","required":false,"schema":{"type":"string"}}]}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X GET "http://localhost:8089/v1/workflows/{workflowId}/executions" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json"
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/workflows/{workflowId}/executions", {
+  method: "GET",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.get(
+    "http://localhost:8089/v1/workflows/{workflowId}/executions",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "executions": [
+    {
+      "id": "string",
+      "workflowId": "string",
+      "tenantId": "string",
+      "correlationId": "string",
+      "triggerType": "string",
+      "status": "string",
+      "inputMessages": [],
+      "outputContent": "string",
+      "resolvedModel": "string",
+      "resolvedProvider": "string",
+      "promptTokens": 0,
+      "completionTokens": 0,
+      "totalTokens": 0,
+      "errorMessage": "string",
+      "startedAt": "string",
+      "completedAt": "string",
+      "durationMs": 0,
+      "eventsJson": "string",
+      "ledgerJson": "string"
+    }
+  ],
+  "total": 0
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+### Parameters
+
+| Name | In | Type | Required | Description |
+|------|-----|------|----------|-------------|
+| `workflowId` | path | `string` | **Yes** |  |
+| `tenantId` | query | `string` | No |  |
+| `pageSize` | query | `integer` | No |  |
+| `offset` | query | `integer` | No |  |
+| `statusFilter` | query | `string` | No | optional: running \| completed \| failed |
+
+
+
+### Responses
+
+#### 200 List workflow executions
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `executions` | `object[]` |  |
+| `total` | `integer` |  |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

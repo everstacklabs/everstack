@@ -1,0 +1,19 @@
+name: "embed-multilingual-v3.0"
+display_name: "Embed Multilingual v3.0"
+family: "embed"
+status: "stable"
+
+cost:
+  input_per_1k: 0.0001
+  output_per_1k: 0
+
+limits:
+  max_tokens: 512
+
+capabilities:
+  - embeddings
+
+modalities:
+  input: ["text"]
+  output: ["embedding"]
+

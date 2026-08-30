@@ -1,0 +1,225 @@
+# Default guardrail rules for the LLM Gateway
+# These are pre-configured safety rules that users can enable/disable
+
+input_guardrails:
+  # Prompt injection protection
+  prompt_injection:
+    enabled: true
+    description: "Prevent prompt injection attacks"
+    patterns:
+      - "ignore previous instructions"
+      - "ignore the above"
+      - "disregard previous"
+      - "forget everything above"
+      - "system:"
+      - "assistant:"
+      - "user:"
+      - "human:"
+      - "ignore all previous"
+      - "disregard all previous"
+      - "forget all previous"
+      - "ignore all above"
+      - "disregard all above"
+      - "forget all above"
+    action: "block"
+    severity: "high"
+
+  # PII detection
+  pii_detection:
+    enabled: true
+    description: "Detect and handle personally identifiable information"
+    patterns:
+      # Email addresses
+      - pattern: "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b"
+        type: "email"
+        action: "redact"
+
+      # Phone numbers (US format)
+      - pattern: "\\b\\d{3}[-.]?\\d{3}[-.]?\\d{4}\\b"
+        type: "phone"
+        action: "redact"
+
+      # Social Security Numbers
+      - pattern: "\\b\\d{3}-\\d{2}-\\d{4}\\b"
+        type: "ssn"
+        action: "block"
+
+      # Credit card numbers
+      - pattern: "\\b\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}\\b"
+        type: "credit_card"
+        action: "block"
+
+      # IP addresses
+      - pattern: "\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b"
+        type: "ip_address"
+        action: "redact"
+    severity: "medium"
+
+  # Content filtering
+  content_filtering:
+    enabled: true
+    description: "Filter inappropriate or harmful content"
+    categories:
+      hate:
+        enabled: true
+        threshold: 0.7
+        action: "block"
+
+      harassment:
+        enabled: true
+        threshold: 0.7
+        action: "block"
+
+      self_harm:
+        enabled: true
+        threshold: 0.7
+        action: "block"
+
+      sexual:
+        enabled: true
+        threshold: 0.7
+        action: "block"
+
+      violence:
+        enabled: true
+        threshold: 0.7
+        action: "block"
+    severity: "high"
+
+  # Token limits
+  token_limits:
+    enabled: true
+    description: "Enforce token limits to prevent abuse"
+    max_input_tokens: 100000
+    max_total_tokens: 200000
+    action: "truncate"
+    severity: "low"
+
+output_guardrails:
+  # Jailbreak detection
+  jailbreak_detection:
+    enabled: true
+    description: "Detect attempts to bypass safety measures"
+    patterns:
+      - "I apologize, but I cannot"
+      - "I'm sorry, but I can't"
+      - "I cannot provide"
+      - "I'm not able to"
+      - "I don't have the ability"
+      - "I'm not programmed to"
+      - "I'm designed to"
+      - "My purpose is to"
+    action: "flag"
+    severity: "medium"
+
+  # Hallucination detection
+  hallucination_detection:
+    enabled: true
+    description: "Detect potential hallucinations in responses"
+    indicators:
+      - "specific dates without sources"
+      - "specific numbers without context"
+      - "claims about current events"
+      - "technical details without references"
+    action: "flag"
+    severity: "medium"
+
+  # Code execution prevention
+  code_execution:
+    enabled: true
+    description: "Prevent execution of potentially harmful code"
+    patterns:
+      - "exec\\("
+      - "eval\\("
+      - "system\\("
+      - "subprocess\\."
+      - "os\\.system"
+      - "shell_exec"
+      - "passthru"
+      - "proc_open"
+    action: "block"
+    severity: "high"
+
+  # Output content filtering
+  output_content_filtering:
+    enabled: true
+    description: "Filter inappropriate content in responses"
+    categories:
+      hate:
+        enabled: true
+        threshold: 0.7
+        action: "block"
+
+      harassment:
+        enabled: true
+        threshold: 0.7
+        action: "block"
+
+      self_harm:
+        enabled: true
+        threshold: 0.7
+        action: "block"
+
+      sexual:
+        enabled: true
+        threshold: 0.7
+        action: "block"
+
+      violence:
+        enabled: true
+        threshold: 0.7
+        action: "block"
+    severity: "high"
+
+# Custom guardrail templates
+templates:
+  # Financial data protection
+  financial_data:
+    name: "Financial Data Protection"
+    description: "Protect sensitive financial information"
+    input_patterns:
+      - pattern: "\\b\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}\\b"
+        type: "credit_card"
+        action: "block"
+      - pattern: "\\b\\d{3}-\\d{2}-\\d{4}\\b"
+        type: "ssn"
+        action: "block"
+    output_patterns:
+      - pattern: "\\$\\d+(\\.\\d{2})?"
+        type: "financial_amount"
+        action: "redact"
+    severity: "high"
+
+  # Healthcare data protection
+  healthcare_data:
+    name: "Healthcare Data Protection"
+    description: "Protect sensitive healthcare information"
+    input_patterns:
+      - pattern: "\\b\\d{3}-\\d{2}-\\d{4}\\b"
+        type: "ssn"
+        action: "block"
+      - pattern: "\\b\\d{10}\\b"
+        type: "medical_record"
+        action: "redact"
+    output_patterns:
+      - pattern: "diagnosis|treatment|medication"
+        type: "medical_info"
+        action: "flag"
+    severity: "high"
+
+  # Code safety
+  code_safety:
+    name: "Code Safety"
+    description: "Ensure code safety and prevent harmful execution"
+    input_patterns:
+      - pattern: "exec\\("
+        type: "dangerous_function"
+        action: "block"
+      - pattern: "eval\\("
+        type: "dangerous_function"
+        action: "block"
+    output_patterns:
+      - pattern: "rm -rf|del /s|format"
+        type: "dangerous_command"
+        action: "block"
+    severity: "high"

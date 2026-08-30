@@ -1,0 +1,93 @@
+---
+title: Annotations
+description: Human review queues for evaluation scoring and quality control.
+icon: MessageSquare
+---
+
+Annotation queues bring human reviewers into the evaluation process. They provide a structured interface for people to score AI outputs, validate automated evaluations, and build labeled datasets for future use.
+
+## What annotation queues are
+
+An annotation queue is an ordered list of items waiting for human review. Each item presents the reviewer with the AI input, output, and any relevant context. The reviewer submits a score or label according to the queue's scoring criteria.
+
+Queues act as a bridge between automated evaluation and human judgment. They are not a replacement for automated scorers but a complement for cases where human assessment is necessary.
+
+## When human review adds value
+
+**Use annotation queues when:**
+
+- Automated scorers cannot capture the quality dimension you care about (brand voice, cultural sensitivity, nuanced correctness)
+- You need a human-verified ground truth to calibrate or validate LLM-judge scorers
+- Compliance or regulatory requirements demand human oversight of AI outputs
+- You are building labeled datasets for fine-tuning or training custom scorers
+- Edge cases from production need expert review to determine the correct handling
+
+**Rely on automated scorers when:**
+
+- The quality dimension is well-defined and consistently measurable (format compliance, factual grounding, toxicity)
+- Volume is too high for human review to keep up
+- Speed matters more than perfect accuracy on every individual item
+- The scorer has been validated against human labels and performs reliably
+
+In most setups, automated scorers handle the bulk of evaluation while annotation queues catch the long tail of ambiguous or high-stakes cases.
+
+## Creating a queue
+
+Navigate to **Evaluations > Annotation Queues** and create a new queue. You configure:
+
+- **Name and description** to clarify the review task for annotators
+- **Scoring criteria** defining what reviewers should evaluate and how they should score (numeric scale, categorical labels, or boolean pass/fail)
+- **Instructions** providing guidance, examples, and rubric details so reviewers score consistently
+
+Clear instructions are the single most important factor in annotation quality. Spend time writing them well, include concrete examples of good and bad outputs, and explain boundary cases explicitly.
+
+## Populating queues
+
+Queues can be populated from two sources.
+
+### From production traces
+
+Filter traces by time range, model, endpoint, or metadata, then push matching items into the queue. This is useful for reviewing a sample of live traffic, investigating quality issues flagged by automated scorers, or building labeled datasets from real-world usage.
+
+### From datasets
+
+Push existing dataset items into a queue for human labeling. This works well when you need human scores alongside automated scores for calibration, or when building a new dataset from scratch with human-generated labels.
+
+Items enter the queue in order and are distributed to reviewers as they become available.
+
+## The annotation interface
+
+Reviewers work through queue items one at a time. The interface shows:
+
+- The original input or prompt
+- The AI-generated output
+- Context documents or retrieval results, if available
+- The scoring criteria and instructions
+- A form for submitting the score
+
+Reviewers submit their score and move to the next item. The interface is designed to minimize friction so reviewers can maintain a consistent pace without excessive context-switching.
+
+## Submitting scores
+
+Scores are recorded against the item and associated with the reviewer. Each submission captures:
+
+- The score value (numeric, categorical, or boolean depending on queue configuration)
+- The reviewer identity
+- A timestamp
+- Optional notes or justification
+
+Annotation scores appear alongside automated scores in eval results, giving you a combined view of human and machine assessment.
+
+## Operational guidance
+
+- Write detailed, example-rich instructions for every queue. Vague criteria lead to inconsistent scores.
+- Use a small calibration round before full annotation. Have multiple reviewers score the same items, compare results, and refine instructions until agreement is high.
+- Route high-confidence automated results away from human review. Focus human attention on items where automated scorers are uncertain or disagree.
+- Review annotation throughput and quality periodically. If scores drift over time, refresh the instructions and run another calibration round.
+
+## Related pages
+
+- [Evaluations Overview](/getting-started/evaluations/overview)
+- [Scorers](/getting-started/evaluations/scorers)
+- [Running Evaluations](/getting-started/evaluations/running-evals)
+- [Evaluations API](/getting-started/evaluations/overview)

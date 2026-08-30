@@ -1,0 +1,71 @@
+---
+title: Shell & Files
+description: Terminal access, filesystems, uploads, and direct debugging inside sandboxes.
+icon: Terminal
+---
+
+One of the biggest advantages of sandboxes is that they are not black boxes. You can open a shell, inspect files, stream logs, watch metrics, and understand exactly what the runtime is doing.
+
+## Shell access
+
+Use shell access when you want to work inside a running sandbox like a lightweight remote machine.
+
+Common tasks:
+
+- inspect the working directory
+- install or verify dependencies
+- run scripts manually
+- reproduce failures interactively
+- inspect environment-specific behavior
+
+This is useful for agents, but it is just as useful for human operators debugging a preview app, data pipeline, or webhook processor.
+
+## SSH access
+
+Sandboxes can optionally enable SSH so you can connect using your own terminal.
+
+This is most useful when you want:
+
+- a familiar local terminal workflow
+- direct troubleshooting for a long-running sandbox
+- controlled access for developers or operators
+
+Keep SSH disabled unless you actually need it.
+
+## Files and uploads
+
+Sandboxes support working with files as part of the runtime.
+
+You can:
+
+- upload files into the sandbox workflow
+- browse files through the API
+- search within sandbox files
+- download outputs and generated artifacts
+- use files as inputs for scripts, agents, or preview apps
+
+Good examples include CSV processing, report generation, code patch review, document conversion, and temporary build artifacts.
+
+## Logs, metrics, and events
+
+Interactive access works best together with the other sandbox views:
+
+- `Logs` shows process output in real time
+- `Metrics` shows CPU, memory, network, and execution history
+- `Events` shows lifecycle actions and runtime activity
+
+Taken together, these make a sandbox feel like a debuggable runtime instead of a fire-and-forget job.
+
+## Examples
+
+### Debug a failing cron job
+
+Open a shell in the same sandbox the cron uses, run the command manually, inspect files, and compare logs with runtime metrics.
+
+### Validate generated code safely
+
+Upload or clone code into a sandbox, run tests or build commands, inspect outputs, and discard the environment when finished.
+
+### Investigate a customer-specific issue
+
+Create a sandbox with the same dependencies and limits as the customer workflow, reproduce the issue, and debug without touching shared infrastructure.

@@ -1,0 +1,154 @@
+---
+title: Tools
+description: Built-in tools, custom functions, and MCP server tools for agents.
+icon: Wrench
+---
+
+Tools are how agents interact with the world beyond conversation. When an agent decides it needs to read a file, run a command, search the web, or store a result, it calls a tool. The Everstack runtime handles dispatching the call, executing it in the right environment, and returning the result to the model for its next reasoning step.
+
+Agents only have access to tools explicitly listed in their definition. This is by design -- it gives you precise control over what each agent can and cannot do.
+
+## Built-in tool catalog
+
+Everstack ships with 45+ built-in tools organized into categories.
+
+### Sandbox tools
+
+These tools operate inside the agent's sandbox environment. For persistent agents, that is their dedicated, fully isolated sandbox. For ephemeral agents, a sandbox is provisioned on demand.
+
+| Tool | Purpose |
+|------|---------|
+| `sandbox_shell` | Run a shell command and return stdout/stderr |
+| `sandbox_execute` | Execute a script or binary |
+| `sandbox_read_file` | Read file contents |
+| `sandbox_write_file` | Write content to a file |
+| `sandbox_edit` | Apply targeted edits to a file |
+| `sandbox_patch` | Apply a patch to one or more files |
+| `sandbox_list_files` | List directory contents |
+| `sandbox_glob` | Find files matching a glob pattern |
+| `sandbox_grep` | Search file contents with regex |
+| `sandbox_git_clone` | Clone a git repository into the sandbox |
+| `sandbox_expose_port` | Expose a port from the sandbox for external access |
+| `schedule_cron` | Schedule a recurring command inside the sandbox |
+
+### Browser tools
+
+Browser tools give agents the ability to navigate web pages, interact with UI elements, and extract information from rendered content.
+
+| Tool | Purpose |
+|------|---------|
+| `browser_navigate` | Navigate to a URL |
+| `browser_screenshot` | Capture a screenshot of the current page |
+| `browser_observe` | Extract structured observations from the page |
+| `browser_click` | Click an element on the page |
+| `browser_type` | Type text into an input field |
+| `browser_scroll` | Scroll the page |
+| `browser_evaluate` | Execute JavaScript in the browser context |
+
+### Web tools
+
+| Tool | Purpose |
+|------|---------|
+| `web_search` | Search the web and return results |
+| `web_fetch` | Fetch content from a URL |
+
+### Agent coordination tools
+
+These tools enable multi-agent workflows where agents communicate, delegate, and collaborate.
+
+| Tool | Purpose |
+|------|---------|
+| `spawn_agent` | Create and start a sub-agent |
+| `send_message` | Send a message to another agent |
+| `check_messages` | Check for incoming messages from other agents |
+| `delegate_job` | Delegate a task to a sub-agent asynchronously |
+| `check_job` | Check the status and result of a delegated job |
+
+### Memory tools
+
+| Tool | Purpose |
+|------|---------|
+| `memory_query` | Search the agent's memory for relevant information |
+| `memory_store` | Store a fact or observation in memory |
+
+### User interaction tools
+
+| Tool | Purpose |
+|------|---------|
+| `ask_user` | Pause execution and ask the user a question |
+
+### Platform tools
+
+Platform tools are meta-level tools that let agents manage other agents. These are typically reserved for orchestrator or admin agents.
+
+| Tool | Purpose |
+|------|---------|
+| `platform_create_agent` | Create a new agent definition |
+| `platform_list_agents` | List existing agents |
+| `platform_update_agent` | Update an agent's configuration |
+
+### Storage tools
+
+| Tool | Purpose |
+|------|---------|
+| `upload_artifact` | Upload a file to persistent storage |
+| `download_artifact` | Download a file from persistent storage |
+| `list_artifacts` | List stored artifacts |
+
+### Trigger tools
+
+| Tool | Purpose |
+|------|---------|
+| `create_trigger` | Create an event trigger that starts agent sessions |
+| `list_triggers` | List existing triggers |
+| `delete_trigger` | Remove a trigger |
+
+## Attaching tools to agents
+
+Tools are attached by name in the agent definition's `tools` array. Only tools listed in this array are available to the agent at runtime.
+
+Be intentional about which tools you grant. An agent that only needs to read and analyze files should not have `sandbox_shell` or `sandbox_write_file`. Narrowing the tool set reduces the surface area for unexpected behavior and makes HITL rules simpler to reason about.
+
+## Custom functions as tools
+
+Beyond built-in tools, you can expose your own application logic as tools through the [Functions](/getting-started/functions/overview) system. When a function is registered with Everstack, it becomes available as a tool that agents can call.
+
+This is how you connect agents to your domain -- a function that queries your database, calls your internal API, triggers a deployment, or performs any custom operation becomes a tool the agent can reason about and invoke.
+
+The agent sees the function's name, description, and parameter schema. When it decides to call the function, Everstack dispatches the call to your registered handler and returns the result to the agent.
+
+## MCP server tools
+
+Everstack supports the [Model Context Protocol (MCP)](/getting-started/mcp/overview), which lets you connect external tool servers. Any tools exposed by a connected MCP server are available to agents alongside built-in and custom tools.
+
+MCP tools are useful for integrating with third-party services, existing tool infrastructure, or specialized capabilities that live outside Everstack.
+
+Federated MCP tools appear in the `tools` array under a namespaced name, `mcp__<server>__<tool>`, and are opt-in per agent exactly like built-in tools. For naming rules, attachment, result handling, and approval patterns, see [MCP Tools in Agents](/getting-started/mcp/agent-tools).
+
+## Tool execution flow
+
+When the model decides to call a tool:
+
+1. The model outputs a structured tool call with the tool name and arguments
+2. The runtime checks the tool against the agent's allowed tool list
+3. If the tool matches a HITL approval rule, the session pauses for reviewer approval (see [Human-in-the-Loop](/getting-started/agents/human-in-the-loop))
+4. Once approved (or if no HITL rule applies), the runtime dispatches the call to the appropriate handler
+5. The handler executes the tool -- in the sandbox, in the browser, against an external API, or wherever the tool operates
+6. The result is returned to the model as a tool result message
+7. The model uses the result to decide its next action
+
+This cycle repeats until the model produces a final response, reaches a constraint limit, or encounters an error.
+
+## Tool approval rules
+
+HITL rules are defined in the agent's configuration as an array of tool name patterns. When a tool call matches a pattern, it is held for approval before execution.
+
+Match modes let you control how patterns are evaluated:
+
+- Exact match: the tool name must match the pattern exactly
+- Prefix match: the tool name must start with the pattern
+- Glob/wildcard: standard glob patterns for flexible matching
+
+You can gate entire categories (e.g. all `sandbox_*` tools) or specific high-risk tools (e.g. only `sandbox_shell`). The goal is to let the agent work autonomously on safe operations while requiring human sign-off for actions that could cause real-world impact.
+
+For detailed configuration options, see [Human-in-the-Loop](/getting-started/agents/human-in-the-loop).

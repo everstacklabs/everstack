@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package everstack.voice.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/voice/v1;voice";
+
+// VoiceCloneProfile represents a cloned voice profile.
+message VoiceCloneProfile {
+  string id = 1;
+  string org_id = 2;
+  string name = 3;
+  string description = 4;
+  string reference_audio_object_id = 5;
+  double reference_audio_duration_seconds = 6;
+  string reference_text = 7;
+  string provider = 8;
+  string model = 9;
+  string provider_voice_id = 10;
+  google.protobuf.Struct metadata = 11;
+  string created_by = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+// CreateVoiceCloneProfileRequest creates a new voice clone profile.
+message CreateVoiceCloneProfileRequest {
+  string org_id = 1;
+  string name = 2;
+  string description = 3;
+  bytes reference_audio = 4;
+  string reference_text = 5;
+  string provider = 6;
+  string model = 7;
+}
+
+message CreateVoiceCloneProfileResponse {
+  VoiceCloneProfile profile = 1;
+}
+
+// ListVoiceCloneProfilesRequest lists voice clone profiles for an organization.
+message ListVoiceCloneProfilesRequest {
+  string org_id = 1;
+}
+
+message ListVoiceCloneProfilesResponse {
+  repeated VoiceCloneProfile profiles = 1;
+}
+
+// GetVoiceCloneProfileRequest retrieves a single voice clone profile.
+message GetVoiceCloneProfileRequest {
+  string id = 1;
+}
+
+message GetVoiceCloneProfileResponse {
+  VoiceCloneProfile profile = 1;
+}
+
+// UpdateVoiceCloneProfileRequest updates an existing voice clone profile.
+message UpdateVoiceCloneProfileRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional string reference_text = 4;
+}
+
+message UpdateVoiceCloneProfileResponse {
+  VoiceCloneProfile profile = 1;
+}
+
+// DeleteVoiceCloneProfileRequest soft-deletes a voice clone profile.
+message DeleteVoiceCloneProfileRequest {
+  string id = 1;
+}
+
+message DeleteVoiceCloneProfileResponse {}

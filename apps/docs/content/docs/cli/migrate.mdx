@@ -1,0 +1,105 @@
+---
+title: evs migrate
+description: Run database migrations for PostgreSQL and ClickHouse.
+icon: ArrowUpDown
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+## What it does
+
+`evs migrate` manages database schema changes for PostgreSQL and ClickHouse. It applies versioned migration files in order, tracks which migrations have run, and supports rolling back. Always run migrations before starting the server for the first time, and again after every upgrade.
+
+<Callout type="info">
+This command is for self-hosted deployments only.
+</Callout>
+
+## Basic usage
+
+```bash
+# Apply all pending migrations for both databases
+evs migrate postgres up
+evs migrate clickhouse up
+
+# Check migration status
+evs migrate postgres status
+evs migrate clickhouse status
+
+# Roll back the most recent migration
+evs migrate postgres down
+evs migrate clickhouse down
+```
+
+## Commands
+
+Migrations are run per-database. The two subcommand groups are `postgres` and `clickhouse`, each with the same set of operations.
+
+### up
+
+```bash
+evs migrate postgres up
+evs migrate clickhouse up
+```
+
+Applies all pending migrations in order. If the database is already up to date, the command exits successfully without making changes.
+
+### down
+
+```bash
+evs migrate postgres down
+evs migrate clickhouse down
+```
+
+Rolls back the most recent migration.
+
+<Callout type="warn">
+Rolling back can cause data loss if the down migration drops tables or columns. Always review what a migration does before running it in production.
+</Callout>
+
+### status
+
+```bash
+evs migrate postgres status
+evs migrate clickhouse status
+```
+
+Shows the current migration version and any pending migrations.
+
+## Running before first serve
+
+```bash
+# 1. Set database connections
+export EVS_DATABASE_URL="postgres://everstack:changeme@localhost:5432/everstack?sslmode=disable"
+export EVS_CLICKHOUSE_URL="clickhouse://localhost:9000/everstack"
+
+# 2. Apply migrations
+evs migrate postgres up
+evs migrate clickhouse up
+
+# 3. Start the server
+evs serve
+```
+
+## Upgrade workflow
+
+When upgrading to a new version, run migrations before restarting the server:
+
+```bash
+evs migrate postgres up
+evs migrate clickhouse up
+evs serve
+```
+
+## Version tracking
+
+Each database maintains a `schema_migrations` table. Migration versions are timestamps in `YYYYMMDDHHMMSS` format applied in ascending order.
+
+## Configuration
+
+Migration commands read database connection strings from the same config file and environment variables as `evs serve`:
+
+```bash
+evs migrate postgres up --config /etc/everstack/config.yaml
+```
+
+See [evs serve](/cli/serve) for the full configuration reference.

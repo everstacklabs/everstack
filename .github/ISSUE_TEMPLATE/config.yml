@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and setup help
+    url: https://github.com/everstacklabs/everstack/discussions
+    about: Ask the community before opening a bug report.
+  - name: Security vulnerability
+    url: https://github.com/everstacklabs/everstack/security/advisories/new
+    about: Report vulnerabilities privately. Do not open a public issue.
+  - name: Support options
+    url: https://github.com/everstacklabs/everstack/blob/master/SUPPORT.md
+    about: Review community and commercial support channels.

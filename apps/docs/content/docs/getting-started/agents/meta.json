@@ -1,0 +1,12 @@
+{
+  "title": "Agents",
+  "pages": [
+    "overview",
+    "creating-agents",
+    "tools",
+    "sessions",
+    "human-in-the-loop",
+    "approvals-center",
+    "advanced"
+  ]
+}

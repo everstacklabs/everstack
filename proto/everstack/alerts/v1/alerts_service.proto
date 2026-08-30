@@ -1,0 +1,127 @@
+syntax = "proto3";
+
+package everstack.alerts.v1;
+
+import "google/api/annotations.proto";
+import "everstack/alerts/v1/alerts.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/alerts/v1;alerts";
+
+service AlertsService {
+  // AlertRule CRUD
+  rpc CreateAlertRule(CreateAlertRuleRequest) returns (CreateAlertRuleResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Create a new alert rule" } }
+    };
+    option (google.api.http) = { post: "/v1/alerts/rules" body: "*" };
+  }
+
+  rpc GetAlertRule(GetAlertRuleRequest) returns (GetAlertRuleResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Get alert rule by ID" } }
+    };
+    option (google.api.http) = { get: "/v1/alerts/rules/{id}" };
+  }
+
+  rpc UpdateAlertRule(UpdateAlertRuleRequest) returns (UpdateAlertRuleResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Update an alert rule" } }
+    };
+    option (google.api.http) = { patch: "/v1/alerts/rules/{id}" body: "*" };
+  }
+
+  rpc DeleteAlertRule(DeleteAlertRuleRequest) returns (DeleteAlertRuleResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Delete an alert rule" } }
+    };
+    option (google.api.http) = { delete: "/v1/alerts/rules/{id}" };
+  }
+
+  rpc ListAlertRules(ListAlertRulesRequest) returns (ListAlertRulesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "List alert rules" } }
+    };
+    option (google.api.http) = { get: "/v1/alerts/rules" };
+  }
+
+  // NotificationTarget CRUD
+  rpc CreateNotificationTarget(CreateNotificationTargetRequest) returns (CreateNotificationTargetResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Create a notification target" } }
+    };
+    option (google.api.http) = { post: "/v1/alerts/targets" body: "*" };
+  }
+
+  rpc GetNotificationTarget(GetNotificationTargetRequest) returns (GetNotificationTargetResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Get notification target by ID" } }
+    };
+    option (google.api.http) = { get: "/v1/alerts/targets/{id}" };
+  }
+
+  rpc UpdateNotificationTarget(UpdateNotificationTargetRequest) returns (UpdateNotificationTargetResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Update a notification target" } }
+    };
+    option (google.api.http) = { patch: "/v1/alerts/targets/{id}" body: "*" };
+  }
+
+  rpc DeleteNotificationTarget(DeleteNotificationTargetRequest) returns (DeleteNotificationTargetResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Delete a notification target" } }
+    };
+    option (google.api.http) = { delete: "/v1/alerts/targets/{id}" };
+  }
+
+  rpc ListNotificationTargets(ListNotificationTargetsRequest) returns (ListNotificationTargetsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "List notification targets" } }
+    };
+    option (google.api.http) = { get: "/v1/alerts/targets" };
+  }
+
+  rpc TestNotificationTarget(TestNotificationTargetRequest) returns (TestNotificationTargetResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Test a notification target" } }
+    };
+    option (google.api.http) = { post: "/v1/alerts/targets/{id}/test" body: "*" };
+  }
+
+  // AlertEvent operations
+  rpc ListAlertEvents(ListAlertEventsRequest) returns (ListAlertEventsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "List alert events" } }
+    };
+    option (google.api.http) = { get: "/v1/alerts/events" };
+  }
+
+  rpc AcknowledgeAlert(AcknowledgeAlertRequest) returns (AcknowledgeAlertResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Acknowledge a firing alert" } }
+    };
+    option (google.api.http) = { post: "/v1/alerts/events/{id}/acknowledge" body: "*" };
+  }
+
+  rpc ResolveAlert(ResolveAlertRequest) returns (ResolveAlertResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Resolve a firing alert" } }
+    };
+    option (google.api.http) = { post: "/v1/alerts/events/{id}/resolve" body: "*" };
+  }
+
+  // Builtin + Summary
+  rpc SeedBuiltinRules(SeedBuiltinRulesRequest) returns (SeedBuiltinRulesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Seed built-in alert rules" } }
+    };
+    option (google.api.http) = { post: "/v1/alerts/rules/seed" body: "*" };
+  }
+
+  rpc GetAlertsSummary(GetAlertsSummaryRequest) returns (GetAlertsSummaryResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Get alerts summary" } }
+    };
+    option (google.api.http) = { get: "/v1/alerts/summary" };
+  }
+}

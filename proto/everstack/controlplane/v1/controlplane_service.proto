@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package everstack.controlplane.v1;
+
+import "everstack/controlplane/v1/controlplane.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/controlplane/v1;controlplane";
+
+// ControlPlaneService manages the lifecycle of gateway instances.
+service ControlPlaneService {
+  // ProvisionInstance triggers async provisioning of a new gateway instance.
+  rpc ProvisionInstance(ProvisionInstanceRequest) returns (ProvisionInstanceResponse);
+
+  // GetInstance retrieves an instance by ID or workspace ID.
+  rpc GetInstance(GetInstanceRequest) returns (GetInstanceResponse);
+
+  // ListInstances lists all instances in an organization.
+  rpc ListInstances(ListInstancesRequest) returns (ListInstancesResponse);
+
+  // StartInstance starts a stopped instance.
+  rpc StartInstance(StartInstanceRequest) returns (StartInstanceResponse);
+
+  // StopInstance stops a running instance.
+  rpc StopInstance(StopInstanceRequest) returns (StopInstanceResponse);
+
+  // RestartInstance restarts a running instance.
+  rpc RestartInstance(RestartInstanceRequest) returns (RestartInstanceResponse);
+
+  // DeleteInstance tears down and removes an instance.
+  rpc DeleteInstance(DeleteInstanceRequest) returns (DeleteInstanceResponse);
+
+  // GetInstanceLogs retrieves recent logs from an instance.
+  rpc GetInstanceLogs(GetInstanceLogsRequest) returns (GetInstanceLogsResponse);
+
+  // PushConfig pushes a configuration section to a running instance.
+  rpc PushConfig(PushConfigRequest) returns (PushConfigResponse);
+
+  // SetCustomDomain registers a tenant-owned domain on an instance and
+  // returns the DNS records the user must create to verify ownership.
+  rpc SetCustomDomain(SetCustomDomainRequest) returns (SetCustomDomainResponse);
+
+  // VerifyCustomDomain polls DNS for the verification TXT record; on
+  // success the domain is attached to the tenant Ingress and cert-manager
+  // begins issuing a certificate via HTTP-01.
+  rpc VerifyCustomDomain(VerifyCustomDomainRequest) returns (VerifyCustomDomainResponse);
+
+  // RemoveCustomDomain detaches the custom domain from an instance.
+  rpc RemoveCustomDomain(RemoveCustomDomainRequest) returns (RemoveCustomDomainResponse);
+
+  // ListRegions returns the regions this controlplane can provision into.
+  rpc ListRegions(ListRegionsRequest) returns (ListRegionsResponse);
+}

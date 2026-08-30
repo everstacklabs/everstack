@@ -1,0 +1,40 @@
+---
+title: GLM
+description: Trace GLM (Zhipu) models used through Claude Code.
+icon: zhipu
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<ZhipuIcon /> **GLM** (Zhipu) is a model family, not a separate CLI. The common
+setup is [Claude Code](/docs/getting-started/observability/coding-agents/claude-code)
+pointed at Z.ai's Anthropic-compatible endpoint.
+
+## Configuration
+
+Point Claude Code at Z.ai, then configure Claude Code telemetry exactly as on
+its own page — the base URL does not change what telemetry is emitted.
+
+```bash
+export ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic
+export ANTHROPIC_AUTH_TOKEN=<zhipu-key>
+```
+
+<Callout type="info">
+  Telemetry is **Claude Code's** — follow the
+  [Claude Code](/docs/getting-started/observability/coding-agents/claude-code)
+  setup for the OTel environment variables. Nothing extra is needed here.
+</Callout>
+
+## How Everstack attributes GLM
+
+Claude Code reports the model name (`glm-*`) but no provider attribute when
+talking to Z.ai. Everstack infers the provider from the model name —
+`glm-*` → **Zhipu** — so GLM traces group under the right provider.
+
+## Notes
+
+- GLM reports no dollar **cost**; Everstack computes it from your model-catalog
+  pricing.
+- Some Z.ai routing can return a `claude-*` model string for GLM requests. If a
+  trace looks mis-attributed, check the model value on the span.

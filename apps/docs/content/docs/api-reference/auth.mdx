@@ -1,0 +1,24 @@
+---
+title: Auth
+description: Auth API endpoints
+---
+
+# Auth API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | [`/v1/auth/accept-invite`](./auth/accept-invitation-accepts-a-team-invitation-and-sets-up-the-user-account) | AcceptInvitation accepts a team invitation and sets up the user account |
+| `POST` | [`/v1/auth/authenticate`](./auth/authenticate-exchanges-an-oauth-code-for-a-session-cloud-only) | Authenticate exchanges an OAuth code for a session (Cloud only) |
+| `POST` | [`/v1/auth/invite`](./auth/invite-team-member-sends-an-invitation-to-join-the-team-checks-seat-limit) | InviteTeamMember sends an invitation to join the team (checks seat limit) |
+| `DELETE` | [`/v1/auth/invite/{invitationId}`](./auth/revoke-invitation-revokes-a-pending-invitation) | RevokeInvitation revokes a pending invitation |
+| `POST` | [`/v1/auth/login`](./auth/login-authenticates-with-email-and-password-self-hosted-only) | Login authenticates with email and password - Self-hosted only |
+| `POST` | [`/v1/auth/magic-link`](./auth/request-magic-link-sends-a-magic-link-email-for-passwordless-login-self-hosted-only) | RequestMagicLink sends a magic link email for passwordless login - Self-hosted only |
+| `GET` | [`/v1/auth/mode`](./auth/get-auth-mode-returns-the-authentication-mode-cloud-vs-self-hosted) | GetAuthMode returns the authentication mode (cloud vs self-hosted) |
+| `POST` | [`/v1/auth/refresh`](./auth/refresh-session-extends-the-current-session) | RefreshSession extends the current session |
+| `POST` | [`/v1/auth/register`](./auth/register-creates-the-first-admin-user-becomes-instance-owner-self-hosted-only) | Register creates the first admin user (becomes instance owner) - Self-hosted only |
+| `GET` | [`/v1/auth/session`](./auth/get-session-returns-the-current-user-session-if-authenticated) | GetSession returns the current user session if authenticated |
+| `POST` | [`/v1/auth/signout`](./auth/sign-out-invalidates-the-current-session) | SignOut invalidates the current session |
+| `POST` | [`/v1/auth/sso-url`](./auth/get-auth-url-returns-the-sso-provider-url-for-sign-in-redirect-cloud-only) | GetAuthURL returns the SSO provider URL for sign-in redirect (Cloud only) |
+| `GET` | [`/v1/auth/team`](./auth/list-team-members-returns-all-team-members-and-pending-invitations) | ListTeamMembers returns all team members and pending invitations |
+| `DELETE` | [`/v1/auth/team/{userId}`](./auth/remove-team-member-removes-a-user-from-the-team) | RemoveTeamMember removes a user from the team |
+| `POST` | [`/v1/auth/verify-magic-link`](./auth/verify-magic-link-verifies-a-magic-link-token-and-creates-a-session-self-hosted-only) | VerifyMagicLink verifies a magic link token and creates a session - Self-hosted only |

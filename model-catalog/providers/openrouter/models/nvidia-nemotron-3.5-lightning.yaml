@@ -1,0 +1,66 @@
+name: "nvidia/nemotron-3.5-lightning"
+display_name: "Nemotron 3.5 Lightning 30B A3B (OpenRouter)"
+family: "nemotron"
+status: "stable"
+release_date: "2026-08-11"
+
+cost:
+  input_per_1k: 0.00008
+  output_per_1k: 0.0002
+  cache_read_per_1k: 0.00004
+
+limits:
+  max_tokens: 262144
+  max_completion_tokens: 131072
+
+capabilities:
+  - chat
+  - function_calling
+  - reasoning
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+
+notes: "Nemotron model for efficient reasoning, coding, and specialized AI agents"
+
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 131072
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+  - key: "frequency_penalty"
+    display_name: "Frequency penalty"
+    type: "number"
+    min_value: -2
+    has_min_value: true
+    max_value: 2
+    has_max_value: true
+  - key: "presence_penalty"
+    display_name: "Presence penalty"
+    type: "number"
+    min_value: -2
+    has_min_value: true
+    max_value: 2
+    has_max_value: true
+  - key: "seed"
+    display_name: "Seed"
+    type: "integer"

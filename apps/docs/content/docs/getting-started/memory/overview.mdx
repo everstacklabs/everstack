@@ -1,0 +1,103 @@
+---
+title: Memory Overview
+description: Vector memory for RAG, semantic search, and long-term agent memory.
+icon: Brain
+---
+
+Memory is Everstack's managed vector storage layer. It lets you store documents as embeddings and retrieve them by meaning rather than by exact keyword match. This powers two distinct use cases: retrieval-augmented generation (RAG) for your applications, and persistent memory for your agents.
+
+## Why memory matters
+
+LLMs have a fixed context window. Once a conversation exceeds that window, earlier content is lost. Memory solves this by storing information as vector embeddings and retrieving only the pieces that are relevant to the current request. Instead of cramming everything into the prompt, you fetch what matters.
+
+This is useful whether you are building a customer support bot that needs access to your knowledge base, or a long-running agent that should remember facts about users across sessions.
+
+## Two use cases, one system
+
+### RAG collections
+
+Collections are tenant-scoped vector stores. You create a collection, add documents (with optional metadata), and query it with natural language. Everstack handles chunking, embedding, storage, and retrieval. This is the standard RAG pattern: your application asks a question, the most relevant chunks come back, and you inject them into the LLM prompt for grounded answers.
+
+Use collections when you have a corpus of documents, knowledge base articles, product catalogs, or any structured content that your application needs to search semantically.
+
+### Agent memory
+
+Agent memory is a higher-level abstraction built on top of the same vector infrastructure. When you enable memory for an agent, Everstack automatically extracts and stores facts, instructions, and session summaries from conversations. At the start of each turn, the most relevant memories are injected into the agent's system prompt.
+
+Agent memory is organized by type and scope:
+
+**Types** describe what kind of information is stored:
+
+| Type | What it captures |
+| --- | --- |
+| `fact` | Concrete information about users, preferences, or context |
+| `instruction` | Behavioral directives the agent should follow |
+| `session_summary` | Compressed summaries of past conversations |
+| `document` | Longer-form reference material |
+
+**Scopes** control who can see a memory:
+
+| Scope | Visibility |
+| --- | --- |
+| `agent` | Only the agent that created it |
+| `user` | Shared across agents for a specific user |
+| `global` | Visible to all agents in the tenant |
+
+This means an agent can remember that a specific user prefers concise answers (`fact`, `user` scope), that it should always respond in French (`instruction`, `agent` scope), or that the company's refund policy changed last week (`document`, `global` scope).
+
+## Backend options
+
+Everstack supports multiple vector backends. You choose one per tenant based on your scale, latency, and infrastructure requirements.
+
+| Backend | Best for |
+| --- | --- |
+| **PgVector** (default) | Simple deployments, low operational overhead, already using Postgres |
+| **Qdrant** | High-throughput similarity search, large collections |
+| **Pinecone** | Fully managed, no infrastructure to run |
+| **Weaviate** | Hybrid search (vector + keyword), complex filtering |
+
+The backend is configured in your tenant's gateway config and is transparent to your application code. Switching backends does not change the API.
+
+## Embedding models
+
+Documents are converted to vectors using embedding models. You configure which models are available in the `features.memory.embedding_models` array. Each collection uses a single embedding model, chosen at creation time. Queries against that collection use the same model automatically.
+
+## Tenant isolation
+
+All memory data is scoped to a tenant. Collections, documents, and agent memories are never shared across tenants. This isolation is enforced at the storage layer, not just the API layer, so there is no risk of cross-tenant data leakage even with shared backend infrastructure.
+
+## When to use memory
+
+**Use memory when:**
+
+- Your application needs to search a knowledge base by meaning, not keywords
+- Agents need to remember information across sessions or conversations
+- You want grounded LLM responses backed by your own data
+- Users expect personalized interactions that improve over time
+
+**Consider alternatives when:**
+
+- You need exact-match lookups on structured data (use a traditional database)
+- Your data changes every few seconds and stale results are unacceptable (use a live query)
+- You only need to pass a few static facts to the LLM (use the system prompt directly)
+
+## Enabling memory
+
+Memory is enabled in your gateway configuration:
+
+```yaml
+features:
+  enable_memory: true
+  memory:
+    backend: "pgvector"
+    embedding_models:
+      - "text-embedding-3-small"
+```
+
+Once enabled, collections and agent memory are available through both the admin UI and the API.
+
+## Next steps
+
+- [Collections](/getting-started/memory/collections) -- Creating and managing vector stores for document storage.
+- [Querying](/getting-started/memory/querying) -- Semantic search, filtering, and retrieval from your collections.
+- [Memory API Reference](/api-reference/memory) -- Full API documentation for collections, documents, and agent memory.

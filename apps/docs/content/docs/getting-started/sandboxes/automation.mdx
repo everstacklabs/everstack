@@ -1,0 +1,114 @@
+---
+title: Automation
+description: Use crons, webhooks, and isolated workers to automate workloads inside sandboxes.
+icon: Clock3
+---
+
+Sandboxes are a strong fit for automation because they combine runtime isolation with just enough control plane to run real jobs safely.
+
+Instead of provisioning a full service for every small workflow, you can create a sandbox and turn it into:
+
+- a scheduled worker with crons
+- an HTTP-triggered worker with webhooks
+- a file-processing runtime
+- a customer-specific integration environment
+- a temporary background job runner with clear lifecycle controls
+
+## Why automation belongs in sandboxes
+
+Most automation workloads need more than raw execution.
+
+They usually also need:
+
+- dependency isolation
+- filesystem access
+- environment-specific debugging
+- network restrictions
+- logs, metrics, and execution history
+- a clean way to stop, revive, or terminate the runtime
+
+That is exactly what sandboxes provide.
+
+## Cron-based automation
+
+Use crons when a command should run on a schedule inside a sandbox.
+
+Good fits include:
+
+- hourly data syncs
+- nightly report generation
+- health checks and cleanup jobs
+- polling third-party APIs
+- recurring enrichment or indexing work
+
+Typical pattern:
+
+1. Create a sandbox with the right image and dependencies.
+2. Verify the command manually in shell.
+3. Add a cron expression and timeout.
+4. Monitor runs through logs, metrics, events, and run counts.
+
+If the job is important, prefer `whitelist` networking and allow only the domains it actually needs.
+
+## Webhook-based automation
+
+Use webhooks when an external system should trigger work inside the sandbox.
+
+Good fits include:
+
+- GitHub push or PR handlers
+- Stripe billing callbacks
+- custom SaaS event processing
+- inbound file-processing triggers
+- internal platform hooks
+
+Each webhook can run a command in response to an HTTP request, with:
+
+- a path
+- a secret for verification
+- rate limiting
+- timeout controls
+- optional auto-recreate behavior
+
+This is a practical way to build isolated event handlers without standing up a separate long-lived service.
+
+## Automation examples
+
+### Nightly CSV import
+
+Use a Python sandbox with a cron that fetches a CSV, validates it, writes outputs to disk, and posts results to your internal API.
+
+### GitHub webhook processor
+
+Create a webhook-driven sandbox that receives repository events and runs a command such as `python sync_repo.py` or `node handle_event.js`.
+
+### Customer-specific connector
+
+Run one sandbox per customer integration. Schedule a cron for periodic syncs and keep outbound access whitelisted to only that customer's required endpoints.
+
+### Temporary migration worker
+
+Create a sandbox for a one-off migration or backfill, monitor resource usage, and terminate it once the task finishes.
+
+## Operational guidance
+
+- Use shell to validate commands before scheduling them.
+- Keep timeouts realistic so stuck jobs do not run forever.
+- Prefer `whitelist` network mode for production automations.
+- Use events and execution history to understand failures.
+- Terminate stale sandboxes when the automation no longer needs a dedicated runtime.
+
+## Crons vs webhooks vs ports
+
+- Use `Crons` for scheduled execution.
+- Use `Webhooks` for request-driven execution.
+- Use `Ports` when you need a continuously running interactive service.
+
+These features can also be combined. For example, a sandbox might expose a status UI on one port, accept incoming webhooks, and run a nightly cron.
+
+## Related pages
+
+- [Sandboxes Overview](/getting-started/sandboxes/overview)
+- [Networking](/getting-started/sandboxes/networking)
+- [Shell & Files](/getting-started/sandboxes/shell-and-files)
+- [Sandbox API](/api-reference/sandbox)

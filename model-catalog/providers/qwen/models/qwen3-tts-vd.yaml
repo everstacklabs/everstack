@@ -1,0 +1,19 @@
+name: "qwen3-tts-vd"
+display_name: "Qwen3 TTS Voice Design"
+family: "qwen-tts"
+status: "stable"
+
+cost:
+  input_per_1k: 0.0002
+  output_per_1k: 0.0
+
+limits:
+  max_tokens: 4096
+  max_completion_tokens: 0
+
+capabilities:
+  - audio
+
+modalities:
+  input: ["text"]
+  output: ["audio"]

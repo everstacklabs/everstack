@@ -1,0 +1,62 @@
+# Browser sidecar image for agent browser automation.
+# Runs Chromium with CDP (Chrome DevTools Protocol) exposed on port 9222.
+# Includes browser-streamer for live WebSocket streaming of the browser viewport.
+#
+# This image runs alongside the main sandbox container:
+#   - K8s: sidecar container sharing the pod network namespace
+#   - Docker: linked container on the same bridge network
+#
+# The agent connects to Chromium via CDP on localhost:9222.
+# The frontend connects via WebSocket relay to the streamer on port 6080.
+#
+# Uses Debian bookworm instead of Ubuntu 24.04 because Ubuntu replaced
+# chromium-browser with a snap stub that doesn't work in containers.
+
+FROM golang:1.25-bookworm AS builder
+
+WORKDIR /build
+COPY go.mod go.sum ./
+COPY build/run-with-retry.sh ./build/run-with-retry.sh
+RUN ./build/run-with-retry.sh go mod download
+COPY cmd/browser-streamer/ cmd/browser-streamer/
+RUN CGO_ENABLED=0 go build -o /browser-streamer ./cmd/browser-streamer/
+
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Chromium + minimal rendering dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
+    fonts-liberation \
+    fonts-noto-color-emoji \
+    fonts-noto-cjk \
+    libnss3 \
+    libgbm1 \
+    libatk-bridge2.0-0 \
+    libgtk-3-0 \
+    libasound2 \
+    libxshmfence1 \
+    libx11-xcb1 \
+    socat \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Headed mode: Xvfb (virtual display) for Chromium to render into.
+# No VNC/noVNC — streaming is handled by browser-streamer via CDP screencast.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    xvfb \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the browser-streamer binary
+COPY --from=builder /browser-streamer /usr/local/bin/browser-streamer
+
+COPY internal/sandbox/docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# CDP port
+EXPOSE 9222
+# Browser streamer WebSocket port
+EXPOSE 6080
+
+ENTRYPOINT ["/entrypoint.sh"]

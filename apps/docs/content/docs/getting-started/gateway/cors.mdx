@@ -1,0 +1,111 @@
+---
+title: CORS
+description: Cross-origin resource sharing configuration for browser-based clients.
+icon: Globe
+---
+
+CORS (Cross-Origin Resource Sharing) controls which browser origins can make requests to the gateway. If your application calls the gateway directly from frontend JavaScript, you need CORS configured correctly or the browser will block the requests.
+
+## When to configure CORS
+
+You need CORS settings when:
+
+- your frontend makes direct API calls to the gateway from the browser
+- you are building a chat widget, playground, or demo that talks to the gateway client-side
+- your gateway serves requests from multiple domains or subdomains
+
+You do not need CORS if all LLM requests go through your own backend server. Server-to-server requests are not subject to browser CORS restrictions.
+
+## Static CORS (server level)
+
+Static CORS is configured at the server level and applies to all requests, including unauthenticated preflight requests.
+
+```yaml
+server:
+  cors:
+    enabled: true
+    allowed_origins:
+      - "https://app.example.com"
+      - "https://staging.example.com"
+    allowed_methods:
+      - "GET"
+      - "POST"
+      - "OPTIONS"
+    allowed_headers:
+      - "Authorization"
+      - "Content-Type"
+    allow_credentials: true
+```
+
+Key settings:
+
+- `enabled` -- turns CORS handling on or off
+- `allowed_origins` -- list of origins permitted to make requests. Use `["*"]` to allow any origin.
+- `allowed_methods` -- HTTP methods the gateway accepts from cross-origin requests
+- `allowed_headers` -- request headers the client is allowed to send
+- `allow_credentials` -- whether the browser should include cookies and authorization headers
+
+## Runtime CORS (per-tenant override)
+
+For multi-tenant deployments, each tenant can override CORS settings at runtime. When an authenticated request arrives, the gateway checks whether the resolved tenant has custom CORS configuration. If it does, the tenant's settings take precedence over the static server-level config.
+
+This is useful when different tenants embed the gateway in different frontend applications, each with its own origin.
+
+Runtime CORS only applies to authenticated requests. Preflight requests (OPTIONS) always use the static configuration because they are unauthenticated by design.
+
+## Preflight behavior
+
+Browsers send a preflight OPTIONS request before making certain cross-origin calls (typically POST requests with custom headers). The gateway handles preflight requests using the static CORS configuration only.
+
+The flow is:
+
+1. Browser sends an OPTIONS request with `Origin` and `Access-Control-Request-Method` headers
+2. Gateway checks the origin against `allowed_origins`
+3. If the origin is allowed, the gateway responds with the appropriate `Access-Control-Allow-*` headers
+4. Browser proceeds with the actual request
+
+If the origin is not in the allowed list, the gateway omits the CORS headers and the browser blocks the request.
+
+## Origin matching
+
+Origin matching follows these rules:
+
+- A wildcard (`"*"`) matches any origin
+- Specific origins are compared case-insensitively
+- The `Origin` header from the request must match at least one entry in `allowed_origins`
+
+If you use a wildcard origin with `allow_credentials: true`, be aware that most browsers reject this combination. Use explicit origins when credentials are enabled.
+
+## Common configurations
+
+### Open development gateway
+
+Allow all origins during development:
+
+```yaml
+server:
+  cors:
+    enabled: true
+    allowed_origins: ["*"]
+    allowed_methods: ["GET", "POST", "OPTIONS"]
+    allowed_headers: ["Authorization", "Content-Type"]
+    allow_credentials: false
+```
+
+### Production with specific origins
+
+Lock CORS to your known frontend domains:
+
+```yaml
+server:
+  cors:
+    enabled: true
+    allowed_origins:
+      - "https://app.yourproduct.com"
+      - "https://admin.yourproduct.com"
+    allowed_methods: ["GET", "POST", "OPTIONS"]
+    allowed_headers: ["Authorization", "Content-Type"]
+    allow_credentials: true
+```
+
+For endpoint details, see the [Gateway API Reference](/api-reference/gateway).

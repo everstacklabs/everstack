@@ -1,0 +1,561 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/firecracker/v1/firecracker_agent.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "FirecrackerAgent"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {},
+  "definitions": {
+    "googlerpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "v1Empty": {
+      "type": "object"
+    },
+    "v1ExecResult": {
+      "type": "object",
+      "properties": {
+        "exitCode": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "stdout": {
+          "type": "string"
+        },
+        "stderr": {
+          "type": "string"
+        },
+        "durationMs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "timedOut": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1ExposePortResponse": {
+      "type": "object",
+      "properties": {
+        "hostPort": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1FileInfo": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string",
+          "format": "int64"
+        },
+        "isDir": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1InvokeFunctionResult": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "resultJson": {
+          "type": "string",
+          "description": "JSON-encoded return value from the handler."
+        },
+        "stdout": {
+          "type": "string"
+        },
+        "stderr": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "errorType": {
+          "type": "string",
+          "title": "\"timeout\"|\"oom\"|\"syntax\"|\"runtime\"|\"network\"|\"\""
+        },
+        "durationMs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "coldStart": {
+          "type": "boolean",
+          "description": "cold_start is true when this invocation created the environment\nrather than reusing a warm one — for cold-start metrics."
+        }
+      }
+    },
+    "v1ListFilesResponse": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FileInfo"
+          }
+        }
+      }
+    },
+    "v1ListSandboxesResponse": {
+      "type": "object",
+      "properties": {
+        "instances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SandboxInstance"
+          }
+        }
+      }
+    },
+    "v1ListSessionsResponse": {
+      "type": "object",
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SessionInfo"
+          }
+        },
+        "nowUnix": {
+          "type": "string",
+          "format": "int64",
+          "description": "NowUnix is the guest's wall-clock time at the moment the agent\nassembled this response. Pair with each session's\nlast_activity_unix to compute idle duration in guest-clock terms\n— avoids host/guest clock-drift bugs that accumulate on\nlong-running Firecracker VMs."
+        }
+      }
+    },
+    "v1LogChunk": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "v1NodeHealth": {
+      "type": "object",
+      "properties": {
+        "healthy": {
+          "type": "boolean",
+          "description": "Computed bool — true means safe to schedule new sandboxes here.\nWhen false, `reason` explains which threshold tripped."
+        },
+        "reason": {
+          "type": "string"
+        },
+        "diskPct": {
+          "type": "number",
+          "format": "double",
+          "description": "Pressure percentages (0..100). disk is the workdir filesystem\n(where rootfs overlays land); mem is /proc/meminfo Available\nagainst Total; cpu is the 1-minute load average normalized by\nlogical CPUs; fd is open FDs against the soft rlimit."
+        },
+        "memPct": {
+          "type": "number",
+          "format": "double"
+        },
+        "cpuPct": {
+          "type": "number",
+          "format": "double"
+        },
+        "fdPct": {
+          "type": "number",
+          "format": "double"
+        },
+        "vmCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current VM count and configured maximum on this node. The\nscheduler may also choose to weight by remaining capacity."
+        },
+        "vmMax": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "timestampUnix": {
+          "type": "string",
+          "format": "int64",
+          "description": "Wall-clock timestamp the snapshot was taken. The cache uses this\nto age stale entries; \u003e30s old → re-probe before trusting."
+        }
+      },
+      "description": "NodeHealth is the host's self-reported pressure signal. Returned by\nGetNodeHealth; cached by the gateway-side LoadBalancer and consulted\nbefore every sandbox placement. healthy=false → skip this node for\nnew creates until the next refresh.\n\nThresholds are evaluated host-side so the load balancer doesn't have\nto know the policy — that keeps the gateway thin and lets per-host\noverrides (e.g. tighter disk limits on small nodes) live with the\nnode config."
+    },
+    "v1NodeInfoResponse": {
+      "type": "object",
+      "properties": {
+        "nodeName": {
+          "type": "string"
+        },
+        "backend": {
+          "type": "string"
+        },
+        "warmVms": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "activeVms": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxTotal": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "timestampUnix": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ReadFileResponse": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string",
+          "format": "byte"
+        },
+        "size": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1RestoreResponse": {
+      "type": "object",
+      "properties": {
+        "exitCode": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "stderr": {
+          "type": "string"
+        },
+        "bytesReceived": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1SandboxConfig": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "string"
+        },
+        "cpuLimit": {
+          "type": "number",
+          "format": "double"
+        },
+        "memoryMb": {
+          "type": "string",
+          "format": "int64"
+        },
+        "diskMb": {
+          "type": "string",
+          "format": "int64"
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "networkMode": {
+          "type": "string",
+          "title": "\"deny\", \"whitelist\", \"allow\""
+        },
+        "allowedHosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "envVars": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "workDir": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string"
+        },
+        "dnsServers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "name": {
+          "type": "string"
+        },
+        "agentId": {
+          "type": "string"
+        },
+        "sshEnabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1SandboxInstance": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "containerId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "title": "\"pending\", \"running\", \"stopped\", \"failed\""
+        },
+        "backend": {
+          "type": "string"
+        },
+        "createdAtUnix": {
+          "type": "string",
+          "format": "int64"
+        },
+        "expiresAtUnix": {
+          "type": "string",
+          "format": "int64"
+        },
+        "nodeName": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "agentHealthy": {
+          "type": "boolean",
+          "description": "agent_healthy reflects the in-guest agent's HTTP /health probe\nresult at the time this response was assembled. true means the\nhost-side HealthMonitor saw a 204 on its most recent tick (default\nevery 20s). false means the agent has stopped answering. Distinct\nfrom `status` above, which tracks the VM's lifecycle (\"running\",\n\"stopped\") and doesn't observe in-guest liveness.\n\nFor backends that don't run an in-guest agent (Docker, Kubernetes,\nDeny-mode Firecracker) the field is always true — those code paths\nhave their own health stories that don't map onto this signal."
+        }
+      }
+    },
+    "v1SandboxStats": {
+      "type": "object",
+      "properties": {
+        "cpuPercent": {
+          "type": "number",
+          "format": "double"
+        },
+        "memoryUsage": {
+          "type": "string",
+          "format": "int64"
+        },
+        "memoryLimit": {
+          "type": "string",
+          "format": "int64"
+        },
+        "memoryPercent": {
+          "type": "number",
+          "format": "double"
+        },
+        "networkRxBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "networkTxBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "blockRead": {
+          "type": "string",
+          "format": "int64"
+        },
+        "blockWrite": {
+          "type": "string",
+          "format": "int64"
+        },
+        "pids": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "timestampUnix": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1SessionInfo": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string"
+        },
+        "attachedClients": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Number of clients currently attached. \u003e1 means multiple browsers\nor an SSH client + UI client are sharing the session."
+        },
+        "createdUnix": {
+          "type": "string",
+          "format": "int64",
+          "description": "Session creation time as a Unix timestamp."
+        },
+        "lastActivityUnix": {
+          "type": "string",
+          "format": "int64",
+          "description": "tmux's record of the last time any pane in the session received\ninput or wrote output. Zero means \"guest tmux didn't report a\nvalue\" — the reaper treats that as unknown and leaves the\nsession alone (fail-safe)."
+        }
+      }
+    },
+    "v1ShellClose": {
+      "type": "object"
+    },
+    "v1ShellExit": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "error": {
+          "type": "string"
+        },
+        "sessionTerminated": {
+          "type": "boolean",
+          "description": "SessionTerminated is true when the underlying persistent session\nis gone (e.g. session_kill, shell exited cleanly, VM rebooted).\nWhen false, the client can retry-attach with the same session_id\nand land back in the same shell. When true, the client should\nsurface \"your session ended\" and start fresh."
+        }
+      }
+    },
+    "v1ShellInit": {
+      "type": "object",
+      "properties": {
+        "sandboxId": {
+          "type": "string"
+        },
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sessionId": {
+          "type": "string",
+          "description": "SessionID reattaches to an existing persistent shell session.\nEmpty creates a new session and the server sends the assigned ID\nback in the first ShellServerMessage. Clients should remember the\nID across reconnects so a brief network drop or fcagent restart\ndoesn't lose the user's working shell. An unknown SessionID is a\nhard error (returned as ShellExit with session_terminated=true and\nan \"session_gone\" error string) so the host never silently swaps\nin a fresh shell when the user thought they were resuming."
+        }
+      }
+    },
+    "v1ShellResize": {
+      "type": "object",
+      "properties": {
+        "rows": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "cols": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ShellServerMessage": {
+      "type": "object",
+      "properties": {
+        "stdout": {
+          "$ref": "#/definitions/v1ShellStdout"
+        },
+        "exit": {
+          "$ref": "#/definitions/v1ShellExit"
+        },
+        "session": {
+          "$ref": "#/definitions/v1ShellSession",
+          "description": "ShellSession is sent as the first server message on a new\nshell stream so the client knows which session_id it landed\non. Empty on reattach (the client already knows). Optional —\nolder clients that ignore it still work, they just can't\nreconnect."
+        }
+      }
+    },
+    "v1ShellSession": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "description": "Server-assigned session ID. Stable across attach/detach cycles."
+        },
+        "reattached": {
+          "type": "boolean",
+          "description": "True when this stream attached to a pre-existing session (rather\nthan created a fresh one). Informational only."
+        },
+        "transport": {
+          "type": "string",
+          "description": "Host↔guest transport actually used for this shell (\"vsock\" or \"ws\").\nSet by the Firecracker backend based on selectShellTransport. Empty\nfor non-FC backends or older fcagent versions that pre-date the\nPhase 5b flag. UI surfaces this in the Shell tab so operators\nrolling out the new transport can see at a glance which path\neach session landed on."
+        }
+      }
+    },
+    "v1ShellStdin": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "v1ShellStdout": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "v1SnapshotChunk": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    }
+  }
+}

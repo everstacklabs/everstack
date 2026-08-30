@@ -1,0 +1,68 @@
+name: "glm-4.5-flash"
+display_name: "GLM-4.5-Flash"
+family: "glm-flash"
+status: "stable"
+release_date: "2025-07-28"
+
+cost:
+  input_per_1k: 0
+  output_per_1k: 0
+  cache_read_per_1k: 0
+  cache_write_per_1k: 0
+
+limits:
+  max_tokens: 131072
+  max_completion_tokens: 98304
+
+capabilities:
+  - chat
+  - function_calling
+  - reasoning
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+
+knowledge_cutoff: "2025-04"
+notes: "Efficient GLM model for fast reasoning, coding, and agent workflows"
+
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 98304
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+  - key: "frequency_penalty"
+    display_name: "Frequency penalty"
+    type: "number"
+    min_value: -2
+    has_min_value: true
+    max_value: 2
+    has_max_value: true
+  - key: "presence_penalty"
+    display_name: "Presence penalty"
+    type: "number"
+    min_value: -2
+    has_min_value: true
+    max_value: 2
+    has_max_value: true
+  - key: "seed"
+    display_name: "Seed"
+    type: "integer"

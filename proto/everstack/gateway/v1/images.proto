@@ -1,0 +1,209 @@
+syntax = "proto3";
+
+package everstack.gateway.v1;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/gateway/v1;gateway";
+
+// =============================================================================
+// Image Generation Messages
+// =============================================================================
+
+message ImageGenerationRequest {
+  // A text description of the desired image(s)
+  // Max length: 32,000 chars (GPT Image), 4,000 chars (DALL-E 3), 1,000 chars (DALL-E 2)
+  string prompt = 1;
+
+  // The model to use for image generation
+  // Options: "gpt-image-1.5", "gpt-image-1", "dall-e-3", "dall-e-2"
+  string model = 2;
+
+  // The number of images to generate (1-10, default 1)
+  // Note: DALL-E 3 only supports n=1
+  int32 n = 3;
+
+  // The quality of the generated images
+  // Options: "auto" (default), "standard", "hd"
+  string quality = 4;
+
+  // The format of the generated images
+  // Options: "url" (default), "b64_json"
+  string response_format = 5;
+
+  // The size of the generated images
+  // Options vary by model:
+  // - GPT Image: "1024x1024", "1536x1024", "1024x1536", "auto"
+  // - DALL-E 3: "1024x1024", "1792x1024", "1024x1792"
+  // - DALL-E 2: "256x256", "512x512", "1024x1024"
+  string size = 6;
+
+  // The style of the generated images (DALL-E 3 only)
+  // Options: "vivid" (default), "natural"
+  string style = 7;
+
+  // A unique identifier for the end user
+  string user = 8;
+
+  // Background style for transparent images (GPT Image only)
+  // Options: "auto" (default), "transparent", "opaque"
+  string background = 9;
+
+  // Output image format (GPT Image only)
+  // Options: "png" (default), "jpeg", "webp"
+  string output_format = 10;
+
+  // Moderation mode (GPT Image only)
+  // Options: "auto" (default), "low"
+  string moderation = 11;
+
+  // Optional per-call metadata
+  google.protobuf.Struct metadata = 12;
+}
+
+// Individual image data
+message ImageData {
+  // Base64-encoded image data (if response_format is "b64_json")
+  string b64_json = 1;
+
+  // URL of the generated image (if response_format is "url")
+  // URLs are valid for 60 minutes
+  string url = 2;
+
+  // The revised prompt (DALL-E 3 returns the actual prompt used)
+  string revised_prompt = 3;
+}
+
+message ImageGenerationResponse {
+  // Unix timestamp when the response was created
+  int64 created = 1;
+
+  // List of generated images
+  repeated ImageData data = 2;
+
+  // The model used
+  string model = 3;
+
+  // Usage information (GPT Image models only)
+  ImageUsage usage = 4;
+}
+
+message ImageUsage {
+  // Number of input tokens used
+  int32 input_tokens = 1;
+
+  // Number of output tokens used
+  int32 output_tokens = 2;
+
+  // Total tokens used
+  int32 total_tokens = 3;
+
+  // Input token details
+  ImageTokenDetails input_tokens_details = 4;
+
+  // Output token details
+  ImageTokenDetails output_tokens_details = 5;
+}
+
+message ImageTokenDetails {
+  // Text tokens used
+  int32 text_tokens = 1;
+
+  // Image tokens used
+  int32 image_tokens = 2;
+}
+
+// =============================================================================
+// Image Edit Messages
+// =============================================================================
+
+message ImageEditRequest {
+  // The image to edit (PNG, max 4MB, must be square)
+  bytes image = 1;
+
+  // A text description of the desired edit
+  string prompt = 2;
+
+  // An optional mask image indicating which areas to edit
+  // Must be PNG with transparent areas marking editable regions
+  bytes mask = 3;
+
+  // The model to use for editing
+  // Options: "gpt-image-1", "dall-e-2"
+  string model = 4;
+
+  // The number of images to generate (1-10, default 1)
+  int32 n = 5;
+
+  // The size of the generated images
+  // Options vary by model
+  string size = 6;
+
+  // The format of the generated images
+  // Options: "url" (default), "b64_json"
+  string response_format = 7;
+
+  // A unique identifier for the end user
+  string user = 8;
+
+  // The quality of the generated images (GPT Image only)
+  // Options: "auto" (default), "standard", "hd"
+  string quality = 9;
+
+  // Optional per-call metadata
+  google.protobuf.Struct metadata = 10;
+}
+
+message ImageEditResponse {
+  // Unix timestamp when the response was created
+  int64 created = 1;
+
+  // List of edited images
+  repeated ImageData data = 2;
+
+  // The model used
+  string model = 3;
+
+  // Usage information (GPT Image models only)
+  ImageUsage usage = 4;
+}
+
+// =============================================================================
+// Image Variation Messages
+// =============================================================================
+
+message ImageVariationRequest {
+  // The image to use as the basis for variations (PNG, max 4MB)
+  bytes image = 1;
+
+  // The model to use (only "dall-e-2" supports variations)
+  string model = 2;
+
+  // The number of images to generate (1-10, default 1)
+  int32 n = 3;
+
+  // The format of the generated images
+  // Options: "url" (default), "b64_json"
+  string response_format = 4;
+
+  // The size of the generated images
+  // Options: "256x256", "512x512", "1024x1024"
+  string size = 5;
+
+  // A unique identifier for the end user
+  string user = 6;
+
+  // Optional per-call metadata
+  google.protobuf.Struct metadata = 7;
+}
+
+message ImageVariationResponse {
+  // Unix timestamp when the response was created
+  int64 created = 1;
+
+  // List of generated variations
+  repeated ImageData data = 2;
+
+  // The model used
+  string model = 3;
+}

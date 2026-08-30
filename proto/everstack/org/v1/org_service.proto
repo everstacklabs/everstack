@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package everstack.org.v1;
+
+import "everstack/org/v1/org.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/org/v1;org";
+
+// OrganizationService provides organization, member, and workspace management
+service OrganizationService {
+  // ========== Organization CRUD ==========
+  
+  // CreateOrganization creates a new organization
+  rpc CreateOrganization(CreateOrganizationRequest) returns (CreateOrganizationResponse);
+  
+  // GetOrganization gets an organization by ID or slug
+  rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse);
+  
+  // ListOrganizations lists all organizations for the current user
+  rpc ListOrganizations(ListOrganizationsRequest) returns (ListOrganizationsResponse);
+
+  // CheckOrganizationAccess evaluates membership plus the authentication
+  // assurance of the current browser session before loading an org route.
+  rpc CheckOrganizationAccess(CheckOrganizationAccessRequest) returns (CheckOrganizationAccessResponse);
+
+  // Organization authentication settings are managed by owners and admins.
+  rpc GetOrganizationIdentitySettings(GetOrganizationIdentitySettingsRequest) returns (GetOrganizationIdentitySettingsResponse);
+  rpc UpdateOrganizationIdentityPolicy(UpdateOrganizationIdentityPolicyRequest) returns (UpdateOrganizationIdentityPolicyResponse);
+  
+  // UpdateOrganization updates an organization's settings
+  rpc UpdateOrganization(UpdateOrganizationRequest) returns (UpdateOrganizationResponse);
+  
+  // DeleteOrganization deletes an organization (owner only)
+  rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse);
+  
+  // ========== Member Management ==========
+  
+  // ListMembers lists all members of an organization
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
+  
+  // InviteMember invites a user to an organization
+  rpc InviteMember(InviteMemberRequest) returns (InviteMemberResponse);
+  
+  // UpdateMemberRole updates a member's role
+  rpc UpdateMemberRole(UpdateMemberRoleRequest) returns (UpdateMemberRoleResponse);
+  
+  // RemoveMember removes a member from an organization
+  rpc RemoveMember(RemoveMemberRequest) returns (RemoveMemberResponse);
+  
+  // ========== Workspace Management ==========
+  
+  // CreateWorkspace creates a new workspace in an organization
+  rpc CreateWorkspace(CreateWorkspaceRequest) returns (CreateWorkspaceResponse);
+  
+  // GetWorkspace gets a workspace by ID or slug
+  rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse);
+  
+  // ListWorkspaces lists all workspaces in an organization
+  rpc ListWorkspaces(ListWorkspacesRequest) returns (ListWorkspacesResponse);
+  
+  // UpdateWorkspace updates a workspace's settings
+  rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse);
+  
+  // DeleteWorkspace deletes a workspace
+  rpc DeleteWorkspace(DeleteWorkspaceRequest) returns (DeleteWorkspaceResponse);
+
+  // ========== Workspace Member Management ==========
+
+  // ListWorkspaceMembers lists all members of a workspace (implicit org admins + explicit members)
+  rpc ListWorkspaceMembers(ListWorkspaceMembersRequest) returns (ListWorkspaceMembersResponse);
+
+  // AddWorkspaceMember adds an org member to a workspace
+  rpc AddWorkspaceMember(AddWorkspaceMemberRequest) returns (AddWorkspaceMemberResponse);
+
+  // UpdateWorkspaceMemberRole updates a workspace member's role
+  rpc UpdateWorkspaceMemberRole(UpdateWorkspaceMemberRoleRequest) returns (UpdateWorkspaceMemberRoleResponse);
+
+  // RemoveWorkspaceMember removes a member from a workspace
+  rpc RemoveWorkspaceMember(RemoveWorkspaceMemberRequest) returns (RemoveWorkspaceMemberResponse);
+
+  // ListAvailableWorkspaceMembers lists org members not yet added to this workspace
+  rpc ListAvailableWorkspaceMembers(ListAvailableWorkspaceMembersRequest) returns (ListAvailableWorkspaceMembersResponse);
+}

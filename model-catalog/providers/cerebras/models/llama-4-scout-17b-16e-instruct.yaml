@@ -1,0 +1,20 @@
+name: "llama-4-scout-17b-16e-instruct"
+display_name: "Llama 4 Scout 17B 16E Instruct"
+family: "llama"
+status: "deprecated"
+
+cost:
+  input_per_1k: 0.0008
+  output_per_1k: 0.0012
+
+limits:
+  max_tokens: 128000
+  max_completion_tokens: 16384
+
+capabilities:
+  - chat
+  - function_calling
+
+modalities:
+  input: ["text"]
+  output: ["text"]

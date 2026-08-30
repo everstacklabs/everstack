@@ -1,0 +1,35 @@
+name: "claude-fable-5@default"
+display_name: "Claude Fable 5 (Vertex)"
+family: "claude-fable"
+status: "stable"
+release_date: "2026-06-09"
+
+cost:
+  input_per_1k: 0.01
+  output_per_1k: 0.05
+  cache_read_per_1k: 0.001
+  cache_write_per_1k: 0.0125
+
+limits:
+  max_tokens: 1000000
+  max_completion_tokens: 128000
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image","pdf"]
+  output: ["text"]
+
+notes: "Claude model for creative writing, analysis, and controlled agent workflows"
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 128000
+    has_max_value: true

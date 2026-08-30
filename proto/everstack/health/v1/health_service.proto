@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package everstack.health.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/health/v1;health";
+
+// EverstackService provides the main API for the Everstack platform
+service HealthService {
+  // Health check endpoint
+  rpc Health(google.protobuf.Empty) returns (HealthResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "A successful response."}
+      }
+    };
+    option (google.api.http) = {
+      get: "/v1/health"
+      additional_bindings: {
+        post: "/v1/health"
+        body: "*"
+      }
+    };
+  }
+
+  // Get system information
+  rpc GetSystemInfo(google.protobuf.Empty) returns (SystemInfoResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "A successful response."}
+      }
+    };
+    option (google.api.http) = {
+      get: "/v1/system/info"
+      additional_bindings: {
+        post: "/v1/system/info"
+        body: "*"
+      }
+    };
+  }
+}
+
+// HealthResponse represents the health status of the service
+message HealthResponse {
+  string status = 1;
+  string version = 2;
+  int64 timestamp = 3;
+}
+
+// SystemInfoResponse contains system information
+message SystemInfoResponse {
+  string version = 1;
+  string build_date = 2;
+  string git_commit = 3;
+  string go_version = 4;
+  SystemResources resources = 5;
+}
+
+// SystemResources contains system resource information
+message SystemResources {
+  double cpu_usage = 1;
+  double memory_usage = 2;
+  double disk_usage = 3;
+}

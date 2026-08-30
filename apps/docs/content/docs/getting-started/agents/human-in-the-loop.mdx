@@ -1,0 +1,87 @@
+---
+title: Human-in-the-Loop
+description: HITL approval gates for tool calls and agent actions.
+icon: UserCheck
+---
+
+Human-in-the-loop, or HITL, lets you keep agents autonomous for most work while requiring a person to approve high-risk actions before they execute.
+
+In Everstack, HITL sits between tool planning and tool execution.
+
+That means the model can still:
+
+- understand the request
+- decide which tool it wants to call
+- prepare structured tool arguments
+
+But if the tool call matches an approval rule, the runtime pauses and waits for a reviewer.
+
+## When to use HITL
+
+Use approval gates when an action is valuable to automate up to the decision point, but should not run fully unattended.
+
+Common cases include:
+
+- production deploys or restarts
+- destructive mutations such as delete, terminate, revoke, or drop
+- billing or subscription changes
+- outbound emails, webhooks, Slack messages, or other external communication
+- actions involving secrets, credentials, admin operations, or regulated data
+
+## How it works at a high level
+
+The approval flow is:
+
+1. the model proposes a tool call
+2. Everstack evaluates that tool call against HITL policy
+3. matching calls create an approval review
+4. the session moves to `waiting_for_approval`
+5. a reviewer approves or denies the review
+6. the agent resumes with that result
+
+If the review is denied, the blocked tool is not executed. Instead, the runtime returns a denial result to the agent so it can continue safely with that context.
+
+## Operator experience
+
+Approval reviews are surfaced in the admin app through the `Approvals` tab under `Deployments -> Agents`.
+
+Reviewers can:
+
+- work through pending reviews from a central queue
+- inspect the exact tool payload
+- read the triggering session context
+- leave reviewer notes
+- see resolved history for audit and debugging
+
+For a full walkthrough of that interface, see [Approvals Center](/getting-started/agents/approvals-center).
+
+## Session state and events
+
+When a review is waiting on a human, the session moves into `waiting_for_approval`.
+
+The runtime also emits approval lifecycle events such as:
+
+- `approval.requested`
+- `approval.heartbeat`
+- `approval.resolved`
+- `approval.cancelled`
+
+These events support streaming UIs, audit trails, and integrations that want to surface approval requests outside the core admin interface.
+
+## Timeout behavior
+
+Each approval gate can define a timeout and a default action.
+
+If no reviewer responds before the timeout:
+
+- the review expires
+- the default action is applied
+- the runtime continues according to that policy
+
+Choose the default carefully. For sensitive systems, `deny` is usually the safer fallback.
+
+## Design goal
+
+HITL is not about making agents less capable. It is about drawing a clear control boundary.
+
+Let the model handle reasoning, planning, and structured tool preparation. Let humans retain final authority over actions that can cause real-world impact.

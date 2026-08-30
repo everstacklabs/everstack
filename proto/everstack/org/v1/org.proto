@@ -1,0 +1,362 @@
+syntax = "proto3";
+
+package everstack.org.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/org/v1;org";
+
+// Organization represents a tenant/organization
+message Organization {
+  string id = 1;
+  string slug = 2;
+  string name = 3;
+  string plan_tier = 4;
+  optional string billing_email = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// OrganizationMember represents a user's membership in an organization
+message OrganizationMember {
+  string id = 1;
+  string user_id = 2;
+  string organization_id = 3;
+  MemberRole role = 4;
+  google.protobuf.Timestamp joined_at = 5;
+  
+  // User info
+  string email = 6;
+  optional string name = 7;
+  optional string avatar_url = 8;
+}
+
+// MemberRole represents a user's role in an organization
+enum MemberRole {
+  MEMBER_ROLE_UNSPECIFIED = 0;
+  MEMBER_ROLE_OWNER = 1;
+  MEMBER_ROLE_ADMIN = 2;
+  MEMBER_ROLE_MEMBER = 3;
+  MEMBER_ROLE_VIEWER = 4;
+}
+
+// Workspace represents a workspace within an organization
+message Workspace {
+  string id = 1;
+  string organization_id = 2;
+  string slug = 3;
+  string name = 4;
+  WorkspaceEnvironment environment = 5;
+  string gateway_url = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// WorkspaceEnvironment represents the environment type
+enum WorkspaceEnvironment {
+  WORKSPACE_ENVIRONMENT_UNSPECIFIED = 0;
+  WORKSPACE_ENVIRONMENT_DEVELOPMENT = 1;
+  WORKSPACE_ENVIRONMENT_STAGING = 2;
+  WORKSPACE_ENVIRONMENT_PRODUCTION = 3;
+}
+
+// ========== Organization CRUD ==========
+
+// CreateOrganizationRequest
+message CreateOrganizationRequest {
+  string name = 1;
+  optional string slug = 2; // Auto-generated from name if not provided
+  optional string billing_email = 3;
+}
+
+message CreateOrganizationResponse {
+  Organization organization = 1;
+}
+
+// GetOrganizationRequest
+message GetOrganizationRequest {
+  oneof identifier {
+    string id = 1;
+    string slug = 2;
+  }
+}
+
+message GetOrganizationResponse {
+  Organization organization = 1;
+  MemberRole current_user_role = 2;
+}
+
+// ListOrganizationsRequest - List organizations for current user
+message ListOrganizationsRequest {}
+
+message ListOrganizationsResponse {
+  repeated OrganizationWithRole organizations = 1;
+}
+
+message OrganizationWithRole {
+  Organization organization = 1;
+  MemberRole role = 2;
+}
+
+// ========== Organization Authentication ==========
+
+enum OrganizationIdentityEnforcementMode {
+  ORGANIZATION_IDENTITY_ENFORCEMENT_MODE_UNSPECIFIED = 0;
+  ORGANIZATION_IDENTITY_ENFORCEMENT_MODE_OPTIONAL = 1;
+  ORGANIZATION_IDENTITY_ENFORCEMENT_MODE_REQUIRED = 2;
+}
+
+message OrganizationIdentityPolicy {
+  string organization_id = 1;
+  OrganizationIdentityEnforcementMode enforcement_mode = 2;
+  optional string connection_id = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+// This is intentionally a bounded organization-facing view. Issuer URLs,
+// client IDs, provider IDs, and secrets remain in the Operations control plane.
+message OrganizationIdentityConnection {
+  string id = 1;
+  string display_name = 2;
+  repeated string domains = 3;
+  bool enabled = 4;
+}
+
+message GetOrganizationIdentitySettingsRequest {
+  string organization_id = 1;
+}
+
+message GetOrganizationIdentitySettingsResponse {
+  OrganizationIdentityPolicy policy = 1;
+  repeated OrganizationIdentityConnection connections = 2;
+}
+
+message UpdateOrganizationIdentityPolicyRequest {
+  string organization_id = 1;
+  OrganizationIdentityEnforcementMode enforcement_mode = 2;
+  optional string connection_id = 3;
+}
+
+message UpdateOrganizationIdentityPolicyResponse {
+  OrganizationIdentityPolicy policy = 1;
+}
+
+enum OrganizationAccessDecision {
+  ORGANIZATION_ACCESS_DECISION_UNSPECIFIED = 0;
+  ORGANIZATION_ACCESS_DECISION_ALLOW = 1;
+  ORGANIZATION_ACCESS_DECISION_REQUIRE_SSO = 2;
+  ORGANIZATION_ACCESS_DECISION_DENY = 3;
+}
+
+message CheckOrganizationAccessRequest {
+  oneof identifier {
+    string organization_id = 1;
+    string organization_slug = 2;
+  }
+}
+
+message CheckOrganizationAccessResponse {
+  OrganizationAccessDecision decision = 1;
+  string reason = 2;
+  string organization_id = 3;
+  string organization_slug = 4;
+}
+
+// UpdateOrganizationRequest
+message UpdateOrganizationRequest {
+  string organization_id = 1;
+  optional string name = 2;
+  optional string billing_email = 3;
+}
+
+message UpdateOrganizationResponse {
+  Organization organization = 1;
+}
+
+// DeleteOrganizationRequest
+message DeleteOrganizationRequest {
+  string organization_id = 1;
+}
+
+message DeleteOrganizationResponse {
+  bool success = 1;
+}
+
+// ========== Member Management ==========
+
+// ListMembersRequest
+message ListMembersRequest {
+  string organization_id = 1;
+}
+
+message ListMembersResponse {
+  repeated OrganizationMember members = 1;
+}
+
+// InviteMemberRequest
+message InviteMemberRequest {
+  string organization_id = 1;
+  string email = 2;
+  MemberRole role = 3;
+}
+
+message InviteMemberResponse {
+  string invitation_id = 1;
+  string invitation_url = 2;
+}
+
+// UpdateMemberRoleRequest
+message UpdateMemberRoleRequest {
+  string organization_id = 1;
+  string user_id = 2;
+  MemberRole role = 3;
+}
+
+message UpdateMemberRoleResponse {
+  OrganizationMember member = 1;
+}
+
+// RemoveMemberRequest
+message RemoveMemberRequest {
+  string organization_id = 1;
+  string user_id = 2;
+}
+
+message RemoveMemberResponse {
+  bool success = 1;
+}
+
+// ========== Workspace Management ==========
+
+// CreateWorkspaceRequest
+message CreateWorkspaceRequest {
+  string organization_id = 1;
+  string name = 2;
+  optional string slug = 3;
+  WorkspaceEnvironment environment = 4;
+  string gateway_url = 5;
+}
+
+message CreateWorkspaceResponse {
+  Workspace workspace = 1;
+}
+
+// GetWorkspaceRequest
+message GetWorkspaceRequest {
+  string organization_id = 1;
+  oneof identifier {
+    string workspace_id = 2;
+    string workspace_slug = 3;
+  }
+}
+
+message GetWorkspaceResponse {
+  Workspace workspace = 1;
+}
+
+// ListWorkspacesRequest
+message ListWorkspacesRequest {
+  string organization_id = 1;
+}
+
+message ListWorkspacesResponse {
+  repeated Workspace workspaces = 1;
+}
+
+// UpdateWorkspaceRequest
+message UpdateWorkspaceRequest {
+  string workspace_id = 1;
+  optional string name = 2;
+  optional string gateway_url = 3;
+}
+
+message UpdateWorkspaceResponse {
+  Workspace workspace = 1;
+}
+
+// DeleteWorkspaceRequest
+message DeleteWorkspaceRequest {
+  string workspace_id = 1;
+}
+
+message DeleteWorkspaceResponse {
+  bool success = 1;
+}
+
+// ========== Workspace Member Management ==========
+
+// WorkspaceMemberRole represents a user's role within a workspace (no owner — ownership is at org level)
+enum WorkspaceMemberRole {
+  WORKSPACE_MEMBER_ROLE_UNSPECIFIED = 0;
+  WORKSPACE_MEMBER_ROLE_ADMIN = 1;
+  WORKSPACE_MEMBER_ROLE_MEMBER = 2;
+  WORKSPACE_MEMBER_ROLE_VIEWER = 3;
+}
+
+// WorkspaceMember represents a user's membership in a workspace
+message WorkspaceMember {
+  string id = 1;
+  string workspace_id = 2;
+  string user_id = 3;
+  WorkspaceMemberRole role = 4;
+  google.protobuf.Timestamp created_at = 5;
+  // User info (populated via join)
+  string email = 6;
+  optional string name = 7;
+  optional string avatar_url = 8;
+  // "explicit" (in workspace_members table) or "implicit" (org owner/admin)
+  string access_source = 9;
+  // Org-level role (populated for implicit members)
+  MemberRole org_role = 10;
+}
+
+// ListWorkspaceMembersRequest
+message ListWorkspaceMembersRequest {
+  string workspace_id = 1;
+}
+
+message ListWorkspaceMembersResponse {
+  repeated WorkspaceMember members = 1;
+}
+
+// AddWorkspaceMemberRequest
+message AddWorkspaceMemberRequest {
+  string workspace_id = 1;
+  string user_id = 2;
+  WorkspaceMemberRole role = 3;
+}
+
+message AddWorkspaceMemberResponse {
+  WorkspaceMember member = 1;
+}
+
+// UpdateWorkspaceMemberRoleRequest
+message UpdateWorkspaceMemberRoleRequest {
+  string workspace_id = 1;
+  string user_id = 2;
+  WorkspaceMemberRole role = 3;
+}
+
+message UpdateWorkspaceMemberRoleResponse {
+  WorkspaceMember member = 1;
+}
+
+// RemoveWorkspaceMemberRequest
+message RemoveWorkspaceMemberRequest {
+  string workspace_id = 1;
+  string user_id = 2;
+}
+
+message RemoveWorkspaceMemberResponse {
+  bool success = 1;
+}
+
+// ListAvailableWorkspaceMembersRequest — org members not yet in this workspace
+message ListAvailableWorkspaceMembersRequest {
+  string workspace_id = 1;
+}
+
+message ListAvailableWorkspaceMembersResponse {
+  repeated OrganizationMember members = 1;
+}

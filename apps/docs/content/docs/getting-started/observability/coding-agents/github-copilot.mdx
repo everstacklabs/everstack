@@ -1,0 +1,68 @@
+---
+title: GitHub Copilot
+description: Send GitHub Copilot Chat and Copilot SDK/CLI OpenTelemetry traces to your Everstack instance.
+icon: copilot
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<GitHubCopilotIcon /> **GitHub Copilot** exports OpenTelemetry natively — from
+Copilot Chat in VS Code and from the Copilot SDK / CLI. Point its OTLP exporter
+at your instance and sessions stream into
+[Traces](/docs/getting-started/observability/traces).
+
+See [Trace Coding Agents](/docs/getting-started/observability/coding-agents) for
+the endpoints, API key, and what Everstack renders.
+
+## VS Code (Copilot Chat)
+
+Enable OTel export in your VS Code settings:
+
+```json
+{
+  "github.copilot.chat.otel.enabled": true,
+  "github.copilot.chat.otel.exporterType": "otlp-http",
+  "github.copilot.chat.otel.otlpEndpoint": "https://<your-instance>"
+}
+```
+
+The endpoint setting alone cannot carry an auth header, so pass the Everstack API
+key through the standard OTLP environment variable (VS Code inherits your shell
+environment):
+
+```bash
+export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <your-api-key>"
+```
+
+You can also drive it entirely from the environment — `COPILOT_OTEL_ENABLED=1`
+plus `OTEL_EXPORTER_OTLP_ENDPOINT=https://<your-instance>` — which activates OTel
+without the settings entries.
+
+## Copilot SDK / CLI
+
+The Copilot SDK takes a `TelemetryConfig` with an `otlpEndpoint`:
+
+```ts
+const client = new CopilotClient({
+  telemetry: { otlpEndpoint: "https://<your-instance>" },
+});
+```
+
+The field name follows each SDK's casing (`otlpEndpoint`, `otlp_endpoint`,
+`OTLPEndpoint`, ...). Supply the Bearer API key via `OTEL_EXPORTER_OTLP_HEADERS`
+as above.
+
+<Callout type="warn">
+  Telemetry initializes when the process starts, so only sessions started
+  **after** you enable it will emit. Restart VS Code or the CLI — a new prompt in
+  an existing session is not enough. Setting names can shift between Copilot
+  versions; confirm them against the current Copilot observability reference.
+</Callout>
+
+## Notes
+
+- Copilot reports token usage but **no dollar cost** — Everstack computes it from
+  your model-catalog pricing, so trace cost matches what you are billed.
+- Copilot Chat and the SDK propagate W3C trace context, so your application's
+  spans and Copilot's spans link into one trace when you instrument both.

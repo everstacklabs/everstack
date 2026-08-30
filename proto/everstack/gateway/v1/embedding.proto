@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package everstack.gateway.v1;
+
+import "google/protobuf/struct.proto";
+import "everstack/gateway/v1/chat.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/gateway/v1;gateway";
+
+message EmbeddingsRequest {
+  // Model name for embedding (e.g., "text-embedding-ada-002")
+  string model = 1;
+  
+  // Direct text input (simple usage) - can be a single string or will be derived from messages
+  string input = 2;
+  
+  // Optional per-call metadata
+  google.protobuf.Struct metadata = 3;
+  
+  // Messages array (consistent with ChatCompletion - extracts text from user messages)
+  // If provided and input is empty, text from messages will be concatenated and used as input
+  repeated Message messages = 4;
+}
+
+// EmbeddingData represents a single embedding in the response
+message EmbeddingData {
+  // The type of object (always "embedding")
+  string object = 1;
+  
+  // The embedding vector
+  repeated float embedding = 2;
+  
+  // The index of this embedding in the list
+  int32 index = 3;
+}
+
+// EmbeddingsUsage represents token usage for the embeddings request
+message EmbeddingsUsage {
+  // Number of tokens in the input
+  int32 prompt_tokens = 1;
+  
+  // Total tokens used
+  int32 total_tokens = 2;
+  
+  // Estimated cost in USD (optional)
+  optional double cost = 3;
+}
+
+// EmbeddingsResponse follows OpenAI's embedding response format
+message EmbeddingsResponse {
+  // The type of object (always "list")
+  string object = 1;
+  
+  // List of embedding data objects
+  repeated EmbeddingData data = 2;
+  
+  // The model used for embedding
+  string model = 3;
+  
+  // Unique identifier for this response (optional)
+  string id = 4;
+  
+  // Token usage information
+  EmbeddingsUsage usage = 5;
+}

@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package everstack.memory.v1;
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/memory/v1;memorypb";
+
+import "google/api/annotations.proto";
+import "everstack/memory/v1/memory.proto";
+
+service MemoryService {
+  rpc CreateCollection(CreateCollectionRequest) returns (CreateCollectionResponse) {
+    option (google.api.http) = {
+      post: "/v1/memory/collections"
+      body: "*"
+    };
+  }
+
+  rpc GetCollection(GetCollectionRequest) returns (GetCollectionResponse) {
+    option (google.api.http) = {
+      get: "/v1/memory/collections/{name}"
+    };
+  }
+
+  rpc ListCollections(ListCollectionsRequest) returns (ListCollectionsResponse) {
+    option (google.api.http) = {
+      get: "/v1/memory/collections"
+    };
+  }
+
+  rpc DeleteCollection(DeleteCollectionRequest) returns (DeleteCollectionResponse) {
+    option (google.api.http) = {
+      delete: "/v1/memory/collections/{name}"
+    };
+  }
+
+  rpc AddDocuments(AddDocumentsRequest) returns (AddDocumentsResponse) {
+    option (google.api.http) = {
+      post: "/v1/memory/collections/{collection_name}/documents"
+      body: "*"
+    };
+  }
+
+  rpc DeleteDocument(DeleteDocumentRequest) returns (DeleteDocumentResponse) {
+    option (google.api.http) = {
+      delete: "/v1/memory/collections/{collection_name}/documents/{document_id}"
+    };
+  }
+
+  rpc QueryCollection(QueryCollectionRequest) returns (QueryCollectionResponse) {
+    option (google.api.http) = {
+      post: "/v1/memory/collections/{collection_name}/query"
+      body: "*"
+    };
+  }
+
+  rpc GetMemoryAnalytics(GetMemoryAnalyticsRequest) returns (GetMemoryAnalyticsResponse) {
+    option (google.api.http) = {
+      post: "/v1/memory/analytics"
+      body: "*"
+    };
+  }
+
+  rpc SetupPgVector(SetupPgVectorRequest) returns (SetupPgVectorResponse) {
+    option (google.api.http) = {
+      post: "/v1/memory/setup"
+      body: "*"
+    };
+  }
+}

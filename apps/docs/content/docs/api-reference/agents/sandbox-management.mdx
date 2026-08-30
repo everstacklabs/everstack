@@ -1,0 +1,222 @@
+---
+title: "POST Sandbox Management"
+description: "Sandbox Management"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Sandbox Management</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400">POST</span>
+    <code className="text-sm text-fd-muted-foreground">/v1/sandbox</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="post"
+  path="/v1/sandbox"
+  parameters={[]}
+  defaultBody={`{
+  "tenantId": "string",
+  "sessionId": "string",
+  "image": "string",
+  "cpuLimit": 0,
+  "memoryMb": "string",
+  "diskMb": "string",
+  "timeoutSeconds": 0,
+  "networkMode": "string",
+  "idleRetentionSeconds": 0,
+  "templateId": "string",
+  "name": "string",
+  "gitRepoUrl": "string",
+  "gitBranch": "string",
+  "gitInstallationId": "string",
+  "sshEnabled": true
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X POST "http://localhost:8089/v1/sandbox" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"tenantId":"string","sessionId":"string","image":"string","cpuLimit":0,"memoryMb":"string","diskMb":"string","timeoutSeconds":0,"networkMode":"string","idleRetentionSeconds":0,"templateId":"string","name":"string","gitRepoUrl":"string","gitBranch":"string","gitInstallationId":"string","sshEnabled":true}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/sandbox", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "tenantId": "string",
+  "sessionId": "string",
+  "image": "string",
+  "cpuLimit": 0,
+  "memoryMb": "string",
+  "diskMb": "string",
+  "timeoutSeconds": 0,
+  "networkMode": "string",
+  "idleRetentionSeconds": 0,
+  "templateId": "string",
+  "name": "string",
+  "gitRepoUrl": "string",
+  "gitBranch": "string",
+  "gitInstallationId": "string",
+  "sshEnabled": true
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8089/v1/sandbox",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "tenantId": "string",
+  "sessionId": "string",
+  "image": "string",
+  "cpuLimit": 0,
+  "memoryMb": "string",
+  "diskMb": "string",
+  "timeoutSeconds": 0,
+  "networkMode": "string",
+  "idleRetentionSeconds": 0,
+  "templateId": "string",
+  "name": "string",
+  "gitRepoUrl": "string",
+  "gitBranch": "string",
+  "gitInstallationId": "string",
+  "sshEnabled": true
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "id": "string",
+  "sessionId": "string",
+  "tenantId": "string",
+  "containerId": "string",
+  "status": "string",
+  "backend": "string",
+  "image": "string",
+  "createdAt": "string",
+  "expiresAt": "string",
+  "name": "string"
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `tenantId` | `string` | No |  |
+| `sessionId` | `string` | No |  |
+| `image` | `string` | No |  |
+| `cpuLimit` | `number` | No |  |
+| `memoryMb` | `string` | No |  |
+| `diskMb` | `string` | No |  |
+| `timeoutSeconds` | `integer` | No |  |
+| `networkMode` | `string` | No |  |
+| `idleRetentionSeconds` | `integer` | No | Idle retention in seconds. 0 means no expiration (pro/enterprise). When omitted, the server resolves retention from the tenant's plan tier. |
+| `templateId` | `string` | No | If set, use template config as base. Individual fields override template defaults. |
+| `name` | `string` | No | Optional friendly name for the sandbox. |
+| `gitRepoUrl` | `string` | No |  |
+| `gitBranch` | `string` | No |  |
+| `gitInstallationId` | `string` | No |  |
+| `sshEnabled` | `boolean` | No |  |
+
+
+### Responses
+
+#### 200 Create a new sandbox instance
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `string` |  |
+| `sessionId` | `string` |  |
+| `tenantId` | `string` |  |
+| `containerId` | `string` |  |
+| `status` | `string` |  |
+| `backend` | `string` |  |
+| `image` | `string` |  |
+| `createdAt` | `string` |  |
+| `expiresAt` | `string` |  |
+| `name` | `string` | Friendly name for the sandbox (if set). |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

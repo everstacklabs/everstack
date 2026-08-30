@@ -1,0 +1,505 @@
+syntax = "proto3";
+
+package everstack.gateway.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "everstack/gateway/v1/chat.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/gateway/v1;gateway";
+
+// =============================================================================
+// Responses API Messages (Agentic Orchestration)
+// =============================================================================
+
+// Input type for responses - can be text, file, or existing input item
+message ResponseInput {
+  // Type of input: "message", "item_reference"
+  string type = 1;
+
+  // For message type: the role of the message
+  Role role = 2;
+
+  // For message type: the content (text, file reference, etc.)
+  repeated ContentPart content = 3;
+
+  // For item_reference type: reference to a previous output item
+  string item_id = 4;
+}
+
+// Built-in tool configuration
+message BuiltInToolConfig {
+  // Tool type: "web_search", "file_search", "code_interpreter", "computer_use", "mcp"
+  string type = 1;
+
+  // Web search configuration
+  WebSearchConfig web_search = 2;
+
+  // File search configuration
+  FileSearchConfig file_search = 3;
+
+  // Code interpreter configuration
+  CodeInterpreterConfig code_interpreter = 4;
+
+  // Computer use configuration
+  ComputerUseConfig computer_use = 5;
+
+  // MCP server configuration
+  McpServerConfig mcp = 6;
+}
+
+message WebSearchConfig {
+  // Maximum number of search results to return
+  int32 max_results = 1;
+
+  // Search context size: "low", "medium", "high"
+  string search_context_size = 2;
+
+  // User location for localized results
+  WebSearchLocation user_location = 3;
+}
+
+message WebSearchLocation {
+  // Type of location: "approximate"
+  string type = 1;
+
+  // City name
+  string city = 2;
+
+  // Region/state code
+  string region = 3;
+
+  // Country code (ISO 3166-1 alpha-2)
+  string country = 4;
+
+  // Timezone
+  string timezone = 5;
+}
+
+message FileSearchConfig {
+  // Vector store IDs to search
+  repeated string vector_store_ids = 1;
+
+  // Maximum number of results per query
+  int32 max_num_results = 2;
+
+  // Ranking options
+  FileSearchRankingOptions ranking_options = 3;
+}
+
+message FileSearchRankingOptions {
+  // Ranker to use: "auto", "default_2024_08_21"
+  string ranker = 1;
+
+  // Score threshold (0.0 to 1.0)
+  float score_threshold = 2;
+}
+
+message CodeInterpreterConfig {
+  // Container settings
+  CodeInterpreterContainer container = 1;
+}
+
+message CodeInterpreterContainer {
+  // Type of container: "auto"
+  string type = 1;
+
+  // File IDs accessible in the container
+  repeated string file_ids = 2;
+}
+
+message ComputerUseConfig {
+  // Display environment: "browser", "mac", "windows", "linux", "ubuntu"
+  string environment = 1;
+
+  // Display width
+  int32 display_width = 2;
+
+  // Display height
+  int32 display_height = 3;
+}
+
+message McpServerConfig {
+  // MCP server URL
+  string url = 1;
+
+  // Server name
+  string name = 2;
+
+  // Tool filter configuration
+  McpToolFilter tool_filter = 3;
+
+  // Whether approval is required for tool calls
+  bool require_approval = 4;
+
+  // Allowed tools (if require_approval is true)
+  repeated string allowed_tools = 5;
+
+  // Headers to send with requests
+  map<string, string> headers = 6;
+}
+
+message McpToolFilter {
+  // Filter type: "include" or "exclude"
+  string type = 1;
+
+  // Tool names to include/exclude
+  repeated string tools = 2;
+}
+
+// Response configuration for text output
+message ResponseTextConfig {
+  // Output format configuration
+  ResponseFormatConfig format = 1;
+}
+
+message ResponseFormatConfig {
+  // Format type: "text", "json_schema", "json_object"
+  string type = 1;
+
+  // JSON Schema (when type is "json_schema")
+  google.protobuf.Struct json_schema = 2;
+}
+
+// Reasoning configuration for advanced models
+message ReasoningConfig {
+  // Effort level: "low", "medium", "high"
+  string effort = 1;
+
+  // Content type to generate: "concise", "summary"
+  string generate_summary = 2;
+}
+
+// Truncation strategy for long contexts
+message TruncationStrategy {
+  // Type of truncation: "auto", "disabled"
+  string type = 1;
+
+  // Last messages to keep
+  int32 last_messages = 2;
+}
+
+message CreateResponseRequest {
+  // The model to use for generating the response
+  string model = 1;
+
+  // System instructions (developer message)
+  string instructions = 2;
+
+  // Input messages for the conversation
+  repeated ResponseInput input = 3;
+
+  // Tools available for the model to call (function definitions)
+  repeated Tool tools = 4;
+
+  // Built-in tools configuration
+  repeated BuiltInToolConfig builtin_tools = 5;
+
+  // Controls how the model uses tools
+  ToolChoice tool_choice = 6;
+
+  // Whether to run parallel tool calls (default: true)
+  bool parallel_tool_calls = 7;
+
+  // Text output configuration
+  ResponseTextConfig text = 8;
+
+  // Reasoning configuration (for advanced models)
+  ReasoningConfig reasoning = 9;
+
+  // Maximum number of output tokens
+  optional int32 max_output_tokens = 10;
+
+  // Sampling temperature (0 to 2, default 1)
+  optional float temperature = 11;
+
+  // Top-p sampling (0 to 1, default 1)
+  optional float top_p = 12;
+
+  // Truncation strategy for long contexts
+  TruncationStrategy truncation = 13;
+
+  // Whether to store the response for retrieval
+  bool store = 14;
+
+  // Optional previous response ID to continue from
+  string previous_response_id = 15;
+
+  // Whether to stream the response
+  bool stream = 16;
+
+  // Metadata to associate with the response
+  map<string, string> metadata = 17;
+}
+
+// Output item from a response
+message ResponseOutputItem {
+  // Unique identifier for this item
+  string id = 1;
+
+  // Object type: "message", "function_call", "function_call_output", "web_search_call", "file_search_call", "computer_call", "reasoning"
+  string type = 2;
+
+  // Status: "in_progress", "completed", "incomplete"
+  string status = 3;
+
+  // For message items
+  Role role = 4;
+  repeated ContentPart content = 5;
+
+  // For function call items
+  string call_id = 6;
+  string name = 7;
+  string arguments = 8;
+
+  // For function call output items
+  string output = 9;
+
+  // For web search items
+  WebSearchResults web_search_results = 10;
+
+  // For file search items
+  FileSearchResults file_search_results = 11;
+}
+
+message WebSearchResults {
+  // The search query used
+  string query = 1;
+
+  // Search results
+  repeated WebSearchResult results = 2;
+}
+
+message WebSearchResult {
+  // Result title
+  string title = 1;
+
+  // Result URL
+  string url = 2;
+
+  // Result snippet
+  string snippet = 3;
+}
+
+message FileSearchResults {
+  // The search query used
+  string query = 1;
+
+  // Search results
+  repeated FileSearchResult results = 2;
+}
+
+message FileSearchResult {
+  // File ID
+  string file_id = 1;
+
+  // File name
+  string file_name = 2;
+
+  // Matching content
+  string content = 3;
+
+  // Relevance score
+  float score = 4;
+}
+
+// Token usage information for responses
+message ResponseUsage {
+  // Input tokens used
+  int32 input_tokens = 1;
+
+  // Output tokens generated
+  int32 output_tokens = 2;
+
+  // Total tokens
+  int32 total_tokens = 3;
+
+  // Detailed token breakdown
+  ResponseUsageDetails input_tokens_details = 4;
+  ResponseUsageDetails output_tokens_details = 5;
+}
+
+message ResponseUsageDetails {
+  // Cached tokens
+  int32 cached_tokens = 1;
+
+  // Text tokens
+  int32 text_tokens = 2;
+
+  // Audio tokens
+  int32 audio_tokens = 3;
+
+  // Image tokens
+  int32 image_tokens = 4;
+
+  // Reasoning tokens
+  int32 reasoning_tokens = 5;
+}
+
+// Incomplete status details
+message IncompleteDetails {
+  // Reason for incomplete status
+  string reason = 1;
+}
+
+// Error details
+message ResponseError {
+  // Error code
+  string code = 1;
+
+  // Error message
+  string message = 2;
+}
+
+message CreateResponseResponse {
+  // Unique identifier for the response
+  string id = 1;
+
+  // Object type (always "response")
+  string object = 2;
+
+  // Unix timestamp of creation
+  int64 created_at = 3;
+
+  // Status: "in_progress", "completed", "incomplete", "failed", "cancelled"
+  string status = 4;
+
+  // Error information (if status is "failed")
+  ResponseError error = 5;
+
+  // Details if status is "incomplete"
+  IncompleteDetails incomplete_details = 6;
+
+  // The model used
+  string model = 7;
+
+  // Output items generated
+  repeated ResponseOutputItem output = 8;
+
+  // Token usage information
+  ResponseUsage usage = 9;
+
+  // Response metadata
+  map<string, string> metadata = 10;
+
+  // Temperature used
+  float temperature = 11;
+
+  // Top-p used
+  float top_p = 12;
+
+  // Max output tokens
+  int32 max_output_tokens = 13;
+
+  // Previous response ID (if continuing)
+  string previous_response_id = 14;
+
+  // Reasoning configuration used
+  ReasoningConfig reasoning = 15;
+
+  // Truncation configuration used
+  TruncationStrategy truncation = 16;
+}
+
+// Streaming chunk for response events
+message ResponseStreamChunk {
+  // Event type
+  string event = 1;
+
+  // Event data (partial response or delta)
+  CreateResponseResponse data = 2;
+
+  // Delta updates for streaming
+  ResponseDelta delta = 3;
+}
+
+message ResponseDelta {
+  // Item ID being updated
+  string item_id = 1;
+
+  // Content delta
+  string content_delta = 2;
+
+  // Arguments delta (for function calls)
+  string arguments_delta = 3;
+}
+
+message GetResponseRequest {
+  // The response ID to retrieve
+  string response_id = 1;
+
+  // Include input items in the response
+  bool include_input = 2;
+}
+
+message GetResponseResponse {
+  // The response object
+  CreateResponseResponse response = 1;
+
+  // Input items (if include_input is true)
+  repeated ResponseInput input = 2;
+}
+
+message CancelResponseRequest {
+  // The response ID to cancel
+  string response_id = 1;
+}
+
+message CancelResponseResponse {
+  // Success status
+  bool success = 1;
+
+  // The cancelled response
+  CreateResponseResponse response = 2;
+}
+
+message DeleteResponseRequest {
+  // The response ID to delete
+  string response_id = 1;
+}
+
+message DeleteResponseResponse {
+  // The ID of the deleted response
+  string id = 1;
+
+  // Object type (always "response.deleted")
+  string object = 2;
+
+  // Whether the deletion was successful
+  bool deleted = 3;
+}
+
+// List responses request
+message ListResponsesRequest {
+  // Filter by status
+  string status = 1;
+
+  // Pagination limit
+  int32 limit = 2;
+
+  // Pagination cursor (after)
+  string after = 3;
+
+  // Pagination cursor (before)
+  string before = 4;
+
+  // Order: "asc" or "desc"
+  string order = 5;
+}
+
+message ListResponsesResponse {
+  // List of responses
+  repeated CreateResponseResponse data = 1;
+
+  // Object type (always "list")
+  string object = 2;
+
+  // First ID in list
+  string first_id = 3;
+
+  // Last ID in list
+  string last_id = 4;
+
+  // Whether there are more results
+  bool has_more = 5;
+}

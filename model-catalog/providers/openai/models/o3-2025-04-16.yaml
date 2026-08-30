@@ -1,0 +1,24 @@
+name: o3-2025-04-16
+display_name: O3 2025 04 16
+family: o-series
+status: stable
+limits:
+    max_tokens: 200000
+    max_completion_tokens: 100000
+capabilities:
+    - chat
+    - function_calling
+modalities:
+    input:
+        - text
+    output:
+        - text
+
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 100000
+    has_max_value: true

@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package everstack.mcp.v1;
+
+import "google/api/annotations.proto";
+import "everstack/mcp/v1/mcp.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/mcp/v1;mcp";
+
+service McpService {
+  // ─── Server CRUD ────────────────────────────────────────────────
+
+  rpc RegisterMcpServer(RegisterMcpServerRequest) returns (RegisterMcpServerResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Register a new MCP server and discover its tools"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/mcp/servers"
+      body: "*"
+    };
+  }
+
+  rpc GetMcpServer(GetMcpServerRequest) returns (GetMcpServerResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get MCP server by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/mcp/servers/{id}"};
+  }
+
+  rpc ListMcpServers(ListMcpServersRequest) returns (ListMcpServersResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List all registered MCP servers for tenant"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/mcp/servers"};
+  }
+
+  rpc UpdateMcpServer(UpdateMcpServerRequest) returns (UpdateMcpServerResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update MCP server configuration"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/mcp/servers/{id}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteMcpServer(DeleteMcpServerRequest) returns (DeleteMcpServerResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete an MCP server and its discovered tools"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/mcp/servers/{id}"};
+  }
+
+  // ─── Tool Discovery ─────────────────────────────────────────────
+
+  rpc DiscoverTools(DiscoverToolsRequest) returns (DiscoverToolsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Trigger tool discovery on a specific MCP server"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/mcp/servers/{server_id}/tools"};
+  }
+
+  rpc ListFederatedTools(ListFederatedToolsRequest) returns (ListFederatedToolsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List tools across all registered MCP servers"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/mcp/tools"};
+  }
+
+  // ─── Tool Execution ─────────────────────────────────────────────
+
+  rpc CallTool(CallToolRequest) returns (CallToolResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Call a tool on the appropriate MCP server"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/mcp/tools/call"
+      body: "*"
+    };
+  }
+
+  // ─── Health ─────────────────────────────────────────────────────
+
+  rpc GetMcpServerHealth(GetMcpServerHealthRequest) returns (GetMcpServerHealthResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get health status of an MCP server"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/mcp/servers/{id}/health"};
+  }
+}

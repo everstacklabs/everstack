@@ -1,0 +1,19 @@
+{
+  "name": "@everstack/utils",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./functions/*": "./src/functions/*.ts",
+    "./types/*": "./src/types/*.ts"
+  },
+  "devDependencies": {
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.0.1",
+    "typescript": "5.9.2"
+  },
+  "dependencies": {
+    "@everstack/ui": "workspace:*",
+    "dayjs": "^1.11.18"
+  }
+}

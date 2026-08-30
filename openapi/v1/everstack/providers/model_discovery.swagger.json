@@ -1,0 +1,215 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/providers/model_discovery.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "ModelDiscoveryService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {},
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AddCustomModelResponse": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "$ref": "#/definitions/v1CustomModel"
+        }
+      },
+      "title": "AddCustomModelResponse returns the created model"
+    },
+    "v1CustomModel": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "providerName": {
+          "type": "string"
+        },
+        "modelName": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "modelMetadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "source": {
+          "type": "string",
+          "title": "\"manual\" or \"discovered\""
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "title": "CustomModel represents a user-configured custom model"
+    },
+    "v1DeleteCustomModelResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "DeleteCustomModelResponse confirms deletion"
+    },
+    "v1DiscoveredModel": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "Unique identifier"
+        },
+        "name": {
+          "type": "string",
+          "title": "Model name/identifier"
+        },
+        "displayName": {
+          "type": "string",
+          "title": "Human-readable name"
+        },
+        "provider": {
+          "type": "string",
+          "title": "Provider name"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Additional metadata (pricing, context_length, etc.)"
+        },
+        "description": {
+          "type": "string",
+          "title": "Model description"
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "Model capabilities"
+        },
+        "contextLength": {
+          "type": "string",
+          "format": "int64",
+          "title": "Context window size"
+        },
+        "pricingInfo": {
+          "type": "string",
+          "title": "Pricing information as JSON string"
+        }
+      },
+      "title": "DiscoveredModel represents a model discovered from a meta-provider's API"
+    },
+    "v1GetCustomModelResponse": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "$ref": "#/definitions/v1CustomModel"
+        }
+      },
+      "title": "GetCustomModelResponse returns the custom model"
+    },
+    "v1ListCustomModelsResponse": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CustomModel"
+          }
+        },
+        "totalCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "ListCustomModelsResponse returns custom models"
+    },
+    "v1SearchModelsResponse": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DiscoveredModel"
+          }
+        },
+        "totalCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "providerName": {
+          "type": "string"
+        },
+        "warning": {
+          "type": "string",
+          "title": "Optional warning message (e.g., local connection failed but showing cloud models)"
+        }
+      },
+      "title": "SearchModelsResponse returns discovered models"
+    },
+    "v1UpdateCustomModelResponse": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "$ref": "#/definitions/v1CustomModel"
+        }
+      },
+      "title": "UpdateCustomModelResponse returns the updated model"
+    }
+  }
+}

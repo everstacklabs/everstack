@@ -1,0 +1,108 @@
+---
+title: Attaching Functions To Agents And Workflows
+description: Use registered functions as tools inside agents, troopers, and workflow executions.
+icon: PlugZap
+---
+
+Once a function is registered, the next step is to make it available where runtime decisions happen.
+
+In Everstack, that usually means attaching functions to:
+
+- agents
+- troopers
+- workflows
+
+## How attachment works
+
+Functions are selected by name.
+
+When you add a function name to an agent or workflow configuration, Everstack exposes that function to the runtime as a callable tool.
+
+That means the model can decide when to use it based on the user's request, your system prompt, and the tool schema.
+
+## Attach a function to an agent
+
+Add function names to the agent's `tools` list.
+
+```json
+{
+  "name": "support-assistant",
+  "description": "Answers support questions using customer and order data",
+  "model": "claude-sonnet-4-20250514",
+  "system_prompt": "Use the available tools before answering when live customer or order data is needed.",
+  "tools": ["search_customers", "get_order_history", "create_jira_ticket"],
+  "max_turns": 10,
+  "max_tool_calls_per_turn": 5
+}
+```
+
+This works well for assistants that need to:
+
+- look up data
+- take a backend action
+- chain multiple business operations together
+
+## Attach a function to a trooper
+
+Troopers use the same mental model: pick the functions you want available and add them to the tool list.
+
+Good fits include:
+
+- internal ops copilots
+- deployment or incident helpers
+- domain-specific assistants with a stable tool catalog
+
+## Attach functions to workflows
+
+Functions are also useful in workflows when you want a step to call a known capability instead of embedding custom logic directly into the flow.
+
+This is a good fit when you want:
+
+- reuse across multiple workflows
+- a cleaner separation between orchestration and execution
+- a shared library of operational steps
+
+## Example pattern: support workflow
+
+One common pattern looks like this:
+
+1. user asks about a customer issue
+2. the agent calls `search_customers`
+3. the agent calls `get_order_history`
+4. if escalation is needed, the agent calls `create_jira_ticket`
+5. the final answer includes both the result and the action taken
+
+## Choosing the right functions to attach
+
+Use functions that are:
+
+- high-confidence
+- clearly described
+- scoped to a specific action
+- stable enough to reuse across multiple sessions
+
+Avoid attaching tools that are:
+
+- overly broad
+- ambiguously named
+- missing a useful description
+- better handled by a sandbox session
+
+## Best practices
+
+- use descriptive names like `search_customers` instead of vague names like `lookup`
+- make descriptions action-oriented so the model knows when to call the tool
+- keep parameter schemas clear and minimal
+- attach only the tools the runtime really needs
+
+## When to use a sandbox instead
+
+If the runtime needs shell access, files, package installation, or long-running stateful behavior, use a sandbox instead of trying to force that behavior through a function.
+
+Read [Functions vs Sandboxes](/getting-started/functions-vs-sandboxes) for the full comparison.
+
+## Next steps
+
+- Read [Functions Overview](/getting-started/functions/overview) for the high-level model.
+- Read [Execution Modes](/getting-started/functions/execution-modes) to choose how each function should run.
+- Read [Examples](/getting-started/functions/examples) for common tool patterns.

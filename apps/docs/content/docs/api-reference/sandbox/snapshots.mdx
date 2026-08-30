@@ -1,0 +1,74 @@
+---
+title: Snapshots
+description: Create and manage named sandbox environment templates.
+---
+
+# Snapshots
+
+Snapshots are named, reusable environment templates. Create a snapshot from a public image or an existing sandbox, then reference it by ID when creating sandboxes for instant cold start.
+
+## Create Snapshot
+
+`POST /v1/snapshots`
+
+**From a public image:**
+```json
+{ "name": "my-python-env", "image": "ghcr.io/everstacklabs/sandbox:python" }
+```
+
+**From an existing sandbox:**
+```json
+{ "name": "my-custom-env", "from_sandbox_id": "sbx_abc123" }
+```
+
+**Response:**
+```json
+{
+  "id": "snap_def456",
+  "tenant_id": "org_123",
+  "name": "my-python-env",
+  "state": "active",
+  "base_image": "ghcr.io/everstacklabs/sandbox:python",
+  "size_bytes": 0,
+  "created_at": "2026-06-01T10:00:00Z",
+  "updated_at": "2026-06-01T10:00:00Z"
+}
+```
+
+**Snapshot states:** `pending` → `active` | `error`
+
+Snapshots are auto-deactivated after 2 weeks of no use (reactivated automatically on next use, not deleted).
+
+## List Snapshots
+
+`GET /v1/snapshots`
+
+Returns all active and inactive snapshots for the tenant.
+
+## Get Snapshot
+
+`GET /v1/snapshots/{snapshotId}`
+
+## Delete Snapshot
+
+`DELETE /v1/snapshots/{snapshotId}` → `204 No Content`
+
+## Use in CreateSandbox
+
+```json
+POST /v1/sandbox
+{ "snapshotId": "snap_def456" }
+```
+
+The sandbox uses the snapshot's `base_image`. Removes the need to know or maintain image references in client code.
+
+## Catalog snapshots
+
+Everstack maintains pre-built catalog images rebuilt weekly:
+
+| Name | `image` value |
+|------|-------------|
+| Base | `ghcr.io/everstacklabs/sandbox:base` |
+| Python (+ pylsp, pylint) | `ghcr.io/everstacklabs/sandbox:python` |
+| Node.js (+ typescript-language-server) | `ghcr.io/everstacklabs/sandbox:node` |
+| Fullstack (Python + Node) | `ghcr.io/everstacklabs/sandbox:fullstack` |

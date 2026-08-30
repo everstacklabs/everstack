@@ -1,0 +1,977 @@
+@import 'tailwindcss';
+@import '@everstack/tailwind-config';
+@import 'tw-animate-css';
+@plugin '@tailwindcss/typography';
+
+body {
+  @apply m-0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
+    'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.18 0.003 286);
+  --card: oklch(0.985 0.001 286);
+  --card-foreground: oklch(0.18 0.003 286);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.003 286);
+  --primary: oklch(0.49 0.155 282);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.965 0.0015 286);
+  --secondary-foreground: oklch(0.2 0.003 286);
+  --muted: oklch(0.965 0.0015 286);
+  --muted-foreground: oklch(0.43 0.005 286);
+  --accent: oklch(0.94 0.002 286);
+  --accent-foreground: oklch(0.2 0.003 286);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0.001 286);
+  --border: oklch(0.89 0.003 286);
+  --input: oklch(0.83 0.003 286);
+  --ring: oklch(0.69 0.135 282);
+  --chart-1: oklch(61.829% 0.24148 30.908);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0.001 286);
+  --sidebar-foreground: oklch(0.18 0.003 286);
+  --sidebar-primary: oklch(0.49 0.155 282);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.94 0.002 286);
+  --sidebar-accent-foreground: oklch(0.2 0.003 286);
+  --sidebar-border: oklch(0.89 0.003 286);
+  --sidebar-ring: oklch(0.69 0.135 282);
+}
+
+.dark,
+[data-theme='dark'] {
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.141 0.005 285.823);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.141 0.005 285.823);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.21 0.006 285.885);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.274 0.006 286.033);
+  --input: oklch(0.274 0.006 286.033);
+  --ring: oklch(0.442 0.017 285.786);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.21 0.006 285.885);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.274 0.006 286.033);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.274 0.006 286.033);
+  --sidebar-ring: oklch(0.442 0.017 285.786);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  /* Design-engineering easing curves (Emil Kowalski lens) — stronger than the
+     built-in CSS easings. Generates `ease-out-strong` / `ease-in-out-strong` /
+     `ease-drawer` utilities. Never use `ease-in` for UI. */
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50 [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:rounded-full [&::-webkit-scrollbar-track]:bg-brand-main-950 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-thumb]:bg-brand-secondary-500 [&::-webkit-scrollbar-thumb]:rounded-full;
+  }
+  html {
+    overscroll-behavior: none;
+  }
+  body {
+    @apply bg-brand-main-950 text-brand-main-50;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+    -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, and Opera */
+  }
+
+  /* macOS-style auto-hiding scrollbar */
+  .scrollbar-macos {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
+  }
+
+  .scrollbar-macos::-webkit-scrollbar {
+    width: 4px !important;
+    height: 4px !important;
+  }
+
+  .scrollbar-macos::-webkit-scrollbar-track {
+    background: transparent !important;
+  }
+
+  .scrollbar-macos::-webkit-scrollbar-thumb {
+    background-color: transparent !important;
+    border-radius: 2px !important;
+    transition: background-color 0.3s ease;
+  }
+
+  .scrollbar-macos:hover::-webkit-scrollbar-thumb,
+  .scrollbar-macos:active::-webkit-scrollbar-thumb {
+    background-color: var(--color-brand-secondary-500) !important;
+  }
+
+  .scrollbar-macos:hover {
+    scrollbar-color: var(--color-brand-secondary-500) transparent;
+  }
+
+  .json-view {
+    color: var(--color-brand-secondary-400);
+    --json-property: var(--color-brand-secondary-500);
+    --json-index: var(--color-brand-secondary-500);
+    --json-number: var(--color-brand-secondary-500);
+    --json-string: var(--color-brand-secondary-500);
+    --json-boolean: var(--color-brand-secondary-500);
+    --json-null: var(--color-brand-secondary-500);
+  }
+  .json-view .json-view--property {
+    color: var(--json-property);
+  }
+  .json-view .json-view--index {
+    color: var(--json-index);
+  }
+  .json-view .json-view--number {
+    color: var(--json-number);
+  }
+  .json-view .json-view--string {
+    color: var(--json-string);
+  }
+  .json-view .json-view--boolean {
+    color: var(--json-boolean);
+  }
+  .json-view .json-view--null {
+    color: var(--json-null);
+  }
+
+  /* Ensure proper indentation and sizing */
+  .json-view {
+    font-size: 0.75rem !important;
+    line-height: 1.5 !important;
+  }
+
+  .json-view .json-view--property,
+  .json-view .json-view--string,
+  .json-view .json-view--number,
+  .json-view .json-view--boolean,
+  .json-view .json-view--null {
+    font-size: 0.75rem !important;
+  }
+
+  /* Fix indentation */
+  .json-view .json-view--pair {
+    margin-left: 1rem !important;
+  }
+
+  .json-view .json-view--object,
+  .json-view .json-view--array {
+    padding-left: 0.5rem !important;
+  }
+
+  /* Hide built-in copy buttons */
+  .json-view .json-view--copy {
+    display: none !important;
+  }
+
+  /* Hide copy icon that appears next to keys */
+  .json-view .json-view--property .json-view--copy,
+  .json-view .json-view--string .json-view--copy {
+    display: none !important;
+  }
+
+  /* ── Admin density baseline ───────────────────────────────────────────────
+     The admin shell runs in compact mode by default. Tailwind spacing/type
+     variables handle most utility classes; these data-slot rules tighten the
+     shared primitives that still carry fixed or roomy component defaults. */
+  [data-density='compact'] [data-slot='button'] {
+    min-height: 1.75rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  [data-density='compact'] [data-slot='input'],
+  [data-density='compact'] [data-slot='select-trigger'] {
+    min-height: 1.75rem;
+    height: 1.75rem;
+    padding-inline: 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  [data-density='compact'] [data-slot='textarea'] {
+    min-height: 3rem;
+    padding: 0.375rem 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1.15rem;
+  }
+
+  [data-density='compact'] [data-slot='label'] {
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  [data-density='compact'] [data-slot='dropdown-menu-content'],
+  [data-density='compact'] [data-slot='context-menu-content'],
+  [data-density='compact'] [data-slot='select-content'] {
+    padding: 0.2rem;
+    border-radius: 0.35rem;
+  }
+
+  [data-density='compact'] [data-slot='dropdown-menu-item'],
+  [data-density='compact'] [data-slot='dropdown-menu-checkbox-item'],
+  [data-density='compact'] [data-slot='dropdown-menu-radio-item'],
+  [data-density='compact'] [data-slot='dropdown-menu-sub-trigger'],
+  [data-density='compact'] [data-slot='context-menu-item'],
+  [data-density='compact'] [data-slot='context-menu-checkbox-item'],
+  [data-density='compact'] [data-slot='context-menu-radio-item'],
+  [data-density='compact'] [data-slot='context-menu-sub-trigger'],
+  [data-density='compact'] [data-slot='select-item'],
+  [data-density='compact'] [data-slot='command-item'] {
+    min-height: 1.6rem;
+    padding-block: 0.275rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  [data-density='compact'] [data-slot='dropdown-menu-label'],
+  [data-density='compact'] [data-slot='context-menu-label'],
+  [data-density='compact'] [data-slot='select-label'] {
+    padding-block: 0.25rem;
+    font-size: 0.6875rem;
+    line-height: 0.9rem;
+  }
+
+  [data-density='compact'] [data-slot='popover-content'] {
+    padding: 0.65rem;
+    border-radius: 0.4rem;
+  }
+
+  [data-density='compact'] [data-slot='dialog-content'] {
+    min-width: 0;
+    gap: 0.6rem;
+    padding: 0.8rem;
+    border-radius: 0.45rem;
+  }
+
+  [data-density='compact'] [data-slot='dialog-header'] {
+    gap: 0.35rem;
+  }
+
+  [data-density='compact'] [data-slot='dialog-title'],
+  [data-density='compact'] [data-slot='sheet-title'] {
+    font-size: 0.875rem;
+    line-height: 1.15rem;
+  }
+
+  [data-density='compact'] [data-slot='dialog-description'],
+  [data-density='compact'] [data-slot='sheet-description'] {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  [data-density='compact'] [data-slot='sheet-body'] {
+    padding-inline: 0.5rem;
+  }
+
+  [data-density='compact'] [data-slot='sheet-footer'] {
+    padding: 0.5rem 0.6rem;
+    gap: 0.4rem;
+  }
+
+  [data-density='compact'] [data-slot='tabs'] {
+    gap: 0.4rem;
+  }
+
+  [data-density='compact'] [data-slot='tabs-list'] {
+    height: 1.75rem;
+    padding: 0.125rem;
+  }
+
+  [data-density='compact'] [data-slot='tabs-trigger'] {
+    gap: 0.35rem;
+    padding-inline: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  [data-density='compact'] [data-slot='table'] {
+    font-size: 0.75rem;
+  }
+
+  [data-density='compact'] [data-slot='table-head'] {
+    height: 1.9rem;
+    padding-inline: 0.45rem;
+    font-size: 0.6875rem;
+  }
+
+  [data-density='compact'] [data-slot='table-cell'] {
+    padding: 0.35rem 0.45rem;
+    font-size: 0.75rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-panel'] {
+    font-size: 0.75rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-panel-header'] {
+    min-height: 2rem;
+    padding-inline: 0.5rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-close'] {
+    padding: 0.2rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-tree-toolbar'] {
+    gap: 0.375rem;
+    padding-top: 0.375rem;
+    padding-inline: 0.375rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-tree-body'] {
+    padding-inline: 0.375rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-header'] {
+    padding: 0.55rem 0.75rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-header'] > div:first-child {
+    gap: 0.5rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-icon'] {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-title'] {
+    font-size: 0.95rem;
+    line-height: 1.2rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-metric-grid'] {
+    margin-top: 0.5rem;
+    gap: 0.375rem;
+    padding: 0.5rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-summary-stack'] {
+    margin-top: 0.5rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-inline-panel'] {
+    padding-inline: 0.75rem;
+    padding-top: 0.5rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-tabs-bar'] {
+    gap: 0.375rem;
+    padding: 0.35rem 0.75rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-tab-panel'] {
+    padding: 0.5rem 0.75rem 1rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-card'] {
+    padding: 0.5rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-frame'] > [data-slot='trace-details-card-header'] {
+    min-height: 2rem;
+    padding-inline: 0.5rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-frame'] > [data-slot='trace-details-card-body'] {
+    padding: 0.5rem;
+  }
+
+  [data-density='compact'] [data-slot='trace-details-metric-row'] {
+    gap: 0.375rem;
+    padding: 0.5rem;
+  }
+
+  /* ── Streaming markdown engine ─────────────────────────────────────────── */
+
+  /* Block-level element entrance animation */
+  @keyframes sd-slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(3px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .sd-prose [data-sd-new] {
+    animation: sd-slideIn 120ms ease-out both;
+  }
+
+  /* Streaming cursor — clean thin caret on the last text node */
+  .streaming-cursor > *:last-child::after,
+  .streaming-cursor > *:last-child > *:last-child::after {
+    content: '';
+    display: inline-block;
+    width: 1.5px;
+    height: 1em;
+    vertical-align: text-bottom;
+    margin-left: 1px;
+    background: var(--color-brand-secondary-400);
+    border-radius: 1px;
+    animation: sd-cursor-pulse 0.8s ease-in-out infinite;
+  }
+  /* Prevent double-cursors — only the deepest last-child shows one */
+  .streaming-cursor > *:last-child::after {
+    content: none;
+  }
+  .streaming-cursor > *:last-child > *:last-child::after {
+    content: '';
+  }
+  /* Fallback for top-level <p> with no nesting */
+  .streaming-cursor > p:last-child::after {
+    content: '';
+  }
+
+  @keyframes sd-cursor-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.3;
+    }
+  }
+
+  /* ── Reasoning shimmer ─────────────────────────────────────────────── */
+  @keyframes reasoning-shimmer {
+    0% {
+      background-position: -200% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
+  }
+
+  .reasoning-shimmer {
+    background: linear-gradient(
+      90deg,
+      oklch(1 0 0 / 0.3) 0%,
+      oklch(1 0 0 / 0.55) 40%,
+      oklch(1 0 0 / 0.3) 80%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: reasoning-shimmer 2.5s ease-in-out infinite;
+  }
+
+  /* ── sd-prose: streaming HTML typography ──────────────────────────────── */
+
+  .sd-prose {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-size: 14px;
+    line-height: 1.6;
+    letter-spacing: -0.006em;
+    color: oklch(1 0 0 / 0.88);
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .sd-prose > *:first-child {
+    margin-top: 0;
+  }
+  .sd-prose > *:last-child {
+    margin-bottom: 0;
+  }
+
+  .sd-prose p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+  }
+
+  .sd-prose strong {
+    color: oklch(1 0 0 / 0.95);
+    font-weight: 600;
+  }
+
+  .sd-prose em {
+    color: oklch(1 0 0 / 0.78);
+  }
+
+  /* Headings — tight tracking, clear hierarchy */
+  .sd-prose h1 {
+    font-size: 1.5em;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    color: oklch(1 0 0);
+    margin: 1.25em 0 0.4em;
+    line-height: 1.3;
+  }
+  .sd-prose h2 {
+    font-size: 1.25em;
+    font-weight: 650;
+    letter-spacing: -0.015em;
+    color: oklch(1 0 0);
+    margin: 1.1em 0 0.35em;
+    line-height: 1.35;
+  }
+  .sd-prose h3 {
+    font-size: 1.1em;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: oklch(1 0 0 / 0.95);
+    margin: 1em 0 0.25em;
+    line-height: 1.4;
+  }
+  .sd-prose h4 {
+    font-size: 1em;
+    font-weight: 600;
+    color: oklch(1 0 0 / 0.9);
+    margin: 0.85em 0 0.2em;
+    line-height: 1.45;
+  }
+  .sd-prose h1:first-child,
+  .sd-prose h2:first-child,
+  .sd-prose h3:first-child,
+  .sd-prose h4:first-child {
+    margin-top: 0;
+  }
+
+  /* Lists */
+  .sd-prose ul {
+    margin: 0.5em 0;
+    padding-left: 1.5em;
+    list-style-type: disc;
+  }
+  .sd-prose ol {
+    margin: 0.5em 0;
+    padding-left: 1.5em;
+    list-style-type: decimal;
+  }
+  .sd-prose li {
+    color: oklch(1 0 0 / 0.88);
+    line-height: 1.6;
+    padding: 0.1em 0;
+  }
+  .sd-prose li::marker {
+    color: oklch(1 0 0 / 0.3);
+  }
+  .sd-prose ol > li::marker {
+    color: oklch(1 0 0 / 0.45);
+    font-size: 0.9em;
+  }
+  .sd-prose li > p {
+    margin: 0;
+  }
+  .sd-prose li > ul,
+  .sd-prose li > ol {
+    margin: 0.15em 0;
+  }
+
+  /* Inline code */
+  .sd-prose code {
+    background: oklch(0.2 0.01 260 / 0.5);
+    color: var(--color-brand-secondary-300);
+    border-radius: 5px;
+    padding: 1.5px 6px;
+    font-size: 0.88em;
+    font-weight: 500;
+    font-family:
+      ui-monospace, 'SF Mono', 'Cascadia Code', 'Fira Code', Menlo, monospace;
+  }
+
+  /* Fenced code blocks */
+  .sd-prose pre {
+    margin: 0.75em 0;
+    padding: 0.85em 1em;
+    background: oklch(0.08 0.005 260 / 0.8);
+    border: 1px solid oklch(0.3 0.01 260 / 0.5);
+    border-radius: 10px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+  .sd-prose pre code {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    font-size: inherit;
+    font-weight: normal;
+    color: oklch(1 0 0 / 0.82);
+  }
+
+  /* Links */
+  .sd-prose a {
+    color: var(--color-brand-secondary-400);
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: oklch(0.7 0.15 260 / 0.3);
+    transition: text-decoration-color 0.15s;
+  }
+  .sd-prose a:hover {
+    text-decoration-color: oklch(0.7 0.15 260 / 0.6);
+  }
+
+  /* Blockquotes */
+  .sd-prose blockquote {
+    margin: 0.6em 0;
+    padding-left: 1em;
+    border-left: 3px solid oklch(0.5 0.12 260 / 0.3);
+    color: oklch(1 0 0 / 0.65);
+    font-style: italic;
+  }
+  .sd-prose blockquote p {
+    margin: 0.2em 0;
+  }
+
+  /* Tables */
+  .sd-prose table {
+    width: 100%;
+    margin: 0.75em 0;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .sd-prose thead {
+    background: oklch(0.15 0.005 260 / 0.5);
+  }
+  .sd-prose th {
+    padding: 0.5em 0.9em;
+    text-align: left;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: oklch(1 0 0 / 0.6);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 1px solid oklch(0.3 0.01 260 / 0.4);
+  }
+  .sd-prose td {
+    padding: 0.5em 0.9em;
+    color: oklch(1 0 0 / 0.75);
+    border-bottom: 1px solid oklch(0.3 0.01 260 / 0.25);
+  }
+  .sd-prose tr:hover td {
+    background: oklch(0.2 0.005 260 / 0.15);
+  }
+
+  /* Horizontal rule */
+  .sd-prose hr {
+    margin: 1.25em 0;
+    border: none;
+    border-top: 1px solid oklch(0.3 0.01 260 / 0.25);
+  }
+
+  /* Images */
+  .sd-prose img {
+    border-radius: 10px;
+    border: 1px solid oklch(0.3 0.01 260 / 0.5);
+    max-width: 100%;
+  }
+
+  /* Strikethrough */
+  .sd-prose del {
+    color: oklch(1 0 0 / 0.4);
+  }
+
+  /* ── Compact variant overrides ─────────────────────────────────── */
+  .sd-prose.sd-compact {
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+  .sd-prose.sd-compact p {
+    margin: 0.25em 0;
+  }
+  .sd-prose.sd-compact h1 {
+    margin-top: 0.8em;
+    margin-bottom: 0.3em;
+    padding-bottom: 0.25em;
+    border-bottom: 1px solid oklch(0.3 0.01 260 / 0.25);
+  }
+  .sd-prose.sd-compact h2 {
+    margin-top: 0.7em;
+    margin-bottom: 0.25em;
+    padding-bottom: 0.15em;
+    border-bottom: 1px solid oklch(0.3 0.01 260 / 0.15);
+  }
+  .sd-prose.sd-compact h3 {
+    margin-top: 0.5em;
+  }
+  .sd-prose.sd-compact ul,
+  .sd-prose.sd-compact ol {
+    margin: 0.25em 0;
+  }
+  .sd-prose.sd-compact li {
+    padding: 0;
+  }
+  .sd-prose.sd-compact blockquote {
+    margin: 0.35em 0;
+    color: oklch(1 0 0 / 0.55);
+  }
+
+  /* ── Decorated code block ──────────────────────────────────────── */
+  .sd-code-block {
+    margin: 0.75em 0;
+    border-radius: 10px;
+    border: 1px solid oklch(0.3 0.01 260 / 0.5);
+    overflow: hidden;
+  }
+
+  .sd-code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4em 1em;
+    background: oklch(0.12 0.005 260 / 0.8);
+    border-bottom: 1px solid oklch(0.3 0.01 260 / 0.35);
+  }
+
+  .sd-code-lang {
+    font-size: 11px;
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    color: oklch(1 0 0 / 0.35);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .sd-code-copy {
+    opacity: 0;
+    padding: 0.25em 0.4em;
+    border-radius: 5px;
+    color: oklch(1 0 0 / 0.4);
+    cursor: pointer;
+    transition:
+      opacity 0.15s,
+      color 0.15s,
+      background 0.15s;
+    background: none;
+    border: none;
+  }
+  .sd-code-block:hover .sd-code-copy {
+    opacity: 1;
+  }
+  .sd-code-copy:hover {
+    color: oklch(1 0 0 / 0.7);
+    background: oklch(1 0 0 / 0.06);
+  }
+  .sd-code-copied {
+    color: oklch(0.7 0.2 150) !important;
+  }
+
+  .sd-code-block pre {
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: oklch(0.08 0.005 260 / 0.8) !important;
+  }
+
+  /* Shiki-highlighted code — transparent backgrounds */
+  .sd-code-block pre code .shiki,
+  .sd-code-block pre code [style*='background-color'] {
+    background-color: transparent !important;
+  }
+
+  /* ── Light theme overrides ─────────────────────────────────────────────
+     The prose/code styling above is authored in white-alpha literals for the
+     dark UI; token-based colours (json-view, links via brand-secondary-*)
+     flip automatically, these literals cannot. Same values, dark-on-light. */
+  [data-theme='light'] .reasoning-shimmer {
+    background: linear-gradient(
+      90deg,
+      oklch(0 0 0 / 0.35) 0%,
+      oklch(0 0 0 / 0.6) 40%,
+      oklch(0 0 0 / 0.35) 80%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+
+  [data-theme='light'] .sd-prose {
+    color: oklch(0 0 0 / 0.85);
+  }
+  [data-theme='light'] .sd-prose strong {
+    color: oklch(0 0 0 / 0.92);
+  }
+  [data-theme='light'] .sd-prose em {
+    color: oklch(0 0 0 / 0.72);
+  }
+  [data-theme='light'] .sd-prose h1,
+  [data-theme='light'] .sd-prose h2 {
+    color: oklch(0.15 0.01 274);
+  }
+  [data-theme='light'] .sd-prose h3 {
+    color: oklch(0 0 0 / 0.9);
+  }
+  [data-theme='light'] .sd-prose h4 {
+    color: oklch(0 0 0 / 0.85);
+  }
+  [data-theme='light'] .sd-prose li {
+    color: oklch(0 0 0 / 0.85);
+  }
+  [data-theme='light'] .sd-prose li::marker {
+    color: oklch(0 0 0 / 0.3);
+  }
+  [data-theme='light'] .sd-prose ol > li::marker {
+    color: oklch(0 0 0 / 0.45);
+  }
+  [data-theme='light'] .sd-prose code {
+    background: oklch(0.94 0.008 270 / 0.8);
+  }
+  [data-theme='light'] .sd-prose pre {
+    background: oklch(0.965 0.004 270 / 0.9);
+    border-color: oklch(0.87 0.008 270 / 0.7);
+  }
+  [data-theme='light'] .sd-prose pre code {
+    color: oklch(0 0 0 / 0.8);
+  }
+  [data-theme='light'] .sd-prose blockquote {
+    border-left-color: oklch(0.6 0.12 280 / 0.35);
+    color: oklch(0 0 0 / 0.6);
+  }
+  [data-theme='light'] .sd-prose thead {
+    background: oklch(0.955 0.004 270 / 0.7);
+  }
+  [data-theme='light'] .sd-prose th {
+    color: oklch(0 0 0 / 0.55);
+    border-bottom-color: oklch(0.8 0.008 270 / 0.5);
+  }
+  [data-theme='light'] .sd-prose td {
+    color: oklch(0 0 0 / 0.72);
+    border-bottom-color: oklch(0.85 0.008 270 / 0.4);
+  }
+  [data-theme='light'] .sd-prose tr:hover td {
+    background: oklch(0.92 0.005 270 / 0.3);
+  }
+  [data-theme='light'] .sd-prose hr {
+    border-top-color: oklch(0.82 0.008 270 / 0.5);
+  }
+  [data-theme='light'] .sd-prose img {
+    border-color: oklch(0.85 0.008 270 / 0.7);
+  }
+  [data-theme='light'] .sd-prose del {
+    color: oklch(0 0 0 / 0.4);
+  }
+  [data-theme='light'] .sd-prose.sd-compact h1 {
+    border-bottom-color: oklch(0.85 0.008 270 / 0.4);
+  }
+  [data-theme='light'] .sd-prose.sd-compact h2 {
+    border-bottom-color: oklch(0.88 0.008 270 / 0.35);
+  }
+  [data-theme='light'] .sd-prose.sd-compact blockquote {
+    color: oklch(0 0 0 / 0.55);
+  }
+
+  [data-theme='light'] .sd-code-block {
+    border-color: oklch(0.87 0.008 270 / 0.7);
+  }
+  [data-theme='light'] .sd-code-header {
+    background: oklch(0.955 0.004 270 / 0.9);
+    border-bottom-color: oklch(0.87 0.008 270 / 0.5);
+  }
+  [data-theme='light'] .sd-code-lang {
+    color: oklch(0 0 0 / 0.4);
+  }
+  [data-theme='light'] .sd-code-copy {
+    color: oklch(0 0 0 / 0.45);
+  }
+  [data-theme='light'] .sd-code-copy:hover {
+    color: oklch(0 0 0 / 0.7);
+    background: oklch(0 0 0 / 0.05);
+  }
+  [data-theme='light'] .sd-code-copied {
+    color: oklch(0.55 0.17 150) !important;
+  }
+  [data-theme='light'] .sd-code-block pre {
+    background: oklch(0.965 0.004 270 / 0.9) !important;
+  }
+}
+
+/* Scrollbars: the global `*` rule paints a solid brand-secondary (purple) thumb,
+   which reads as a loud bar on a light page. Soften to a neutral gray in light.
+   Outside @layer so it beats the layered utility regardless of source order. */
+[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background-color: var(--color-brand-main-500) !important;
+}
+[data-theme='light'] ::-webkit-scrollbar-track {
+  background-color: transparent !important;
+}
+[data-theme='light'] .scrollbar-macos:hover::-webkit-scrollbar-thumb,
+[data-theme='light'] .scrollbar-macos:active::-webkit-scrollbar-thumb {
+  background-color: var(--color-brand-main-400) !important;
+}

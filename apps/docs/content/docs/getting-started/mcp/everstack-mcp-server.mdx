@@ -1,0 +1,164 @@
+---
+title: Everstack MCP Server
+description: Connect Claude Desktop, Cursor, Google ADK, or any MCP client to Everstack and call your agents, memory, and web tools.
+icon: Share2
+---
+
+Everstack speaks MCP in both directions. The [MCP gateway](/getting-started/mcp/overview) is the outbound half: Everstack acts as a client to servers you register. This page covers the inbound half, where Everstack itself is the MCP server and an external client calls into your tenant.
+
+That means Claude Desktop, Cursor, Google ADK, or anything else that speaks MCP can list your agents, invoke a deployed agent, search your memory, and fetch the web, all under your tenant's isolation and your API key.
+
+## Endpoint
+
+```
+POST https://{instance}.{region}.everstack.ai/mcp
+```
+
+Self-hosted instances expose the same path on the gateway host, for example `https://everstack.internal.example.com/mcp`. It is the same host and port as the rest of the API (default `8089`), so if the admin UI is reachable, `/mcp` is reachable.
+
+The transport is **Streamable HTTP**, protocol revision `2025-03-26`.
+
+## Authentication
+
+Every request authenticates with an Everstack API key sent as a Bearer token:
+
+```
+Authorization: Bearer YOUR_EVERSTACK_API_KEY
+```
+
+Clients that cannot set an `Authorization` header may send the key in `x-evs-api-key` instead.
+
+The key resolves the tenant, and that tenant is the isolation boundary for the whole request. There is no anonymous mode and no fallback tenant: a request with a missing, unknown, or revoked key gets `401 Unauthorized` with a `WWW-Authenticate: Bearer` challenge.
+
+Create and revoke keys under **Vault → API Keys**.
+
+<Callout type="warn">
+  An API key handed to an MCP client grants that client everything in the tool catalog below, including invoking deployed agents. Issue a dedicated key per client so you can revoke one without disturbing the others.
+</Callout>
+
+## Connecting a client
+
+The admin UI generates ready-to-paste config under **Gateway → MCP → Publish**, prefilled with your instance's endpoint. The shapes are:
+
+### Claude Desktop and Cursor
+
+```json
+{
+  "mcpServers": {
+    "everstack": {
+      "url": "https://{instance}.{region}.everstack.ai/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_EVERSTACK_API_KEY"
+      }
+    }
+  }
+}
+```
+
+### Google ADK
+
+```python
+from google.adk.tools.mcp_tool import McpToolset, StreamableHTTPConnectionParams
+
+everstack_tools = McpToolset(
+    connection_params=StreamableHTTPConnectionParams(
+        url="https://{instance}.{region}.everstack.ai/mcp",
+        headers={"Authorization": "Bearer YOUR_EVERSTACK_API_KEY"},
+    )
+)
+```
+
+### Raw JSON-RPC
+
+Useful for verifying connectivity before wiring a real client:
+
+```bash
+curl -X POST https://{instance}.{region}.everstack.ai/mcp \
+  -H "Authorization: Bearer YOUR_EVERSTACK_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+## Tool catalog
+
+The catalog is assembled per request from what the instance has configured and what the tenant has enabled. Tools whose backing subsystem is not configured simply do not appear.
+
+| Tool | What it does | Available when |
+| --- | --- | --- |
+| `everstack_whoami` | Returns the tenant the API key resolved to | Always |
+| `everstack_echo` | Echoes its input, for connectivity checks | Always |
+| `memory_query` | Semantic search over the tenant's memory | Memory store and embedder configured |
+| `memory_store` | Writes an entry to the tenant's memory | Memory store and embedder configured |
+| `web_search` | Web search via the instance's SearXNG | `EVS_SEARXNG_URL` set |
+| `web_fetch` | Fetches a URL and returns readable content | Always |
+| `list_agents` | Lists the tenant's agent definitions | Agents database available |
+| `get_agent` | Returns one agent definition | Agents database available |
+| `run_agent` | Invokes a deployed agent and returns its final text | Deployment invoker wired |
+| `run_adk_agent` | Runs a Google ADK agent in a tenant-scoped sandbox | ADK runtime available |
+
+`everstack_whoami` is the quickest way to confirm a client is authenticated as the tenant you expect.
+
+<Callout type="info">
+  `run_agent` requires the agent to have an active deployment. Calling it for an undeployed agent returns an error telling you to deploy it first.
+</Callout>
+
+`web_fetch` runs behind an SSRF guard, so it cannot be used to reach internal hosts, cloud metadata endpoints, or other tenants' services.
+
+## Choosing what to expose
+
+Every tool in the catalog can be turned off per tenant under **Gateway → MCP → Publish**. Tools without an explicit setting default to enabled.
+
+A disabled tool is hidden from `tools/list` and refused by `tools/call`, so turning one off takes effect immediately for already-connected clients on their next call.
+
+The same settings are readable and writable over the admin API:
+
+```bash
+# Current overrides for the tenant, as {"tools": {"<name>": <bool>, ...}}
+GET /api/interop/mcp/tools
+
+# Turn one tool off (PUT or POST)
+PUT /api/interop/mcp/tools/run_adk_agent
+{ "enabled": false }
+```
+
+Only tools with an explicit override appear in the `GET` response. Anything absent is enabled.
+
+`run_adk_agent` deserves particular thought before enabling it: it runs caller-supplied code in a sandbox. On multi-tenant cloud, that sandbox is always egress-restricted to an allowlist, but the tool is still the widest-reaching thing in the catalog.
+
+## Protocol support
+
+Supported JSON-RPC methods:
+
+| Method | Behavior |
+| --- | --- |
+| `initialize` | Advertises protocol version `2025-03-26` and the `tools` capability |
+| `notifications/initialized` | Accepted, no response (`202`) |
+| `ping` | Empty result |
+| `tools/list` | The tenant's enabled catalog |
+| `tools/call` | Executes a tool for the tenant |
+
+Known limits:
+
+- **Tools only.** Resources, prompts, and sampling are not advertised or served.
+- **No server-initiated stream.** A `GET` on `/mcp` returns `405` with `Allow: POST`. Clients that require an SSE channel for server-to-client messages will not get one.
+- **No JSON-RPC batching.** A request body starting with `[` is rejected as an invalid request.
+- **4 MB request cap.** Larger bodies are truncated at the read.
+- Unknown notifications are dropped silently; unknown calls return `-32601 method not found`.
+
+Tool failures are not transport failures. A tool that errors returns a normal result with `isError: true` and the error text in a content block, so the calling model can read it and adapt.
+
+## Isolation guarantees
+
+Everything on this endpoint is bound to the tenant resolved from the API key:
+
+- Tool handlers are constructed per request with that tenant baked in. A handler cannot be pointed at another tenant by argument.
+- `list_agents`, `get_agent`, and `run_agent` query and invoke only that tenant's agents.
+- `memory_query` and `memory_store` read and write only that tenant's memory.
+- There is no "only tenant in the database" fallback. An unattributable request is rejected, not guessed.
+
+## Related
+
+- [MCP Tools in Agents](/getting-started/mcp/agent-tools) for the outbound direction, where your agents consume external MCP servers.
+- [API Keys](/api-reference/api-keys) for creating and revoking the key an MCP client uses.
+
+Everstack also serves an Agent-to-Agent (A2A) endpoint for deployed agents, published per agent rather than per tenant. Unlike this endpoint, A2A exposes one agent as a peer rather than exposing the tenant's tool catalog. It shares the same API key authentication.

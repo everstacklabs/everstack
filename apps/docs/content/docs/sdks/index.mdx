@@ -1,0 +1,25 @@
+---
+title: SDKs
+description: Official Everstack SDKs for gateway and platform integration.
+icon: Boxes
+---
+
+Everstack SDKs provide typed clients for every platform API -- gateway, agents, memory, evaluations, observability, and more.
+
+## Available SDKs
+
+<Cards>
+  <Card title="TypeScript / Node.js" href="/sdks/typescript">
+    Full-featured SDK covering gateway, agents, memory, evaluations, audio, traces, and channels.
+  </Card>
+  <Card title="Python" href="/sdks/python">
+    Sync and async clients with Pydantic models for gateway and platform APIs.
+  </Card>
+  <Card title="Go" href="/sdks/go">
+    Idiomatic Go client with streaming support and typed responses.
+  </Card>
+</Cards>
+
+## OpenAI compatibility
+
+The Everstack gateway is OpenAI-compatible, so you can also use the official OpenAI SDK by pointing it at your Everstack gateway URL. The Everstack SDK adds typed access to platform-specific features like agents, memory, evaluations, and observability that the OpenAI SDK does not cover.

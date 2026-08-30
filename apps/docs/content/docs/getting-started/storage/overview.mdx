@@ -1,0 +1,119 @@
+---
+title: Storage Overview
+description: S3-compatible object storage for artifacts, files, and agent-generated content.
+icon: Archive
+---
+
+Storage gives every tenant a managed object storage layer backed by any S3-compatible provider. Agents, users, and automations can upload files, download them through presigned URLs, and query usage without ever touching raw cloud credentials.
+
+The important framing is this: storage is not just for agents. It is a general-purpose file layer that agents, evaluations, datasets, and your own application code can all use.
+
+## What storage does
+
+Storage provides:
+
+- an abstraction over S3, Cloudflare R2, MinIO, and Google Cloud Storage
+- presigned URLs for secure, time-limited uploads and downloads
+- a direct upload proxy for files up to 100 MB
+- per-object metadata tracking including filename, content type, size, and SHA256 checksum
+- quota enforcement per tenant (total bytes and object count)
+- soft deletes with reference tracking back to datasets, agent sessions, and other resources
+- CQRS event sourcing so every state change is auditable
+
+In practice, that means you configure a bucket once and let the platform handle signing, validation, quota checks, and lifecycle.
+
+## Why storage exists
+
+Running AI workloads produces files constantly. Agents generate code, logs, reports, and intermediate artifacts. Evaluations produce result sets. Datasets need a home before they reach a model. Voice sessions produce audio.
+
+Without a first-class storage layer, every one of those use cases ends up with a bespoke upload path, its own credential management, and no unified visibility.
+
+Storage solves that by giving you:
+
+- one configuration surface for bucket credentials
+- one quota model across all file types
+- one set of presigned URLs that work the same way regardless of the underlying provider
+- one admin UI to browse, inspect, and manage objects
+
+## Object purposes
+
+Every stored object has a purpose that describes why it exists:
+
+- `DATASET` -- files backing a dataset resource
+- `ARTIFACT` -- files produced by agent tool calls
+- `UPLOAD` -- files uploaded manually through the UI or API
+- `EVAL_RESULT` -- output from evaluation runs
+- `VOICE_AUDIO` -- audio recordings from voice sessions
+
+Purposes drive filtering in the admin UI and let you build retention or cleanup policies around specific categories.
+
+## How it fits together
+
+Storage connects to several other parts of the platform:
+
+- **Agents** use the `upload_artifact`, `download_artifact`, and `list_artifacts` tools to read and write files during sessions.
+- **Datasets** reference stored objects so training and eval data lives in your own bucket.
+- **Evaluations** write result files back to storage with the `EVAL_RESULT` purpose.
+- **Voice** persists audio recordings for playback and transcription review.
+- **Admin UI** provides a hierarchical folder browser, usage dashboard, and configuration manager.
+
+## Configuration model
+
+Each tenant can have multiple storage configurations pointing to different buckets or providers. One configuration is marked as the default and is used automatically by agent tools and platform internals.
+
+A configuration captures:
+
+- the provider (S3, R2, MinIO, or GCS)
+- endpoint, region, and bucket name
+- access key and secret key (secret key is write-only and never returned by the API)
+- provider-specific settings like path-style addressing for MinIO and R2
+
+You manage configurations through the admin UI or the `ConfigureStorage`, `UpdateStorageConfig`, and `DeleteStorageConfig` RPCs.
+
+## Quota enforcement
+
+Every tenant has storage quotas for total bytes and total object count. The platform checks quotas before every upload and rejects requests that would exceed the limit.
+
+You can monitor current usage through the admin UI's Usage tab or the `GetStorageUsage` RPC.
+
+## The upload and download flow
+
+There are two ways to get files into storage:
+
+1. **Presigned upload** -- request a presigned PUT URL, upload directly to the bucket from a client or agent, then call `CompleteUpload` to finalize metadata and quota accounting.
+2. **Direct proxy** -- POST the file to `/api/v1/storage/upload` (up to 100 MB, multipart). The platform streams it to the bucket and handles metadata in one step.
+
+Downloads always go through presigned GET URLs with a configurable expiry. Agent artifact downloads default to 15 minutes.
+
+## Admin UI
+
+The Storage section in the admin dashboard has three tabs:
+
+- **Configurations** -- add, edit, and remove backend configurations. Test connectivity before saving.
+- **Objects** -- browse stored files in a hierarchical folder view. Inspect metadata, copy download URLs, or delete objects.
+- **Usage** -- see current quota consumption, object counts, and storage trends.
+
+## Examples
+
+### Dataset storage for evaluations
+
+Upload a CSV dataset through the UI, reference it in an evaluation run, and let the eval framework write results back to the same bucket under the `EVAL_RESULT` purpose.
+
+### Agent-generated reports
+
+An agent runs a data analysis task, writes the output to storage using `upload_artifact`, and returns a presigned download link in the conversation. The user clicks the link and gets the file immediately.
+
+### Multi-region backup
+
+Configure two storage backends pointing to buckets in different regions. Use the default for everyday operations and the secondary for archival or compliance copies.
+
+### Temporary file sharing
+
+Upload a file through the direct proxy, generate a presigned download URL, and share it with a collaborator. The URL expires after the configured window.
+
+## Next steps
+
+- Use [Backends](/getting-started/storage/backends) to configure your S3, R2, MinIO, or GCS provider.
+- Use [Uploads and Downloads](/getting-started/storage/uploads-and-downloads) to understand presigned URLs and the direct upload proxy.
+- Use [Agent Artifacts](/getting-started/storage/agent-artifacts) to learn how agents interact with storage during sessions.
+- Use the [Storage API](/getting-started/storage/overview) to automate configuration, uploads, and object management.

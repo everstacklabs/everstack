@@ -1,0 +1,427 @@
+# Default server configurations for the LLM Gateway
+# These are pre-configured server settings that users cannot override
+server:
+  # Server configuration
+  config:
+    port: 8089
+    external_port: 8089
+    external_domain: "localhost"
+    enforce_external_domain: false # Set to true in production to reject requests not matching external_domain
+    external_secure: false
+    public_host_headers:
+      - "x-forwarded-host"
+    instance_host_headers:
+      - "x-forwarded-host"
+
+  # Logging configuration
+  log:
+    level: "info" # debug, info, warn, error, trace
+    # Granular level control - only show specific levels
+    include_levels: [] # e.g., ["info", "trace"] to show only info and trace
+    # Granular level control - exclude specific levels
+    exclude_levels: [] # e.g., ["debug"] to exclude debug logs
+    formatter:
+      format: "text" # text, json
+    output: "stdout" # stdout, stderr, file
+    file: "" # path to log file (if output is file)
+
+  # Metrics configuration
+  metrics:
+    type: "otel" # otel, none
+    enabled: true
+    port: 9090
+    path: "/metrics" # or any other path
+    interval: "15s"
+
+  # Tracing configuration
+  tracing:
+    type: "otel" # otel, none
+    fraction: 0.1 # 0.0 to 1.0
+    enabled: true
+
+    # OpenTelemetry configuration
+    otel:
+      endpoint: "" # OTLP endpoint
+      service_name: "everstack-gateway"
+      service_version: "1.0.0"
+      timeout: "30s"
+      retry:
+        enabled: true
+        max_attempts: 3
+        backoff_duration: "1s"
+      tls:
+        enabled: false
+        ca_cert: ""
+        client_cert: ""
+        client_key: ""
+        insecure_skip_verify: false
+
+  # Telemetry configuration
+  telemetry:
+    endpoint: "" # Telemetry endpoint
+    types:
+      - "metrics"
+      - "logs"
+      - "events"
+    batch:
+      enabled: true
+      max_size: 100
+      interval: "10s"
+
+    # OpenTelemetry logging configuration (logs to OTLP collector -> ClickHouse)
+    otel:
+      enabled: false # Disabled by default for self-hosted
+      collector_url: "localhost:4317" # OTLP collector gRPC endpoint
+      service_name: "everstack-gateway"
+      tenant_id: "" # Will be set per deployment
+      tenant_type: "self_hosted" # self_hosted or cloud
+      instance_owner: "user" # user or everstack
+
+  # TLS configuration
+  tls:
+    enabled: false
+    key_path: ""
+    key: ""
+    cert_path: ""
+    cert: ""
+    ca_cert: ""
+    min_version: "1.2"
+    max_version: "1.3"
+
+  # CORS configuration
+  cors:
+    enabled: false
+    allowed_origins:
+      - "*"
+    allowed_methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+    allowed_headers:
+      - "*"
+    exposed_headers: [] # Can be used to set custom headers
+    allow_credentials: false
+    max_age: "86400s"
+
+  # Catalog sync configuration
+  #
+  # Catalog startup is always local-first and never waits on this URL.
+  # Runtime updates use the signed R2 distribution URL. GitHub is only a
+  # noncritical source mirror and is never the runtime authority.
+  #
+  # source=local is reserved for development mode (auto-detected when
+  # go.mod is present in CWD). Production gateway pods stay on remote.
+  catalog:
+    source: "remote" # "remote" or "local"
+    remote_url: "https://catalog.everstack.ai/v1"
+    local_path: "model-catalog" # Used when source is "local"
+    enable_auto_sync: true
+    sync_interval: "5m"
+    channel: "stable"
+    public_key: "" # Configure via EVS_CATALOG_PUBLIC_KEY
+    public_keys: "" # Optional comma-separated rotation set
+    # Remote refresh remains disabled until a trusted Ed25519 public key is
+    # configured. Startup continues from local last-known-good or embedded data.
+    require_signature: true
+
+  # Custom headers configuration
+  # TODO: Decide if we need this - we already have the cors configuration and we can use that to set custom headers
+  custom_headers:
+    enabled: false
+    headers: []
+
+  security:
+    api_key_hash_secret: "<random-32-bytes-base64-string>"
+
+  # Quotas configuration
+  quotas:
+    access:
+      enabled: false
+      debounce:
+        min_frequency: "0s"
+        max_bulk_size: 0
+      exhausted_cookie_key: "MF.quota.exhausted"
+      exhausted_cookie_max_age: "300s"
+    execution:
+      enabled: false
+      debounce:
+        min_frequency: "0s"
+        max_bulk_size: 0
+
+# Secret manager configuration
+secret_manager:
+  type: "env" # env, vault, gcp, azure, aws, infisical
+  refresh_interval: "5m"
+  cache_ttl: "10m"
+
+  # External object-storage credential envelope encryption. Prefer injecting
+  # the master key through EVS_STORAGE_CREDENTIAL_MASTER_KEY.
+  storage_credentials:
+    backend: "inherit" # inherit, postgres, or vault
+    key_id: "v1"
+    master_key: ""
+    previous_keys: ""
+    path_prefix: "everstack/storage-credentials"
+
+  retry:
+    max_attempts: 3
+    backoff_duration: "1s"
+
+  # HashiCorp Vault
+  vault:
+    address: ""
+    token: ""
+    namespace: ""
+    mount_path: "secret"
+    tls:
+      enabled: true
+      ca_cert: ""
+      client_cert: ""
+      client_key: ""
+      skip_verify: false
+
+  # Google Cloud Secret Manager
+  gcp:
+    credentials_file: ""
+    project_id: ""
+    location: "global"
+
+  # Azure Key Vault
+  azure:
+    vault_url: ""
+    tenant_id: ""
+    client_id: ""
+    client_secret: ""
+    managed_identity: false
+
+  # AWS Secrets Manager
+  aws:
+    region: ""
+    access_key_id: ""
+    secret_access_key: ""
+    session_token: ""
+    endpoint: ""
+
+  # Infisical
+  infisical:
+    token: ""
+    project_id: ""
+    environment: ""
+    base_url: "https://app.infisical.com"
+
+  # Default secret keys
+  keys:
+    - "OPENAI_API_KEY"
+    - "ANTHROPIC_API_KEY"
+    - "DB_PASSWORD"
+    - "TLS_CERT"
+    - "TLS_KEY"
+
+# Database configuration
+database:
+  # In-memory database
+  memory:
+    enabled: false
+    data_file: ""
+    journal_mode: "WAL"
+    cache_size: 1000
+    busy_timeout: 5000
+
+  # PostgreSQL
+  postgres:
+    dsn: ""
+    max_open_conns: 25
+    max_idle_conns: 10
+    conn_max_lifetime: "5m"
+    conn_max_idle_time: "5m"
+    ssl_mode: "disable"
+    ssl_root_cert: ""
+    ssl_cert: ""
+    ssl_key: ""
+    ssl_insecure: false
+    ssl_server_name: ""
+    ssl_cipher_suites: ""
+    ssl_min_version: ""
+    ssl_max_version: ""
+    ssl_prefer_server_cipher_suites: false
+
+  # ClickHouse
+  clickhouse:
+    dsn: ""
+    max_open_conns: 50
+    max_idle_conns: 20
+    conn_max_lifetime: "10m"
+    conn_max_idle_time: "5m"
+    compression: "lz4"
+    debug: false
+    settings:
+      max_execution_time: 300
+      max_memory_usage: 10000000000
+
+# Cache configuration
+cache:
+  enabled: true
+  type: "memory" # memory, redis
+  ttl: "10m"
+  max_size: 1000
+
+  # Redis configuration
+  redis:
+    address: ""
+    password: ""
+    db: 0
+    pool_size: 10
+    min_idle_conns: 5
+    max_retries: 3
+    dial_timeout: "5s"
+    read_timeout: "3s"
+    write_timeout: "3s"
+
+# Server templates for common environments
+templates:
+  # Development environment
+  development:
+    name: "Development"
+    description: "Configuration suitable for development environments"
+    server:
+      config:
+        port: 8089
+        external_domain: "localhost"
+      log:
+        level: "debug"
+        format: "text"
+      metrics:
+        type: "none"
+      tracing:
+        type: "none"
+      tls:
+        enabled: false
+      cors:
+        enabled: true
+        allowed_origins: ["http://localhost:3000", "http://localhost:8080", "http://main.everstack.local", "http://main.everstack.local:8080", "http://main-gateway.everstack.local", "http://main-gateway.everstack.local:8080"]
+      catalog:
+        source: "local" # Use local filesystem in dev
+        local_path: "model-catalog"
+        enable_auto_sync: false # Disable auto-sync in dev
+    database:
+      memory:
+        enabled: true
+    cache:
+      type: "memory"
+      ttl: "5m"
+
+  # Production environment
+  production:
+    name: "Production"
+    description: "Configuration suitable for production environments"
+    server:
+      config:
+        port: 8089
+        external_domain: "api.example.com"
+        external_secure: true
+      log:
+        level: "info"
+        format: "json"
+      metrics:
+        type: "otel"
+      tracing:
+        type: "otel"
+        fraction: 0.1
+      tls:
+        enabled: true
+      cors:
+        enabled: false
+    database:
+      postgres:
+        max_open_conns: 50
+        max_idle_conns: 20
+    cache:
+      type: "redis"
+      ttl: "30m"
+
+  # High-performance environment
+  high_performance:
+    name: "High Performance"
+    description: "Configuration optimized for high throughput"
+    server:
+      config:
+        port: 8089
+      metrics:
+        type: "otel"
+      tracing:
+        type: "otel"
+        fraction: 0.05
+    database:
+      postgres:
+        max_open_conns: 100
+        max_idle_conns: 50
+      clickhouse:
+        max_open_conns: 100
+        max_idle_conns: 50
+    cache:
+      type: "redis"
+      ttl: "1h"
+      redis:
+        pool_size: 50
+
+# Server categories for easy filtering
+categories:
+  infrastructure:
+    - "server"
+    - "database"
+    - "cache"
+    - "secret_manager"
+
+  observability:
+    - "metrics"
+    - "tracing"
+    - "telemetry"
+    - "log"
+
+  security:
+    - "tls"
+    - "cors"
+    - "secret_manager"
+
+  performance:
+    - "cache"
+    - "database"
+    - "quotas"
+
+security:
+  policy:
+    bypass_services:
+      - "everstack.license.v1.LicenseService"
+      - "everstack.license.v1.InstanceService"
+      - "everstack.health.v1.HealthService"
+      - "everstack.events.v1.EventsService"
+    bypass_prefixes:
+      - "/everstack.license.v1.LicenseService/"
+      - "/everstack.license.v1.InstanceService/"
+      - "/everstack.gateway.v1.GatewayService/ActivateGatewayInstance"
+      - "/everstack.gateway.v1.GatewayService/GetGatewayInstanceStatus"
+      - "/everstack.gateway.v1.GatewayService/GetTrialStatus"
+      - "/everstack.gateway.v1.GatewayService/GetLicenseMonitorStatus"
+      - "/everstack.gateway.v1.GatewayService/GetPlans"
+      - "/everstack.gateway.v1.GatewayService/ActivationCallback"
+      - "/everstack.gateway.v1.GatewayService/SubscriptionStatusCallback"
+      - "/everstack.gateway.v1.GatewayService/StoreUpgradeCallbackSecret"
+      - "/everstack.gateway.v1.GatewayService/GetUpgradeCallbackSecret"
+
+# Gateway proxy configuration for internal services
+# Upstream URLs are loaded from config/default.yaml (services.license.url)
+# Override via EVS_SERVICES_LICENSE_URL environment variable for local development
+gateway:
+  proxy:
+    license:
+      enabled: true
+      mount_prefix: "/everstack.license.v1.LicenseService/"
+      # upstream is set dynamically from services.license.url at runtime
+      # Default: https://license.everstack.ai (baked into binary)
+      # Override: EVS_SERVICES_LICENSE_URL=http://localhost:8091
+    instance:
+      enabled: true
+      mount_prefix: "/everstack.license.v1.InstanceService/"
+      # upstream is set dynamically from services.license.url at runtime

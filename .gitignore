@@ -1,0 +1,53 @@
+# Dependencies and package-manager state
+node_modules/
+.pnpm-store/
+.turbo/
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+!.env.*.example
+.everstack/
+
+# Build output and caches
+/everstack
+/evs
+/bin/
+/dist/
+dist/
+tmp/
+.cache/
+coverage.out
+*.log
+.artifacts/
+ui/dist/
+
+# Runtime data
+qdrant_storage/
+/logs/
+*.pid
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Language and infrastructure tooling
+.venv/
+__pycache__/
+*.pyc
+.terraform/
+*.tfstate*
+
+# Local certificates and keys
+**/certs/
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Generated API artifacts under pkg/grpc, openapi, and packages/proto are
+# intentionally committed so a fresh Community Edition checkout builds.

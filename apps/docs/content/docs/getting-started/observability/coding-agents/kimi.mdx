@@ -1,0 +1,39 @@
+---
+title: Kimi
+description: Trace Kimi (Moonshot) models used through Claude Code.
+icon: moonshot
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<MoonshotIcon /> **Kimi** (Moonshot) is a model family, not a separate CLI. The
+common setup is [Claude Code](/docs/getting-started/observability/coding-agents/claude-code)
+pointed at Moonshot's Anthropic-compatible endpoint.
+
+## Configuration
+
+Point Claude Code at Moonshot, then configure Claude Code telemetry exactly as
+on its own page — the base URL does not change what telemetry is emitted.
+
+```bash
+export ANTHROPIC_BASE_URL=https://api.moonshot.ai/anthropic   # or api.moonshot.cn
+export ANTHROPIC_AUTH_TOKEN=<moonshot-key>
+```
+
+<Callout type="info">
+  Telemetry is **Claude Code's** — follow the
+  [Claude Code](/docs/getting-started/observability/coding-agents/claude-code)
+  setup for the OTel environment variables. Nothing extra is needed here.
+</Callout>
+
+## How Everstack attributes Kimi
+
+Claude Code reports the model name (`kimi-*`, `moonshot-*`) but no provider
+attribute when talking to Moonshot. Everstack infers the provider from the model
+name — `kimi-*` / `moonshot-*` → **Moonshot** — so Kimi traces group under the
+right provider.
+
+## Notes
+
+- Kimi reports no dollar **cost**; Everstack computes it from your model-catalog
+  pricing.

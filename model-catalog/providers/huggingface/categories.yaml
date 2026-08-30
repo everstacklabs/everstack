@@ -1,0 +1,27 @@
+# Model categories for Hugging Face Inference Providers
+# These hosted models route through HF's Inference Providers network
+
+chat:
+  - deepseek-ai/DeepSeek-V4-Pro
+  - moonshotai/Kimi-K2.6
+  - zai-org/GLM-5.1
+  - Qwen/Qwen3-Coder-480B-A35B-Instruct
+  - Qwen/Qwen3-Next-80B-A3B-Instruct
+
+function_calling:
+  - deepseek-ai/DeepSeek-V4-Pro
+  - moonshotai/Kimi-K2.6
+  - zai-org/GLM-5.1
+  - Qwen/Qwen3-Coder-480B-A35B-Instruct
+  - Qwen/Qwen3-Next-80B-A3B-Instruct
+
+reasoning:
+  - deepseek-ai/DeepSeek-V4-Pro
+  - moonshotai/Kimi-K2.6
+  - zai-org/GLM-5.1
+
+vision:
+  - moonshotai/Kimi-K2.6
+
+coding:
+  - Qwen/Qwen3-Coder-480B-A35B-Instruct

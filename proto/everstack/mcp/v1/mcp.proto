@@ -1,0 +1,256 @@
+syntax = "proto3";
+
+package everstack.mcp.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/mcp/v1;mcp";
+
+// ─── Enums ──────────────────────────────────────────────────────────
+
+enum McpTransportType {
+  MCP_TRANSPORT_TYPE_UNSPECIFIED = 0;
+  MCP_TRANSPORT_TYPE_SSE = 1;
+  MCP_TRANSPORT_TYPE_STREAMABLE_HTTP = 2;
+  MCP_TRANSPORT_TYPE_STDIO = 3;
+}
+
+enum McpAuthType {
+  MCP_AUTH_TYPE_UNSPECIFIED = 0;
+  MCP_AUTH_TYPE_NONE = 1;
+  MCP_AUTH_TYPE_API_KEY = 2;
+  MCP_AUTH_TYPE_BEARER = 3;
+  MCP_AUTH_TYPE_OAUTH2 = 4;
+}
+
+enum McpServerHealthStatus {
+  MCP_SERVER_HEALTH_STATUS_UNSPECIFIED = 0;
+  MCP_SERVER_HEALTH_STATUS_HEALTHY = 1;
+  MCP_SERVER_HEALTH_STATUS_UNHEALTHY = 2;
+  MCP_SERVER_HEALTH_STATUS_UNKNOWN = 3;
+}
+
+enum McpToolCallStatus {
+  MCP_TOOL_CALL_STATUS_UNSPECIFIED = 0;
+  MCP_TOOL_CALL_STATUS_SUCCESS = 1;
+  MCP_TOOL_CALL_STATUS_ERROR = 2;
+  MCP_TOOL_CALL_STATUS_TIMEOUT = 3;
+}
+
+// ─── Core Messages ──────────────────────────────────────────────────
+
+message McpStdioConfig {
+  // Command to execute for the stdio MCP server
+  string command = 1;
+
+  // Arguments passed to the command
+  repeated string args = 2;
+
+  // Environment variables for the child process
+  map<string, string> env = 3;
+
+  // Working directory for the child process
+  string working_dir = 4;
+}
+
+message McpToolFilter {
+  // Filter type: "include" or "exclude"
+  string type = 1;
+
+  // Tool names to include/exclude
+  repeated string tools = 2;
+}
+
+message McpServer {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+
+  // Server URL (for SSE/Streamable HTTP transports)
+  string url = 4;
+
+  McpTransportType transport_type = 5;
+  McpAuthType auth_type = 6;
+
+  // Auth configuration (API key value, bearer token, OAuth config)
+  google.protobuf.Struct auth_config = 7;
+
+  // Tool filtering configuration
+  McpToolFilter tool_filter = 8;
+
+  // Custom headers sent with requests
+  map<string, string> headers = 9;
+
+  // Stdio transport configuration
+  McpStdioConfig stdio_config = 10;
+
+  bool enabled = 11;
+  McpServerHealthStatus health_status = 12;
+  google.protobuf.Timestamp health_last_check = 13;
+
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+
+  // Number of discovered tools
+  int32 tool_count = 16;
+}
+
+message McpTool {
+  string id = 1;
+  string server_id = 2;
+
+  // Tool name as reported by the MCP server
+  string name = 3;
+
+  // Human-readable description
+  string description = 4;
+
+  // JSON Schema for tool input parameters
+  google.protobuf.Struct input_schema = 5;
+
+  // MCP tool annotations (readOnlyHint, destructiveHint, etc.)
+  google.protobuf.Struct annotations = 6;
+
+  google.protobuf.Timestamp discovered_at = 7;
+  google.protobuf.Timestamp last_seen_at = 8;
+}
+
+message McpToolCallResult {
+  string id = 1;
+  string server_id = 2;
+  string tool_name = 3;
+  string tenant_id = 4;
+
+  McpToolCallStatus status = 5;
+
+  // Input arguments passed to the tool
+  google.protobuf.Struct input_args = 6;
+
+  // Tool output (text content)
+  string output = 7;
+
+  // Error message if status is ERROR
+  string error = 8;
+
+  // Execution latency in milliseconds
+  int64 latency_ms = 9;
+
+  google.protobuf.Timestamp created_at = 10;
+}
+
+// ─── Request / Response Messages ────────────────────────────────────
+
+// RegisterMcpServer
+message RegisterMcpServerRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string url = 3;
+  McpTransportType transport_type = 4;
+  McpAuthType auth_type = 5;
+  google.protobuf.Struct auth_config = 6;
+  McpToolFilter tool_filter = 7;
+  map<string, string> headers = 8;
+  McpStdioConfig stdio_config = 9;
+  bool enabled = 10;
+}
+
+message RegisterMcpServerResponse {
+  McpServer server = 1;
+  // Tools discovered during registration
+  repeated McpTool tools = 2;
+}
+
+// GetMcpServer
+message GetMcpServerRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message GetMcpServerResponse {
+  McpServer server = 1;
+}
+
+// ListMcpServers
+message ListMcpServersRequest {
+  string tenant_id = 1;
+  bool enabled_only = 2;
+}
+
+message ListMcpServersResponse {
+  repeated McpServer servers = 1;
+}
+
+// UpdateMcpServer
+message UpdateMcpServerRequest {
+  string id = 1;
+  string tenant_id = 2;
+  optional string name = 3;
+  optional string url = 4;
+  optional McpTransportType transport_type = 5;
+  optional McpAuthType auth_type = 6;
+  google.protobuf.Struct auth_config = 7;
+  McpToolFilter tool_filter = 8;
+  map<string, string> headers = 9;
+  McpStdioConfig stdio_config = 10;
+  optional bool enabled = 11;
+}
+
+message UpdateMcpServerResponse {
+  McpServer server = 1;
+}
+
+// DeleteMcpServer
+message DeleteMcpServerRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message DeleteMcpServerResponse {}
+
+// DiscoverTools — trigger tool discovery on a specific server
+message DiscoverToolsRequest {
+  string server_id = 1;
+  string tenant_id = 2;
+}
+
+message DiscoverToolsResponse {
+  repeated McpTool tools = 1;
+}
+
+// ListFederatedTools — aggregate tools across all servers
+message ListFederatedToolsRequest {
+  string tenant_id = 1;
+  // Optional: filter by server IDs
+  repeated string server_ids = 2;
+  // Optional: search by tool name prefix
+  string name_prefix = 3;
+}
+
+message ListFederatedToolsResponse {
+  repeated McpTool tools = 1;
+}
+
+// CallTool — execute a tool on the appropriate MCP server
+message CallToolRequest {
+  string tenant_id = 1;
+  string server_id = 2;
+  string tool_name = 3;
+  google.protobuf.Struct arguments = 4;
+}
+
+message CallToolResponse {
+  McpToolCallResult result = 1;
+}
+
+// GetMcpServerHealth
+message GetMcpServerHealthRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message GetMcpServerHealthResponse {
+  McpServerHealthStatus status = 1;
+  google.protobuf.Timestamp last_check = 2;
+  string error = 3;
+}

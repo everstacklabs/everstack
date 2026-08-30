@@ -1,0 +1,234 @@
+---
+title: "POST Classify content for policy violations"
+description: "Classify content for policy violations"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Classify content for policy violations</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400">POST</span>
+    <code className="text-sm text-fd-muted-foreground">/v1/moderations</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="post"
+  path="/v1/moderations"
+  parameters={[]}
+  defaultBody={`{
+  "input": "string",
+  "inputs": [
+    {
+      "type": "string",
+      "text": "string",
+      "imageUrl": {
+        "url": "string"
+      }
+    }
+  ],
+  "model": "string"
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X POST "http://localhost:8089/v1/moderations" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"input":"string","inputs":[{"type":"string","text":"string","imageUrl":{"url":"string"}}],"model":"string"}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/moderations", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "input": "string",
+  "inputs": [
+    {
+      "type": "string",
+      "text": "string",
+      "imageUrl": {
+        "url": "string"
+      }
+    }
+  ],
+  "model": "string"
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8089/v1/moderations",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "input": "string",
+  "inputs": [
+    {
+      "type": "string",
+      "text": "string",
+      "imageUrl": {
+        "url": "string"
+      }
+    }
+  ],
+  "model": "string"
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "id": "string",
+  "model": "string",
+  "results": [
+    {
+      "flagged": true,
+      "categories": {
+        "hate": true,
+        "hateThreatening": true,
+        "harassment": true,
+        "harassmentThreatening": true,
+        "illicit": true,
+        "illicitViolent": true,
+        "selfHarm": true,
+        "selfHarmIntent": true,
+        "selfHarmInstructions": true,
+        "sexual": true,
+        "sexualMinors": true,
+        "violence": true,
+        "violenceGraphic": true
+      },
+      "categoryScores": {
+        "hate": 0,
+        "hateThreatening": 0,
+        "harassment": 0,
+        "harassmentThreatening": 0,
+        "illicit": 0,
+        "illicitViolent": 0,
+        "selfHarm": 0,
+        "selfHarmIntent": 0,
+        "selfHarmInstructions": 0,
+        "sexual": 0,
+        "sexualMinors": 0,
+        "violence": 0,
+        "violenceGraphic": 0
+      },
+      "categoryAppliedInputTypes": {
+        "hate": [],
+        "hateThreatening": [],
+        "harassment": [],
+        "harassmentThreatening": [],
+        "illicit": [],
+        "illicitViolent": [],
+        "selfHarm": [],
+        "selfHarmIntent": [],
+        "selfHarmInstructions": [],
+        "sexual": [],
+        "sexualMinors": [],
+        "violence": [],
+        "violenceGraphic": []
+      }
+    }
+  ]
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `input` | `string` | No |  |
+| `inputs` | `object[]` | No |  |
+| `model` | `string` | No |  |
+| `metadata` | `object` | No |  |
+
+
+### Responses
+
+#### 200 Moderation results
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `string` |  |
+| `model` | `string` |  |
+| `results` | `object[]` |  |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

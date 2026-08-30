@@ -1,0 +1,46 @@
+name: "c4ai-aya-vision-32b"
+display_name: "Aya Vision 32B"
+family: "c4ai-aya-vision-32b"
+status: "stable"
+release_date: "2025-03-04"
+
+cost:
+  input_per_1k: 0
+  output_per_1k: 0
+
+limits:
+  max_tokens: 16000
+  max_completion_tokens: 4000
+
+capabilities:
+  - chat
+  - vision
+
+modalities:
+  input: ["text","image"]
+  output: ["text"]
+
+notes: "Open multilingual vision model for OCR, visual reasoning, and image question answering"
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 4000
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true

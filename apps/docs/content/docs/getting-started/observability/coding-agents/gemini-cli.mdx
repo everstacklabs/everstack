@@ -1,0 +1,43 @@
+---
+title: Gemini CLI
+description: Send Google Gemini CLI session traces to your Everstack instance.
+icon: gemini
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<GeminiIcon /> **Gemini CLI** (Google) has built-in OpenTelemetry, but **traces
+are off by default** and it uses its own `telemetry.*` settings — it does **not**
+honor the standard `OTEL_EXPORTER_OTLP_ENDPOINT`.
+
+See [Trace Coding Agents](/docs/getting-started/observability/coding-agents) for
+the endpoints, API key, and what Everstack renders.
+
+## Configuration
+
+Enable telemetry, turn on traces, and point the OTLP target at your instance via
+`~/.gemini/settings.json`:
+
+```json
+{
+  "telemetry": {
+    "enabled": true,
+    "target": "otlp",
+    "otlpEndpoint": "https://<your-instance>",
+    "otlpHeaders": { "Authorization": "Bearer <your-api-key>" }
+  }
+}
+```
+
+<Callout type="info">
+  Exact setting names vary by Gemini CLI version — check the Gemini CLI telemetry
+  docs for your release. The key points are: telemetry **on**, traces **on**, and
+  the OTLP endpoint + `Authorization` header pointed at your instance.
+</Callout>
+
+## Notes
+
+- Gemini CLI emits token counts but **no cost** — Everstack computes it from your
+  model-catalog pricing, so cost still appears in Traces.
+- Token counts may use `input_token_count` / `output_token_count` on some records
+  and the `gen_ai.usage.*` keys on others; Everstack coalesces both.

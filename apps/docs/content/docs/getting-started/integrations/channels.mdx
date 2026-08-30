@@ -1,0 +1,159 @@
+---
+title: Channels
+description: Slack, Discord, and Telegram connectors for agent communication.
+icon: MessageCircle
+---
+
+Channels connect agents to messaging platforms so users can interact with them in the tools they already use. Slack, Discord, and Telegram are supported today, each with its own transport mechanism but a shared interface underneath.
+
+<Callout type="info">
+  Channel connectors are in **beta**. The core messaging flow is stable, but the configuration API may change before the 1.0 release.
+</Callout>
+
+## How channels work
+
+Every channel connector implements the same `Connector` interface. This means the system above it -- the `ChannelManager` -- does not care whether a message came from Slack, Discord, or Telegram. It routes messages to agent sessions and routes agent responses back to the correct thread or conversation.
+
+The flow looks like this:
+
+1. A user sends a message on a connected platform.
+2. The connector receives the event through its platform-specific transport.
+3. `ChannelManager` maps the message to an agent session (creating one if needed).
+4. The agent processes the message and produces a response.
+5. The response is formatted for the target platform and sent back to the original thread.
+
+This is fully bidirectional. Agents can also initiate messages when triggered by other events, not only in response to user input.
+
+## Supported platforms
+
+### Slack
+
+Slack uses [Socket Mode](https://api.slack.com/apis/connections/socket), which means Everstack connects to Slack over a WebSocket rather than requiring an inbound webhook URL. This is simpler to set up because you do not need to expose a public endpoint.
+
+Capabilities:
+
+- Message and interaction handling
+- Thread history for maintaining conversation context
+- Block Kit formatting for rich message layouts
+- Rich embeds for structured agent responses
+
+### Discord
+
+Discord uses a full event listener that connects to the Discord gateway. It supports:
+
+- Message events in configured channels
+- Button interactions for human-in-the-loop (HITL) approval and denial workflows
+- Rich embeds and formatted responses
+
+The HITL button interactions are particularly useful for agents that need human approval before executing high-impact actions. The agent posts a message with approve/deny buttons, and the user's click is routed back to the agent session as an interaction event.
+
+### Telegram
+
+Telegram uses a polling-based message handler. Everstack periodically polls the Telegram Bot API for new messages rather than receiving push events.
+
+Capabilities:
+
+- Text message handling
+- Message routing to agent sessions
+
+Telegram's polling approach is the simplest of the three transports and works well behind firewalls where inbound connections are restricted.
+
+## Setting up a channel
+
+<Steps>
+
+<Step>
+## Create the platform bot or app
+
+Before connecting to Everstack, you need a bot or app on the target platform:
+
+- **Slack**: Create a Slack app at [api.slack.com/apps](https://api.slack.com/apps) with Socket Mode enabled. Note the bot token and app-level token.
+- **Discord**: Create a bot at [discord.com/developers](https://discord.com/developers/applications). Note the bot token and enable the required gateway intents (Message Content, Guild Messages).
+- **Telegram**: Create a bot through [@BotFather](https://t.me/BotFather). Note the bot token.
+</Step>
+
+<Step>
+## Create a channel binding
+
+In the Everstack dashboard, go to **Settings > Integrations > Channels** and click **Add Channel**. Select the platform, enter the credentials from the previous step, and choose which agent should handle messages.
+
+You can also create bindings through the API:
+
+```bash
+curl -X POST https://{instance}.{region}.everstack.ai/v1/channels \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "platform": "slack",
+    "config": {
+      "bot_token": "xoxb-...",
+      "app_token": "xapp-..."
+    },
+    "agent_id": "agent_abc123"
+  }'
+```
+</Step>
+
+<Step>
+## Test the connection
+
+Use the **Test Connection** button in the dashboard or call the test endpoint to verify that Everstack can reach the platform and authenticate successfully.
+
+The health check confirms transport connectivity and credential validity without sending a visible message.
+</Step>
+
+</Steps>
+
+## Channel discovery
+
+For platforms that support it, Everstack can discover available channels and conversations. This lets you browse Slack channels, Discord text channels, or Telegram groups from the dashboard and select which ones the agent should listen in.
+
+## Managing channels
+
+The channel API supports the full lifecycle:
+
+| Operation | Description |
+| --- | --- |
+| Create | Bind a platform channel to an agent |
+| List | See all channel bindings for the tenant |
+| Get | Retrieve a specific binding's config and status |
+| Update | Change the agent, credentials, or platform config |
+| Delete | Remove the binding and disconnect |
+| Test | Verify connectivity without sending a message |
+| Health | Check whether the connector is currently healthy |
+
+All operations are available through both the dashboard UI and the REST API. See the [API Reference](/api-reference) for endpoint details.
+
+## Plans and limits
+
+Channels are metered by **messages, not connections**. Connecting another Slack workspace, Discord server, or Telegram group never changes what you pay, and every plan reaches every platform.
+
+| Plan | Channels | Platforms |
+| --- | --- | --- |
+| Self-hosted (Community Edition) | Unlimited | Slack, Discord, Telegram |
+| Starter (free, hosted) | 3 | Slack, Discord, Telegram |
+| Build | Unlimited | Slack, Discord, Telegram |
+| Scale | Unlimited | Slack, Discord, Telegram |
+| Enterprise | Unlimited | Slack, Discord, Telegram |
+
+Each hosted plan carries a monthly channel message allowance, which is the meter that actually prices channel usage. See [pricing](https://everstack.ai/pricing) for current allowances.
+
+A message counts when a user sends one to a connected channel. Agent replies, cron notifications, and messages refused by a limit are not counted. The meter stores no message content, only which tenant, channel, and platform the message arrived on.
+
+Creating a channel past the Starter count returns `resource_exhausted` with the current usage in the message. Channels already connected keep running; only the create is refused.
+
+Passing the monthly message allowance behaves differently by plan. On Starter, agent replies pause until the month rolls over. On paid plans nothing pauses and nothing extra is billed: the channel notes the overage once and it shows in your usage dashboard. Either way the channel says so at most once every few hours, not on every message.
+
+<Callout type="info">
+  Self-hosted instances have no channel limit and no message allowance. A live connector costs a goroutine and an open socket for as long as it stays connected, and the messages it carries cost whoever runs the gateway, so on your own infrastructure both are yours to spend. Community Edition connects as many channels as you want across all three platforms.
+</Callout>
+
+## Tenant isolation
+
+Channel bindings are strictly scoped to the tenant that created them. A Slack workspace connected by one tenant is invisible to every other tenant. Connector credentials are stored encrypted and never shared.
+
+## Next steps
+
+- [GitHub](/getting-started/integrations/github) -- source control integration for repo access and webhooks
+- [Webhooks](/getting-started/integrations/webhooks) -- trigger agents from generic HTTP events
+- [Agents](/getting-started/agents/overview) -- build the agents that respond on your channels

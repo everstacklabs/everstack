@@ -1,0 +1,42 @@
+name: "open-mistral-7b"
+display_name: "Mistral 7B"
+family: "mistral"
+status: "stable"
+release_date: "2023-09-27"
+
+cost:
+  input_per_1k: 0.00025
+  output_per_1k: 0.00025
+
+limits:
+  max_tokens: 8000
+  max_completion_tokens: 8000
+
+capabilities:
+  - chat
+  - function_calling
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+
+knowledge_cutoff: "2023-12"
+notes: "Mistral model for multilingual chat, reasoning, and tool-assisted workflows"
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 8000
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true

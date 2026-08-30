@@ -1,0 +1,5 @@
+name = "es-core"
+compatibility_date = "2026-05-12"
+
+[assets]
+directory = "./dist/client"

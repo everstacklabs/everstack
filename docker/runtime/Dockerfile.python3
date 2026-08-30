@@ -1,0 +1,29 @@
+FROM python:3.12-alpine
+
+# Install security updates
+RUN apk upgrade --no-cache
+
+# Create non-root user
+RUN adduser -D -s /bin/sh runner
+WORKDIR /app
+
+# Copy runner script
+COPY runner-python.py /app/runner.py
+
+# Pre-install common packages for faster cold starts
+RUN pip install --no-cache-dir \
+    requests==2.31.0 \
+    httpx==0.27.0 \
+    pydantic==2.6.1 \
+    python-dateutil==2.8.2 \
+    ujson==5.9.0
+
+# Set environment
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Switch to non-root user
+USER runner
+
+# Runner receives payload as first argument
+ENTRYPOINT ["python3", "/app/runner.py"]

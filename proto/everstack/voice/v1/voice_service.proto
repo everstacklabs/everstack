@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package everstack.voice.v1;
+
+import "google/api/annotations.proto";
+import "everstack/voice/v1/voice.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/voice/v1;voice";
+
+service VoiceService {
+  rpc CreateVoiceCloneProfile(CreateVoiceCloneProfileRequest) returns (CreateVoiceCloneProfileResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Create a voice clone profile" } }
+    };
+    option (google.api.http) = { post: "/v1/voice/profiles" body: "*" };
+  }
+
+  rpc ListVoiceCloneProfiles(ListVoiceCloneProfilesRequest) returns (ListVoiceCloneProfilesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "List voice clone profiles" } }
+    };
+    option (google.api.http) = { get: "/v1/voice/profiles" };
+  }
+
+  rpc GetVoiceCloneProfile(GetVoiceCloneProfileRequest) returns (GetVoiceCloneProfileResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Get a voice clone profile" } }
+    };
+    option (google.api.http) = { get: "/v1/voice/profiles/{id}" };
+  }
+
+  rpc UpdateVoiceCloneProfile(UpdateVoiceCloneProfileRequest) returns (UpdateVoiceCloneProfileResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Update a voice clone profile" } }
+    };
+    option (google.api.http) = { patch: "/v1/voice/profiles/{id}" body: "*" };
+  }
+
+  rpc DeleteVoiceCloneProfile(DeleteVoiceCloneProfileRequest) returns (DeleteVoiceCloneProfileResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: { key: "200" value: { description: "Delete a voice clone profile" } }
+    };
+    option (google.api.http) = { delete: "/v1/voice/profiles/{id}" };
+  }
+}

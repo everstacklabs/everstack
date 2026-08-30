@@ -1,0 +1,840 @@
+syntax = "proto3";
+
+package everstack.traces.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "everstack/traces/v1/traces.proto";
+
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/traces/v1;traces";
+
+// TracesService provides access to distributed trace data
+service TracesService {
+  // ListTraces streams traces matching the filter criteria
+  rpc ListTraces(ListTracesRequest) returns (stream Trace);
+
+  // GetTraceByID retrieves all spans for a specific trace
+  rpc GetTraceByID(GetTraceByIDRequest) returns (GetTraceByIDResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/spans"
+      body: "*"
+    };
+  }
+
+  // GetTrace retrieves a single aggregated Trace by ID
+  rpc GetTrace(GetTraceRequest) returns (GetTraceResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/get"
+      body: "*"
+    };
+  }
+
+  // GetTraceTree retrieves a trace in hierarchical tree structure
+  rpc GetTraceTree(GetTraceTreeRequest) returns (GetTraceTreeResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/tree"
+      body: "*"
+    };
+  }
+
+  // GetTraceLogs returns the OTLP log records correlated to a trace (by
+  // TraceId, with an optional session-id fallback for SDKs that don't stamp
+  // trace context on their log records, e.g. coding agents).
+  rpc GetTraceLogs(GetTraceLogsRequest) returns (GetTraceLogsResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/logs"
+      body: "*"
+    };
+  }
+
+  // GetRichTrace retrieves a Langfuse-compatible trace with full details
+  rpc GetRichTrace(GetRichTraceRequest) returns (GetRichTraceResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/rich/get"
+      body: "*"
+    };
+  }
+
+  // ListRichTraces retrieves Langfuse-compatible traces with filtering
+  rpc ListRichTraces(ListRichTracesRequest) returns (ListRichTracesResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/rich/list"
+      body: "*"
+    };
+  }
+
+  // Enhanced Observability RPCs
+
+  // StreamEnhancedObservations streams observations with workflow and performance data
+  rpc StreamEnhancedObservations(StreamEnhancedObservationsRequest) returns (stream EnhancedObservation);
+
+  // GetWorkflowMetrics retrieves aggregated workflow performance metrics
+  rpc GetWorkflowMetrics(GetWorkflowMetricsRequest) returns (GetWorkflowMetricsResponse);
+
+  // ListObservationsByStep retrieves observations ordered by execution step
+  rpc ListObservationsByStep(ListObservationsByStepRequest) returns (ListObservationsByStepResponse);
+
+  // GetObservationIO retrieves input/output data for specific observations
+  rpc GetObservationIO(GetObservationIORequest) returns (GetObservationIOResponse);
+
+  // Batch Analytics RPCs
+
+  // GetTraceAnalytics retrieves pre-aggregated trace statistics
+  rpc GetTraceAnalytics(GetTraceAnalyticsRequest) returns (GetTraceAnalyticsResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/analytics"
+      body: "*"
+    };
+  }
+
+  // GetPerformanceBreakdown retrieves detailed performance analysis
+  rpc GetPerformanceBreakdown(GetPerformanceBreakdownRequest) returns (GetPerformanceBreakdownResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/performance"
+      body: "*"
+    };
+  }
+
+  // GetResourceUtilization retrieves resource usage over time
+  rpc GetResourceUtilization(GetResourceUtilizationRequest) returns (GetResourceUtilizationResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/resources"
+      body: "*"
+    };
+  }
+
+  // Score management RPCs (P0.5)
+
+  // GetTraceScores retrieves all scores for a trace
+  rpc GetTraceScores(GetTraceScoresRequest) returns (GetTraceScoresResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/scores/list"
+      body: "*"
+    };
+  }
+
+  // CreateScore creates a new score for a trace
+  rpc CreateScore(CreateScoreRequest) returns (CreateScoreResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/scores"
+      body: "*"
+    };
+  }
+
+  // DeleteScore deletes a score
+  rpc DeleteScore(DeleteScoreRequest) returns (DeleteScoreResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/scores/delete"
+      body: "*"
+    };
+  }
+
+  // Overlay/custom observation RPCs
+
+  // GetTraceOverlay retrieves the latest user/API overlay for a trace
+  rpc GetTraceOverlay(GetTraceOverlayRequest) returns (GetTraceOverlayResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/overlay/get"
+      body: "*"
+    };
+  }
+
+  // UpdateTraceOverlay appends a new overlay version for a trace
+  rpc UpdateTraceOverlay(UpdateTraceOverlayRequest) returns (UpdateTraceOverlayResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/overlay"
+      body: "*"
+    };
+  }
+
+  // CreateCustomObservation appends a user/API observation to a trace
+  rpc CreateCustomObservation(CreateCustomObservationRequest) returns (CreateCustomObservationResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/observations/custom"
+      body: "*"
+    };
+  }
+
+  // BatchCreateCustomObservations appends several user/API observations
+  rpc BatchCreateCustomObservations(BatchCreateCustomObservationsRequest) returns (BatchCreateCustomObservationsResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/observations/custom/batch"
+      body: "*"
+    };
+  }
+
+  // ListCustomObservations lists user/API observations for a trace
+  rpc ListCustomObservations(ListCustomObservationsRequest) returns (ListCustomObservationsResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/observations/custom/list"
+      body: "*"
+    };
+  }
+
+  // CreateTraceAnnotation appends a note to a trace or observation
+  rpc CreateTraceAnnotation(CreateTraceAnnotationRequest) returns (CreateTraceAnnotationResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/annotations"
+      body: "*"
+    };
+  }
+
+  // ListTraceAnnotations lists notes for a trace
+  rpc ListTraceAnnotations(ListTraceAnnotationsRequest) returns (ListTraceAnnotationsResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/annotations/list"
+      body: "*"
+    };
+  }
+
+  // Custom column RPCs: user-defined trace columns so the table shows the
+  // dimensions a tenant cares about, not only our fixed set.
+
+  // ListCustomColumns returns the tenant's registered custom columns.
+  rpc ListCustomColumns(ListCustomColumnsRequest) returns (ListCustomColumnsResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/custom-columns/list"
+      body: "*"
+    };
+  }
+
+  // UpsertCustomColumn creates or updates a custom column definition.
+  rpc UpsertCustomColumn(UpsertCustomColumnRequest) returns (UpsertCustomColumnResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/custom-columns"
+      body: "*"
+    };
+  }
+
+  // DeleteCustomColumn removes a custom column definition by key.
+  rpc DeleteCustomColumn(DeleteCustomColumnRequest) returns (DeleteCustomColumnResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/custom-columns/delete"
+      body: "*"
+    };
+  }
+
+  // Saved view RPCs: named bundles of visible columns + filters + sort.
+
+  // ListTraceViews returns the tenant's saved views.
+  rpc ListTraceViews(ListTraceViewsRequest) returns (ListTraceViewsResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/views/list"
+      body: "*"
+    };
+  }
+
+  // UpsertTraceView creates or updates a saved view.
+  rpc UpsertTraceView(UpsertTraceViewRequest) returns (UpsertTraceViewResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/views"
+      body: "*"
+    };
+  }
+
+  // DeleteTraceView removes a saved view by id.
+  rpc DeleteTraceView(DeleteTraceViewRequest) returns (DeleteTraceViewResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/views/delete"
+      body: "*"
+    };
+  }
+
+  // Semantic mapping RPCs: alias a tenant's own attribute names into our typed
+  // fields (model/provider/session/user/cost/tokens/input/output).
+
+  // ListSemanticMappings returns the tenant's field aliases.
+  rpc ListSemanticMappings(ListSemanticMappingsRequest) returns (ListSemanticMappingsResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/semantic-mappings/list"
+      body: "*"
+    };
+  }
+
+  // AddSemanticMapping adds an attribute-key alias for a field.
+  rpc AddSemanticMapping(AddSemanticMappingRequest) returns (AddSemanticMappingResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/semantic-mappings"
+      body: "*"
+    };
+  }
+
+  // DeleteSemanticMapping removes an attribute-key alias for a field.
+  rpc DeleteSemanticMapping(DeleteSemanticMappingRequest) returns (DeleteSemanticMappingResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/semantic-mappings/delete"
+      body: "*"
+    };
+  }
+
+  // Classification rule RPCs: tenant SpanName-pattern -> kind rules that extend
+  // the built-in trace-kind classifier.
+
+  // ListClassificationRules returns the tenant's classification rules.
+  rpc ListClassificationRules(ListClassificationRulesRequest) returns (ListClassificationRulesResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/classification-rules/list"
+      body: "*"
+    };
+  }
+
+  // AddClassificationRule adds a SpanName-pattern -> kind rule.
+  rpc AddClassificationRule(AddClassificationRuleRequest) returns (AddClassificationRuleResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/classification-rules"
+      body: "*"
+    };
+  }
+
+  // DeleteClassificationRule removes a classification rule.
+  rpc DeleteClassificationRule(DeleteClassificationRuleRequest) returns (DeleteClassificationRuleResponse) {
+    option (google.api.http) = {
+      post: "/v1/traces/classification-rules/delete"
+      body: "*"
+    };
+  }
+}
+
+// ClassificationRule assigns kind to spans whose name is LIKE pattern. pattern
+// is a SpanName LIKE pattern (e.g. "retriever.%"); kind is the label shown in
+// the Type column.
+message ClassificationRule {
+  string pattern = 1;
+  string kind = 2;
+}
+
+message ListClassificationRulesRequest {}
+
+message ListClassificationRulesResponse {
+  repeated ClassificationRule rules = 1;
+}
+
+message AddClassificationRuleRequest {
+  string pattern = 1;
+  string kind = 2;
+}
+
+message AddClassificationRuleResponse {
+  ClassificationRule rule = 1;
+}
+
+message DeleteClassificationRuleRequest {
+  string pattern = 1;
+  string kind = 2;
+}
+
+message DeleteClassificationRuleResponse {}
+
+// SemanticMapping aliases a tenant attribute key into a typed field. field is
+// one of model|provider|session|user|cost|input|output|input_tokens|
+// output_tokens|total_tokens; attr_key is the tenant's span-attribute name.
+message SemanticMapping {
+  string field = 1;
+  string attr_key = 2;
+}
+
+message ListSemanticMappingsRequest {}
+
+message ListSemanticMappingsResponse {
+  repeated SemanticMapping mappings = 1;
+}
+
+message AddSemanticMappingRequest {
+  string field = 1;
+  string attr_key = 2;
+}
+
+message AddSemanticMappingResponse {
+  SemanticMapping mapping = 1;
+}
+
+message DeleteSemanticMappingRequest {
+  string field = 1;
+  string attr_key = 2;
+}
+
+message DeleteSemanticMappingResponse {}
+
+// TraceView is a saved traces-table view. config_json is an opaque blob owned
+// by the client: { visibleColumns, filters, sort, ... }.
+message TraceView {
+  string id = 1;
+  string name = 2;
+  string config_json = 3;
+  string author_user_id = 4;
+}
+
+message ListTraceViewsRequest {}
+
+message ListTraceViewsResponse {
+  repeated TraceView views = 1;
+}
+
+message UpsertTraceViewRequest {
+  TraceView view = 1;
+}
+
+message UpsertTraceViewResponse {
+  TraceView view = 1;
+}
+
+message DeleteTraceViewRequest {
+  string id = 1;
+}
+
+message DeleteTraceViewResponse {}
+
+// CustomColumnDef is a user-defined trace column. value_type is one of
+// string|number|bool|date; source is one of metadata_path|attribute_path|
+// score_name; source_ref is the dotted metadata path, span-attribute key, or
+// score name depending on source.
+message CustomColumnDef {
+  string key = 1;
+  string label = 2;
+  string value_type = 3;
+  string source = 4;
+  string source_ref = 5;
+  int32 position = 6;
+}
+
+message ListCustomColumnsRequest {}
+
+message ListCustomColumnsResponse {
+  repeated CustomColumnDef columns = 1;
+}
+
+message UpsertCustomColumnRequest {
+  CustomColumnDef column = 1;
+}
+
+message UpsertCustomColumnResponse {
+  CustomColumnDef column = 1;
+}
+
+message DeleteCustomColumnRequest {
+  string key = 1;
+}
+
+message DeleteCustomColumnResponse {}
+
+message TraceFilterClause {
+  string scope = 1;  // "any" | "root"
+  string field = 2;  // logical esql field id: model, provider, user, session, thread, correlation, status, tool.name, tokens.total, or metadata.<key>
+  string op    = 3;  // "=", "!=", ">", ">=", "<", "<=", "exists"
+  string value = 4;
+}
+
+// ListTracesRequest filters traces by various criteria
+message ListTracesRequest {
+  google.protobuf.Timestamp from = 1;
+  google.protobuf.Timestamp to = 2;
+  string tenant_id = 3;
+  string model = 4;
+  string provider = 5;
+  string status_code = 6; // "OK", "ERROR", "UNSET"
+  string correlation_id = 9; // Filter by correlation_id from SpanAttributes
+  int32 limit = 7;
+  int32 offset = 8;
+
+  // Multi-dimension filters (P0.3)
+  optional string user_id = 10;
+  optional string session_id = 11;
+  optional string environment = 12;
+  repeated string tags = 13;
+  optional double min_cost = 14;
+  optional double max_cost = 15;
+  optional int64 min_duration_ns = 16;
+  optional int64 max_duration_ns = 17;
+  optional string thread_id = 18;
+  // Full-text substring search on trace input/output payloads, multi-semconv.
+  // Backed by tokenbf_v1 skip indexes on otel_traces.
+  optional string query = 19;
+  // Arbitrary metadata predicates — each item is `key=value` to filter
+  // traces where any span has SpanAttributes[key] = value.
+  // Multiple entries AND together. Empty list = no metadata filter.
+  repeated string metadata = 20;
+
+  // Include operational/noise traces (health checks, external interaction
+  // wrappers). Defaults to false, so the list hides them unless asked.
+  optional bool include_operational = 21;
+
+  repeated TraceFilterClause filters = 22;
+}
+
+// Score represents a quality/evaluation score for a trace or observation
+message Score {
+  string id = 1;
+  string trace_id = 2;
+  optional string observation_id = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  string name = 7;
+  string source = 8; // ANNOTATION, API, EVAL
+  string data_type = 9; // NUMERIC, CATEGORICAL, BOOLEAN
+  optional double numeric_value = 10;
+  optional string string_value = 11;
+  optional bool boolean_value = 12;
+  optional string comment = 13;
+  optional string author_user_id = 14;
+}
+
+message GetTraceScoresRequest {
+  string trace_id = 1;
+}
+
+message GetTraceScoresResponse {
+  repeated Score scores = 1;
+}
+
+message CreateScoreRequest {
+  string trace_id = 1;
+  optional string observation_id = 2;
+  string name = 3;
+  string source = 4; // ANNOTATION, API, EVAL
+  string data_type = 5; // NUMERIC, CATEGORICAL, BOOLEAN
+  optional double numeric_value = 6;
+  optional string string_value = 7;
+  optional bool boolean_value = 8;
+  optional string comment = 9;
+}
+
+message CreateScoreResponse {
+  Score score = 1;
+}
+
+message DeleteScoreRequest {
+  string score_id = 1;
+  string trace_id = 2;
+}
+
+message DeleteScoreResponse {}
+
+message GetTraceOverlayRequest {
+  string trace_id = 1;
+}
+
+message GetTraceOverlayResponse {
+  optional TraceOverlay overlay = 1;
+}
+
+message UpdateTraceOverlayRequest {
+  string trace_id = 1;
+  optional string display_name = 2;
+  optional string input_override = 3;
+  optional string output_override = 4;
+  map<string, string> metadata = 5;
+  repeated string tags = 6;
+  repeated string hidden_span_ids = 7;
+}
+
+message UpdateTraceOverlayResponse {
+  TraceOverlay overlay = 1;
+}
+
+message CreateCustomObservationRequest {
+  string trace_id = 1;
+  optional string parent_observation_id = 2;
+  string name = 3;
+  string type = 4; // SPAN, GENERATION, EVENT, CHAIN, TOOL
+  optional string source = 5; // USER, API, SDK
+  google.protobuf.Timestamp start_time = 6;
+  optional google.protobuf.Timestamp end_time = 7;
+  optional int64 duration = 8;
+  optional string level = 9; // DEBUG, DEFAULT, WARNING, ERROR
+  optional string status_message = 10;
+  optional string model = 11;
+  optional string input_data = 12;
+  optional string output_data = 13;
+  optional string input_mime_type = 14;
+  optional string output_mime_type = 15;
+  optional int64 input_tokens = 16;
+  optional int64 output_tokens = 17;
+  optional int64 total_tokens = 18;
+  optional double input_cost = 19;
+  optional double output_cost = 20;
+  optional double total_cost = 21;
+  map<string, string> metadata = 22;
+  repeated string tags = 23;
+  // Optional client-supplied id. SDKs use this so nested custom spans can
+  // reference parent observations before the parent write has completed.
+  optional string id = 24;
+}
+
+message CreateCustomObservationResponse {
+  CustomObservation observation = 1;
+}
+
+message BatchCreateCustomObservationsRequest {
+  repeated CreateCustomObservationRequest observations = 1;
+}
+
+message BatchCreateCustomObservationsResponse {
+  repeated CustomObservation observations = 1;
+}
+
+message ListCustomObservationsRequest {
+  string trace_id = 1;
+}
+
+message ListCustomObservationsResponse {
+  repeated CustomObservation observations = 1;
+}
+
+message CreateTraceAnnotationRequest {
+  string trace_id = 1;
+  optional string observation_id = 2;
+  string body = 3;
+  map<string, string> metadata = 4;
+}
+
+message CreateTraceAnnotationResponse {
+  TraceAnnotation annotation = 1;
+}
+
+message ListTraceAnnotationsRequest {
+  string trace_id = 1;
+}
+
+message ListTraceAnnotationsResponse {
+  repeated TraceAnnotation annotations = 1;
+}
+
+// GetTraceByIDRequest requests all spans for a specific trace
+message GetTraceByIDRequest {
+  string trace_id = 1;
+}
+
+// GetTraceByIDResponse returns all spans for a trace
+message GetTraceByIDResponse {
+  repeated Span spans = 1;
+}
+
+// GetTraceRequest requests a single aggregated Trace by ID
+message GetTraceRequest {
+  string trace_id = 1;
+}
+
+// GetTraceResponse returns a single aggregated Trace
+message GetTraceResponse {
+  Trace trace = 1;
+}
+
+// GetTraceTreeRequest requests a hierarchical tree structure
+message GetTraceTreeRequest {
+  string trace_id = 1;
+}
+
+// GetTraceTreeResponse returns the root of the span tree
+message GetTraceTreeResponse {
+  SpanTreeNode root = 1;
+}
+
+// GetTraceLogsRequest requests the log records correlated to a trace.
+message GetTraceLogsRequest {
+  string trace_id = 1;
+  // Optional: when set, log records carrying this session id (in any of the
+  // recognised session attribute keys) within the trace window are included
+  // even if they don't carry the trace id.
+  string session_id = 2;
+}
+
+// GetTraceLogsResponse returns the correlated log records in time order.
+message GetTraceLogsResponse {
+  repeated TraceLogRecord records = 1;
+}
+
+// TraceLogRecord is one OTLP log record correlated to a trace.
+message TraceLogRecord {
+  google.protobuf.Timestamp timestamp = 1;
+  string severity_text = 2;
+  int32 severity_number = 3;
+  string body = 4;
+  string span_id = 5;
+  string scope_name = 6;
+  string service_name = 7;
+  map<string, string> attributes = 8;
+}
+
+message GetRichTraceRequest {
+  string trace_id = 1;
+}
+
+message GetRichTraceResponse {
+  RichTrace trace = 1;
+}
+
+// ListRichTracesRequest filters rich traces
+message ListRichTracesRequest {
+  repeated string trace_ids = 1;
+  optional string session_id = 2;
+  optional string user_id = 3;
+  optional string environment = 4;
+  repeated string tags = 5;
+  optional google.protobuf.Timestamp from_time = 6;
+  optional google.protobuf.Timestamp to_time = 7;
+  optional string model = 8;
+  optional string provider = 9;
+  optional string thread_id = 12;
+  optional string query = 13;
+  repeated string metadata = 14;
+  int32 limit = 10;
+  int32 offset = 11;
+}
+
+// ListRichTracesResponse returns paginated rich traces
+message ListRichTracesResponse {
+  repeated RichTrace traces = 1;
+  int32 total_count = 2;
+}
+
+message RichTrace {
+  string id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  optional string name = 3;
+  optional string session_id = 4;
+  optional string user_id = 5;
+  optional string release = 6;
+  optional string environment = 7;
+  repeated string tags = 8;
+  double latency = 9;        // in seconds
+  double total_cost = 10;    // in USD
+  repeated RichObservation observations = 11;
+  optional string thread_id = 12;
+}
+
+message RichObservation {
+  string id = 1;
+  string trace_id = 2;
+  string type = 3;  // SPAN, GENERATION, EVENT
+  optional string name = 4;
+  google.protobuf.Timestamp start_time = 5;
+  optional google.protobuf.Timestamp end_time = 6;
+  optional string model = 7;
+  optional string level = 8;  // DEBUG, DEFAULT, WARNING, ERROR
+  optional string status_message = 9;
+  optional string parent_observation_id = 10;
+  optional double latency = 11;  // in seconds
+  
+  // Token usage
+  optional int64 input_tokens = 12;
+  optional int64 output_tokens = 13;
+  optional int64 total_tokens = 14;
+  
+  // Costs
+  optional double input_cost = 15;
+  optional double output_cost = 16;
+  optional double total_cost = 17;
+  
+  // Enhanced fields
+  optional uint32 step = 18;
+  optional string node = 19;
+}
+
+// Enhanced Observability Request/Response Messages
+
+message StreamEnhancedObservationsRequest {
+  string trace_id = 1;
+  optional string workflow_id = 2;
+  repeated string observation_types = 3; // Filter by types: SPAN, GENERATION, CHAIN, TOOL
+  repeated string nodes = 4; // Filter by node names
+  optional uint32 min_step = 5;
+  optional uint32 max_step = 6;
+  optional google.protobuf.Timestamp from_time = 7;
+  optional google.protobuf.Timestamp to_time = 8;
+  optional bool include_io = 9; // Include input/output data
+  optional bool include_performance = 10; // Include performance metrics
+  optional bool include_resources = 11; // Include resource metrics
+}
+
+message GetWorkflowMetricsRequest {
+  optional string workflow_id = 1;
+  optional string workflow_type = 2;
+  optional string trace_id = 3;
+  optional google.protobuf.Timestamp from_time = 4;
+  optional google.protobuf.Timestamp to_time = 5;
+}
+
+message GetWorkflowMetricsResponse {
+  repeated WorkflowPerformance workflows = 1;
+  int32 total_count = 2;
+}
+
+message ListObservationsByStepRequest {
+  string trace_id = 1;
+  optional uint32 start_step = 2;
+  optional uint32 end_step = 3;
+  optional bool ascending = 4; // Default true
+  int32 limit = 5;
+  int32 offset = 6;
+}
+
+message ListObservationsByStepResponse {
+  repeated EnhancedObservation observations = 1;
+  int32 total_count = 2;
+}
+
+message GetObservationIORequest {
+  repeated string observation_ids = 1;
+  optional bool include_tokens = 2;
+}
+
+message GetObservationIOResponse {
+  map<string, ObservationIO> observation_io = 1; // Key: observation_id
+}
+
+// Batch Analytics Request/Response Messages
+
+message GetTraceAnalyticsRequest {
+  repeated string trace_ids = 1;
+  optional google.protobuf.Timestamp from_time = 2;
+  optional google.protobuf.Timestamp to_time = 3;
+  optional string tenant_id = 4;
+  int32 limit = 5;
+  int32 offset = 6;
+}
+
+message GetTraceAnalyticsResponse {
+  repeated TraceAnalytics analytics = 1;
+  int32 total_count = 2;
+}
+
+message GetPerformanceBreakdownRequest {
+  string trace_id = 1;
+  optional string observation_id = 2; // If specified, breakdown for single observation
+  optional bool group_by_node = 3;
+  optional bool group_by_type = 4;
+}
+
+message GetPerformanceBreakdownResponse {
+  repeated PerformanceBreakdownEntry entries = 1;
+  PerformanceMetrics total_metrics = 2;
+}
+
+message PerformanceBreakdownEntry {
+  optional string node = 1;
+  optional string observation_type = 2;
+  optional string observation_id = 3;
+  PerformanceMetrics metrics = 4;
+  double percentage_of_total = 5;
+}
+
+message GetResourceUtilizationRequest {
+  string trace_id = 1;
+  optional google.protobuf.Timestamp from_time = 2;
+  optional google.protobuf.Timestamp to_time = 3;
+  optional int32 granularity_ms = 4; // Time bucket size in milliseconds
+}
+
+message GetResourceUtilizationResponse {
+  repeated ResourceUtilizationPoint points = 1;
+  ResourceMetrics peak_utilization = 2;
+  ResourceMetrics average_utilization = 3;
+}
+
+message ResourceUtilizationPoint {
+  google.protobuf.Timestamp timestamp = 1;
+  ResourceMetrics metrics = 2;
+  repeated string active_observations = 3; // IDs of observations active at this time
+}

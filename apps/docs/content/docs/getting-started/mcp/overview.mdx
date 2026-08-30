@@ -1,0 +1,98 @@
+---
+title: MCP Gateway Overview
+description: Model Context Protocol server registration and federated tool calling.
+icon: Puzzle
+---
+
+The Model Context Protocol (MCP) is an open standard for connecting AI models to external tools and data sources. Everstack acts as an MCP gateway, letting you register MCP servers once and make their tools available to any agent or workflow in your tenant.
+
+## Why Everstack acts as a gateway
+
+Without a gateway, every agent that needs to call an external tool must be individually configured with that tool's endpoint, authentication, and schema. This creates duplication, makes credential management harder, and means adding a new tool requires updating every agent that needs it.
+
+Everstack's MCP gateway solves this by centralizing server registration. You register an MCP server with the gateway, and its tools become discoverable by all agents in the tenant. Agents pick the tools they need from a shared catalog rather than each maintaining their own connections.
+
+## How it works
+
+The MCP integration follows a three-step pattern:
+
+### 1. Register servers
+
+You register MCP servers with Everstack by providing the server's URL and authentication credentials. Each server exposes a set of tools with defined input/output schemas. Everstack connects to the server, discovers its tools, and adds them to the tenant's tool catalog.
+
+### 2. Discover tools
+
+Once a server is registered, its tools appear in the tool catalog alongside Everstack's built-in tools. You can browse available tools in the admin UI, see their descriptions and parameter schemas, and decide which ones to attach to your agents.
+
+### 3. Federated calling
+
+When an agent needs to call an MCP tool during a conversation, Everstack routes the call to the appropriate registered server, handles authentication, waits for the response, and returns the result to the agent. The agent does not need to know which server hosts which tool. It simply calls the tool by name.
+
+## What federated tool calling means
+
+"Federated" means tools from multiple servers are unified under a single interface. An agent might call a tool from your internal CRM server, a GitHub MCP server, and a Slack MCP server in the same conversation. From the agent's perspective, these are all just tools in its toolbox. The routing happens transparently.
+
+This is particularly useful when you have:
+
+- Multiple internal services that expose MCP tool interfaces
+- Third-party MCP servers (GitHub, Slack, Jira, databases) that your agents need to interact with
+- Different teams maintaining different MCP servers, all consumed by shared agents
+
+## MCP vs built-in tools
+
+Everstack provides several built-in tools (shell execution, file operations, web browsing, code interpretation). These run inside Everstack's infrastructure and do not require external server registration.
+
+MCP tools extend this with access to external systems. Use the right tool for the job:
+
+| Use built-in tools when | Use MCP tools when |
+| --- | --- |
+| Running code in a sandbox | Calling external APIs (CRM, ticketing, databases) |
+| Reading and writing files | Interacting with third-party services |
+| Browsing the web | Accessing internal tools behind your firewall |
+| Operations that should stay inside Everstack | Operations that require external system access |
+
+You can combine both in the same agent. An agent might use built-in shell execution to process data locally and an MCP tool to push results to your CRM.
+
+## Server health monitoring
+
+Everstack pings registered MCP servers on an interval and records the result. Health status is visible in the admin UI so you can quickly identify and resolve connectivity issues.
+
+Health is observational rather than a gate: an unhealthy server keeps its tools attached to agents, and those calls fail until it recovers. Disabling the server is what removes its tools from circulation. See [Health checks](/getting-started/mcp/server-management).
+
+## Authentication support
+
+MCP servers often require authentication. Everstack supports OAuth-based auth flows for MCP servers, so credentials are managed centrally and refreshed automatically. This means your agents never handle raw API keys or tokens for MCP server access.
+
+## Tenant scoping
+
+MCP server registrations are scoped to a tenant. Servers registered in one tenant are not visible to other tenants. This ensures that each tenant's tool catalog and credentials remain isolated.
+
+## When to use MCP
+
+**Use MCP when:**
+
+- You want agents to interact with external services (Slack, GitHub, Jira, databases)
+- You have internal tools that expose an MCP interface and want agents to use them
+- You want centralized management of external tool access rather than per-agent configuration
+- Multiple agents need access to the same external tools
+
+**You probably do not need MCP when:**
+
+- All your agent work happens inside sandboxes (use built-in tools)
+- You only need the LLM to generate text without calling external systems
+- Your integration is a simple webhook (use sandbox webhooks instead)
+
+## Everstack as an MCP server
+
+The gateway described above is the outbound direction: Everstack connects out to servers you register. Everstack also serves the inbound direction, exposing its own tools (your agents, memory, and web tools) to external MCP clients such as Claude Desktop, Cursor, and Google ADK.
+
+The two are independent. You can register external servers without publishing anything, publish without registering anything, or do both.
+
+See [Everstack MCP Server](/getting-started/mcp/everstack-mcp-server).
+
+## Next steps
+
+- [Server Management](/getting-started/mcp/server-management) -- Registering, configuring, and monitoring MCP servers.
+- [MCP Tools in Agents](/getting-started/mcp/agent-tools) -- Naming, attaching, and executing federated tools inside agents.
+- [Everstack MCP Server](/getting-started/mcp/everstack-mcp-server) -- Connecting external MCP clients to Everstack.
+- [MCP API Reference](/api-reference/mcp) -- Full API documentation for server registration and tool discovery.

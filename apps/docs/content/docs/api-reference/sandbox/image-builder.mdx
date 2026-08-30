@@ -1,0 +1,70 @@
+---
+title: Declarative Image Builder
+description: Build sandbox environments from a spec without a Docker registry.
+---
+
+# Declarative Image Builder
+
+Build sandbox environments from a code spec. No Docker registry needed. Repeated calls with the same spec within 24 hours return the cached result instantly.
+
+> **Preview:** Phase 1 maps specs to the nearest catalog image. Custom package installation via Kaniko build is in Phase 2.
+
+## Build
+
+`POST /v1/images/build`
+
+```json
+{
+  "spec": {
+    "base": "debian:bookworm-slim",
+    "apt": ["python3", "git", "ripgrep"],
+    "pip": ["numpy", "pandas", "fastapi", "uvicorn"],
+    "npm": ["typescript", "@types/node"],
+    "run": ["pip install -r requirements.txt"],
+    "env": { "PYTHONPATH": "/app" },
+    "workdir": "/app",
+    "user": "sandbox"
+  }
+}
+```
+
+**Spec fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `base` | string | Base image (default: `debian:bookworm-slim`) |
+| `apt` | string[] | APT packages to install |
+| `pip` | string[] | Python packages to install |
+| `npm` | string[] | Node packages to install globally |
+| `run` | string[] | Shell commands to run during build |
+| `env` | object | Environment variables |
+| `workdir` | string | Working directory |
+| `user` | string | User to run as |
+
+**Response:**
+```json
+{
+  "image_id": "img_abc123",
+  "image_ref": "ghcr.io/everstacklabs/sandbox:python",
+  "cached": false,
+  "build_ms": 0,
+  "state": "ready",
+  "expires_at": "2026-06-02T10:00:00Z",
+  "note": "Phase 1: spec matched to catalog image."
+}
+```
+
+## Caching
+
+The spec is SHA-256 hashed. The same spec within 24 hours returns `"cached": true` with zero build time. After 24 hours, the next call rebuilds.
+
+## Use the image
+
+```json
+POST /v1/sandbox
+{
+  "image": "ghcr.io/everstacklabs/sandbox:python"
+}
+```
+
+Use `image_ref` from the build response as the `image` field on `CreateSandbox`.

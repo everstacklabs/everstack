@@ -1,0 +1,156 @@
+syntax = "proto3";
+
+package everstack.prompts.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/prompts/v1;prompts";
+
+// PromptMessage is a single chat-template message inside a prompt version.
+message PromptMessage {
+  // "system" | "user" | "assistant"
+  string role = 1;
+  string content = 2;
+}
+
+// Prompt is a named, versioned chat template. The tenant id is always derived
+// from the authenticated request context server-side; requests never carry it.
+message Prompt {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  repeated string tags = 5;
+  // Highest version number that exists for this prompt (0 = no versions yet).
+  int32 latest_version = 6;
+  int32 version_count = 7;
+  // Deployment labels currently assigned across versions: label -> version.
+  map<string, int32> labels = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  google.protobuf.Timestamp archived_at = 11;
+}
+
+// PromptVersion is an immutable snapshot of a prompt's content.
+message PromptVersion {
+  string id = 1;
+  string prompt_id = 2;
+  string tenant_id = 3;
+  int32 version = 4;
+  repeated PromptMessage messages = 5;
+  // Default inference config (model, temperature, ...) captured with the version.
+  google.protobuf.Struct config = 6;
+  // Deployment labels assigned to this version (e.g. "production"). A label
+  // belongs to at most one version of a prompt.
+  repeated string labels = 7;
+  string commit_message = 8;
+  string created_by = 9;
+  google.protobuf.Timestamp created_at = 10;
+}
+
+// --- Prompt CRUD ---
+
+message CreatePromptRequest {
+  string name = 1;
+  string description = 2;
+  repeated string tags = 3;
+  // Optional initial content; when present, version 1 is created with it.
+  repeated PromptMessage messages = 4;
+  google.protobuf.Struct config = 5;
+  string commit_message = 6;
+}
+
+message CreatePromptResponse {
+  Prompt prompt = 1;
+}
+
+message GetPromptRequest {
+  // Lookup by id or by name (exactly one required).
+  string id = 1;
+  string name = 2;
+}
+
+message GetPromptResponse {
+  Prompt prompt = 1;
+}
+
+message ListPromptsRequest {
+  optional int32 limit = 1;
+  optional int32 offset = 2;
+}
+
+message ListPromptsResponse {
+  repeated Prompt prompts = 1;
+}
+
+message UpdatePromptRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  repeated string tags = 4;
+  // Tags are only replaced when set_tags is true (distinguishes "no change"
+  // from "clear all tags").
+  bool set_tags = 5;
+}
+
+message UpdatePromptResponse {
+  Prompt prompt = 1;
+}
+
+message DeletePromptRequest {
+  string id = 1;
+}
+
+message DeletePromptResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// --- Versions ---
+
+message CreatePromptVersionRequest {
+  string prompt_id = 1;
+  repeated PromptMessage messages = 2;
+  google.protobuf.Struct config = 3;
+  string commit_message = 4;
+  // Labels to assign to the new version (moved from other versions if needed).
+  repeated string labels = 5;
+}
+
+message CreatePromptVersionResponse {
+  PromptVersion version = 1;
+}
+
+message ListPromptVersionsRequest {
+  string prompt_id = 1;
+  optional int32 limit = 2;
+  optional int32 offset = 3;
+}
+
+message ListPromptVersionsResponse {
+  repeated PromptVersion versions = 1;
+}
+
+message GetPromptVersionRequest {
+  string prompt_id = 1;
+  // Resolve by explicit version number, by label, or latest when both unset.
+  optional int32 version = 2;
+  optional string label = 3;
+}
+
+message GetPromptVersionResponse {
+  PromptVersion version = 1;
+}
+
+// SetPromptLabels replaces the label set of one version. Any of the supplied
+// labels currently held by sibling versions are moved to this version.
+message SetPromptLabelsRequest {
+  string prompt_id = 1;
+  int32 version = 2;
+  repeated string labels = 3;
+}
+
+message SetPromptLabelsResponse {
+  PromptVersion version = 1;
+}

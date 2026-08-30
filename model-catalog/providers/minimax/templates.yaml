@@ -1,0 +1,41 @@
+high_performance:
+  name: "High Performance"
+  description: "Optimized for high throughput and low latency"
+  settings:
+    timeout: 30s
+    retry_attempts: 2
+    retry_delay: 500ms
+    connection_pool_size: 50
+    max_concurrent_requests: 25
+
+cost_optimized:
+  name: "Cost Optimized"
+  description: "Optimized for cost efficiency"
+  settings:
+    timeout: 120s
+    retry_attempts: 1
+    retry_delay: 2s
+    connection_pool_size: 10
+    max_concurrent_requests: 5
+  recommended_models:
+    - MiniMax-M1
+
+coding:
+  name: "Coding Assistant"
+  description: "Optimized for code generation and review"
+  settings:
+    temperature: 0.2
+    max_tokens: 8192
+  recommended_models:
+    - MiniMax-M2.5
+    - MiniMax-M2.5-highspeed
+
+agentic:
+  name: "Agentic Workflows"
+  description: "Optimized for agentic tool-use workflows"
+  settings:
+    temperature: 0.3
+    max_tokens: 4096
+  recommended_models:
+    - MiniMax-M2.5
+    - MiniMax-M2

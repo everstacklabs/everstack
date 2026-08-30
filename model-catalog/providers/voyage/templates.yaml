@@ -1,0 +1,12 @@
+default:
+  name: "Default"
+  description: "Standard Voyage AI gateway settings"
+  settings:
+    timeout: 30s
+    retry_attempts: 2
+
+cost_optimized:
+  name: "Cost Optimized"
+  description: "Cheapest Voyage embedding tier for high-volume indexing"
+  recommended_models:
+    - voyage-4-lite

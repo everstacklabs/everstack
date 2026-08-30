@@ -1,0 +1,67 @@
+name: "sakana/sakana-namazu"
+display_name: "Sakana Namazu (OpenRouter)"
+family: "sakana-namazu"
+status: "stable"
+release_date: "2026-08-03"
+
+cost:
+  input_per_1k: 0.00095
+  output_per_1k: 0.004
+  cache_read_per_1k: 0.00015
+
+limits:
+  max_tokens: 262144
+  max_completion_tokens: 65536
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image","pdf"]
+  output: ["text"]
+
+notes: "Multi-agent model for routing expert agents across complex analytical tasks"
+
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 65536
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+  - key: "frequency_penalty"
+    display_name: "Frequency penalty"
+    type: "number"
+    min_value: -2
+    has_min_value: true
+    max_value: 2
+    has_max_value: true
+  - key: "presence_penalty"
+    display_name: "Presence penalty"
+    type: "number"
+    min_value: -2
+    has_min_value: true
+    max_value: 2
+    has_max_value: true
+  - key: "seed"
+    display_name: "Seed"
+    type: "integer"

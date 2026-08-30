@@ -1,0 +1,761 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "everstack/memory/v1/memory_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "MemoryService"
+    }
+  ],
+  "paths": {
+    "/v1/memory/analytics": {
+      "post": {
+        "operationId": "MemoryService_GetMemoryAnalytics",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetMemoryAnalyticsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1GetMemoryAnalyticsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["MemoryService"]
+      }
+    },
+    "/v1/memory/collections": {
+      "get": {
+        "operationId": "MemoryService_ListCollections",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListCollectionsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["MemoryService"]
+      },
+      "post": {
+        "operationId": "MemoryService_CreateCollection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreateCollectionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateCollectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["MemoryService"]
+      }
+    },
+    "/v1/memory/collections/{collectionName}/documents": {
+      "post": {
+        "operationId": "MemoryService_AddDocuments",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1AddDocumentsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "collectionName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemoryServiceAddDocumentsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["MemoryService"]
+      }
+    },
+    "/v1/memory/collections/{collectionName}/documents/{documentId}": {
+      "delete": {
+        "operationId": "MemoryService_DeleteDocument",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteDocumentResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "collectionName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["MemoryService"]
+      }
+    },
+    "/v1/memory/collections/{collectionName}/query": {
+      "post": {
+        "operationId": "MemoryService_QueryCollection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1QueryCollectionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "collectionName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemoryServiceQueryCollectionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["MemoryService"]
+      }
+    },
+    "/v1/memory/collections/{name}": {
+      "get": {
+        "operationId": "MemoryService_GetCollection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetCollectionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["MemoryService"]
+      },
+      "delete": {
+        "operationId": "MemoryService_DeleteCollection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteCollectionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["MemoryService"]
+      }
+    },
+    "/v1/memory/setup": {
+      "post": {
+        "operationId": "MemoryService_SetupPgVector",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1SetupPgVectorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1SetupPgVectorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["MemoryService"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MemoryServiceAddDocumentsBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Document"
+            }
+          },
+          "chunkSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "title": "AddDocuments"
+      },
+      "MemoryServiceQueryCollectionBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "topK": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "minScore": {
+            "type": "number",
+            "format": "float"
+          },
+          "metadataFilter": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "title": "QueryCollection"
+      },
+      "protobufAny": {
+        "type": "object",
+        "properties": {
+          "@type": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": {}
+      },
+      "rpcStatus": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/protobufAny"
+            }
+          }
+        }
+      },
+      "v1AddDocumentsResponse": {
+        "type": "object",
+        "properties": {
+          "documentIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "chunksCreated": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1AnalyticsBucket": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string"
+          },
+          "queryCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "storeCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "deleteCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "errorCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "avgLatencyMs": {
+            "type": "number",
+            "format": "float"
+          }
+        },
+        "title": "Analytics"
+      },
+      "v1Collection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "embeddingModel": {
+            "type": "string"
+          },
+          "embeddingDimension": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "distanceMetric": {
+            "type": "string"
+          },
+          "documentCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Collection represents a vector memory collection."
+      },
+      "v1CollectionStat": {
+        "type": "object",
+        "properties": {
+          "collectionName": {
+            "type": "string"
+          },
+          "requestCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1CreateCollectionRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "embeddingModel": {
+            "type": "string"
+          },
+          "embeddingDimension": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "distanceMetric": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "title": "CreateCollection"
+      },
+      "v1CreateCollectionResponse": {
+        "type": "object",
+        "properties": {
+          "collection": {
+            "$ref": "#/components/schemas/v1Collection"
+          }
+        }
+      },
+      "v1DeleteCollectionResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1DeleteDocumentResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1Document": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "description": "Document represents a source document to be embedded and stored."
+      },
+      "v1GetCollectionResponse": {
+        "type": "object",
+        "properties": {
+          "collection": {
+            "$ref": "#/components/schemas/v1Collection"
+          }
+        }
+      },
+      "v1GetMemoryAnalyticsRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        }
+      },
+      "v1GetMemoryAnalyticsResponse": {
+        "type": "object",
+        "properties": {
+          "buckets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1AnalyticsBucket"
+            }
+          },
+          "totalRequests": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalErrors": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "avgLatencyMs": {
+            "type": "number",
+            "format": "float"
+          },
+          "topCollections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1CollectionStat"
+            }
+          }
+        }
+      },
+      "v1ListCollectionsResponse": {
+        "type": "object",
+        "properties": {
+          "collections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Collection"
+            }
+          }
+        }
+      },
+      "v1QueryCollectionResponse": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SearchResult"
+            }
+          }
+        }
+      },
+      "v1SearchResult": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string"
+          },
+          "chunkText": {
+            "type": "string"
+          },
+          "chunkIndex": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "score": {
+            "type": "number",
+            "format": "float"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "SearchResult represents a single search result with score."
+      },
+      "v1SetupPgVectorRequest": {
+        "type": "object",
+        "title": "SetupPgVector"
+      },
+      "v1SetupPgVectorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

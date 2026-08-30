@@ -1,0 +1,226 @@
+# Default alert rules for the LLM Gateway
+# These are pre-configured monitoring rules that users can enable/disable
+
+server_alerts:
+  # Infrastructure alerts
+  high_cpu_usage:
+    name: "High CPU Usage"
+    description: "Alert when CPU usage exceeds threshold"
+    enabled: true
+    condition: "cpu_usage > 0.8" # 80% CPU usage
+    duration: "5m"
+    severity: "warning"
+    category: "infrastructure"
+
+  high_memory_usage:
+    name: "High Memory Usage"
+    description: "Alert when memory usage exceeds threshold"
+    enabled: true
+    condition: "memory_usage > 0.85" # 85% memory usage
+    duration: "5m"
+    severity: "warning"
+    category: "infrastructure"
+
+  disk_space_low:
+    name: "Low Disk Space"
+    description: "Alert when disk space is running low"
+    enabled: true
+    condition: "disk_usage > 0.9" # 90% disk usage
+    duration: "1m"
+    severity: "critical"
+    category: "infrastructure"
+
+  # Service health alerts
+  grpc_server_down:
+    name: "gRPC Server Down"
+    description: "gRPC server is not responding"
+    enabled: true
+    condition: "grpc_health_check_failed"
+    duration: "30s"
+    severity: "critical"
+    category: "service"
+
+  database_connection_failed:
+    name: "Database Connection Failed"
+    description: "Database connection errors"
+    enabled: true
+    condition: "db_connection_errors > 5"
+    duration: "1m"
+    severity: "critical"
+    category: "service"
+
+  cache_failure:
+    name: "Cache Service Failure"
+    description: "Cache service is down or failing"
+    enabled: true
+    condition: "cache_errors > 10"
+    duration: "2m"
+    severity: "warning"
+    category: "service"
+
+gateway_alerts:
+  # Performance alerts
+  high_error_rate:
+    name: "High Error Rate"
+    description: "High error rate from LLM providers"
+    enabled: true
+    condition: "error_rate > 0.1" # 10% error rate
+    duration: "5m"
+    severity: "warning"
+    category: "performance"
+
+  high_latency:
+    name: "High Response Latency"
+    description: "High response latency from LLM providers"
+    enabled: true
+    condition: "avg_latency_ms > 5000" # 5 seconds
+    duration: "10m"
+    severity: "warning"
+    category: "performance"
+
+  low_throughput:
+    name: "Low Throughput"
+    description: "Low request throughput"
+    enabled: true
+    condition: "requests_per_minute < 10"
+    duration: "15m"
+    severity: "warning"
+    category: "performance"
+
+  # Provider alerts
+  model_provider_outage:
+    name: "Model Provider Outage"
+    description: "LLM provider is down or unreachable"
+    enabled: true
+    condition: "provider_health_check_failed"
+    duration: "1m"
+    severity: "critical"
+    category: "provider"
+
+  rate_limit_exceeded:
+    name: "Rate Limit Exceeded"
+    description: "Rate limit exceeded for model provider"
+    enabled: true
+    condition: "rate_limit_hit"
+    duration: "30s"
+    severity: "warning"
+    category: "provider"
+
+  # Cost alerts
+  high_cost:
+    name: "High API Cost"
+    description: "API costs exceeding threshold"
+    enabled: true
+    condition: "hourly_cost > 100" # $100 per hour
+    duration: "10m"
+    severity: "warning"
+    category: "cost"
+
+  cost_limit_reached:
+    name: "Cost Limit Reached"
+    description: "Cost limit has been reached"
+    enabled: true
+    condition: "cost_limit_hit"
+    duration: "1m"
+    severity: "critical"
+    category: "cost"
+
+  # Security alerts
+  suspicious_activity:
+    name: "Suspicious Activity"
+    description: "Detected suspicious activity patterns"
+    enabled: true
+    condition: "suspicious_requests > 50"
+    duration: "5m"
+    severity: "warning"
+    category: "security"
+
+  authentication_failure:
+    name: "Authentication Failures"
+    description: "High rate of authentication failures"
+    enabled: true
+    condition: "auth_failures > 10"
+    duration: "2m"
+    severity: "warning"
+    category: "security"
+
+# Alert templates for common scenarios
+templates:
+  # Development environment
+  development:
+    name: "Development Environment"
+    description: "Alerts suitable for development environments"
+    alerts:
+      - "high_cpu_usage"
+      - "high_memory_usage"
+      - "grpc_server_down"
+      - "database_connection_failed"
+    severity_adjustment: "reduce" # Reduce severity for dev
+
+  # Production environment
+  production:
+    name: "Production Environment"
+    description: "Alerts suitable for production environments"
+    alerts:
+      - "high_cpu_usage"
+      - "high_memory_usage"
+      - "disk_space_low"
+      - "grpc_server_down"
+      - "database_connection_failed"
+      - "cache_failure"
+      - "high_error_rate"
+      - "high_latency"
+      - "model_provider_outage"
+      - "rate_limit_exceeded"
+      - "high_cost"
+      - "cost_limit_reached"
+      - "suspicious_activity"
+      - "authentication_failure"
+
+  # High-traffic environment
+  high_traffic:
+    name: "High Traffic Environment"
+    description: "Alerts for high-traffic production environments"
+    alerts:
+      - "high_cpu_usage"
+      - "high_memory_usage"
+      - "disk_space_low"
+      - "grpc_server_down"
+      - "database_connection_failed"
+      - "cache_failure"
+      - "high_error_rate"
+      - "high_latency"
+      - "low_throughput"
+      - "model_provider_outage"
+      - "rate_limit_exceeded"
+      - "high_cost"
+      - "cost_limit_reached"
+      - "suspicious_activity"
+      - "authentication_failure"
+    thresholds:
+      high_cpu_usage: "0.7" # Lower threshold for high traffic
+      high_latency: "3000" # Lower latency threshold
+      high_error_rate: "0.05" # Lower error rate threshold
+
+# Default notification routing
+default_routing:
+  critical:
+    - "email"
+    - "slack"
+    - "webhook"
+  warning:
+    - "slack"
+    - "email"
+  info:
+    - "slack"
+
+# Default escalation policies
+default_escalation:
+  name: "Default Escalation"
+  steps:
+    - delay: "5m"
+      notify: ["slack"]
+    - delay: "15m"
+      notify: ["email"]
+    - delay: "1h"
+      notify: ["webhook"]

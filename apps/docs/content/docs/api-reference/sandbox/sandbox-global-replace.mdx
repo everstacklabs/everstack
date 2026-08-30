@@ -1,0 +1,49 @@
+---
+title: Global Replace
+description: Find-and-replace across all files under a path inside a sandbox.
+---
+
+# Global Replace
+
+Replace a pattern across all files under a path. Supports `dry_run` mode to preview changes.
+
+`POST /v1/sandbox/{sandboxId}/files/global-replace`
+
+## Request
+
+```json
+{
+  "path": "/repo",
+  "pattern": "oldFunctionName",
+  "replacement": "newFunctionName",
+  "dry_run": false
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `path` | string | Root directory to search (default: `.`) |
+| `pattern` | string | Pattern to match (supports regex) |
+| `replacement` | string | Replacement string |
+| `dry_run` | boolean | Preview matches without applying (default: false) |
+
+## Response
+
+```json
+{
+  "dry_run": false,
+  "pattern": "oldFunctionName",
+  "replacement": "newFunctionName",
+  "path": "/repo",
+  "output": "done",
+  "exit_code": 0
+}
+```
+
+## Dry run
+
+Set `"dry_run": true` to see which lines would be affected without modifying any files. Returns the matching lines in `output`.
+
+## Implementation
+
+Uses `perl -pi -e 's/pattern/replacement/g'` via `find | xargs`. Supports regex with capture groups. 60 second timeout.

@@ -1,0 +1,23 @@
+---
+title: Providers
+description: Providers API endpoints
+---
+
+# Providers API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | [`/v1/providers/api-keys`](./providers/add-provider-apikey-adds-a-new-api-key-to-a-provider-configuration) | AddProviderAPIKey adds a new API key to a provider configuration |
+| `DELETE` | [`/v1/providers/api-keys/{keyId}`](./providers/delete-provider-apikey-deletes-an-api-key) | DeleteProviderAPIKey deletes an API key |
+| `PATCH` | [`/v1/providers/api-keys/{keyId}/toggle`](./providers/toggle-apikey-activates-or-deactivates-an-api-key) | ToggleAPIKey activates or deactivates an API key |
+| `PATCH` | [`/v1/providers/api-keys/{keyId}/weight`](./providers/update-apikey-weight-updates-the-weight-of-an-api-key-for-load-balancing) | UpdateAPIKeyWeight updates the weight of an API key for load balancing |
+| `GET` | [`/v1/providers/api-keys/{providerConfigId}`](./providers/list-provider-apikeys-lists-all-api-keys-for-a-provider-configuration) | ListProviderAPIKeys lists all API keys for a provider configuration |
+| `GET` | [`/v1/providers/catalog`](./providers/list-provider-catalog-returns-all-available-providers-from-the-catalog-defaults) | ListProviderCatalog returns all available providers from the catalog (defaults) |
+| `GET` | [`/v1/providers/config-yaml`](./providers/get-config-yaml-gets-the-current-yaml-config-content) | GetConfigYAML gets the current YAML config content |
+| `POST` | [`/v1/providers/config-yaml`](./providers/save-config-yaml-saves-yaml-config-and-syncs-to-database) | SaveConfigYAML saves YAML config and syncs to database |
+| `GET` | [`/v1/providers/configured`](./providers/list-configured-providers-returns-all-providers-with-their-status-configured-and-unconfigured) | ListConfiguredProviders returns all providers with their status (configured and unconfigured) |
+| `POST` | [`/v1/providers/reload`](./providers/reload-config-syncs-yaml-to-db-and-triggers-gateway-reload) | ReloadConfig syncs YAML to DB and triggers gateway reload |
+| `GET` | [`/v1/providers/sync-status`](./providers/get-sync-status-checks-if-yaml-and-db-are-in-sync) | GetSyncStatus checks if YAML and DB are in sync |
+| `GET` | [`/v1/providers/{providerName}`](./providers/get-provider-returns-detailed-information-about-a-specific-provider) | GetProvider returns detailed information about a specific provider |
+| `DELETE` | [`/v1/providers/{providerName}`](./providers/delete-provider-configuration-removes-a-provider-configuration) | DeleteProviderConfiguration removes a provider configuration |
+| `POST` | [`/v1/providers/{providerName}/configure`](./providers/configure-provider-creates-or-updates-a-provider-configuration) | ConfigureProvider creates or updates a provider configuration |

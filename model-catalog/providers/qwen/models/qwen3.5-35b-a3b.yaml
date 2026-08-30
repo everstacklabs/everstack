@@ -1,0 +1,54 @@
+name: "qwen3.5-35b-a3b"
+display_name: "Qwen3.5 35B-A3B"
+family: "qwen"
+status: "stable"
+release_date: "2026-02-23"
+
+cost:
+  input_per_1k: 0.00025
+  output_per_1k: 0.002
+
+limits:
+  max_tokens: 262144
+  max_completion_tokens: 65536
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image","video","audio"]
+  output: ["text"]
+
+notes: "Qwen vision-language model for visual reasoning, documents, and agent tasks"
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 65536
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "reasoning_enabled"
+    display_name: "Reasoning"
+    type: "boolean"
+  - key: "reasoning_budget_tokens"
+    display_name: "Reasoning token budget"
+    type: "integer"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true

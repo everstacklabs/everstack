@@ -1,0 +1,62 @@
+name: "aws-bedrock"
+display_name: "AWS Bedrock"
+base_url: "https://bedrock-runtime.{region}.amazonaws.com"
+api_version: "2024-01-01"
+
+provider_type: "static"
+supports_model_discovery: false
+
+auth:
+  type: "aws_sigv4"
+  header_name: "Authorization"
+  header_format: "AWS4-HMAC-SHA256 ..."
+  env_var: "AWS_REGION"
+
+rate_limits:
+  requests_per_minute: 1200
+  tokens_per_minute: 240000
+  concurrent_requests: 30
+
+capabilities:
+  chat: true
+  completions: true
+  embeddings: false
+  function_calling: true
+  vision: true
+  streaming: true
+  fine_tuning: false
+  assistants: false
+
+model_families:
+  claude:
+    description: "Anthropic Claude via Bedrock"
+    capabilities: ["chat", "function_calling", "vision"]
+    max_tokens: 200000
+
+  llama:
+    description: "Meta Llama via Bedrock"
+    capabilities: ["chat", "function_calling"]
+    max_tokens: 128000
+
+  mistral:
+    description: "Mistral via Bedrock"
+    capabilities: ["chat", "function_calling"]
+    max_tokens: 128000
+
+  nova:
+    description: "Amazon Nova family"
+    capabilities: ["chat", "function_calling", "vision"]
+    max_tokens: 300000
+
+defaults:
+  temperature: 0.7
+  max_tokens: 1000
+  top_p: 1.0
+  timeout: 60s
+  retry_attempts: 3
+  retry_delay: 1s
+
+error_mapping:
+  "AccessDeniedException": "authentication_failed"
+  "ResourceNotFoundException": "model_unavailable"
+  "ThrottlingException": "rate_limit_exceeded"

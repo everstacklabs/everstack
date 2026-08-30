@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS idx_sandbox_instances_tenant_created;

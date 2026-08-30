@@ -1,0 +1,78 @@
+---
+title: Text-to-Speech
+description: Generate audio from text using multiple models and voices.
+icon: Volume2
+---
+
+The TTS endpoint converts text into spoken audio. You send a string, choose a model and output format, and receive an audio file. Long inputs are automatically split into chunks and concatenated so you do not need to manage text length yourself.
+
+## Endpoint
+
+```
+POST /v1/audio/speech
+```
+
+See the [Gateway API Reference](/api-reference/gateway) for the full request and response schema.
+
+## Models
+
+| Model | Provider | When to use |
+|-------|----------|-------------|
+| `qwen3-tts-flash` | Qwen / DashScope | General-purpose TTS. Fast, good quality, no reference audio needed. |
+| `qwen3-tts-vc-2026-01-22` | Qwen / DashScope | Voice clone variant. Requires a `voice_clone_profile_id`. Use when you need output that matches a custom voice. |
+
+## Output formats
+
+| Format | Notes |
+|--------|-------|
+| `mp3` | Compressed, widely supported. Good default for web and mobile. |
+| `opus` | Low-latency compressed format. Good for real-time playback over networks. |
+| `aac` | Compressed, native on Apple platforms. |
+| `flac` | Lossless compression. Use when quality matters more than file size. |
+| `wav` | Uncompressed PCM in a WAV container. Largest files, no quality loss. |
+| `pcm` | Raw PCM samples with no header. Use when you are feeding audio into another processing pipeline. |
+
+## Parameters
+
+Beyond the required `input` (text) and `model`, TTS accepts several optional parameters that control voice characteristics:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `speed` | float | Playback speed multiplier. Values below 1.0 slow down, above 1.0 speed up. |
+| `temperature` | float | Controls randomness in speech generation. Lower values produce more consistent output. |
+| `topP` | float | Nucleus sampling threshold. Restricts token selection to the most probable candidates. |
+| `stability` | float | How consistent the voice stays across the generated audio. Higher values reduce variation. |
+| `similarity` | float | How closely the output should match the target voice. More relevant with voice cloning. |
+| `style` | float | Expressiveness of the delivery. Higher values produce more animated speech. |
+| `enhancement` | bool | Applies post-processing to improve audio clarity. |
+| `speakerBoost` | bool | Amplifies the speaker's presence in the mix. |
+
+Not every parameter is supported by every model. When an unsupported parameter is passed, it is ignored rather than causing an error.
+
+## Text chunking
+
+TTS models have a per-request text limit of approximately 500 characters. When your input exceeds this limit, Everstack automatically:
+
+1. Splits the text into chunks at sentence boundaries (or at the 500-character limit if no boundary is found)
+2. Sends each chunk to the provider as a separate synthesis request
+3. Concatenates the resulting audio segments into a single output file
+
+This happens transparently. You send the full text, and you receive one audio file back. The chunking logic preserves natural sentence breaks so the stitched output sounds continuous.
+
+## When to use TTS
+
+- **Notifications and alerts** that need an audio component alongside text
+- **Accessibility** for visually impaired users or screen-reader alternatives
+- **Content production** where you need to convert articles, documentation, or scripts into audio
+- **Agent responses** where a voice interface is more natural than text
+- **Workflow automation** where audio is an output artifact, such as podcast generation or voiceover creation
+
+## Using a cloned voice
+
+To generate speech with a custom voice, set the `voice_clone_profile_id` field in your request and use the `qwen3-tts-vc-2026-01-22` model. The profile must already be enrolled with the provider. See [Voice Cloning](/getting-started/voice/voice-cloning) for setup instructions.
+
+## Next steps
+
+- [Speech-to-Text](/getting-started/voice/speech-to-text) covers the reverse direction, turning audio into text.
+- [Voice Cloning](/getting-started/voice/voice-cloning) explains how to create and use custom voice profiles.
+- [Gateway API Reference](/api-reference/gateway) has the full endpoint schema.

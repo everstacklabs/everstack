@@ -1,0 +1,300 @@
+---
+title: Go
+description: Official Everstack Go SDK with streaming support and typed responses.
+icon: Code2
+---
+
+The official Go SDK provides an idiomatic Go client for every Everstack API with generic streaming support.
+
+## Installation
+
+```bash
+go get github.com/everstacklabs/everstack-go
+```
+
+Requires Go 1.22+.
+
+## Initialize the client
+
+```go
+import everstack "github.com/everstacklabs/everstack-go"
+
+client := everstack.NewClient("pk_...")
+```
+
+With options:
+
+```go
+client := everstack.NewClient("pk_...",
+    everstack.WithBaseURL("https://{instance}.{region}.everstack.ai"),
+    everstack.WithProvider("@openai"),
+    everstack.WithOrgID("org_123"),
+    everstack.WithTimeout(30 * time.Second),
+)
+```
+
+Available options:
+
+- `WithBaseURL(url)` -- gateway URL (defaults to `https://{instance}.{region}.everstack.ai`)
+- `WithProvider(provider)` -- default provider for routing
+- `WithOrgID(orgID)` -- organization ID for multi-tenant setups
+- `WithUserID(userID)` -- user ID for tracking
+- `WithHeaders(headers)` -- additional default headers
+- `WithHTTPClient(client)` -- custom `*http.Client`
+- `WithTimeout(duration)` -- request timeout (default: 60s)
+
+## Gateway APIs
+
+### Chat completions
+
+```go
+ctx := context.Background()
+
+resp, err := client.Chat.Completions.Create(ctx, &everstack.ChatCompletionParams{
+    Model: "@openai/gpt-4o",
+    Messages: []everstack.Message{
+        {Role: "user", Content: "Hello!"},
+    },
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Println(*resp.Choices[0].Message.Content)
+```
+
+Streaming:
+
+```go
+stream, err := client.Chat.Completions.CreateStream(ctx, &everstack.ChatCompletionParams{
+    Model: "@anthropic/claude-sonnet-4-20250514",
+    Messages: []everstack.Message{
+        {Role: "user", Content: "Tell me a joke"},
+    },
+})
+if err != nil {
+    log.Fatal(err)
+}
+defer stream.Close()
+
+for stream.Next() {
+    chunk := stream.Current()
+    if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != nil {
+        fmt.Print(*chunk.Choices[0].Delta.Content)
+    }
+}
+if err := stream.Err(); err != nil {
+    log.Fatal(err)
+}
+```
+
+### Embeddings
+
+```go
+resp, err := client.Embeddings.Create(ctx, &everstack.EmbeddingsParams{
+    Model: "@openai/text-embedding-3-small",
+    Input: "Hello world",
+})
+```
+
+### Models
+
+```go
+models, err := client.Models.List(ctx)
+```
+
+### Audio
+
+Text-to-speech:
+
+```go
+audio, err := client.Audio.Speech.Create(ctx, &everstack.SpeechParams{
+    Model: "tts-1",
+    Input: "Hello from Everstack.",
+    Voice: "alloy",
+})
+```
+
+Speech-to-text:
+
+```go
+transcription, err := client.Audio.Transcriptions.Create(ctx, &everstack.TranscriptionParams{
+    Model: "whisper-1",
+    File:  audioBytes,
+})
+```
+
+### Images
+
+```go
+images, err := client.Images.Generate(ctx, &everstack.ImageGenerateParams{
+    Model:  "@openai/dall-e-3",
+    Prompt: "A sunset over the ocean",
+})
+```
+
+### Moderations
+
+```go
+result, err := client.Moderations.Create(ctx, &everstack.ModerationParams{
+    Input: "Text to check",
+})
+```
+
+### Reranking
+
+```go
+result, err := client.Rerank.Create(ctx, &everstack.RerankParams{
+    Model:     "rerank-v1",
+    Query:     "What is Everstack?",
+    Documents: []string{"Everstack is an AI platform.", "Unrelated text."},
+})
+```
+
+### Responses (agentic orchestration)
+
+```go
+resp, err := client.Responses.Create(ctx, &everstack.ResponseCreateParams{
+    Model: "@openai/gpt-4o",
+    Input: "Summarize this document",
+})
+
+// Streaming
+stream, err := client.Responses.CreateStream(ctx, &everstack.ResponseCreateParams{
+    Model: "@openai/gpt-4o",
+    Input: "Summarize this document",
+})
+defer stream.Close()
+
+for stream.Next() {
+    event := stream.Current()
+    // handle response stream events
+}
+```
+
+## Platform APIs
+
+### Agents
+
+```go
+agent, err := client.Agents.Create(ctx, map[string]any{
+    "name":         "support-agent",
+    "systemPrompt": "You are a concise support assistant.",
+})
+
+session, err := client.Agents.Sessions.Create(ctx, map[string]any{
+    "agentId": agent["id"],
+})
+
+result, err := client.Agents.Sessions.RunTurn(ctx, map[string]any{
+    "sessionId": session["id"],
+    "input":     "Summarize open tickets.",
+})
+```
+
+Agent sub-resources: `Sessions`, `Reviews`, `Sandboxes`, `Lifecycle`, `Memories`, `Deployments`, `Triggers`, `Links`, `Channels`.
+
+### Datasets and evaluations
+
+```go
+dataset, err := client.Datasets.Create(ctx, map[string]any{
+    "name": "support-regression",
+})
+
+run, err := client.Evaluations.Runs.Create(ctx, map[string]any{
+    "datasetId": dataset["id"],
+    "name":      "nightly-regression",
+})
+
+summary, err := client.Evaluations.Runs.GetSummary(ctx, run["id"].(string))
+```
+
+### Observability
+
+```go
+dashboard, err := client.Observability.Metrics.GetDashboard(ctx, nil)
+sessions, err := client.Observability.Sessions.List(ctx, nil)
+```
+
+## Streaming
+
+The SDK uses a generic `Stream[T]` type for streaming responses:
+
+```go
+type Stream[T any] struct { ... }
+
+func (s *Stream[T]) Next() bool      // advance to next event
+func (s *Stream[T]) Current() T      // get current decoded event
+func (s *Stream[T]) Err() error      // get any error encountered
+func (s *Stream[T]) Close() error    // release connection
+```
+
+Available for chat completions (`CreateStream`), responses (`CreateStream`), and agent sessions (`RunTurnStream`).
+
+## Error handling
+
+```go
+import "errors"
+
+resp, err := client.Chat.Completions.Create(ctx, params)
+if err != nil {
+    var authErr *everstack.AuthenticationError
+    var rateLimitErr *everstack.RateLimitError
+    var notFoundErr *everstack.NotFoundError
+    var apiErr *everstack.APIError
+
+    switch {
+    case errors.As(err, &authErr):
+        log.Fatal("Invalid API key")
+    case errors.As(err, &rateLimitErr):
+        log.Fatal("Rate limited, retry later")
+    case errors.As(err, &notFoundErr):
+        log.Fatal("Resource not found")
+    case errors.As(err, &apiErr):
+        log.Fatalf("API error %d: %s", apiErr.StatusCode, apiErr.Message)
+    default:
+        log.Fatal(err)
+    }
+}
+```
+
+## Full resource map
+
+```
+client.Chat.Completions.Create(), .CreateStream()
+client.Embeddings.Create()
+client.Models.List()
+client.Audio.Speech.Create()
+client.Audio.Transcriptions.Create()
+client.Audio.Translations.Create()
+client.Images.Generate(), .Edit(), .CreateVariation()
+client.Moderations.Create()
+client.Rerank.Create()
+client.Responses.Create(), .CreateStream(), .Get(), .Cancel(), .Delete(), .List()
+
+client.Agents.Create(), .Get(), .List(), .Update(), .Delete()
+client.Agents.Sessions.Create(), .RunTurn(), .RunTurnStream(), .Cancel(), .Complete()
+client.Agents.Reviews.Submit(), .Get(), .List()
+client.Agents.Sandboxes.Create(), .ListInstances(), .Stop(), .Revive(), .Terminate()
+client.Agents.Lifecycle.Provision(), .Sleep(), .Wake()
+client.Agents.Memories.List(), .Create(), .Update(), .Deactivate(), .Delete()
+client.Agents.Deployments.Deploy(), .List(), .Get(), .Update()
+client.Agents.Triggers.Create(), .List(), .Get(), .Update(), .Delete()
+client.Agents.Links.Create(), .List(), .Delete()
+client.Agents.Channels.Bind(), .Unbind(), .List()
+client.Datasets.Create(), .Get(), .List(), .Update(), .Delete()
+client.Datasets.Items.Create(), .CreateBatch(), .Get(), .List(), .Update(), .Delete()
+client.Datasets.ScoreConfigs.Create(), .Get(), .List(), .Update(), .Delete()
+client.Evaluations.Runs.Create(), .Get(), .List(), .Cancel(), .Delete(), .Retry()
+client.Evaluations.Runs.GetItems(), .GetSummary(), .Compare(), .SetBaseline()
+client.Evaluations.Schedules.Create(), .Get(), .List(), .Update(), .Delete()
+client.Observability.Metrics.GetDashboard(), .GetTimeSeries()
+client.Observability.Sessions.List(), .Get()
+client.Observability.Users.List(), .Get()
+client.Observability.Outcomes.GetDashboard(), .GetTimeSeries()
+```
+
+## Resources
+
+- [Go SDK source](https://github.com/everstacklabs/everstack-go)
+- [pkg.go.dev](https://pkg.go.dev/github.com/everstacklabs/everstack-go)

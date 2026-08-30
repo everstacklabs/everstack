@@ -1,0 +1,106 @@
+---
+title: Evaluations Overview
+description: LLM-as-judge scoring, built-in metrics, and regression detection for AI quality.
+icon: Brain
+---
+
+Evaluations let you measure and track the quality of your AI outputs systematically. Instead of relying on gut checks or manual spot-checking, you define scoring criteria, run them against datasets or production traces, and get repeatable, comparable results.
+
+Evaluations are part of the observe pillar in Everstack, sitting alongside tracing and logging. Where traces show you what happened, evals tell you how good it was.
+
+## What evaluations are
+
+An evaluation in Everstack is a scored assessment of AI-generated content. The system supports several scoring approaches:
+
+- **LLM-as-judge** scoring, where a separate LLM grades the output against defined criteria
+- **Built-in metrics** for common quality dimensions like relevancy, faithfulness, and safety
+- **Custom score configs** for domain-specific quality checks using numeric, boolean, categorical, LLM-judge, or code-based scorers
+- **Code scorers** that execute Python, JavaScript, or TypeScript in sandboxed environments for deterministic or rule-based evaluation
+- **Human annotations** through review queues for cases where automated scoring is not sufficient
+
+## The LLM-as-judge concept
+
+LLM-as-judge is a pattern where a language model evaluates the output of another language model. You provide the judge with the original input, the generated output, and optionally a reference answer or context. The judge then scores the output on the criteria you define.
+
+This approach scales better than human review for most quality dimensions while being more nuanced than simple heuristic checks. It works especially well for subjective criteria like relevance, coherence, and tone.
+
+## Built-in metrics
+
+Everstack ships five built-in metrics that cover the most common quality concerns:
+
+- **Answer Relevancy** measures whether the response actually addresses what was asked
+- **Faithfulness** checks whether claims in the response are supported by the provided context
+- **Hallucination** detects fabricated facts, entities, or citations that do not exist in the source material
+- **Bias** identifies unfair or prejudiced content across demographic dimensions
+- **Toxicity** flags harmful, offensive, or inappropriate language
+
+Each metric is preconfigured with a judge prompt and scoring rubric. You can use them out of the box or as starting points for custom scorers.
+
+## Evaluations vs monitoring
+
+Monitoring tells you whether your system is up and performing within latency and error-rate bounds. Evaluations tell you whether the content your system produces is actually good.
+
+Use monitoring for operational health. Use evaluations for output quality. In practice, you want both: monitoring catches outages and performance regressions, while evaluations catch quality regressions that would otherwise slip through unnoticed.
+
+## Where evaluations fit
+
+Evaluations connect to several other parts of Everstack:
+
+- **Datasets** hold the test cases you score against
+- **Scorers** define how each output gets graded
+- **Eval runs** execute a scorer across a dataset and produce results
+- **Scheduling** lets you run evals on a cron so regressions surface automatically
+- **CI/CD integration** blocks deploys when quality drops below a threshold
+- **Annotation queues** bring humans into the loop for edge cases
+- **Sampling** runs scorers on a fraction of production traffic in real time
+
+## How evaluations work in practice
+
+A typical evaluation workflow follows this sequence:
+
+1. **Define your dataset.** Collect input-output pairs that represent the scenarios you care about. Import from CSV, JSON, or create them in the UI.
+2. **Choose your scorers.** Start with built-in metrics, then add custom LLM-judge or code scorers for domain-specific criteria.
+3. **Run the evaluation.** Execute scorers against the dataset. Review per-item scores and aggregate results.
+4. **Set a baseline.** When you are satisfied with the scores, promote the run as your quality baseline.
+5. **Automate.** Schedule recurring runs and wire the CLI into your CI/CD pipeline so regressions are caught before they ship.
+6. **Review edge cases.** Route ambiguous or high-stakes items to annotation queues for human review.
+
+Each step builds on the previous one. You can start with just step 1 and 2, then layer on automation as your evaluation practice matures.
+
+## Use cases
+
+### Pre-deploy quality gates
+
+Run your eval suite in CI before every deploy. If scores drop below a threshold or regress compared to the baseline, the pipeline fails and the deploy is blocked.
+
+### Prompt iteration
+
+When refining prompts, run the same dataset through each version and compare scores side by side. This replaces anecdotal testing with measurable improvement.
+
+### Model migration
+
+Switching from one model to another (or upgrading versions) is risky without evaluation. Run your existing eval suite against the new model and compare results to your baseline before cutting over.
+
+### Production quality monitoring
+
+Sample a percentage of live traffic and score it continuously. This catches quality degradation from model drift, upstream data changes, or prompt regressions that only appear at scale.
+
+### Compliance and safety audits
+
+Use the Bias and Toxicity metrics, combined with custom scorers, to demonstrate that your AI outputs meet safety and fairness standards. Annotation queues provide a human review layer for audit trails.
+
+### RAG pipeline validation
+
+For retrieval-augmented generation systems, combine Faithfulness and Hallucination scorers to verify that responses stay grounded in retrieved context. Add Answer Relevancy to confirm the retrieval step is surfacing the right documents.
+
+## Pro tier requirement
+
+Evaluations are available on the Pro tier. This includes all built-in metrics, custom scorers, datasets, eval runs, scheduling, regression detection, CI/CD integration, and annotation queues.
+
+## Next steps
+
+- Create test cases with [Datasets](/getting-started/evaluations/datasets)
+- Configure scoring criteria with [Scorers](/getting-started/evaluations/scorers)
+- Execute and schedule runs with [Running Evaluations](/getting-started/evaluations/running-evals)
+- Add human review with [Annotations](/getting-started/evaluations/annotations)
+- Automate with the [Evaluations API](/getting-started/evaluations/overview)

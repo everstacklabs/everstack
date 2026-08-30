@@ -1,0 +1,30 @@
+chat:
+  - deepseek-ai/DeepSeek-V4-Pro
+  - moonshotai/Kimi-K2.6
+  - Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8
+  - openai/gpt-oss-120b
+  - zai-org/GLM-5.1
+  - meta-llama/Llama-3.3-70B-Instruct-Turbo
+
+function_calling:
+  - deepseek-ai/DeepSeek-V4-Pro
+  - moonshotai/Kimi-K2.6
+  - Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8
+  - openai/gpt-oss-120b
+  - zai-org/GLM-5.1
+  - meta-llama/Llama-3.3-70B-Instruct-Turbo
+
+reasoning:
+  - deepseek-ai/DeepSeek-V4-Pro
+  - moonshotai/Kimi-K2.6
+  - openai/gpt-oss-120b
+  - zai-org/GLM-5.1
+
+vision:
+  - moonshotai/Kimi-K2.6
+
+coding:
+  - Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8
+
+embeddings:
+  - togethercomputer/m2-bert-80M-8k-retrieval

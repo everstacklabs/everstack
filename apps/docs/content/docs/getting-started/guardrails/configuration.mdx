@@ -1,0 +1,155 @@
+---
+title: Guardrails Configuration
+description: Configuring guardrails in gateway YAML and workflow studio nodes.
+icon: Settings
+---
+
+Guardrails can be configured in two places: the gateway YAML config for API-level enforcement, and Workflow Studio nodes for per-workflow control. This page covers both approaches, the built-in templates, and how to handle violations.
+
+## Enabling guardrails in the gateway
+
+Guardrails are disabled by default in the gateway configuration. To enable them, set `guardrails.enabled: true` in your gateway config.
+
+The default guardrail rules live in `cmd/config/gateway/defaults/guardrails.yaml`. This file defines all input guardrails, output guardrails, and templates with sensible defaults. When you enable guardrails, these defaults take effect immediately.
+
+<Callout type="info">
+  The dedicated UI page at `/gateway/guardrails` is currently a coming-soon stub. All gateway guardrail configuration is done through YAML for now.
+</Callout>
+
+### Overriding defaults
+
+You can override any default by redefining it in your gateway config. For example, to disable PII detection while keeping everything else:
+
+```yaml
+input_guardrails:
+  pii_detection:
+    enabled: false
+```
+
+To change the content filtering threshold for a specific category:
+
+```yaml
+input_guardrails:
+  content_filtering:
+    categories:
+      violence:
+        threshold: 0.5
+```
+
+To change the jailbreak detection action from flag to block:
+
+```yaml
+output_guardrails:
+  jailbreak_detection:
+    action: "block"
+```
+
+### Available actions
+
+Each guardrail supports one of three actions:
+
+| Action | Behavior |
+| --- | --- |
+| **block** | Stop the request or response entirely. Return an error with violation details. |
+| **redact** | Replace the matched content with a placeholder and continue processing. Only available for input guardrails. |
+| **flag** | Record the violation but allow the request or response to proceed. Useful for monitoring before enforcing. |
+
+### Token limits
+
+Token limits are an input guardrail that prevents oversized requests from consuming excessive resources. The defaults are:
+
+```yaml
+input_guardrails:
+  token_limits:
+    enabled: true
+    max_input_tokens: 100000
+    max_total_tokens: 200000
+    action: "truncate"
+```
+
+Adjust these values based on your model's context window and your cost tolerance.
+
+## Configuring in Workflow Studio
+
+In Workflow Studio, guardrails are visual nodes that you drag onto the canvas and wire into your workflow.
+
+### Adding input guardrails
+
+1. Open your workflow in Workflow Studio.
+2. Drag an **InputGuardrailsExecutor** node onto the canvas.
+3. Place it between your input node and your LLM node.
+4. Configure which checks to enable (PII detection, prompt injection, content filtering) in the node's settings panel.
+5. Wire the **pass** output handle to your LLM node.
+6. Wire the **block** output handle to your error-handling or fallback logic.
+
+### Adding output guardrails
+
+1. Drag an **OutputGuardrailsExecutor** node onto the canvas.
+2. Place it between your LLM node and your output node.
+3. Configure which checks to enable (jailbreak detection, toxicity detection, code execution prevention) in the node's settings panel.
+4. Wire the **pass** output handle to your response delivery node.
+5. Wire the **block** output handle to your error-handling logic.
+
+### Pass and block handles
+
+Every guardrail node has exactly two output handles. This makes the control flow explicit: you always define what happens on both the happy path and the violation path. There is no silent failure mode.
+
+Common patterns for the block handle:
+
+- Return a generic error message to the user
+- Log the violation and route to a human review queue
+- Retry with a modified prompt that removes the flagged content
+- Return a cached safe response
+
+## Combining multiple guards
+
+You can chain multiple guardrail nodes in sequence if you want different violation handling for different checks. For example, you might want PII violations to trigger a redaction-and-continue flow while prompt injection violations trigger a hard block.
+
+In the gateway, all enabled guardrails run on every request. The request is blocked if any guardrail produces a block result. Checks run in order from cheapest to most expensive: token limits, then prompt injection, then PII detection, then content filtering.
+
+## Handling violations
+
+When a guardrail fires, the violation is recorded in the `ExecutionContext` under `input_guardrail_violations` (for input checks) or the output equivalent. Each violation record includes:
+
+- Which guardrail fired
+- The matched pattern or category
+- The severity level (low, medium, high)
+- The action taken (block, redact, flag)
+
+These records are visible in:
+
+- **Workflow execution logs** -- see exactly where a workflow branched to the block path
+- **Observability traces** -- every guardrail check appears as a span in the request trace
+- **Gateway error responses** -- blocked requests include violation details in the response body
+
+## Built-in templates
+
+The default guardrails config includes three templates for common compliance scenarios. Templates bundle input and output patterns into a named, reusable configuration.
+
+### Financial data protection
+
+Designed for applications that handle payment information or financial records. Blocks credit card numbers and SSNs on input. Redacts financial amounts (dollar values) on output.
+
+### Healthcare data protection
+
+Designed for applications that handle medical records or patient data. Blocks SSNs on input, redacts medical record numbers, and flags medical terminology (diagnosis, treatment, medication) on output.
+
+### Code safety
+
+Designed for applications that generate or execute code. Blocks dangerous function calls (`exec()`, `eval()`) on input. Blocks destructive shell commands (`rm -rf`, `del /s`, `format`) on output.
+
+### Using a template
+
+Templates are defined in the `templates` section of the guardrails YAML. To apply a template, reference its patterns in your guardrail configuration. Templates serve as a starting point -- you can customize the patterns, actions, and severity levels to match your specific requirements.
+
+## Recommended setup
+
+For most applications, start with this approach:
+
+1. **Enable guardrails** in your gateway config with the defaults.
+2. **Set all actions to flag** initially so you can observe what gets caught without disrupting users.
+3. **Review the traces** in observability to understand your violation patterns.
+4. **Switch to block** for the guardrails that are catching real violations, and tune thresholds for any that produce too many false positives.
+5. **Add Workflow Studio nodes** for workflows that need custom violation handling beyond the gateway defaults.
+
+This gives you visibility first and enforcement second, which reduces the risk of blocking legitimate traffic during initial rollout.

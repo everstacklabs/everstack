@@ -1,0 +1,172 @@
+---
+title: Database Setup
+description: PostgreSQL and ClickHouse configuration for Everstack.
+icon: Database
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+## Hybrid storage model
+
+Everstack uses two databases, each optimized for a different workload:
+
+| Database | Stores | Why |
+| --- | --- | --- |
+| **PostgreSQL** | Users, tenants, agents, configs, sessions, jobs | Relational integrity, ACID transactions |
+| **ClickHouse** | Traces, spans, analytics events, logs | Columnar compression, fast aggregation over billions of rows |
+
+This is the **hybrid** mode and it is the default. You can also run in Postgres-only mode, but you lose analytics, trace search, and log aggregation.
+
+## PostgreSQL setup
+
+### Version and extensions
+
+Everstack requires PostgreSQL 15 or later. The following extensions must be available:
+
+- `uuid-ossp` -- UUID generation for primary keys
+- `pgcrypto` -- Cryptographic functions for token hashing
+
+Optional but recommended:
+
+- `pgvector` -- Vector similarity search for agent memory
+
+Create the database and enable extensions:
+
+```sql
+CREATE DATABASE everstack;
+\c everstack
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- Optional: for agent memory vector search
+CREATE EXTENSION IF NOT EXISTS "vector";
+```
+
+### Connection string
+
+The Postgres connection string follows the standard URI format:
+
+```
+postgres://user:password@host:5432/everstack?sslmode=require
+```
+
+Set it via the config file or environment variable:
+
+```bash
+export EVS_DATABASE_URL="postgres://everstack:changeme@localhost:5432/everstack?sslmode=disable"
+```
+
+For production, always use `sslmode=require` or `sslmode=verify-full`.
+
+### Connection pooling
+
+Everstack manages its own connection pool internally. The defaults work for most deployments. For large clusters with many gateway replicas, consider placing PgBouncer in front of Postgres to limit total backend connections.
+
+## ClickHouse setup
+
+### Version
+
+ClickHouse 24.1 or later is recommended. Everstack uses the native protocol (port `9000`) for writes and the HTTP interface (port `8123`) for health checks.
+
+### Creating the database
+
+```sql
+CREATE DATABASE IF NOT EXISTS everstack;
+```
+
+Everstack creates all required tables automatically when migrations run. You do not need to create tables manually.
+
+### Connection string
+
+```
+clickhouse://host:9000/everstack
+```
+
+Set it via config or environment variable:
+
+```bash
+export EVS_CLICKHOUSE_URL="clickhouse://localhost:9000/everstack"
+```
+
+For authenticated ClickHouse instances:
+
+```
+clickhouse://user:password@host:9000/everstack?secure=true
+```
+
+## Database modes
+
+### Hybrid mode (default)
+
+Both Postgres and ClickHouse are required. This is the recommended mode for production.
+
+```yaml title="everstack.yaml"
+database:
+  mode: hybrid
+  url: "postgres://..."
+clickhouse:
+  url: "clickhouse://..."
+```
+
+### Postgres-only mode
+
+Only Postgres is required. Analytics, traces, and log queries will be unavailable.
+
+```yaml title="everstack.yaml"
+database:
+  mode: postgres
+  url: "postgres://..."
+```
+
+<Callout type="info">
+  Postgres-only mode is useful for evaluation and development. For production workloads with observability features, use hybrid mode.
+</Callout>
+
+## Running migrations
+
+After setting up your databases, run migrations before starting the server:
+
+```bash
+# Migrate both databases (hybrid mode)
+everstack migrate up
+
+# Migrate only Postgres
+everstack migrate up --target postgres
+
+# Migrate only ClickHouse
+everstack migrate up --target clickhouse
+```
+
+Migrations are idempotent. Running them multiple times is safe. See [everstack migrate](/cli/migrate) for the full reference.
+
+## What goes where
+
+Understanding the split helps when planning backups and capacity:
+
+| PostgreSQL (small, critical) | ClickHouse (large, append-heavy) |
+| --- | --- |
+| Tenant and user accounts | LLM call traces and spans |
+| Agent definitions and configs | Token usage analytics |
+| Session history and messages | Audit logs |
+| Job queue and results | Performance metrics |
+| API keys and secrets | Evaluation run results |
+
+PostgreSQL data is small but critical -- back it up frequently. ClickHouse data grows fast but can be rebuilt from source if needed.
+
+## Backup considerations
+
+**PostgreSQL:** Use `pg_dump` or continuous archiving (WAL-G, pgBackRest) for point-in-time recovery. Back up at least daily in production.
+
+```bash
+pg_dump -Fc everstack > everstack_backup.dump
+```
+
+**ClickHouse:** Use `clickhouse-backup` or the built-in `BACKUP` command. ClickHouse data is append-heavy, so incremental backups work well.
+
+```sql
+BACKUP DATABASE everstack TO Disk('backups', 'everstack_backup');
+```
+
+<Callout type="warn">
+  Always test your backup restoration process before relying on it. An untested backup is not a backup.
+</Callout>

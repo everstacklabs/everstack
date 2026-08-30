@@ -1,0 +1,19 @@
+name: "sonar-reasoning"
+display_name: "Sonar Reasoning"
+family: "sonar"
+status: "deprecated"
+
+cost:
+  input_per_1k: 0.002
+  output_per_1k: 0.008
+
+limits:
+  max_tokens: 127000
+  max_completion_tokens: 8192
+
+capabilities:
+  - chat
+
+modalities:
+  input: ["text"]
+  output: ["text"]

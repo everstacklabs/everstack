@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package everstack.api_key.v1;
+
+import "google/api/annotations.proto";
+import "everstack/api_key/v1/api_key.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/api_key/v1;api_key";
+
+service ApiKeyService {
+  rpc CreateApiKey(CreateApiKeyRequest) returns (CreateApiKeyResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create new Everstack API key"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/api-key/create"
+      body: "*"
+    };
+  }
+  rpc RegenerateApiKey(RegenerateApiKeyRequest) returns (RegenerateApiKeyResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Regenerate Everstack API key"}
+      }
+    };
+    option (google.api.http) = {post: "/v1/api-key/regenerate"};
+  }
+  rpc UpdateApiKey(UpdateApiKeyRequest) returns (UpdateApiKeyResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update Everstack API key"}
+      }
+    };
+    option (google.api.http) = {post: "/v1/api-key/update"};
+  }
+  rpc DeleteApiKey(DeleteApiKeyRequest) returns (DeleteApiKeyResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete Everstack API key"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/api-key/{id}"};
+  }
+  rpc GetApiKey(GetApiKeyRequest) returns (GetApiKeyResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get Everstack API key"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/api-key/{id}"};
+  }
+  rpc ListApiKeys(ListApiKeysRequest) returns (ListApiKeysResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List Everstack API keys"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/api-key/list"};
+  }
+}

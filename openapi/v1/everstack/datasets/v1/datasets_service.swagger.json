@@ -1,0 +1,4028 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/datasets/v1/datasets_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "DatasetService"
+    },
+    {
+      "name": "EvalService"
+    },
+    {
+      "name": "PlaygroundService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/builtin-metrics": {
+      "get": {
+        "operationId": "DatasetService_ListBuiltinMetrics",
+        "responses": {
+          "200": {
+            "description": "List available built-in evaluation metrics",
+            "schema": {
+              "$ref": "#/definitions/v1ListBuiltinMetricsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "DatasetService"
+        ]
+      }
+    },
+    "/v1/comparisons/{comparisonId}/rows": {
+      "get": {
+        "operationId": "EvalService_ListComparisonRows",
+        "responses": {
+          "200": {
+            "description": "List paginated per-item rows for a materialized comparison",
+            "schema": {
+              "$ref": "#/definitions/v1ListComparisonRowsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "comparisonId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "onlyRegressions",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    },
+    "/v1/datasets": {
+      "get": {
+        "operationId": "DatasetService_ListDatasets",
+        "responses": {
+          "200": {
+            "description": "List all datasets for tenant",
+            "schema": {
+              "$ref": "#/definitions/v1ListDatasetsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      },
+      "post": {
+        "operationId": "DatasetService_CreateDataset",
+        "responses": {
+          "200": {
+            "description": "Create a new dataset",
+            "schema": {
+              "$ref": "#/definitions/v1CreateDatasetResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateDatasetRequest"
+            }
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      }
+    },
+    "/v1/datasets/items/{id}": {
+      "get": {
+        "operationId": "DatasetService_GetDatasetItem",
+        "responses": {
+          "200": {
+            "description": "Get dataset item by ID",
+            "schema": {
+              "$ref": "#/definitions/v1GetDatasetItemResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      },
+      "delete": {
+        "operationId": "DatasetService_DeleteDatasetItem",
+        "responses": {
+          "200": {
+            "description": "Delete dataset item",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteDatasetItemResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      },
+      "patch": {
+        "operationId": "DatasetService_UpdateDatasetItem",
+        "responses": {
+          "200": {
+            "description": "Update dataset item",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateDatasetItemResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DatasetServiceUpdateDatasetItemBody"
+            }
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      }
+    },
+    "/v1/datasets/versions/{id}": {
+      "get": {
+        "operationId": "DatasetService_GetDatasetVersion",
+        "responses": {
+          "200": {
+            "description": "Get dataset version by ID",
+            "schema": {
+              "$ref": "#/definitions/v1GetDatasetVersionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      }
+    },
+    "/v1/datasets/{datasetId}/items": {
+      "get": {
+        "operationId": "DatasetService_ListDatasetItems",
+        "responses": {
+          "200": {
+            "description": "List items in a dataset",
+            "schema": {
+              "$ref": "#/definitions/v1ListDatasetItemsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "datasetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      },
+      "post": {
+        "operationId": "DatasetService_CreateDatasetItem",
+        "responses": {
+          "200": {
+            "description": "Create a new dataset item",
+            "schema": {
+              "$ref": "#/definitions/v1CreateDatasetItemResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "datasetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DatasetServiceCreateDatasetItemBody"
+            }
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      }
+    },
+    "/v1/datasets/{datasetId}/items/batch": {
+      "post": {
+        "operationId": "DatasetService_CreateDatasetItemBatch",
+        "responses": {
+          "200": {
+            "description": "Create dataset items in batch",
+            "schema": {
+              "$ref": "#/definitions/v1CreateDatasetItemBatchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "datasetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DatasetServiceCreateDatasetItemBatchBody"
+            }
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      }
+    },
+    "/v1/datasets/{datasetId}/items/generate": {
+      "post": {
+        "operationId": "DatasetService_GenerateDatasetItems",
+        "responses": {
+          "200": {
+            "description": "Generate dataset items with an LLM",
+            "schema": {
+              "$ref": "#/definitions/v1GenerateDatasetItemsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "datasetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DatasetServiceGenerateDatasetItemsBody"
+            }
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      }
+    },
+    "/v1/datasets/{datasetId}/items/generate-redteam": {
+      "post": {
+        "operationId": "DatasetService_GenerateRedTeamDataset",
+        "responses": {
+          "200": {
+            "description": "Generate adversarial red-team dataset items",
+            "schema": {
+              "$ref": "#/definitions/v1GenerateRedTeamDatasetResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "datasetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DatasetServiceGenerateRedTeamDatasetBody"
+            }
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      }
+    },
+    "/v1/datasets/{datasetId}/versions": {
+      "get": {
+        "operationId": "DatasetService_ListDatasetVersions",
+        "responses": {
+          "200": {
+            "description": "List immutable versions for a dataset",
+            "schema": {
+              "$ref": "#/definitions/v1ListDatasetVersionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "datasetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      },
+      "post": {
+        "operationId": "DatasetService_CreateDatasetVersion",
+        "responses": {
+          "200": {
+            "description": "Create an immutable dataset version",
+            "schema": {
+              "$ref": "#/definitions/v1CreateDatasetVersionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "datasetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DatasetServiceCreateDatasetVersionBody"
+            }
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      }
+    },
+    "/v1/datasets/{id}": {
+      "get": {
+        "operationId": "DatasetService_GetDataset",
+        "responses": {
+          "200": {
+            "description": "Get dataset by ID",
+            "schema": {
+              "$ref": "#/definitions/v1GetDatasetResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      },
+      "delete": {
+        "operationId": "DatasetService_DeleteDataset",
+        "responses": {
+          "200": {
+            "description": "Delete dataset",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteDatasetResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      },
+      "patch": {
+        "operationId": "DatasetService_UpdateDataset",
+        "responses": {
+          "200": {
+            "description": "Update dataset",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateDatasetResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DatasetServiceUpdateDatasetBody"
+            }
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      }
+    },
+    "/v1/eval-runs": {
+      "get": {
+        "operationId": "EvalService_ListEvalRuns",
+        "responses": {
+          "200": {
+            "description": "List eval runs",
+            "schema": {
+              "$ref": "#/definitions/v1ListEvalRunsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "datasetId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      },
+      "post": {
+        "operationId": "EvalService_CreateEvalRun",
+        "responses": {
+          "200": {
+            "description": "Create a new evaluation run",
+            "schema": {
+              "$ref": "#/definitions/v1CreateEvalRunResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateEvalRunRequest"
+            }
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    },
+    "/v1/eval-runs/compare": {
+      "post": {
+        "operationId": "EvalService_CompareEvalRuns",
+        "responses": {
+          "200": {
+            "description": "Compare multiple eval runs",
+            "schema": {
+              "$ref": "#/definitions/v1CompareEvalRunsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CompareEvalRunsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    },
+    "/v1/eval-runs/{evalRunId}/baseline": {
+      "post": {
+        "operationId": "EvalService_SetBaseline",
+        "responses": {
+          "200": {
+            "description": "Set an eval run as the baseline for regression detection",
+            "schema": {
+              "$ref": "#/definitions/v1SetBaselineResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "evalRunId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EvalServiceSetBaselineBody"
+            }
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    },
+    "/v1/eval-runs/{evalRunId}/items": {
+      "get": {
+        "operationId": "EvalService_GetEvalRunItems",
+        "responses": {
+          "200": {
+            "description": "Get items for an eval run",
+            "schema": {
+              "$ref": "#/definitions/v1GetEvalRunItemsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "evalRunId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    },
+    "/v1/eval-runs/{id}": {
+      "get": {
+        "operationId": "EvalService_GetEvalRun",
+        "responses": {
+          "200": {
+            "description": "Get eval run by ID",
+            "schema": {
+              "$ref": "#/definitions/v1GetEvalRunResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      },
+      "delete": {
+        "operationId": "EvalService_DeleteEvalRun",
+        "responses": {
+          "200": {
+            "description": "Delete an eval run",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteEvalRunResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    },
+    "/v1/eval-runs/{id}/cancel": {
+      "post": {
+        "operationId": "EvalService_CancelEvalRun",
+        "responses": {
+          "200": {
+            "description": "Cancel a running eval run",
+            "schema": {
+              "$ref": "#/definitions/v1CancelEvalRunResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EvalServiceCancelEvalRunBody"
+            }
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    },
+    "/v1/eval-runs/{id}/retry": {
+      "post": {
+        "operationId": "EvalService_RetryEvalRun",
+        "responses": {
+          "200": {
+            "description": "Retry an eval run",
+            "schema": {
+              "$ref": "#/definitions/v1RetryEvalRunResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EvalServiceRetryEvalRunBody"
+            }
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    },
+    "/v1/eval-runs/{id}/summary": {
+      "get": {
+        "operationId": "EvalService_GetEvalRunSummary",
+        "responses": {
+          "200": {
+            "description": "Get eval run summary with score breakdown",
+            "schema": {
+              "$ref": "#/definitions/v1GetEvalRunSummaryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    },
+    "/v1/eval-schedules": {
+      "get": {
+        "operationId": "EvalService_ListEvalSchedules",
+        "responses": {
+          "200": {
+            "description": "List eval schedules",
+            "schema": {
+              "$ref": "#/definitions/v1ListEvalSchedulesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "datasetId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      },
+      "post": {
+        "operationId": "EvalService_CreateEvalSchedule",
+        "responses": {
+          "200": {
+            "description": "Create a new eval schedule",
+            "schema": {
+              "$ref": "#/definitions/v1CreateEvalScheduleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateEvalScheduleRequest"
+            }
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    },
+    "/v1/eval-schedules/{id}": {
+      "get": {
+        "operationId": "EvalService_GetEvalSchedule",
+        "responses": {
+          "200": {
+            "description": "Get eval schedule by ID",
+            "schema": {
+              "$ref": "#/definitions/v1GetEvalScheduleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      },
+      "delete": {
+        "operationId": "EvalService_DeleteEvalSchedule",
+        "responses": {
+          "200": {
+            "description": "Delete eval schedule",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteEvalScheduleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      },
+      "patch": {
+        "operationId": "EvalService_UpdateEvalSchedule",
+        "responses": {
+          "200": {
+            "description": "Update eval schedule",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateEvalScheduleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EvalServiceUpdateEvalScheduleBody"
+            }
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    },
+    "/v1/playgrounds": {
+      "get": {
+        "operationId": "PlaygroundService_ListPlaygrounds",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListPlaygroundsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "PlaygroundService"
+        ]
+      },
+      "post": {
+        "operationId": "PlaygroundService_CreatePlayground",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreatePlaygroundResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreatePlaygroundRequest"
+            }
+          }
+        ],
+        "tags": [
+          "PlaygroundService"
+        ]
+      }
+    },
+    "/v1/playgrounds/{id}": {
+      "get": {
+        "operationId": "PlaygroundService_GetPlayground",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetPlaygroundResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "PlaygroundService"
+        ]
+      },
+      "delete": {
+        "operationId": "PlaygroundService_DeletePlayground",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeletePlaygroundResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "PlaygroundService"
+        ]
+      },
+      "patch": {
+        "operationId": "PlaygroundService_UpdatePlayground",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdatePlaygroundResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PlaygroundServiceUpdatePlaygroundBody"
+            }
+          }
+        ],
+        "tags": [
+          "PlaygroundService"
+        ]
+      }
+    },
+    "/v1/sampling-eval-rules": {
+      "post": {
+        "operationId": "EvalService_CreateSamplingEvalRule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateSamplingEvalRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateSamplingEvalRuleRequest"
+            }
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    },
+    "/v1/sampling-eval-rules/list": {
+      "post": {
+        "operationId": "EvalService_ListSamplingEvalRules",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSamplingEvalRulesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ListSamplingEvalRulesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    },
+    "/v1/sampling-eval-rules/{id}": {
+      "get": {
+        "operationId": "EvalService_GetSamplingEvalRule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetSamplingEvalRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      },
+      "delete": {
+        "operationId": "EvalService_DeleteSamplingEvalRule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteSamplingEvalRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      },
+      "patch": {
+        "operationId": "EvalService_UpdateSamplingEvalRule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateSamplingEvalRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EvalServiceUpdateSamplingEvalRuleBody"
+            }
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    },
+    "/v1/sampling-eval-rules/{id}/run": {
+      "post": {
+        "operationId": "EvalService_RunSamplingEvalRuleNow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RunSamplingEvalRuleNowResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EvalServiceRunSamplingEvalRuleNowBody"
+            }
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    },
+    "/v1/score-configs": {
+      "get": {
+        "operationId": "DatasetService_ListScoreConfigs",
+        "responses": {
+          "200": {
+            "description": "List all score configs for tenant",
+            "schema": {
+              "$ref": "#/definitions/v1ListScoreConfigsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      },
+      "post": {
+        "operationId": "DatasetService_CreateScoreConfig",
+        "responses": {
+          "200": {
+            "description": "Create a new score config",
+            "schema": {
+              "$ref": "#/definitions/v1CreateScoreConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateScoreConfigRequest"
+            }
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      }
+    },
+    "/v1/score-configs/{id}": {
+      "get": {
+        "operationId": "DatasetService_GetScoreConfig",
+        "responses": {
+          "200": {
+            "description": "Get score config by ID",
+            "schema": {
+              "$ref": "#/definitions/v1GetScoreConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      },
+      "delete": {
+        "operationId": "DatasetService_DeleteScoreConfig",
+        "responses": {
+          "200": {
+            "description": "Delete score config",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteScoreConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      },
+      "patch": {
+        "operationId": "DatasetService_UpdateScoreConfig",
+        "responses": {
+          "200": {
+            "description": "Update score config",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateScoreConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DatasetServiceUpdateScoreConfigBody"
+            }
+          }
+        ],
+        "tags": [
+          "DatasetService"
+        ]
+      }
+    },
+    "/v1/score-output": {
+      "post": {
+        "summary": "ScoreOutput scores a single output synchronously against the given\nscorer configs and returns the scores immediately. This is the\ninteractive counterpart to the background eval-run scorer loop: the\nplayground uses it to fill in per-cell scores live as outputs stream.\nTenant is resolved from the authenticated context, never from the\nrequest body.",
+        "operationId": "EvalService_ScoreOutput",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ScoreOutputResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ScoreOutputRequest scores a single (input, output, expected) triple against\nthe named scorer configs. Used by the playground to score a grid cell live.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ScoreOutputRequest"
+            }
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    },
+    "/v1/scorers/generate": {
+      "post": {
+        "summary": "GenerateScorer asks Claude to draft an LLM-judge prompt + rubric for\nthe user's evaluation intent. Returns a draft scorer config the\ncaller can edit and save via CreateScoreConfig.",
+        "operationId": "EvalService_GenerateScorer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GenerateScorerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "GenerateScorerRequest asks Claude (via the gateway) to draft an\nLLM-judge prompt for the user-described evaluation intent.\n\nExample payload:\n  {\n    \"intent\": \"score how politely the assistant responded\",\n    \"data_type\": \"numeric\",\n    \"examples\": [\n      {\"input\": \"...\", \"output\": \"...\", \"label\": \"1.0\"},\n      {\"input\": \"...\", \"output\": \"...\", \"label\": \"0.0\"},\n      ...\n    ]\n  }",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GenerateScorerRequest"
+            }
+          }
+        ],
+        "tags": [
+          "EvalService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "DatasetServiceCreateDatasetItemBatchBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CreateDatasetItemRequest"
+          }
+        }
+      }
+    },
+    "DatasetServiceCreateDatasetItemBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "input": {
+          "type": "object"
+        },
+        "expectedOutput": {
+          "type": "object"
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "sourceTraceId": {
+          "type": "string"
+        },
+        "sourceObservationId": {
+          "type": "string"
+        }
+      }
+    },
+    "DatasetServiceCreateDatasetVersionBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "DatasetServiceGenerateDatasetItemsBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "instructions": {
+          "type": "string"
+        },
+        "context": {
+          "type": "string"
+        },
+        "style": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        }
+      }
+    },
+    "DatasetServiceGenerateRedTeamDatasetBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "attacksPerCategory": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "enhancement": {
+          "type": "string"
+        }
+      }
+    },
+    "DatasetServiceUpdateDatasetBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object"
+        }
+      }
+    },
+    "DatasetServiceUpdateDatasetItemBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "input": {
+          "type": "object"
+        },
+        "expectedOutput": {
+          "type": "object"
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "DatasetServiceUpdateScoreConfigBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "minValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "maxValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "categories": {
+          "type": "object"
+        },
+        "evalPrompt": {
+          "type": "string"
+        },
+        "evalModel": {
+          "type": "string"
+        },
+        "isArchived": {
+          "type": "boolean"
+        },
+        "scorerCode": {
+          "type": "string"
+        },
+        "scorerLanguage": {
+          "type": "string"
+        },
+        "useSandbox": {
+          "type": "boolean"
+        },
+        "dataType": {
+          "type": "string",
+          "description": "was missing on update entirely",
+          "title": "--- Braintrust-style scorer fields (additive) ---"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "scorerType": {
+          "type": "string"
+        },
+        "outputType": {
+          "type": "string"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ScoreConfigMessage"
+          }
+        },
+        "modelParams": {
+          "$ref": "#/definitions/v1ModelParams"
+        },
+        "choiceScores": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChoiceScore"
+          }
+        },
+        "useCot": {
+          "type": "boolean"
+        },
+        "passThreshold": {
+          "type": "number",
+          "format": "double"
+        },
+        "dagDefinition": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "EvalServiceCancelEvalRunBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        }
+      }
+    },
+    "EvalServiceRetryEvalRunBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "retryAll": {
+          "type": "boolean",
+          "title": "true = reset all items, false = reset only failed"
+        }
+      },
+      "description": "RetryEvalRunRequest restarts an eval run, optionally retrying all items."
+    },
+    "EvalServiceRunSamplingEvalRuleNowBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        }
+      }
+    },
+    "EvalServiceSetBaselineBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        }
+      }
+    },
+    "EvalServiceUpdateEvalScheduleBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "cronExpression": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "scorerConfigIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "EvalServiceUpdateSamplingEvalRuleBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "filterPredicate": {
+          "type": "object"
+        },
+        "sampleRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "scorerConfigIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lookbackSeconds": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "intervalSeconds": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "PlaygroundServiceUpdatePlaygroundBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "protobufNullValue": {
+      "type": "string",
+      "enum": [
+        "NULL_VALUE"
+      ],
+      "default": "NULL_VALUE",
+      "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1BuiltinMetric": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "dataType": {
+          "type": "string"
+        },
+        "evalPrompt": {
+          "type": "string"
+        },
+        "minValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "maxValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "category": {
+          "type": "string"
+        },
+        "scorerType": {
+          "type": "string",
+          "title": "--- full seed definition so a template prefills the editor (additive) ---"
+        },
+        "outputType": {
+          "type": "string"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ScoreConfigMessage"
+          }
+        },
+        "choiceScores": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChoiceScore"
+          }
+        },
+        "useCot": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1CancelEvalRunResponse": {
+      "type": "object",
+      "properties": {
+        "evalRun": {
+          "$ref": "#/definitions/v1EvalRun"
+        }
+      }
+    },
+    "v1ChoiceScore": {
+      "type": "object",
+      "properties": {
+        "choice": {
+          "type": "string",
+          "title": "e.g. \"A\""
+        },
+        "score": {
+          "type": "number",
+          "format": "double",
+          "title": "0..1"
+        }
+      },
+      "description": "ChoiceScore maps one enumerated judge choice to a 0..1 score."
+    },
+    "v1CompareEvalRunsRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "evalRunIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "persist": {
+          "type": "boolean",
+          "description": "When true, materialize the comparison into the comparisons table\n(both runs must be terminal). When false (default), preview only."
+        }
+      }
+    },
+    "v1CompareEvalRunsResponse": {
+      "type": "object",
+      "properties": {
+        "evalRuns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1EvalRun"
+          }
+        },
+        "comparison": {
+          "type": "object",
+          "description": "Legacy untyped comparison payload; kept for backward compatibility."
+        },
+        "scorerResults": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ComparisonScorerResult"
+          },
+          "description": "Typed per-scorer paired-bootstrap results (candidate vs baseline)."
+        },
+        "overall": {
+          "$ref": "#/definitions/v1ComparisonVerdict",
+          "description": "Composite verdict across scorers, cost, latency, and error rate."
+        },
+        "comparisonId": {
+          "type": "string",
+          "description": "Set when persist=true: id of the materialized comparisons row."
+        },
+        "matchMode": {
+          "type": "string",
+          "description": "How items were paired: \"hash\" | \"dataset_item\"."
+        }
+      }
+    },
+    "v1ComparisonGrade": {
+      "type": "string",
+      "enum": [
+        "COMPARISON_GRADE_UNSPECIFIED",
+        "COMPARISON_GRADE_IMPROVEMENT",
+        "COMPARISON_GRADE_REGRESSION",
+        "COMPARISON_GRADE_TRADEOFF",
+        "COMPARISON_GRADE_TIE",
+        "COMPARISON_GRADE_INSUFFICIENT_DATA"
+      ],
+      "default": "COMPARISON_GRADE_UNSPECIFIED"
+    },
+    "v1ComparisonRow": {
+      "type": "object",
+      "properties": {
+        "inputHash": {
+          "type": "string"
+        },
+        "inputPreview": {
+          "type": "string"
+        },
+        "baselineOutput": {
+          "type": "string"
+        },
+        "candidateOutput": {
+          "type": "string"
+        },
+        "scorerDeltas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ScorerCellDelta"
+          }
+        },
+        "regression": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1ComparisonScorerResult": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "baselineMean": {
+          "type": "number",
+          "format": "double"
+        },
+        "candidateMean": {
+          "type": "number",
+          "format": "double"
+        },
+        "meanDiff": {
+          "type": "number",
+          "format": "double"
+        },
+        "ciLow": {
+          "type": "number",
+          "format": "double",
+          "description": "95% bootstrap confidence interval on the mean per-item delta."
+        },
+        "ciHigh": {
+          "type": "number",
+          "format": "double"
+        },
+        "pValue": {
+          "type": "number",
+          "format": "double",
+          "description": "Two-sided bootstrap p-value for mean_diff != 0."
+        },
+        "verdict": {
+          "type": "string",
+          "description": "\"improvement\" | \"regression\" | \"inconclusive\" | \"insufficient\"."
+        },
+        "n": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of paired items backing this scorer's comparison."
+        }
+      },
+      "description": "Per-scorer paired-bootstrap comparison result. Deltas are candidate -\nbaseline; a positive mean_diff means the candidate scored higher."
+    },
+    "v1ComparisonVerdict": {
+      "type": "object",
+      "properties": {
+        "grade": {
+          "$ref": "#/definitions/v1ComparisonGrade"
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Human-readable explanation naming the drivers of the grade."
+        },
+        "latencyDelta": {
+          "type": "number",
+          "format": "double",
+          "description": "Mean per-item latency delta in ms (candidate - baseline)."
+        },
+        "costDelta": {
+          "type": "number",
+          "format": "double",
+          "description": "Mean per-item cost delta (candidate - baseline)."
+        },
+        "errorRateDelta": {
+          "type": "number",
+          "format": "double",
+          "description": "Failed-item rate delta (candidate - baseline), in [-1, 1]."
+        },
+        "coverage": {
+          "type": "number",
+          "format": "double",
+          "description": "Fraction of items that were paired: paired / max(baseline, candidate)."
+        }
+      },
+      "description": "Composite comparison verdict across scorer quality, cost, latency, and\nerror-rate deltas."
+    },
+    "v1CreateDatasetItemBatchResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DatasetItem"
+          }
+        }
+      }
+    },
+    "v1CreateDatasetItemRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "datasetId": {
+          "type": "string"
+        },
+        "input": {
+          "type": "object"
+        },
+        "expectedOutput": {
+          "type": "object"
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "sourceTraceId": {
+          "type": "string"
+        },
+        "sourceObservationId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateDatasetItemResponse": {
+      "type": "object",
+      "properties": {
+        "item": {
+          "$ref": "#/definitions/v1DatasetItem"
+        }
+      }
+    },
+    "v1CreateDatasetRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object"
+        }
+      }
+    },
+    "v1CreateDatasetResponse": {
+      "type": "object",
+      "properties": {
+        "dataset": {
+          "$ref": "#/definitions/v1Dataset"
+        }
+      }
+    },
+    "v1CreateDatasetVersionResponse": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "$ref": "#/definitions/v1DatasetVersion"
+        }
+      }
+    },
+    "v1CreateEvalRunRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "datasetId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "evalTargetType": {
+          "type": "string"
+        },
+        "evalTargetId": {
+          "type": "string"
+        },
+        "evalConfig": {
+          "type": "object"
+        },
+        "scorerConfigIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "datasetVersionId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateEvalRunResponse": {
+      "type": "object",
+      "properties": {
+        "evalRun": {
+          "$ref": "#/definitions/v1EvalRun"
+        }
+      }
+    },
+    "v1CreateEvalScheduleRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "datasetId": {
+          "type": "string"
+        },
+        "evalTargetType": {
+          "type": "string"
+        },
+        "evalTargetId": {
+          "type": "string"
+        },
+        "evalConfig": {
+          "type": "object"
+        },
+        "scorerConfigIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cronExpression": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "datasetVersionId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateEvalScheduleResponse": {
+      "type": "object",
+      "properties": {
+        "schedule": {
+          "$ref": "#/definitions/v1EvalSchedule"
+        }
+      }
+    },
+    "v1CreatePlaygroundRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string",
+          "title": "ignored server-side; tenant from auth context"
+        },
+        "name": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        }
+      }
+    },
+    "v1CreatePlaygroundResponse": {
+      "type": "object",
+      "properties": {
+        "playground": {
+          "$ref": "#/definitions/v1Playground"
+        }
+      }
+    },
+    "v1CreateSamplingEvalRuleRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "filterPredicate": {
+          "type": "object"
+        },
+        "sampleRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "scorerConfigIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lookbackSeconds": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "intervalSeconds": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1CreateSamplingEvalRuleResponse": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "$ref": "#/definitions/v1SamplingEvalRule"
+        }
+      }
+    },
+    "v1CreateScoreConfigRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "dataType": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "minValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "maxValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "categories": {
+          "type": "object"
+        },
+        "evalPrompt": {
+          "type": "string"
+        },
+        "evalModel": {
+          "type": "string"
+        },
+        "scorerCode": {
+          "type": "string"
+        },
+        "scorerLanguage": {
+          "type": "string"
+        },
+        "useSandbox": {
+          "type": "boolean"
+        },
+        "slug": {
+          "type": "string",
+          "title": "--- Braintrust-style scorer fields (additive) ---"
+        },
+        "scorerType": {
+          "type": "string"
+        },
+        "outputType": {
+          "type": "string"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ScoreConfigMessage"
+          }
+        },
+        "modelParams": {
+          "$ref": "#/definitions/v1ModelParams"
+        },
+        "choiceScores": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChoiceScore"
+          }
+        },
+        "useCot": {
+          "type": "boolean"
+        },
+        "passThreshold": {
+          "type": "number",
+          "format": "double"
+        },
+        "dagDefinition": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "v1CreateScoreConfigResponse": {
+      "type": "object",
+      "properties": {
+        "scoreConfig": {
+          "$ref": "#/definitions/v1ScoreConfig"
+        }
+      }
+    },
+    "v1Dataset": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "itemCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "archivedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "Dataset represents a collection of test items for evaluation"
+    },
+    "v1DatasetItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "datasetId": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "input": {
+          "type": "object"
+        },
+        "expectedOutput": {
+          "type": "object"
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "sourceTraceId": {
+          "type": "string"
+        },
+        "sourceObservationId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "DatasetItem represents a single test case within a dataset"
+    },
+    "v1DatasetVersion": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "datasetId": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "versionNumber": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "label": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "itemCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdBy": {
+          "type": "string"
+        }
+      },
+      "description": "DatasetVersion is an immutable snapshot of a dataset's active items."
+    },
+    "v1DeleteDatasetItemResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DeleteDatasetResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DeleteEvalRunResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DeleteEvalScheduleResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DeletePlaygroundResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1DeleteSamplingEvalRuleResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DeleteScoreConfigResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "v1EvalRun": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "datasetId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "title": "pending, running, completed, failed, cancelled"
+        },
+        "evalTargetType": {
+          "type": "string"
+        },
+        "evalTargetId": {
+          "type": "string"
+        },
+        "evalConfig": {
+          "type": "object"
+        },
+        "scorerConfigIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "totalItems": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "completedItems": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "failedItems": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "scoreSummary": {
+          "type": "object"
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "isBaseline": {
+          "type": "boolean"
+        },
+        "baselineRunId": {
+          "type": "string"
+        },
+        "regressionResult": {
+          "type": "object"
+        }
+      },
+      "title": "EvalRun represents an evaluation run against a dataset"
+    },
+    "v1EvalRunItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "evalRunId": {
+          "type": "string"
+        },
+        "datasetItemId": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "output": {
+          "type": "object"
+        },
+        "traceId": {
+          "type": "string"
+        },
+        "latencyMs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cost": {
+          "type": "number",
+          "format": "double"
+        },
+        "tokenUsage": {
+          "type": "object"
+        },
+        "error": {
+          "type": "string"
+        },
+        "scores": {
+          "type": "object"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "input": {
+          "type": "object"
+        },
+        "expectedOutput": {
+          "type": "object"
+        }
+      },
+      "title": "EvalRunItem represents a single item result within an eval run"
+    },
+    "v1EvalSchedule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "datasetId": {
+          "type": "string"
+        },
+        "evalTargetType": {
+          "type": "string"
+        },
+        "evalTargetId": {
+          "type": "string"
+        },
+        "evalConfig": {
+          "type": "object"
+        },
+        "scorerConfigIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cronExpression": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "lastRunAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "nextRunAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1GenerateDatasetItemsResponse": {
+      "type": "object",
+      "properties": {
+        "itemsCreated": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DatasetItem"
+          }
+        }
+      }
+    },
+    "v1GenerateRedTeamDatasetResponse": {
+      "type": "object",
+      "properties": {
+        "itemsCreated": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "categoriesUsed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1GenerateScorerExample": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string",
+          "description": "Free-text label expressing the desired score for this example\n(e.g. \"1.0\", \"polite\", \"false\")."
+        }
+      }
+    },
+    "v1GenerateScorerRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "intent": {
+          "type": "string",
+          "description": "Free-text description of what to evaluate."
+        },
+        "dataType": {
+          "type": "string",
+          "description": "Desired output type: numeric, categorical, boolean. Defaults to numeric."
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1GenerateScorerExample"
+          },
+          "description": "Optional examples to ground the prompt."
+        }
+      },
+      "description": "GenerateScorerRequest asks Claude (via the gateway) to draft an\nLLM-judge prompt for the user-described evaluation intent.\n\nExample payload:\n  {\n    \"intent\": \"score how politely the assistant responded\",\n    \"data_type\": \"numeric\",\n    \"examples\": [\n      {\"input\": \"...\", \"output\": \"...\", \"label\": \"1.0\"},\n      {\"input\": \"...\", \"output\": \"...\", \"label\": \"0.0\"},\n      ...\n    ]\n  }"
+    },
+    "v1GenerateScorerResponse": {
+      "type": "object",
+      "properties": {
+        "suggestedName": {
+          "type": "string",
+          "description": "Suggested name for the score config (slug-style, e.g. \"politeness\")."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "The draft LLM-judge prompt template, ready to drop into\nScoreConfig.eval_prompt."
+        },
+        "dataType": {
+          "type": "string",
+          "description": "Echoed back so the caller can wire to ScoreConfig.data_type."
+        },
+        "suggestedCategories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "For CATEGORICAL outputs: suggested category values."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Anything Claude wanted to flag (ambiguity in examples, etc.)."
+        }
+      }
+    },
+    "v1GetDatasetItemResponse": {
+      "type": "object",
+      "properties": {
+        "item": {
+          "$ref": "#/definitions/v1DatasetItem"
+        }
+      }
+    },
+    "v1GetDatasetResponse": {
+      "type": "object",
+      "properties": {
+        "dataset": {
+          "$ref": "#/definitions/v1Dataset"
+        }
+      }
+    },
+    "v1GetDatasetVersionResponse": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "$ref": "#/definitions/v1DatasetVersion"
+        }
+      }
+    },
+    "v1GetEvalRunItemsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1EvalRunItem"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1GetEvalRunResponse": {
+      "type": "object",
+      "properties": {
+        "evalRun": {
+          "$ref": "#/definitions/v1EvalRun"
+        }
+      }
+    },
+    "v1GetEvalRunSummaryResponse": {
+      "type": "object",
+      "properties": {
+        "evalRun": {
+          "$ref": "#/definitions/v1EvalRun"
+        },
+        "scoreBreakdown": {
+          "type": "object"
+        }
+      }
+    },
+    "v1GetEvalScheduleResponse": {
+      "type": "object",
+      "properties": {
+        "schedule": {
+          "$ref": "#/definitions/v1EvalSchedule"
+        }
+      }
+    },
+    "v1GetPlaygroundResponse": {
+      "type": "object",
+      "properties": {
+        "playground": {
+          "$ref": "#/definitions/v1Playground"
+        }
+      }
+    },
+    "v1GetSamplingEvalRuleResponse": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "$ref": "#/definitions/v1SamplingEvalRule"
+        }
+      }
+    },
+    "v1GetScoreConfigResponse": {
+      "type": "object",
+      "properties": {
+        "scoreConfig": {
+          "$ref": "#/definitions/v1ScoreConfig"
+        }
+      }
+    },
+    "v1ListBuiltinMetricsResponse": {
+      "type": "object",
+      "properties": {
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1BuiltinMetric"
+          }
+        }
+      }
+    },
+    "v1ListComparisonRowsResponse": {
+      "type": "object",
+      "properties": {
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ComparisonRow"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListDatasetItemsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DatasetItem"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListDatasetVersionsResponse": {
+      "type": "object",
+      "properties": {
+        "versions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DatasetVersion"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListDatasetsResponse": {
+      "type": "object",
+      "properties": {
+        "datasets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Dataset"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListEvalRunsResponse": {
+      "type": "object",
+      "properties": {
+        "evalRuns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1EvalRun"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListEvalSchedulesResponse": {
+      "type": "object",
+      "properties": {
+        "schedules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1EvalSchedule"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListPlaygroundsResponse": {
+      "type": "object",
+      "properties": {
+        "playgrounds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Playground"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListSamplingEvalRulesRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "enabledOnly": {
+          "type": "boolean"
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "offset": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListSamplingEvalRulesResponse": {
+      "type": "object",
+      "properties": {
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SamplingEvalRule"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListScoreConfigsResponse": {
+      "type": "object",
+      "properties": {
+        "scoreConfigs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ScoreConfig"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ModelParams": {
+      "type": "object",
+      "properties": {
+        "temperature": {
+          "type": "number",
+          "format": "double"
+        },
+        "topP": {
+          "type": "number",
+          "format": "double"
+        },
+        "maxTokens": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "stop": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "toolChoice": {
+          "type": "string",
+          "title": "\"auto\" | \"required\" | \"none\""
+        }
+      },
+      "description": "ModelParams mirrors the gateway chat-completions sampling shape so the Go\nreader maps 1:1. Only fields the /v1/chat/completions path actually honors\nare included (no penalties / verbosity / reasoning_effort — see design doc)."
+    },
+    "v1Playground": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "Playground persists a full playground workspace (tasks, dataset, scorers,\ngrid, view flags) as an opaque JSON config blob so the schema can evolve\nwithout migrations."
+    },
+    "v1RetryEvalRunResponse": {
+      "type": "object",
+      "properties": {
+        "evalRun": {
+          "$ref": "#/definitions/v1EvalRun"
+        }
+      }
+    },
+    "v1RunSamplingEvalRuleNowResponse": {
+      "type": "object",
+      "properties": {
+        "tracesMatched": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "tracesSampled": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "scoresRecorded": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SamplingEvalRule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "filterPredicate": {
+          "type": "object",
+          "description": "Filter doc using a subset of ListRichTracesRequest fields:\n{environment, tags[], user_id, session_id, thread_id, model,\nprovider, metadata[]}. Empty doc = match all."
+        },
+        "sampleRate": {
+          "type": "number",
+          "format": "double",
+          "description": "Sampling fraction, 0..1. Same trace is consistently in/out across\nre-runs via stable hash."
+        },
+        "scorerConfigIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Score configs to apply to each sampled trace."
+        },
+        "lookbackSeconds": {
+          "type": "integer",
+          "format": "int32",
+          "description": "How far back the runner looks per tick."
+        },
+        "intervalSeconds": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Polling interval. 0 = manual-only (use RunSamplingEvalRuleNow)."
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "lastRunAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastRunTraceCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "lastRunError": {
+          "type": "string"
+        },
+        "lastProcessedTraceAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "SamplingEvalRule continuously samples production traces matching a\nfilter and runs scorers against them. Output lands in otel_trace_scores\nvia the existing score recorder. The polling runner lives in\ninternal/services/eval_runner/sampling.go."
+    },
+    "v1ScoreConfig": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "dataType": {
+          "type": "string",
+          "title": "legacy, display-only; see scorer_type/output_type"
+        },
+        "description": {
+          "type": "string"
+        },
+        "minValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "maxValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "categories": {
+          "type": "object"
+        },
+        "evalPrompt": {
+          "type": "string"
+        },
+        "evalModel": {
+          "type": "string"
+        },
+        "isArchived": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "scorerCode": {
+          "type": "string"
+        },
+        "scorerLanguage": {
+          "type": "string",
+          "title": "\"python\", \"javascript\", \"typescript\""
+        },
+        "useSandbox": {
+          "type": "boolean"
+        },
+        "slug": {
+          "type": "string",
+          "description": "url/api handle, slugified from name",
+          "title": "--- Braintrust-style scorer fields (additive) ---"
+        },
+        "scorerType": {
+          "type": "string",
+          "title": "manual|llm_judge|typescript|javascript|python|builtin"
+        },
+        "outputType": {
+          "type": "string",
+          "title": "numeric|boolean|categorical|choice"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ScoreConfigMessage"
+          },
+          "title": "multi-part chat template for llm_judge"
+        },
+        "modelParams": {
+          "$ref": "#/definitions/v1ModelParams",
+          "title": "sampling knobs for llm_judge"
+        },
+        "choiceScores": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChoiceScore"
+          },
+          "title": "choice -\u003e 0..1 (output_type == choice)"
+        },
+        "useCot": {
+          "type": "boolean",
+          "title": "chain-of-thought before the choice"
+        },
+        "passThreshold": {
+          "type": "number",
+          "format": "double",
+          "title": "0..1 pass/fail cutoff"
+        },
+        "dagDefinition": {
+          "type": "string",
+          "format": "byte",
+          "title": "JSON DAG scorer definition"
+        }
+      },
+      "title": "ScoreConfig defines how to score/grade evaluation outputs"
+    },
+    "v1ScoreConfigMessage": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string",
+          "title": "\"system\" | \"user\" | \"assistant\""
+        },
+        "content": {
+          "type": "string",
+          "title": "Raw text, may contain Mustache vars:\n{{input}} {{output}} {{expected_output}} {{context}} {{metadata}}"
+        }
+      },
+      "description": "ScoreConfigMessage is a single chat-template message for an LLM-judge scorer.\nLocal copy of prompts/v1.PromptMessage to avoid cross-package wire coupling."
+    },
+    "v1ScoreOutputRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string",
+          "description": "Ignored server-side; tenant is resolved from the authenticated context."
+        },
+        "input": {
+          "description": "The generation input (dataset row / prompt variables). Arbitrary JSON."
+        },
+        "output": {
+          "description": "The generated output to score. Arbitrary JSON (string or structured)."
+        },
+        "expectedOutput": {
+          "description": "Optional expected/reference output for scorers that compare against it."
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Optional row metadata passed through to code scorers."
+        },
+        "scorerConfigIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Score configs to run (must belong to the caller's tenant)."
+        }
+      },
+      "description": "ScoreOutputRequest scores a single (input, output, expected) triple against\nthe named scorer configs. Used by the playground to score a grid cell live."
+    },
+    "v1ScoreOutputResponse": {
+      "type": "object",
+      "properties": {
+        "scores": {
+          "type": "object",
+          "description": "scores maps score name -\u003e value, plus \"\u003cname\u003e_reason\" and \"\u003cname\u003e_error\"\nkeys, matching the shape written into eval_run_items.scores."
+        }
+      }
+    },
+    "v1ScorerCellDelta": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "baseline": {
+          "type": "number",
+          "format": "double"
+        },
+        "candidate": {
+          "type": "number",
+          "format": "double"
+        },
+        "delta": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "v1SetBaselineResponse": {
+      "type": "object",
+      "properties": {
+        "evalRun": {
+          "$ref": "#/definitions/v1EvalRun"
+        }
+      }
+    },
+    "v1UpdateDatasetItemResponse": {
+      "type": "object",
+      "properties": {
+        "item": {
+          "$ref": "#/definitions/v1DatasetItem"
+        }
+      }
+    },
+    "v1UpdateDatasetResponse": {
+      "type": "object",
+      "properties": {
+        "dataset": {
+          "$ref": "#/definitions/v1Dataset"
+        }
+      }
+    },
+    "v1UpdateEvalScheduleResponse": {
+      "type": "object",
+      "properties": {
+        "schedule": {
+          "$ref": "#/definitions/v1EvalSchedule"
+        }
+      }
+    },
+    "v1UpdatePlaygroundResponse": {
+      "type": "object",
+      "properties": {
+        "playground": {
+          "$ref": "#/definitions/v1Playground"
+        }
+      }
+    },
+    "v1UpdateSamplingEvalRuleResponse": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "$ref": "#/definitions/v1SamplingEvalRule"
+        }
+      }
+    },
+    "v1UpdateScoreConfigResponse": {
+      "type": "object",
+      "properties": {
+        "scoreConfig": {
+          "$ref": "#/definitions/v1ScoreConfig"
+        }
+      }
+    }
+  }
+}

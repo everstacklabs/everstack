@@ -1,0 +1,143 @@
+syntax = "proto3";
+
+package everstack.storage.v1;
+
+import "google/api/annotations.proto";
+import "everstack/storage/v1/storage.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/storage/v1;storage";
+
+service ObjectStorageService {
+  rpc ConfigureStorage(ConfigureStorageRequest) returns (ConfigureStorageResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Configure a storage backend"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/storage/configs"
+      body: "*"
+    };
+  }
+
+  rpc GetStorageConfig(GetStorageConfigRequest) returns (GetStorageConfigResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get storage config by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/storage/configs/{config_id}"};
+  }
+
+  rpc ListStorageConfigs(ListStorageConfigsRequest) returns (ListStorageConfigsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List storage configs for tenant"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/storage/configs"};
+  }
+
+  rpc UpdateStorageConfig(UpdateStorageConfigRequest) returns (UpdateStorageConfigResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update storage config"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/storage/configs/{config_id}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteStorageConfig(DeleteStorageConfigRequest) returns (DeleteStorageConfigResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete storage config"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/storage/configs/{config_id}"};
+  }
+
+  rpc GetPresignedUploadURL(GetPresignedUploadURLRequest) returns (GetPresignedUploadURLResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get a presigned URL for direct upload to storage"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/storage/upload-url"
+      body: "*"
+    };
+  }
+
+  rpc CompleteUpload(CompleteUploadRequest) returns (CompleteUploadResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Confirm upload completion and register object"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/storage/complete-upload"
+      body: "*"
+    };
+  }
+
+  rpc GetUploadStatus(GetUploadStatusRequest) returns (GetUploadStatusResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get durable upload verification and retry status"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/storage/uploads/{object_id}"};
+  }
+
+  rpc GetPresignedDownloadURL(GetPresignedDownloadURLRequest) returns (GetPresignedDownloadURLResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get a presigned URL to download an object"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/storage/objects/{object_id}/download-url"};
+  }
+
+  rpc DeleteObject(DeleteObjectRequest) returns (DeleteObjectResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete an object from storage"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/storage/objects/{object_id}"};
+  }
+
+  rpc ListObjects(ListObjectsRequest) returns (ListObjectsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List objects filtered by purpose and reference"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/storage/objects"};
+  }
+
+  rpc GetStorageUsage(GetStorageUsageRequest) returns (GetStorageUsageResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get storage usage and quota for tenant"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/storage/usage"};
+  }
+}

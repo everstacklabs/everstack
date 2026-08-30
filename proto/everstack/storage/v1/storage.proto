@@ -1,0 +1,271 @@
+syntax = "proto3";
+
+package everstack.storage.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/storage/v1;storage";
+
+// StorageProvider defines the object storage backend type
+enum StorageProvider {
+  STORAGE_PROVIDER_UNSPECIFIED = 0;
+  STORAGE_PROVIDER_S3 = 1;
+  STORAGE_PROVIDER_R2 = 2;
+  STORAGE_PROVIDER_MINIO = 3;
+  STORAGE_PROVIDER_GCS = 4;
+  // Everstack is a logical, system-managed connection. Physical storage-cell
+  // placement and credentials are intentionally absent from this API.
+  STORAGE_PROVIDER_EVERSTACK = 5;
+}
+
+// ObjectPurpose defines how the object is used
+enum ObjectPurpose {
+  OBJECT_PURPOSE_UNSPECIFIED = 0;
+  OBJECT_PURPOSE_DATASET = 1;
+  OBJECT_PURPOSE_ARTIFACT = 2;
+  OBJECT_PURPOSE_UPLOAD = 3;
+  OBJECT_PURPOSE_EVAL_RESULT = 4;
+  OBJECT_PURPOSE_VOICE_AUDIO = 5;
+}
+
+// UploadState is the durable lifecycle of one logical upload.
+enum UploadState {
+  UPLOAD_STATE_UNSPECIFIED = 0;
+  UPLOAD_STATE_PENDING = 1;
+  UPLOAD_STATE_TRANSFERRED = 2;
+  UPLOAD_STATE_VERIFYING = 3;
+  UPLOAD_STATE_READY = 4;
+  UPLOAD_STATE_FAILED = 5;
+  UPLOAD_STATE_QUARANTINED = 6;
+  UPLOAD_STATE_DELETING = 7;
+  UPLOAD_STATE_DELETED = 8;
+}
+
+message UploadTransition {
+  int64 sequence = 1;
+  UploadState from_state = 2;
+  UploadState to_state = 3;
+  string reason_code = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+// StorageUpload exposes verification and retry state without making pending
+// bytes visible as a ready StorageObject.
+message StorageUpload {
+  string object_id = 1;
+  string tenant_id = 2;
+  string config_id = 3;
+  string key = 4;
+  string filename = 5;
+  string content_type = 6;
+  int64 expected_size_bytes = 7;
+  string expected_checksum_sha256 = 8;
+  int64 actual_size_bytes = 9;
+  string actual_checksum_sha256 = 10;
+  ObjectPurpose purpose = 11;
+  string reference_id = 12;
+  string reference_type = 13;
+  UploadState state = 14;
+  string reservation_state = 15;
+  string idempotency_key = 16;
+  string last_error_code = 17;
+  int64 attempt_count = 18;
+  google.protobuf.Timestamp last_error_at = 19;
+  google.protobuf.Timestamp next_attempt_at = 20;
+  google.protobuf.Timestamp expires_at = 21;
+  google.protobuf.Timestamp created_at = 22;
+  google.protobuf.Timestamp updated_at = 23;
+  repeated UploadTransition transitions = 24;
+}
+
+// StorageConfig represents a configured storage backend. Provider credentials
+// are write-only and are never returned in this message.
+message StorageConfig {
+  string id = 1;
+  string tenant_id = 2;
+  StorageProvider provider = 3;
+  string endpoint = 4;
+  string region = 5;
+  string bucket = 6;
+  string path_prefix = 7;
+  bool is_default = 8;
+  bool enabled = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  bool system_managed = 12;
+}
+
+// StorageObject represents metadata about a stored object
+message StorageObject {
+  string id = 1;
+  string tenant_id = 2;
+  string config_id = 3;
+  string key = 4;
+  string filename = 5;
+  string content_type = 6;
+  int64 size_bytes = 7;
+  string checksum_sha256 = 8;
+  ObjectPurpose purpose = 9;
+  string reference_id = 10;
+  string reference_type = 11;
+  google.protobuf.Struct metadata = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp deleted_at = 14;
+}
+
+// StorageUsage represents current storage usage for a tenant
+message StorageUsage {
+  string tenant_id = 1;
+  int64 total_bytes = 2;
+  int64 object_count = 3;
+  int64 quota_bytes = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  int64 reserved_bytes = 6;
+  int64 reserved_object_count = 7;
+}
+
+// --- Requests / Responses ---
+
+message ConfigureStorageRequest {
+  string tenant_id = 1;
+  StorageProvider provider = 2;
+  string endpoint = 3;
+  string region = 4;
+  string bucket = 5;
+  string access_key_id = 6;
+  string secret_access_key = 7;
+  string path_prefix = 8;
+  bool is_default = 9;
+}
+
+message ConfigureStorageResponse {
+  StorageConfig config = 1;
+}
+
+message GetStorageConfigRequest {
+  string tenant_id = 1;
+  string config_id = 2;
+}
+
+message GetStorageConfigResponse {
+  StorageConfig config = 1;
+}
+
+message ListStorageConfigsRequest {
+  string tenant_id = 1;
+}
+
+message ListStorageConfigsResponse {
+  repeated StorageConfig configs = 1;
+}
+
+message GetPresignedUploadURLRequest {
+  string tenant_id = 1;
+  string filename = 2;
+  string content_type = 3;
+  int64 size_bytes = 4;
+  ObjectPurpose purpose = 5;
+  string reference_id = 6;
+  string reference_type = 7;
+  string config_id = 8; // optional, uses default if empty
+  string idempotency_key = 9; // optional for legacy clients; required for replay safety
+  string expected_checksum_sha256 = 10; // optional lowercase SHA-256
+}
+
+message GetPresignedUploadURLResponse {
+  string upload_url = 1;
+  string object_id = 2;
+  string key = 3;
+  map<string, string> headers = 4;
+  int64 expires_in_seconds = 5;
+  UploadState state = 6;
+  string idempotency_key = 7;
+}
+
+message CompleteUploadRequest {
+  string tenant_id = 1;
+  string object_id = 2;
+  string checksum_sha256 = 3;
+  int64 size_bytes = 4;
+  google.protobuf.Struct metadata = 5;
+}
+
+message CompleteUploadResponse {
+  StorageObject object = 1;
+  UploadState state = 2;
+}
+
+message GetUploadStatusRequest {
+  string tenant_id = 1;
+  string object_id = 2;
+}
+
+message GetUploadStatusResponse {
+  StorageUpload upload = 1;
+}
+
+message GetPresignedDownloadURLRequest {
+  string tenant_id = 1;
+  string object_id = 2;
+}
+
+message GetPresignedDownloadURLResponse {
+  string download_url = 1;
+  int64 expires_in_seconds = 2;
+}
+
+message DeleteObjectRequest {
+  string tenant_id = 1;
+  string object_id = 2;
+}
+
+message DeleteObjectResponse {
+  UploadState state = 1;
+}
+
+message ListObjectsRequest {
+  string tenant_id = 1;
+  ObjectPurpose purpose = 2;
+  string reference_id = 3;
+  string reference_type = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message ListObjectsResponse {
+  repeated StorageObject objects = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message GetStorageUsageRequest {
+  string tenant_id = 1;
+}
+
+message GetStorageUsageResponse {
+  StorageUsage usage = 1;
+}
+
+message UpdateStorageConfigRequest {
+  string tenant_id = 1;
+  string config_id = 2;
+  optional string endpoint = 3;
+  optional string region = 4;
+  optional string bucket = 5;
+  optional string access_key_id = 6;
+  optional string secret_access_key = 7;
+  optional string path_prefix = 8;
+  optional bool enabled = 9;
+}
+
+message UpdateStorageConfigResponse {
+  StorageConfig config = 1;
+}
+
+message DeleteStorageConfigRequest {
+  string tenant_id = 1;
+  string config_id = 2;
+}
+
+message DeleteStorageConfigResponse {}

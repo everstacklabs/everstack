@@ -1,0 +1,17 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build", "generate:models"],
+      "outputs": ["dist/**"]
+    },
+    "generate:models": {
+      "inputs": [
+        "../../../model-catalog/providers/**",
+        "../../../model-catalog/manifest.yaml",
+        "scripts/generate-models.ts"
+      ],
+      "outputs": ["src/generated/models.ts"]
+    }
+  }
+}

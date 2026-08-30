@@ -1,0 +1,42 @@
+name: "fireworks"
+display_name: "Fireworks AI"
+base_url: "https://api.fireworks.ai/inference/v1"
+api_version: "2024-01-01"
+
+provider_type: "meta"
+supports_model_discovery: false
+
+auth:
+  type: "api_key"
+  header_name: "Authorization"
+  header_format: "Bearer {api_key}"
+  env_var: "FIREWORKS_API_KEY"
+
+rate_limits:
+  requests_per_minute: 1500
+  tokens_per_minute: 300000
+  concurrent_requests: 40
+
+capabilities:
+  chat: true
+  completions: true
+  embeddings: true
+  function_calling: true
+  vision: true
+  streaming: true
+  fine_tuning: true
+  assistants: false
+
+model_families:
+  llama:
+    description: "Llama family via Fireworks"
+    capabilities: ["chat", "function_calling"]
+  deepseek:
+    description: "DeepSeek family via Fireworks"
+    capabilities: ["chat", "function_calling"]
+  qwen:
+    description: "Qwen family via Fireworks"
+    capabilities: ["chat", "function_calling"]
+  embedding:
+    description: "Embedding models via Fireworks"
+    capabilities: ["embeddings"]

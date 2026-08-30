@@ -1,0 +1,83 @@
+---
+title: Introduction
+description: Install, configure, and run Everstack -- the unified AI infrastructure platform.
+icon: Rocket
+---
+
+Welcome to Everstack. This section walks you through installation, configuration, and the core concepts you need to ship AI-powered applications on Everstack.
+
+## Cloud URLs
+
+Everstack Cloud uses two URL patterns:
+
+- **Dashboard** (`https://app.everstack.ai`) -- the cloud admin app where you manage providers, agents, evaluations, and deployments.
+- **Your instance gateway** (`https://{instance}.{region}.everstack.ai`) -- the API endpoint for your dedicated managed instance. For example, `https://acme.us-east.everstack.ai`. This is what your application code sends requests to.
+
+Throughout the docs, code examples use the `https://{instance}.{region}.everstack.ai` placeholder. Replace it with your own instance URL, which you can find in the dashboard under **Settings -> Instance**.
+
+For self-hosted deployments, see [Installation](/getting-started/installation) and replace the URL with your own host (e.g., `http://localhost:8089`).
+
+## Start here
+
+<Cards>
+  <Card title="Installation" href="/getting-started/installation">
+    Get Everstack running locally or on your own infrastructure.
+  </Card>
+  <Card title="Quick Start" href="/getting-started/quickstart">
+    Send your first request through the gateway in minutes.
+  </Card>
+  <Card title="Configuration" href="/getting-started/configuration">
+    Configure providers, auth, and platform features.
+  </Card>
+  <Card title="Architecture" href="/getting-started/architecture">
+    Understand how Everstack's services fit together.
+  </Card>
+</Cards>
+
+## Features
+
+<Cards>
+  <Card title="AI Gateway" href="/getting-started/gateway/overview">
+    Unified proxy for 200+ LLMs with routing, caching, and fallbacks.
+  </Card>
+  <Card title="Agents" href="/getting-started/agents/overview">
+    Build autonomous agents with tool use and human-in-the-loop.
+  </Card>
+  <Card title="Workflow Studio" href="/getting-started/studio/overview">
+    Visual builder for multi-step AI pipelines.
+  </Card>
+  <Card title="Vector Memory" href="/getting-started/memory/overview">
+    Managed vector collections for RAG and agent memory.
+  </Card>
+  <Card title="Sandboxes" href="/getting-started/sandboxes/overview">
+    Isolated runtimes for safe code execution.
+  </Card>
+  <Card title="Voice" href="/getting-started/voice/overview">
+    Text-to-speech, speech-to-text, and voice cloning for AI applications.
+  </Card>
+</Cards>
+
+## Data and safety
+
+<Cards>
+  <Card title="Storage" href="/getting-started/storage/overview">
+    S3-compatible object storage for artifacts, files, and agent-generated content.
+  </Card>
+  <Card title="Guardrails" href="/getting-started/guardrails/overview">
+    PII detection, prompt injection prevention, and content safety at runtime.
+  </Card>
+  <Card title="Evaluations" href="/getting-started/evaluations/overview">
+    LLM-as-judge scoring, built-in metrics, and regression detection for CI/CD.
+  </Card>
+</Cards>
+
+## Connect and observe
+
+<Cards>
+  <Card title="Integrations" href="/getting-started/integrations/overview">
+    GitHub, Slack, Discord, and Telegram connectors for agents and workflows.
+  </Card>
+  <Card title="Observability" href="/getting-started/observability/overview">
+    Tracing, logging, and metrics powered by OpenTelemetry.
+  </Card>
+</Cards>

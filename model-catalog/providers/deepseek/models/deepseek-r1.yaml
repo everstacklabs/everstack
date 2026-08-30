@@ -1,0 +1,20 @@
+name: deepseek-r1
+display_name: DeepSeek R1
+family: deepseek-reasoning
+status: deprecated
+
+cost:
+  input_per_1k: 0.002
+  output_per_1k: 0.008
+
+limits:
+  max_tokens: 64000
+  max_completion_tokens: 8192
+
+capabilities:
+  - chat
+  - function_calling
+
+modalities:
+  input: [text]
+  output: [text]

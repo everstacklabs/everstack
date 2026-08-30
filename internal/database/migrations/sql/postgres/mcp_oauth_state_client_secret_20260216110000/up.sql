@@ -1,0 +1,2 @@
+ALTER TABLE mcp_oauth_states
+ADD COLUMN IF NOT EXISTS client_secret TEXT NOT NULL DEFAULT '';

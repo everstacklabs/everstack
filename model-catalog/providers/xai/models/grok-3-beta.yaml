@@ -1,0 +1,21 @@
+name: "grok-3-beta"
+display_name: "Grok 3 Beta"
+family: "grok"
+status: "deprecated"
+
+cost:
+  input_per_1k: 0.003
+  output_per_1k: 0.015
+
+limits:
+  max_tokens: 131072
+  max_completion_tokens: 32768
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+
+modalities:
+  input: ["text", "image"]
+  output: ["text"]

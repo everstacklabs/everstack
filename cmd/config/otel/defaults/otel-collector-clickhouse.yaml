@@ -1,0 +1,96 @@
+# =============================================================================
+# Everstack OTEL Collector Configuration with ClickHouse Export
+# =============================================================================
+# This configuration exports telemetry data to ClickHouse for storage and analysis.
+#
+# Prerequisites:
+#   - ClickHouse server running and accessible
+#   - Tables created (see: build/clickhouse-init.sql)
+#
+# Environment Variables (optional):
+#   CLICKHOUSE_HOST=localhost
+#   CLICKHOUSE_PORT=9000
+#   CLICKHOUSE_DATABASE=everstack
+#   CLICKHOUSE_USERNAME=clickhouse
+#   CLICKHOUSE_PASSWORD=clickhouse
+#
+# Quick Start:
+#   docker run -d \
+#     --name everstack-otel-collector \
+#     --network host \
+#     -e CLICKHOUSE_HOST=localhost \
+#     -e CLICKHOUSE_DATABASE=everstack \
+#     -e CLICKHOUSE_USERNAME=clickhouse \
+#     -e CLICKHOUSE_PASSWORD=clickhouse \
+#     otel/opentelemetry-collector-contrib:latest \
+#     --config=<(curl -s https://raw.githubusercontent.com/everstack/everstack/main/cmd/config/otel/defaults/otel-collector-clickhouse.yaml)
+# =============================================================================
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 100
+    send_batch_max_size: 1000
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+exporters:
+  # ClickHouse exporter
+  clickhouse:
+    endpoint: tcp://${env:CLICKHOUSE_HOST}:${env:CLICKHOUSE_PORT}?dial_timeout=10s&compress=lz4
+    database: ${env:CLICKHOUSE_DATABASE}
+    username: ${env:CLICKHOUSE_USERNAME}
+    password: ${env:CLICKHOUSE_PASSWORD}
+    logs_table_name: otel_logs
+    traces_table_name: otel_traces
+    timeout: 10s
+    # Must stay >= the retention in the otel_retention_ttl_20260728191232
+    # migration. The exporter creates otel_traces/otel_logs with CREATE TABLE IF
+    # NOT EXISTS and wins that race against the migration, so this value decides
+    # retention for a brand-new environment until the migration ALTERs it. It
+    # sat at 72h and silently capped every deployment at 3 days.
+    ttl: 720h
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+    sending_queue:
+      enabled: true
+      num_consumers: 4
+      queue_size: 1000
+
+  # Also log to console for debugging
+  debug:
+    verbosity: normal
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+service:
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed
+
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [clickhouse, debug]
+
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [clickhouse, debug]

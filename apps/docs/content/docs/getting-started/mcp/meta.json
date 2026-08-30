@@ -1,0 +1,9 @@
+{
+  "title": "MCP Gateway",
+  "pages": [
+    "overview",
+    "server-management",
+    "agent-tools",
+    "everstack-mcp-server"
+  ]
+}

@@ -1,0 +1,20 @@
+name: gpt-image-1-mini
+display_name: Gpt Image 1 Mini
+family: other
+status: "stable"
+release_date: "2025-09-26"
+cost:
+  input_per_1k: 0
+  output_per_1k: 0
+
+limits:
+  max_tokens: 0
+  max_completion_tokens: 0
+
+capabilities:
+  - chat
+  - vision
+
+modalities:
+  input: ["text","image"]
+  output: ["text","image"]

@@ -1,0 +1,55 @@
+---
+title: Introduction
+description: The unified AI infrastructure platform for building, deploying, and managing AI-powered applications.
+icon: Layers
+---
+
+Welcome to the Everstack documentation. Everstack is an open-source, unified AI infrastructure platform that brings together everything you need to build production-grade AI applications -- from LLM gateways and agent orchestration to workflow studios, vector memory, and sandboxed execution environments.
+
+## What is Everstack?
+
+Everstack provides a complete platform for AI application development:
+
+- **AI Gateway** -- A unified proxy for 200+ LLM models across providers (OpenAI, Anthropic, Google, etc.) with built-in load balancing, caching, rate limiting, and fallback routing.
+- **Agent Runtime** -- Build, deploy, and manage autonomous AI agents with tool use, human-in-the-loop approval, and persistent memory.
+- **Workflow Studio** -- A visual workflow builder for designing multi-step AI pipelines with conditional logic, branching, and provider chaining.
+- **Vector Memory** -- Managed vector collections for RAG, semantic search, and long-term agent memory backed by pgvector.
+- **Sandbox Environments** -- Isolated runtimes for agents, jobs, preview apps, webhook workers, and safe code execution with shell access, filesystems, networking controls, and port exposure.
+- **Observability** -- Full-stack tracing, logging, and metrics powered by OpenTelemetry and ClickHouse.
+- **Vault** -- Centralized API key management with rotation, spend limits, and per-key access controls.
+
+## Quick Start
+
+<Cards>
+  <Card title="Installation" href="/getting-started/installation" />
+  <Card title="Quick Start Guide" href="/getting-started/quickstart" />
+  <Card title="Configuration" href="/getting-started/configuration" />
+  <Card title="Architecture Overview" href="/getting-started/architecture" />
+</Cards>
+
+## Choose Your Path
+
+Whether you're setting up your first AI gateway or orchestrating complex multi-agent workflows, Everstack scales with your needs.
+
+| Use Case                                      | Start Here                                                  |
+| --------------------------------------------- | ----------------------------------------------------------- |
+| Route LLM requests with fallbacks and caching | [AI Gateway](/getting-started/gateway/overview)          |
+| Build autonomous AI agents                    | [Agents](/getting-started/agents/overview)               |
+| Design visual AI workflows                    | [Workflow Studio](/getting-started/studio/overview)      |
+| Add semantic search / RAG                     | [Vector Memory](/getting-started/memory/overview)        |
+| Execute code in isolated sandboxes            | [Sandboxes](/getting-started/sandboxes/overview)         |
+| Monitor and debug AI requests                 | [Observability](/getting-started/observability/overview) |
+
+## More Resources
+
+<Cards>
+  <Card title="Deployment" href="/deployment">
+    Deploy to Docker, Kubernetes, or bare metal.
+  </Card>
+  <Card title="API Reference" href="/api-reference">
+    OpenAI-compatible REST API and platform APIs.
+  </Card>
+  <Card title="CLI Reference" href="/cli">
+    Command-line interface for server and database management.
+  </Card>
+</Cards>

@@ -1,0 +1,140 @@
+---
+title: Sessions
+description: Session lifecycle, streaming events, and turn-by-turn execution.
+icon: MessageSquare
+---
+
+A session is a single conversation between a user (or trigger) and an agent. It tracks the full execution from the first message through every tool call, model response, and approval gate until the agent completes its work or hits a limit.
+
+Sessions are the unit of execution in Everstack. Every interaction with an agent happens inside a session, and every session produces a complete, auditable record of what happened.
+
+## Session state machine
+
+Sessions move through a defined set of states:
+
+```
+CREATED -> RUNNING -> COMPLETED
+                   -> FAILED
+                   -> CANCELLED
+```
+
+With intermediate states for interactive flows:
+
+```
+RUNNING -> WAITING_FOR_INPUT -> RUNNING
+RUNNING -> WAITING_FOR_APPROVAL -> RUNNING
+```
+
+And for persistent agents:
+
+```
+HIBERNATED (sandbox sleeping, session preserved)
+```
+
+**CREATED** -- the session has been initialized but the agent has not started processing. This is the state immediately after session creation, before the first turn begins.
+
+**RUNNING** -- the agent is actively processing. It may be waiting for a model response, executing a tool, or preparing its next action. This is the normal active state.
+
+**WAITING_FOR_INPUT** -- the agent has called the `ask_user` tool and is paused, waiting for the user to provide a response. The session resumes to `RUNNING` once the user replies.
+
+**WAITING_FOR_APPROVAL** -- a tool call has matched a HITL approval rule and is waiting for a reviewer. The session resumes to `RUNNING` once the review is resolved (approved or denied). See [Human-in-the-Loop](/getting-started/agents/human-in-the-loop) for details.
+
+**COMPLETED** -- the agent finished its work normally. The final turn contains the agent's concluding output.
+
+**FAILED** -- the session ended due to an error, such as a model API failure, a sandbox crash, or an unrecoverable tool error.
+
+**CANCELLED** -- the session was explicitly cancelled by a user or system action before it completed.
+
+**HIBERNATED** -- for persistent agents, the session is preserved while the sandbox is sleeping. The session resumes when the agent wakes.
+
+## Turns
+
+A session is composed of turns. Each turn represents one exchange: a user input followed by the agent's response (which may include multiple tool calls).
+
+Each turn records:
+
+- **turn_number** -- the sequential position within the session
+- **user_input** -- the message or trigger that started this turn
+- **assistant_output** -- the agent's final text response for the turn
+- **tool_calls** -- an ordered list of every tool call the agent made during the turn, including arguments and results
+- **token_usage** -- prompt tokens, completion tokens, and cache hits for this turn
+- **latency_ms** -- wall-clock time from turn start to turn completion
+
+Turns give you a structured, inspectable record of agent behavior. You can see exactly what the agent was asked, what it did, and how much it cost.
+
+## The execution loop
+
+Within each turn, the agent runs an iteration loop:
+
+1. The user's message (or the previous tool result) is sent to the model
+2. The model returns either a text response or one or more tool calls
+3. If the model returned a text response with no tool calls, the turn is complete
+4. If the model returned tool calls, each call is evaluated against HITL rules
+5. Approved tool calls are executed and their results are appended to the conversation
+6. The loop returns to step 1 with the updated context
+
+This loop continues until the model produces a final text response, or a constraint is reached.
+
+**Iteration limit:** each turn allows up to 200 tool-result cycles. This prevents infinite loops where the agent keeps calling tools without converging on an answer.
+
+**Turn timeout:** each turn has a 30-minute wall-clock timeout. If the agent has not completed the turn within this window, the turn is terminated.
+
+These defaults keep execution bounded and costs predictable.
+
+## Streaming events
+
+Sessions emit a real-time event stream over SSE (Server-Sent Events). Clients can subscribe to this stream to build live UIs that show agent activity as it happens.
+
+### Event types
+
+**Model events**
+
+- `llm.chunk` -- a text delta from the model's streaming response. These arrive token-by-token and can be assembled into the full response progressively.
+
+**Tool events**
+
+- `tool_call.start` -- the agent is about to execute a tool. Includes the tool name and arguments.
+- `tool_call.end` -- a tool call has completed. Includes the result and execution time.
+
+**Approval events**
+
+- `approval.requested` -- a tool call matched a HITL rule and is waiting for review.
+- `approval.heartbeat` -- periodic signal that an approval is still pending.
+- `approval.resolved` -- a reviewer has approved or denied the tool call.
+- `approval.cancelled` -- the approval request was cancelled.
+
+**Sandbox events**
+
+- `sandbox.*` -- lifecycle events for the agent's sandbox, including provisioning, ready, sleeping, and wake events.
+
+These events give clients granular visibility into every phase of agent execution. A streaming UI can show the model thinking in real time, display tool calls as they happen, surface approval requests instantly, and reflect sandbox state changes without polling.
+
+## Token tracking
+
+Every turn tracks token consumption at a granular level:
+
+- **prompt_tokens** -- tokens in the input to the model, including system prompt, conversation history, tool results, and memory context
+- **completion_tokens** -- tokens generated by the model in its response
+- **cache_tokens** -- tokens served from the provider's prompt cache rather than recomputed
+
+Token tracking is essential for understanding costs and optimizing agent configurations. Sessions with high prompt token counts may benefit from context compaction (see [Advanced](/getting-started/agents/advanced)). Sessions with excessive tool calls may need tighter constraints.
+
+## Session management in the admin UI
+
+The admin UI provides a session timeline view that shows:
+
+- the full sequence of turns with user inputs and agent responses
+- every tool call with expandable argument and result inspection
+- approval events with reviewer identity and resolution
+- token usage per turn and cumulative for the session
+- session state transitions and timing
+
+You can browse active, completed, and failed sessions. Filtering by agent, status, and time range helps you find specific sessions for debugging or review.
+
+For persistent agents, the session list shows the relationship between the agent's lifecycle and its sessions -- which sessions ran during which wake periods, and when the agent was sleeping between them.
+
+## Programmatic access
+
+Sessions can be created, listed, and inspected through the API. You can start a session by sending a message to an agent, poll for status, stream events, and retrieve the complete turn history.
+
+See the [API Reference](/api-reference/agents) for full endpoint documentation.

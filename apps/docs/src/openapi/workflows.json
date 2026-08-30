@@ -1,0 +1,1371 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "everstack/workflows/v1/workflows_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "WorkflowsService"
+    }
+  ],
+  "paths": {
+    "/v1/workflows": {
+      "get": {
+        "operationId": "WorkflowsService_ListWorkflows",
+        "responses": {
+          "200": {
+            "description": "List all workflows for tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListWorkflowsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "enabled",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": ["WorkflowsService"]
+      },
+      "post": {
+        "operationId": "WorkflowsService_CreateWorkflow",
+        "responses": {
+          "200": {
+            "description": "Create a new workflow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreateWorkflowResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateWorkflowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["WorkflowsService"]
+      }
+    },
+    "/v1/workflows/executions/{executionId}": {
+      "get": {
+        "summary": "Get a single workflow execution by ID",
+        "operationId": "WorkflowsService_GetWorkflowExecution",
+        "responses": {
+          "200": {
+            "description": "Get workflow execution details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetWorkflowExecutionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "executionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["WorkflowsService"]
+      }
+    },
+    "/v1/workflows/executions/{executionId}/replay": {
+      "post": {
+        "summary": "Replay a past workflow execution with the same inputs",
+        "operationId": "WorkflowsService_ReplayWorkflowExecution",
+        "responses": {
+          "200": {
+            "description": "Replay a workflow execution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {
+                      "$ref": "#/components/schemas/v1ExecuteWorkflowEvent"
+                    },
+                    "error": {
+                      "$ref": "#/components/schemas/rpcStatus"
+                    }
+                  },
+                  "title": "Stream result of v1ExecuteWorkflowEvent"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "executionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowsServiceReplayWorkflowExecutionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["WorkflowsService"]
+      }
+    },
+    "/v1/workflows/{id}": {
+      "get": {
+        "operationId": "WorkflowsService_GetWorkflow",
+        "responses": {
+          "200": {
+            "description": "Get workflow by ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetWorkflowResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["WorkflowsService"]
+      },
+      "delete": {
+        "operationId": "WorkflowsService_DeleteWorkflow",
+        "responses": {
+          "200": {
+            "description": "Delete workflow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteWorkflowResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["WorkflowsService"]
+      },
+      "patch": {
+        "operationId": "WorkflowsService_UpdateWorkflow",
+        "responses": {
+          "200": {
+            "description": "Update workflow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1UpdateWorkflowResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowsServiceUpdateWorkflowBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["WorkflowsService"]
+      }
+    },
+    "/v1/workflows/{id}/draft": {
+      "put": {
+        "summary": "Save workflow draft without creating a version event",
+        "operationId": "WorkflowsService_SaveWorkflowDraft",
+        "responses": {
+          "200": {
+            "description": "Save workflow draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1SaveWorkflowDraftResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowsServiceSaveWorkflowDraftBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["WorkflowsService"]
+      }
+    },
+    "/v1/workflows/{id}/publish": {
+      "post": {
+        "summary": "Publish workflow, creating a version snapshot",
+        "operationId": "WorkflowsService_PublishWorkflow",
+        "responses": {
+          "200": {
+            "description": "Publish workflow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1PublishWorkflowResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowsServicePublishWorkflowBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["WorkflowsService"]
+      }
+    },
+    "/v1/workflows/{id}/unpublish": {
+      "post": {
+        "summary": "Unpublish workflow (move back to draft)",
+        "operationId": "WorkflowsService_UnpublishWorkflow",
+        "responses": {
+          "200": {
+            "description": "Unpublish workflow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1UnpublishWorkflowResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowsServiceUnpublishWorkflowBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["WorkflowsService"]
+      }
+    },
+    "/v1/workflows/{id}/versions": {
+      "get": {
+        "summary": "Get version history for a workflow",
+        "operationId": "WorkflowsService_GetWorkflowVersionHistory",
+        "responses": {
+          "200": {
+            "description": "Get version history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetWorkflowVersionHistoryResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "workflow ID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["WorkflowsService"]
+      }
+    },
+    "/v1/workflows/{id}/versions/{version}": {
+      "get": {
+        "summary": "Get reconstructed workflow state at a specific version",
+        "operationId": "WorkflowsService_GetWorkflowAtVersion",
+        "responses": {
+          "200": {
+            "description": "Get workflow state at a specific version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetWorkflowAtVersionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "workflow ID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "description": "version number to reconstruct",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["WorkflowsService"]
+      }
+    },
+    "/v1/workflows/{workflowId}/execute": {
+      "post": {
+        "summary": "Execute a workflow with streaming events",
+        "operationId": "WorkflowsService_ExecuteWorkflow",
+        "responses": {
+          "200": {
+            "description": "Execute a workflow and stream execution events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {
+                      "$ref": "#/components/schemas/v1ExecuteWorkflowEvent"
+                    },
+                    "error": {
+                      "$ref": "#/components/schemas/rpcStatus"
+                    }
+                  },
+                  "title": "Stream result of v1ExecuteWorkflowEvent"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflowId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowsServiceExecuteWorkflowBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": ["WorkflowsService"]
+      }
+    },
+    "/v1/workflows/{workflowId}/executions": {
+      "get": {
+        "summary": "List execution history for a workflow",
+        "operationId": "WorkflowsService_ListWorkflowExecutions",
+        "responses": {
+          "200": {
+            "description": "List workflow executions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListWorkflowExecutionsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflowId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "statusFilter",
+            "description": "optional: running | completed | failed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": ["WorkflowsService"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "WorkflowsServiceExecuteWorkflowBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ChatMessage"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "title": "Request to execute a workflow"
+      },
+      "WorkflowsServicePublishWorkflowBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          }
+        },
+        "description": "PublishWorkflowRequest publishes the current draft, creating a version snapshot."
+      },
+      "WorkflowsServiceReplayWorkflowExecutionBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          }
+        }
+      },
+      "WorkflowsServiceSaveWorkflowDraftBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1WorkflowNode"
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1WorkflowEdge"
+            }
+          },
+          "viewport": {
+            "$ref": "#/components/schemas/v1WorkflowViewport"
+          }
+        },
+        "description": "SaveWorkflowDraftRequest saves a workflow draft without creating a version event.\nOnly provided fields are updated (partial update)."
+      },
+      "WorkflowsServiceUnpublishWorkflowBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          }
+        },
+        "description": "UnpublishWorkflowRequest moves a published workflow back to draft (enabled=false)."
+      },
+      "WorkflowsServiceUpdateWorkflowBody": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1WorkflowNode"
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1WorkflowEdge"
+            }
+          },
+          "viewport": {
+            "$ref": "#/components/schemas/v1WorkflowViewport"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "protobufAny": {
+        "type": "object",
+        "properties": {
+          "@type": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": {}
+      },
+      "protobufNullValue": {
+        "type": "string",
+        "enum": ["NULL_VALUE"],
+        "default": "NULL_VALUE",
+        "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+      },
+      "rpcStatus": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/protobufAny"
+            }
+          }
+        }
+      },
+      "v1ChatMessage": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "title": "Chat message for workflow execution"
+      },
+      "v1CreateWorkflowRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1WorkflowNode"
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1WorkflowEdge"
+            }
+          },
+          "viewport": {
+            "$ref": "#/components/schemas/v1WorkflowViewport"
+          }
+        },
+        "title": "CreateWorkflowRequest creates a new workflow"
+      },
+      "v1CreateWorkflowResponse": {
+        "type": "object",
+        "properties": {
+          "workflow": {
+            "$ref": "#/components/schemas/v1Workflow"
+          }
+        }
+      },
+      "v1DeleteWorkflowResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1ExecuteWorkflowEvent": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "node.started | node.completed | node.error | chunk | done | error | agent.tool_call.start | agent.tool_call.end | agent.turn.start | agent.turn.end | agent.approval.requested"
+          },
+          "nodeId": {
+            "type": "string"
+          },
+          "nodeType": {
+            "type": "string"
+          },
+          "nodeLabel": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": "string",
+            "format": "int64"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "int64"
+          },
+          "chunkContent": {
+            "type": "string",
+            "title": "LLM streamed token content (for type=chunk)"
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Additional metadata"
+          }
+        },
+        "title": "Streaming event emitted during workflow execution"
+      },
+      "v1GetWorkflowAtVersionResponse": {
+        "type": "object",
+        "properties": {
+          "workflow": {
+            "$ref": "#/components/schemas/v1Workflow"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1WorkflowChangeDetail"
+            },
+            "title": "what changed in this specific version"
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "human-readable summaries for this version"
+          }
+        }
+      },
+      "v1GetWorkflowExecutionResponse": {
+        "type": "object",
+        "properties": {
+          "execution": {
+            "$ref": "#/components/schemas/v1WorkflowExecution"
+          }
+        }
+      },
+      "v1GetWorkflowResponse": {
+        "type": "object",
+        "properties": {
+          "workflow": {
+            "$ref": "#/components/schemas/v1Workflow"
+          }
+        }
+      },
+      "v1GetWorkflowVersionHistoryResponse": {
+        "type": "object",
+        "properties": {
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1WorkflowVersionEntry"
+            }
+          }
+        }
+      },
+      "v1ListWorkflowExecutionsResponse": {
+        "type": "object",
+        "properties": {
+          "executions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1WorkflowExecution"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ListWorkflowsResponse": {
+        "type": "object",
+        "properties": {
+          "workflows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Workflow"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1PublishWorkflowResponse": {
+        "type": "object",
+        "properties": {
+          "workflow": {
+            "$ref": "#/components/schemas/v1Workflow"
+          },
+          "publishedVersion": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1SaveWorkflowDraftResponse": {
+        "type": "object",
+        "properties": {
+          "workflow": {
+            "$ref": "#/components/schemas/v1Workflow"
+          }
+        }
+      },
+      "v1UnpublishWorkflowResponse": {
+        "type": "object",
+        "properties": {
+          "workflow": {
+            "$ref": "#/components/schemas/v1Workflow"
+          }
+        }
+      },
+      "v1UpdateWorkflowResponse": {
+        "type": "object",
+        "properties": {
+          "workflow": {
+            "$ref": "#/components/schemas/v1Workflow"
+          }
+        }
+      },
+      "v1Workflow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1WorkflowNode"
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1WorkflowEdge"
+            }
+          },
+          "viewport": {
+            "$ref": "#/components/schemas/v1WorkflowViewport"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "title": "Workflow represents a complete workflow pipeline"
+      },
+      "v1WorkflowChangeDetail": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "title": "\"nodes\", \"edges\", \"name\", \"description\", \"status\""
+          },
+          "summary": {
+            "type": "string",
+            "title": "\"5 nodes\", \"4 connections\", \"Test 5\", \"Published\""
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "For nodes: [\"Start\", \"Provider (gpt-4o)\", ...]"
+          },
+          "itemIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "IDs of affected nodes/edges for canvas highlighting"
+          }
+        },
+        "title": "WorkflowChangeDetail represents a structured change within a version entry"
+      },
+      "v1WorkflowEdge": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "sourceHandle": {
+            "type": "string"
+          },
+          "targetHandle": {
+            "type": "string"
+          }
+        },
+        "title": "WorkflowEdge represents a connection between two nodes"
+      },
+      "v1WorkflowExecution": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "workflowId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "correlationId": {
+            "type": "string"
+          },
+          "triggerType": {
+            "type": "string",
+            "title": "manual | webhook | schedule | replay"
+          },
+          "status": {
+            "type": "string",
+            "title": "running | completed | failed"
+          },
+          "inputMessages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ChatMessage"
+            }
+          },
+          "outputContent": {
+            "type": "string"
+          },
+          "requestMetadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "resolvedModel": {
+            "type": "string"
+          },
+          "resolvedProvider": {
+            "type": "string"
+          },
+          "promptTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completionTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "errorMessage": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "int64",
+            "title": "Unix milliseconds"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "int64",
+            "title": "Unix milliseconds"
+          },
+          "durationMs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "eventsJson": {
+            "type": "string",
+            "title": "Raw JSON array of events for replay"
+          },
+          "ledgerJson": {
+            "type": "string",
+            "title": "Serialized execution ledger (JSON array of node outputs)"
+          }
+        },
+        "title": "WorkflowExecution represents a single execution of a workflow"
+      },
+      "v1WorkflowNode": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "title": "start, auth, rateLimiter, cache, router, loadBalancer, inputGuardrails, outputGuardrails, provider, function, httpRequest, webhook, ifElse, response, agent"
+          },
+          "label": {
+            "type": "string"
+          },
+          "position": {
+            "$ref": "#/components/schemas/v1WorkflowNodePosition"
+          },
+          "config": {
+            "type": "object",
+            "title": "type-specific config as JSON"
+          }
+        },
+        "title": "WorkflowNode represents a single node in the workflow"
+      },
+      "v1WorkflowNodePosition": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number",
+            "format": "double"
+          },
+          "y": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "title": "WorkflowNodePosition represents a node's position on the canvas"
+      },
+      "v1WorkflowVersionEntry": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "eventType": {
+            "type": "string",
+            "title": "\"workflow.created\" or \"workflow.updated\""
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Human-readable summaries"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1WorkflowChangeDetail"
+            },
+            "title": "Structured change details"
+          }
+        },
+        "title": "WorkflowVersionEntry represents a single version in the workflow history"
+      },
+      "v1WorkflowViewport": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number",
+            "format": "double"
+          },
+          "y": {
+            "type": "number",
+            "format": "double"
+          },
+          "zoom": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "title": "WorkflowViewport represents the canvas viewport state"
+      }
+    }
+  }
+}

@@ -1,0 +1,114 @@
+---
+title: Server Management
+description: Registering, configuring, and monitoring MCP servers.
+icon: Server
+---
+
+Server management covers the full lifecycle of MCP servers in Everstack: registering new servers, configuring authentication, monitoring health, attaching tools to agents, and removing servers when they are no longer needed.
+
+## Registering a server
+
+To register an MCP server, you provide:
+
+- **Name** -- a human-readable label for the server (e.g., "GitHub", "Internal CRM")
+- **URL** -- the server's MCP endpoint
+- **Authentication** -- credentials for connecting to the server (see OAuth configuration below)
+- **Description** (optional) -- notes about what tools this server provides
+
+Once registered, Everstack connects to the server, runs tool discovery, and adds the server's tools to your tenant's catalog. This initial discovery happens automatically.
+
+If the server adds or removes tools later, re-run discovery to pick up the change, either from the admin UI or with [`GET /v1/mcp/servers/{server_id}/tools`](/api-reference/mcp/discover-tools). Discovery also re-runs whenever Everstack re-establishes the connection, for example after a gateway restart. Periodic health checks only ping the server; they do not re-list its tools.
+
+## OAuth configuration
+
+Many MCP servers require OAuth for authentication. Everstack supports OAuth flows so you can configure credentials once and have them managed centrally.
+
+When registering a server that requires OAuth:
+
+1. Provide the OAuth client ID and client secret
+2. Specify the authorization and token endpoints
+3. Define the required scopes
+4. Complete the OAuth authorization flow
+
+Everstack stores the resulting tokens securely, handles token refresh automatically, and uses the credentials for all tool calls to that server. Individual agents never see or handle these tokens directly.
+
+<Callout type="info">
+  For servers that use simpler auth schemes (API keys, bearer tokens), you can provide the credentials directly during registration. Everstack will include them in the appropriate header on every request.
+</Callout>
+
+## Health checks
+
+Everstack monitors registered servers continuously, pinging each one on a 30 second interval with a 5 second timeout. Health checks verify that the server is reachable and responding to MCP protocol requests. The health status is visible in the admin UI with three states:
+
+| Status | Meaning |
+| --- | --- |
+| **Healthy** | Server responded to the last health check |
+| **Unhealthy** | Server did not respond to the last health check |
+| **Unknown** | No health check has completed yet, for example just after registration |
+
+Health status recovers automatically when the server comes back online. You do not need to manually re-register or re-enable a server after a temporary outage.
+
+<Callout type="warn">
+  Health is a signal, not a gate. An unhealthy server keeps its discovered tools attached to agents, and calls to them fail at the transport until the server recovers. To take a failing server's tools out of circulation immediately, disable or remove the server.
+</Callout>
+
+## Tool listing
+
+After registration, you can view all tools exposed by a server in the admin UI. Each tool shows:
+
+- **Name** -- the tool's identifier as defined by the MCP server
+- **Description** -- what the tool does
+- **Parameters** -- input schema with types, required fields, and descriptions
+- **Server** -- which registered server provides this tool
+
+The tool catalog is a unified view across all registered servers. You can search and filter to find the right tool for your use case.
+
+## Attaching MCP tools to agents
+
+Registering a server makes its tools available, but agents do not automatically have access to every tool. You explicitly attach tools to agents during agent configuration.
+
+This is done in the agent's tool configuration, where you can:
+
+- Browse the full tool catalog (built-in tools and MCP tools together)
+- Select which MCP tools this agent should have access to
+- Preview tool schemas to understand inputs and outputs
+
+Selective attachment gives you control over which agents can do what. A customer support agent might only get CRM and ticketing tools, while a DevOps agent gets GitHub and infrastructure tools.
+
+Tools are attached by their namespaced name, `mcp__<server>__<tool>`. See [MCP Tools in Agents](/getting-started/mcp/agent-tools) for the naming rules and how the runtime resolves them.
+
+## Removing a server
+
+When you remove (deregister) an MCP server:
+
+1. All tools from that server are removed from the tenant's catalog
+2. Any agents that had those tools attached lose access to them
+3. Stored credentials for that server are deleted
+
+Removal is immediate. If an agent is mid-conversation and tries to call a tool from a removed server, the call will fail with a clear error indicating the tool is no longer available.
+
+Before removing a server, check which agents are using its tools. The admin UI shows tool usage across agents so you can identify dependencies.
+
+## Troubleshooting
+
+### Server shows as unreachable after registration
+
+Verify that the URL is correct and the server is running. Check that any firewalls or network policies allow Everstack to reach the server's endpoint. If the server is behind a private network, you may need to configure network access.
+
+### OAuth flow fails
+
+Confirm the client ID, client secret, and endpoint URLs match what the MCP server expects. Check that the requested scopes are valid. Some OAuth providers require pre-registering redirect URIs.
+
+### Tools are not appearing after registration
+
+If the server registered successfully but no tools appear, the server may not be exposing tools through the MCP discovery endpoint. Verify that the server implements the MCP tool listing protocol correctly.
+
+### Agent cannot call a tool
+
+Confirm the tool is attached to the agent's configuration. Check the server's health status. If the server is healthy and the tool is attached, review the agent's tool call to ensure the parameters match the tool's expected schema.
+
+## Next steps
+
+- [MCP Overview](/getting-started/mcp/overview) -- How Everstack's MCP gateway and federated tool calling work.
+- [MCP Tools in Agents](/getting-started/mcp/agent-tools) -- Naming, attaching, and executing federated tools inside agents.
+- [MCP API Reference](/api-reference/mcp) -- Full API documentation for server registration, tool discovery, and tool invocation.

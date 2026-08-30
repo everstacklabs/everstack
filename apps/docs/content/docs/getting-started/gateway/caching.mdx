@@ -1,0 +1,83 @@
+---
+title: Caching
+description: Exact and semantic response caching for LLM calls.
+icon: HardDrive
+---
+
+The gateway can cache LLM responses to reduce latency, lower costs, and avoid redundant provider calls. Two cache types are available, and they work together: exact caching for identical requests, and semantic caching for requests that are similar but not byte-identical.
+
+## When to use caching
+
+Caching is most valuable when your application sends repeated or near-identical prompts. Common scenarios include:
+
+- customer support agents that handle similar questions across sessions
+- classification or extraction pipelines that process similar inputs
+- development and testing workflows where the same prompts are sent repeatedly
+- high-traffic endpoints where a subset of requests are functionally identical
+
+Caching is less useful for open-ended conversation where every message is unique.
+
+## How exact caching works
+
+Exact caching stores responses keyed by an xxHash of the request contents. The hash is computed over:
+
+- the model name
+- the sorted message array
+- the temperature
+- the max_tokens value
+
+If an incoming request produces the same hash as a cached entry, the cached response is returned in under 1ms without contacting the provider.
+
+This is fast and deterministic. Two requests with identical parameters always produce the same cache key.
+
+## How semantic caching works
+
+Semantic caching catches requests that are worded differently but carry the same meaning. For example, "What is the capital of France?" and "Tell me France's capital city" would miss an exact cache but hit a semantic cache.
+
+The gateway supports two semantic cache implementations:
+
+- **MinHash LSH** (default) -- uses locality-sensitive hashing to estimate similarity without any external calls. This is fast and requires no additional infrastructure. It works well for moderate similarity thresholds.
+- **Redis + embeddings** -- uses embedding vectors stored in Redis for higher-accuracy similarity matching. This requires a Redis instance and an embedding model, but produces better results for nuanced similarity.
+
+Both caches are checked in order: exact first, then semantic. The first hit wins.
+
+## Configuration
+
+Enable caching and choose a backend:
+
+```yaml
+cache:
+  enabled: true
+  type: "memory"    # or "redis"
+  memory:
+    ttl: "10m"
+    max_size: 50000
+```
+
+Key settings:
+
+- `cache.enabled` -- turns caching on or off
+- `cache.type` -- `"memory"` for in-process storage, `"redis"` for shared storage across replicas
+- `cache.memory.ttl` -- how long entries live before expiration (default: `"10m"`)
+- `cache.memory.max_size` -- maximum number of cached entries (default: `50000`)
+
+All settings are overridable via environment variables with the `EVS_` prefix, for example `EVS_CACHE_TYPE=redis`.
+
+## What is not cached
+
+- **Streaming responses** are not cached. The gateway only caches complete, non-streamed responses. If your request uses `stream: true`, the response will always go to the provider.
+- **Errored responses** are not cached. Only successful completions are stored.
+
+## Cache bypass
+
+If you need to force a fresh provider call for a specific request, you can bypass the cache. This is useful when you know the cached result is stale or when you want to compare cached and fresh responses during debugging.
+
+Cache bypass is controlled at the request level and does not affect the global cache state. Other requests will continue to hit the cache normally.
+
+## TTL and eviction
+
+Cached entries expire after the configured TTL. When the cache reaches `max_size`, the oldest entries are evicted to make room for new ones.
+
+For the in-memory backend, cache state is local to each gateway replica. If you are running multiple replicas and need shared cache state, use the Redis backend.
+
+For endpoint details, see the [Gateway API Reference](/api-reference/gateway).

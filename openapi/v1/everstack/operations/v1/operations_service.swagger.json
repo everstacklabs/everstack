@@ -1,0 +1,1817 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/operations/v1/operations_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "OperationsService"
+    },
+    {
+      "name": "OperationsAgentService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {},
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "protobufNullValue": {
+      "type": "string",
+      "enum": [
+        "NULL_VALUE"
+      ],
+      "default": "NULL_VALUE",
+      "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AbuseReason": {
+      "type": "string",
+      "enum": [
+        "ABUSE_REASON_UNSPECIFIED",
+        "ABUSE_REASON_PHISHING",
+        "ABUSE_REASON_MALWARE",
+        "ABUSE_REASON_IMPERSONATION",
+        "ABUSE_REASON_PRIVACY",
+        "ABUSE_REASON_COPYRIGHT",
+        "ABUSE_REASON_OTHER"
+      ],
+      "default": "ABUSE_REASON_UNSPECIFIED",
+      "description": "AbuseReason is the reporter-selected category used to triage the operator\nqueue. Free-form context belongs in ReportSiteRequest.details."
+    },
+    "v1AbuseReport": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/definitions/v1AbuseReason"
+        },
+        "details": {
+          "type": "string"
+        },
+        "pagePath": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "resolvedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1AcknowledgeIncidentResponse": {
+      "type": "object",
+      "properties": {
+        "incident": {
+          "$ref": "#/definitions/v1Incident"
+        }
+      }
+    },
+    "v1AlertRule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/definitions/v1IncidentSeverity"
+        },
+        "engine": {
+          "type": "string",
+          "title": "rules | prometheus"
+        },
+        "signal": {
+          "type": "string"
+        },
+        "comparator": {
+          "type": "string"
+        },
+        "threshold": {
+          "type": "number",
+          "format": "double"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "disabledReason": {
+          "type": "string",
+          "description": "Why a builtin ships dark. Surfaced so a disabled rule is never mistaken\nfor a healthy one."
+        },
+        "mutedUntil": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "builtin": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1AuditEvent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "actorId": {
+          "type": "string"
+        },
+        "actorEmail": {
+          "type": "string"
+        },
+        "actorRole": {
+          "$ref": "#/definitions/v1StaffRole"
+        },
+        "action": {
+          "type": "string"
+        },
+        "targetType": {
+          "type": "string"
+        },
+        "targetId": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ChangeInstanceLifecycleResponse": {
+      "type": "object",
+      "properties": {
+        "instanceId": {
+          "type": "string"
+        },
+        "action": {
+          "$ref": "#/definitions/v1InstanceLifecycleAction"
+        }
+      }
+    },
+    "v1DeleteIdentityConnectionResponse": {
+      "type": "object",
+      "properties": {
+        "deleted": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1EnvironmentSnapshot": {
+      "type": "object",
+      "properties": {
+        "environmentId": {
+          "type": "string"
+        },
+        "collectedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "agentVersion": {
+          "type": "string"
+        },
+        "kubernetesVersion": {
+          "type": "string"
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1NodeSnapshot"
+          }
+        },
+        "workloads": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorkloadSnapshot"
+          }
+        },
+        "firecrackerAgents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FirecrackerAgentSnapshot"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1EnvironmentSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "freshness": {
+          "$ref": "#/definitions/v1SnapshotFreshness"
+        },
+        "lastPollAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "snapshotAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastError": {
+          "type": "string"
+        },
+        "nodeCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "readyNodeCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "workloadCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "unhealthyWorkloadCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "firecrackerAgentCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1EventSeverity": {
+      "type": "string",
+      "enum": [
+        "EVENT_SEVERITY_UNSPECIFIED",
+        "EVENT_SEVERITY_INFO",
+        "EVENT_SEVERITY_WARNING",
+        "EVENT_SEVERITY_ERROR",
+        "EVENT_SEVERITY_CRITICAL"
+      ],
+      "default": "EVENT_SEVERITY_UNSPECIFIED"
+    },
+    "v1FirecrackerAgentSnapshot": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "string"
+        },
+        "lastSeenAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1GetAgentSnapshotResponse": {
+      "type": "object",
+      "properties": {
+        "snapshot": {
+          "$ref": "#/definitions/v1EnvironmentSnapshot"
+        }
+      }
+    },
+    "v1GetEnvironmentResponse": {
+      "type": "object",
+      "properties": {
+        "environment": {
+          "$ref": "#/definitions/v1EnvironmentSummary"
+        },
+        "snapshot": {
+          "$ref": "#/definitions/v1EnvironmentSnapshot"
+        }
+      }
+    },
+    "v1GetIdentityOverviewResponse": {
+      "type": "object",
+      "properties": {
+        "overview": {
+          "$ref": "#/definitions/v1IdentityOverview"
+        }
+      }
+    },
+    "v1GetIncidentResponse": {
+      "type": "object",
+      "properties": {
+        "incident": {
+          "$ref": "#/definitions/v1Incident"
+        },
+        "timeline": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1IncidentEvent"
+          }
+        }
+      }
+    },
+    "v1GetInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "instance": {
+          "$ref": "#/definitions/v1InstanceSummary"
+        }
+      }
+    },
+    "v1GetOverviewResponse": {
+      "type": "object",
+      "properties": {
+        "overview": {
+          "$ref": "#/definitions/v1OperationsOverview"
+        }
+      }
+    },
+    "v1GetSessionResponse": {
+      "type": "object",
+      "properties": {
+        "principal": {
+          "$ref": "#/definitions/v1SessionPrincipal"
+        },
+        "dataSources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OperationsDataSource"
+          }
+        },
+        "currentDataSourceId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1HostingOverviewResponse": {
+      "type": "object",
+      "properties": {
+        "totalSites": {
+          "type": "string",
+          "format": "int64"
+        },
+        "activeSites": {
+          "type": "string",
+          "format": "int64"
+        },
+        "anonymousSites": {
+          "type": "string",
+          "format": "int64"
+        },
+        "expiringSites": {
+          "type": "string",
+          "format": "int64"
+        },
+        "disabledSites": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "openReports": {
+          "type": "string",
+          "format": "int64"
+        },
+        "pendingActions": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1IdentityConnectionSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "providerId": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "issuer": {
+          "type": "string"
+        },
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "clientId": {
+          "type": "string"
+        },
+        "clientSecretConfigured": {
+          "type": "boolean"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "callbackUrl": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Every workforce connection belongs to exactly one Everstack organization.\nEmpty is possible only for legacy rows that must be assigned before use."
+        }
+      },
+      "description": "Identity connections are upstream workforce OIDC providers used by the\nEverstack-native Cloud login UI. Secrets are write-only and never appear in\nthis control-plane representation."
+    },
+    "v1IdentityOverview": {
+      "type": "object",
+      "properties": {
+        "backend": {
+          "type": "string"
+        },
+        "healthy": {
+          "type": "boolean"
+        },
+        "totalUsers": {
+          "type": "string",
+          "format": "int64"
+        },
+        "verifiedUsers": {
+          "type": "string",
+          "format": "int64"
+        },
+        "activeSessions": {
+          "type": "string",
+          "format": "int64"
+        },
+        "linkedEverstackUsers": {
+          "type": "string",
+          "format": "int64"
+        },
+        "enabledMethods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Identity records describe human authentication state only. Organization\nmemberships, product roles, billing, and instance access remain in the\nEverstack platform model and are intentionally not editable here."
+    },
+    "v1IdentitySessionSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "identityUserId": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ipAddress": {
+          "type": "string"
+        },
+        "userAgent": {
+          "type": "string"
+        }
+      }
+    },
+    "v1IdentityUserSummary": {
+      "type": "object",
+      "properties": {
+        "identityUserId": {
+          "type": "string"
+        },
+        "everstackUserId": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "emailVerified": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "imageUrl": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastActiveAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "activeSessionCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "authenticationMethods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1Incident": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "fingerprint": {
+          "type": "string",
+          "description": "Dedupe key. A condition repeating every ten seconds updates one row\nrather than creating thousands, and this is what identifies it."
+        },
+        "source": {
+          "type": "string",
+          "title": "alertmanager | rules | manual"
+        },
+        "ruleKey": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "runbookUrl": {
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/definitions/v1IncidentSeverity"
+        },
+        "status": {
+          "$ref": "#/definitions/v1IncidentStatus"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "subjectKind": {
+          "type": "string"
+        },
+        "subjectId": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "value": {
+          "type": "number",
+          "format": "double",
+          "description": "Absent when the incident is not threshold-based."
+        },
+        "threshold": {
+          "type": "number",
+          "format": "double"
+        },
+        "occurrenceCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "How many times the condition has been observed. Large numbers here are\nnormal and are the point: they mean dedupe is working."
+        },
+        "firstSeenAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastSeenAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "resolvedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "acknowledgedBy": {
+          "type": "string"
+        },
+        "acknowledgedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "snoozedUntil": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1IncidentEvent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "incidentId": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "title": "fired | escalated | notified | acknowledged | snoozed | resolved | comment"
+        },
+        "actorId": {
+          "type": "string"
+        },
+        "actorEmail": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1IncidentSeverity": {
+      "type": "string",
+      "enum": [
+        "INCIDENT_SEVERITY_UNSPECIFIED",
+        "INCIDENT_SEVERITY_INFO",
+        "INCIDENT_SEVERITY_WARNING",
+        "INCIDENT_SEVERITY_CRITICAL"
+      ],
+      "default": "INCIDENT_SEVERITY_UNSPECIFIED"
+    },
+    "v1IncidentStatus": {
+      "type": "string",
+      "enum": [
+        "INCIDENT_STATUS_UNSPECIFIED",
+        "INCIDENT_STATUS_FIRING",
+        "INCIDENT_STATUS_ACKNOWLEDGED",
+        "INCIDENT_STATUS_RESOLVED"
+      ],
+      "default": "INCIDENT_STATUS_UNSPECIFIED"
+    },
+    "v1InstallationConnectivity": {
+      "type": "string",
+      "enum": [
+        "INSTALLATION_CONNECTIVITY_UNSPECIFIED",
+        "INSTALLATION_CONNECTIVITY_LIVE",
+        "INSTALLATION_CONNECTIVITY_STALE",
+        "INSTALLATION_CONNECTIVITY_OFFLINE",
+        "INSTALLATION_CONNECTIVITY_UNREPORTED"
+      ],
+      "default": "INSTALLATION_CONNECTIVITY_UNSPECIFIED"
+    },
+    "v1InstallationKind": {
+      "type": "string",
+      "enum": [
+        "INSTALLATION_KIND_UNSPECIFIED",
+        "INSTALLATION_KIND_CLOUD",
+        "INSTALLATION_KIND_CONNECTED_SELF_HOSTED",
+        "INSTALLATION_KIND_UNLICENSED_UNIFIED",
+        "INSTALLATION_KIND_ISSUED_OFFLINE_CAPABLE"
+      ],
+      "default": "INSTALLATION_KIND_UNSPECIFIED"
+    },
+    "v1InstallationSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "sourceId": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/v1InstallationKind"
+        },
+        "connectivity": {
+          "$ref": "#/definitions/v1InstallationConnectivity"
+        },
+        "organizationId": {
+          "type": "string"
+        },
+        "organizationSlug": {
+          "type": "string"
+        },
+        "organizationName": {
+          "type": "string"
+        },
+        "planTier": {
+          "type": "string"
+        },
+        "licenseStatus": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "gatewayUrl": {
+          "type": "string"
+        },
+        "fingerprintPrefix": {
+          "type": "string"
+        },
+        "liveTelemetry": {
+          "type": "boolean"
+        },
+        "usage": {
+          "type": "object"
+        },
+        "firstSeenAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastSeenAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "activatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1InstanceLifecycleAction": {
+      "type": "string",
+      "enum": [
+        "INSTANCE_LIFECYCLE_ACTION_UNSPECIFIED",
+        "INSTANCE_LIFECYCLE_ACTION_START",
+        "INSTANCE_LIFECYCLE_ACTION_STOP",
+        "INSTANCE_LIFECYCLE_ACTION_RESTART"
+      ],
+      "default": "INSTANCE_LIFECYCLE_ACTION_UNSPECIFIED"
+    },
+    "v1InstanceSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
+        },
+        "organizationSlug": {
+          "type": "string"
+        },
+        "organizationName": {
+          "type": "string"
+        },
+        "workspaceId": {
+          "type": "string"
+        },
+        "workspaceSlug": {
+          "type": "string"
+        },
+        "workspaceName": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "gatewayUrl": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "backendType": {
+          "type": "string"
+        },
+        "healthy": {
+          "type": "boolean"
+        },
+        "lastHealthCheck": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastHealthError": {
+          "type": "string"
+        },
+        "cpuLimit": {
+          "type": "number",
+          "format": "double"
+        },
+        "memoryMb": {
+          "type": "string",
+          "format": "int64"
+        },
+        "diskMb": {
+          "type": "string",
+          "format": "int64"
+        },
+        "sandboxCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "activeSandboxCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "agentCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "hostedSiteCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "hostedSiteCountAvailable": {
+          "type": "boolean",
+          "description": "False when hosting data is isolated in a separate database and cannot be\njoined to this platform instance record."
+        }
+      }
+    },
+    "v1LicenseSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "instanceId": {
+          "type": "string"
+        },
+        "planTier": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "hasLiveInstallation": {
+          "type": "boolean"
+        },
+        "lastSeenAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ListAbuseReportsResponse": {
+      "type": "object",
+      "properties": {
+        "reports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AbuseReport"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListAlertRulesResponse": {
+      "type": "object",
+      "properties": {
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AlertRule"
+          }
+        }
+      }
+    },
+    "v1ListAuditEventsResponse": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AuditEvent"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListEnvironmentsResponse": {
+      "type": "object",
+      "properties": {
+        "environments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1EnvironmentSummary"
+          }
+        }
+      }
+    },
+    "v1ListEventsResponse": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OperationsEvent"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListIdentityConnectionsResponse": {
+      "type": "object",
+      "properties": {
+        "connections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1IdentityConnectionSummary"
+          }
+        }
+      }
+    },
+    "v1ListIdentitySessionsResponse": {
+      "type": "object",
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1IdentitySessionSummary"
+          }
+        }
+      }
+    },
+    "v1ListIdentityUsersResponse": {
+      "type": "object",
+      "properties": {
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1IdentityUserSummary"
+          }
+        },
+        "total": {
+          "type": "string",
+          "format": "int64"
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListIncidentsResponse": {
+      "type": "object",
+      "properties": {
+        "incidents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Incident"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        },
+        "firingCritical": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Counts across the whole open set, not just this page, so the console can\nshow an accurate badge without fetching everything."
+        },
+        "firingWarning": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "firingInfo": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListInstallationsResponse": {
+      "type": "object",
+      "properties": {
+        "installations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1InstallationSummary"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListInstancesResponse": {
+      "type": "object",
+      "properties": {
+        "instances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1InstanceSummary"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListLicensesResponse": {
+      "type": "object",
+      "properties": {
+        "licenses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1LicenseSummary"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListNotificationTargetsResponse": {
+      "type": "object",
+      "properties": {
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1NotificationTarget"
+          }
+        }
+      }
+    },
+    "v1ListOperatorSitesResponse": {
+      "type": "object",
+      "properties": {
+        "sites": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OperatorSite"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListOrganizationsResponse": {
+      "type": "object",
+      "properties": {
+        "organizations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrganizationSummary"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListSandboxesResponse": {
+      "type": "object",
+      "properties": {
+        "sandboxes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SandboxSummary"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ModerationAction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/v1ModerationActionKind"
+        },
+        "status": {
+          "$ref": "#/definitions/v1ModerationActionStatus"
+        },
+        "reason": {
+          "$ref": "#/definitions/v1AbuseReason"
+        },
+        "note": {
+          "type": "string"
+        },
+        "actorId": {
+          "type": "string"
+        },
+        "attemptCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "lastError": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "appliedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ModerationActionKind": {
+      "type": "string",
+      "enum": [
+        "MODERATION_ACTION_KIND_UNSPECIFIED",
+        "MODERATION_ACTION_KIND_TAKEDOWN",
+        "MODERATION_ACTION_KIND_RESTORE"
+      ],
+      "default": "MODERATION_ACTION_KIND_UNSPECIFIED"
+    },
+    "v1ModerationActionStatus": {
+      "type": "string",
+      "enum": [
+        "MODERATION_ACTION_STATUS_UNSPECIFIED",
+        "MODERATION_ACTION_STATUS_PENDING",
+        "MODERATION_ACTION_STATUS_APPLIED",
+        "MODERATION_ACTION_STATUS_SUPERSEDED"
+      ],
+      "default": "MODERATION_ACTION_STATUS_UNSPECIFIED",
+      "description": " - MODERATION_ACTION_STATUS_APPLIED: The serving provider accepted the write. This does not claim that an\neventually-consistent KV update is already visible at every edge.\n - MODERATION_ACTION_STATUS_SUPERSEDED: A newer decision for the same site replaced this action before it could\nbe projected. Superseded actions are retained for audit but never retried."
+    },
+    "v1NodeSnapshot": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "unschedulable": {
+          "type": "boolean"
+        },
+        "architecture": {
+          "type": "string"
+        },
+        "instanceType": {
+          "type": "string"
+        },
+        "zone": {
+          "type": "string"
+        },
+        "cpuCapacityMilli": {
+          "type": "string",
+          "format": "int64"
+        },
+        "memoryCapacityBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1NotificationTarget": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "targetType": {
+          "type": "string",
+          "title": "channel | webhook"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "minSeverity": {
+          "$ref": "#/definitions/v1IncidentSeverity"
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "lastDeliveredAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Delivery health, so a target that has silently stopped working is visible."
+        },
+        "lastError": {
+          "type": "string"
+        }
+      }
+    },
+    "v1OperationsDataSource": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "readOnly": {
+          "type": "boolean"
+        },
+        "default": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1OperationsEvent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "environmentId": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/definitions/v1EventSeverity"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "object"
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1OperationsOverview": {
+      "type": "object",
+      "properties": {
+        "organizations": {
+          "type": "string",
+          "format": "int64"
+        },
+        "workspaces": {
+          "type": "string",
+          "format": "int64"
+        },
+        "instances": {
+          "type": "string",
+          "format": "int64"
+        },
+        "healthyInstances": {
+          "type": "string",
+          "format": "int64"
+        },
+        "degradedInstances": {
+          "type": "string",
+          "format": "int64"
+        },
+        "stoppedInstances": {
+          "type": "string",
+          "format": "int64"
+        },
+        "activeSandboxes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "hostedSites": {
+          "type": "string",
+          "format": "int64"
+        },
+        "openAbuseReports": {
+          "type": "string",
+          "format": "int64"
+        },
+        "environments": {
+          "type": "string",
+          "format": "int64"
+        },
+        "offlineEnvironments": {
+          "type": "string",
+          "format": "int64"
+        },
+        "installations": {
+          "type": "string",
+          "format": "int64"
+        },
+        "connectedSelfHosted": {
+          "type": "string",
+          "format": "int64"
+        },
+        "visibleUnlicensed": {
+          "type": "string",
+          "format": "int64"
+        },
+        "issuedLicenses": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1OperatorSite": {
+      "type": "object",
+      "properties": {
+        "site": {
+          "$ref": "#/definitions/v1Site"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "ownerUserId": {
+          "type": "string"
+        },
+        "anonymous": {
+          "type": "boolean"
+        },
+        "killSwitch": {
+          "type": "boolean"
+        },
+        "takedownReason": {
+          "type": "string"
+        },
+        "openReportCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "enforcementStatus": {
+          "$ref": "#/definitions/v1ModerationActionStatus"
+        }
+      }
+    },
+    "v1OrganizationSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "planTier": {
+          "type": "string"
+        },
+        "memberCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "workspaceCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "instanceCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "activeSandboxCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "hostedSiteCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "hostedSiteCountAvailable": {
+          "type": "boolean",
+          "description": "False when hosting data is isolated in a separate database and cannot be\njoined to the platform organization inventory."
+        }
+      }
+    },
+    "v1ResolveIncidentResponse": {
+      "type": "object",
+      "properties": {
+        "incident": {
+          "$ref": "#/definitions/v1Incident"
+        }
+      }
+    },
+    "v1RestoreSiteResponse": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "$ref": "#/definitions/v1ModerationAction"
+        }
+      }
+    },
+    "v1ReviewAbuseReportResponse": {
+      "type": "object",
+      "properties": {
+        "report": {
+          "$ref": "#/definitions/v1AbuseReport"
+        }
+      }
+    },
+    "v1RevokeIdentitySessionResponse": {
+      "type": "object",
+      "properties": {
+        "revoked": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1SandboxSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "instanceId": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string"
+        },
+        "backend": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "lifecycleState": {
+          "type": "string"
+        },
+        "desiredState": {
+          "type": "string"
+        },
+        "agentId": {
+          "type": "string"
+        },
+        "persistent": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastUsedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "errorReason": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SessionPrincipal": {
+      "type": "object",
+      "properties": {
+        "subjectId": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/v1StaffRole"
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1Site": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1SiteStatus"
+        },
+        "access": {
+          "$ref": "#/definitions/v1SiteAccess"
+        },
+        "spaFallback": {
+          "type": "boolean"
+        },
+        "currentVersion": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "fileCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "url": {
+          "type": "string"
+        },
+        "claimed": {
+          "type": "boolean"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastPublishedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "Site is a hosted static site served at {slug}.evs.run."
+    },
+    "v1SiteAccess": {
+      "type": "string",
+      "enum": [
+        "SITE_ACCESS_UNSPECIFIED",
+        "SITE_ACCESS_PUBLIC",
+        "SITE_ACCESS_NOINDEX"
+      ],
+      "default": "SITE_ACCESS_UNSPECIFIED",
+      "description": "SiteAccess controls indexing/visibility of a site. Anonymous sites are\nalways served with noindex regardless of this value."
+    },
+    "v1SiteStatus": {
+      "type": "string",
+      "enum": [
+        "SITE_STATUS_UNSPECIFIED",
+        "SITE_STATUS_ACTIVE",
+        "SITE_STATUS_EXPIRED",
+        "SITE_STATUS_DISABLED"
+      ],
+      "default": "SITE_STATUS_UNSPECIFIED",
+      "description": "SiteStatus is the lifecycle state of a hosted site."
+    },
+    "v1SnapshotFreshness": {
+      "type": "string",
+      "enum": [
+        "SNAPSHOT_FRESHNESS_UNSPECIFIED",
+        "SNAPSHOT_FRESHNESS_FRESH",
+        "SNAPSHOT_FRESHNESS_STALE",
+        "SNAPSHOT_FRESHNESS_OFFLINE",
+        "SNAPSHOT_FRESHNESS_UNKNOWN"
+      ],
+      "default": "SNAPSHOT_FRESHNESS_UNSPECIFIED"
+    },
+    "v1SnoozeIncidentResponse": {
+      "type": "object",
+      "properties": {
+        "incident": {
+          "$ref": "#/definitions/v1Incident"
+        }
+      }
+    },
+    "v1StaffRole": {
+      "type": "string",
+      "enum": [
+        "STAFF_ROLE_UNSPECIFIED",
+        "STAFF_ROLE_VIEWER",
+        "STAFF_ROLE_OPERATOR",
+        "STAFF_ROLE_ADMIN"
+      ],
+      "default": "STAFF_ROLE_UNSPECIFIED"
+    },
+    "v1TakedownSiteResponse": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "$ref": "#/definitions/v1ModerationAction"
+        }
+      }
+    },
+    "v1UpsertIdentityConnectionResponse": {
+      "type": "object",
+      "properties": {
+        "connection": {
+          "$ref": "#/definitions/v1IdentityConnectionSummary"
+        }
+      }
+    },
+    "v1WorkloadSnapshot": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ready": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "desired": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "available": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "image": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,365 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/controlplane/v1/controlplane_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "ControlPlaneService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {},
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1DeleteInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1GatewayInstance": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "workspaceId": {
+          "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "gatewayUrl": {
+          "type": "string"
+        },
+        "internalUrl": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1InstanceStatus"
+        },
+        "version": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "resources": {
+          "$ref": "#/definitions/v1InstanceResources"
+        },
+        "health": {
+          "$ref": "#/definitions/v1InstanceHealth"
+        },
+        "containerId": {
+          "type": "string"
+        },
+        "m2mInstanceId": {
+          "type": "string"
+        },
+        "backendType": {
+          "type": "string"
+        },
+        "errorReason": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "stoppedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "schemaName": {
+          "type": "string"
+        },
+        "customDomain": {
+          "type": "string"
+        },
+        "customDomainStatus": {
+          "type": "string",
+          "title": "\"\" | \"pending_dns\" | \"verifying\" | \"active\" | \"failed\""
+        },
+        "region": {
+          "type": "string",
+          "description": "\"eu\", \"americas\", ..."
+        }
+      },
+      "description": "GatewayInstance represents a managed gateway instance."
+    },
+    "v1GetInstanceLogsResponse": {
+      "type": "object",
+      "properties": {
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1GetInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "instance": {
+          "$ref": "#/definitions/v1GatewayInstance"
+        }
+      }
+    },
+    "v1InstanceHealth": {
+      "type": "object",
+      "properties": {
+        "healthy": {
+          "type": "boolean"
+        },
+        "lastCheck": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "consecutiveFailures": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "lastError": {
+          "type": "string"
+        },
+        "uptimeSeconds": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "InstanceHealth describes the health status of an instance."
+    },
+    "v1InstanceResources": {
+      "type": "object",
+      "properties": {
+        "cpuLimit": {
+          "type": "number",
+          "format": "double"
+        },
+        "memoryMb": {
+          "type": "string",
+          "format": "int64"
+        },
+        "diskMb": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cpuUsage": {
+          "type": "number",
+          "format": "double"
+        },
+        "memoryUsageMb": {
+          "type": "string",
+          "format": "int64"
+        },
+        "activeConnections": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "InstanceResources describes the resource allocation and usage for an instance."
+    },
+    "v1InstanceStatus": {
+      "type": "string",
+      "enum": [
+        "INSTANCE_STATUS_UNSPECIFIED",
+        "INSTANCE_STATUS_PROVISIONING",
+        "INSTANCE_STATUS_STARTING",
+        "INSTANCE_STATUS_RUNNING",
+        "INSTANCE_STATUS_STOPPING",
+        "INSTANCE_STATUS_STOPPED",
+        "INSTANCE_STATUS_DEGRADED",
+        "INSTANCE_STATUS_FAILED",
+        "INSTANCE_STATUS_DELETING"
+      ],
+      "default": "INSTANCE_STATUS_UNSPECIFIED",
+      "description": "InstanceStatus represents the lifecycle state of a managed gateway instance."
+    },
+    "v1ListInstancesResponse": {
+      "type": "object",
+      "properties": {
+        "instances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1GatewayInstance"
+          }
+        },
+        "instanceCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Number of active instances"
+        },
+        "instanceLimit": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Max allowed instances for the org's plan (0 = unlimited)"
+        }
+      }
+    },
+    "v1ListRegionsResponse": {
+      "type": "object",
+      "properties": {
+        "regions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Region"
+          }
+        },
+        "defaultRegion": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ProvisionInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "instance": {
+          "$ref": "#/definitions/v1GatewayInstance"
+        }
+      }
+    },
+    "v1PushConfigResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1Region": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "city-level slug (\"eu-fra-1\", \"us-pdx-1\")"
+        },
+        "displayName": {
+          "type": "string",
+          "title": "\"Frankfurt (eu-fra-1)\", \"Oregon (us-pdx-1)\""
+        },
+        "flagEmoji": {
+          "type": "string",
+          "title": "\"🇩🇪\", \"🇺🇸\""
+        },
+        "available": {
+          "type": "boolean",
+          "title": "false for greyed-out options"
+        }
+      }
+    },
+    "v1RemoveCustomDomainResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1RestartInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "instance": {
+          "$ref": "#/definitions/v1GatewayInstance"
+        }
+      }
+    },
+    "v1SetCustomDomainResponse": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "title": "\"pending_dns\""
+        },
+        "verificationTxtName": {
+          "type": "string",
+          "title": "e.g. \"_everstack-verify.acme.com\""
+        },
+        "verificationTxtValue": {
+          "type": "string",
+          "title": "random token tenant must publish"
+        },
+        "cnameTarget": {
+          "type": "string",
+          "title": "where the tenant should point CNAME"
+        }
+      }
+    },
+    "v1StartInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "instance": {
+          "$ref": "#/definitions/v1GatewayInstance"
+        }
+      }
+    },
+    "v1StopInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "instance": {
+          "$ref": "#/definitions/v1GatewayInstance"
+        }
+      }
+    },
+    "v1VerifyCustomDomainResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "title": "\"pending_dns\" | \"verifying\" | \"active\" | \"failed\""
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

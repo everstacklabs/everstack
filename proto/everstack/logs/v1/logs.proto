@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package everstack.logs.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/logs/v1;logs";
+
+// ChunkMetadata represents detailed timing information for a single streaming chunk
+message ChunkMetadata {
+    int32 index = 1;              // Chunk index (0-based)
+    int64 timestamp_ms = 2;       // Unix timestamp when chunk was received
+    int64 latency_ms = 3;         // Time since previous chunk (inter-chunk latency)
+    int32 token_count = 4;        // Estimated tokens in this chunk
+    int32 cumulative_tokens = 5;  // Running total of tokens received
+}
+
+// StreamingMetrics contains performance metrics for streaming responses
+message StreamingMetrics {
+    int64 ttft_ms = 1;                         // Time to first token (ms)
+    int32 chunk_count = 2;                     // Total chunks received
+    double avg_chunk_latency_ms = 3;           // Average inter-chunk latency
+    int64 max_chunk_latency_ms = 4;            // Slowest chunk latency (identifies issues)
+    double tokens_per_second = 5;              // Throughput: completion_tokens / stream_duration
+    int64 stream_duration_ms = 6;              // Total streaming time (first to last chunk)
+    string partial_response_on_error = 7;      // Captured response text before error occurred
+    repeated ChunkMetadata chunk_timeline = 8; // Optional detailed per-chunk timeline
+}
+
+// FunctionExecution represents a single function execution within a request
+message FunctionExecution {
+    string function_id = 1;      // Unique function identifier
+    string function_name = 2;    // Human-readable function name
+    string runtime = 3;          // Runtime (e.g., "nodejs20", "deno")
+    string backend = 4;          // Isolation backend (e.g., "docker", "isolated")
+    string execution_mode = 5;   // "warm" or "cold"
+    int64 duration_ms = 6;       // Execution duration in milliseconds
+    bool success = 7;            // Whether execution succeeded
+    string error = 8;            // Error message if failed
+    string error_type = 9;       // Error type (e.g., "timeout", "oom", "runtime")
+    string stdout = 10;          // Standard output (truncated to 2KB)
+    string stderr = 11;          // Standard error (truncated to 2KB)
+}
+
+// RequestLog represents a log entry for a single request (grouped by correlation_id)
+message RequestLog {
+    string correlation_id = 1;
+    google.protobuf.Timestamp timestamp = 2;
+    string first_timestamp = 3;
+    string command_type = 4;
+    string provider = 5;
+    string model = 6;  // Kept for backward compatibility - same as served_model
+    int64 latency_ms = 7;
+    int64 prompt_tokens = 8;
+    int64 completion_tokens = 9;
+    int64 total_tokens = 10;
+    double cost = 11;
+    string status = 12;  // "success", "error", "pending"
+    string severity = 13;
+    string log_event = 14;
+    string payload = 15;  // JSON string from LogAttributes['payload']
+    string trace_id = 16;
+    string span_id = 17;
+    string tenant_id = 18;
+    string tenant_type = 19;
+    string request_text = 20;   // Extracted user input/request text
+    string response_text = 21;  // Extracted chatbot response text
+    bool stream = 22;           // Whether this was a streaming request
+
+    // Multi-model fallback tracking
+    string requested_model = 23;        // Originally requested model by user
+    string served_model = 24;           // Model that actually responded/errored (same as model)
+    repeated string attempted_models = 25; // All models attempted in chronological order
+    bool fallback_occurred = 26;        // Whether fallback routing was used
+    int32 attempt_count = 27;           // Number of provider attempts made
+
+    // Streaming performance metrics (only populated when stream = true)
+    StreamingMetrics streaming_metrics = 28;
+
+    // Function executions (for requests that triggered serverless functions)
+    repeated FunctionExecution function_executions = 29;
+
+    // User-defined custom columns: resolved LogAttributes values keyed by the
+    // tenant's column key. Populated only when the tenant has registered log
+    // custom columns (see LogsService.ListLogCustomColumns).
+    map<string, string> custom_columns = 30;
+}
+
+message ListLogsRequest {
+    string from = 1;  // RFC3339 timestamp
+    string to = 2;
+    int32 page_size = 3;
+    int32 offset = 4;  // Offset for pagination
+}
+
+message ListLogsResponse {
+    repeated RequestLog logs = 1;
+}
+

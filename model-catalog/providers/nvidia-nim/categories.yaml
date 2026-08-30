@@ -1,0 +1,30 @@
+chat:
+  - deepseek-ai/deepseek-v4-pro
+  - deepseek-ai/deepseek-v3.2
+  - meta/llama-4-maverick-17b-128e-instruct
+  - meta/llama-4-scout-17b-16e-instruct
+  - meta/llama-3.3-70b-instruct
+  - meta/llama-3.1-70b-instruct
+  - meta/llama-3.1-405b-instruct
+  - nvidia/llama-3.1-nemotron-70b-instruct
+
+function_calling:
+  - deepseek-ai/deepseek-v4-pro
+  - deepseek-ai/deepseek-v3.2
+  - meta/llama-4-maverick-17b-128e-instruct
+  - meta/llama-4-scout-17b-16e-instruct
+  - meta/llama-3.3-70b-instruct
+  - meta/llama-3.1-70b-instruct
+  - meta/llama-3.1-405b-instruct
+  - nvidia/llama-3.1-nemotron-70b-instruct
+
+reasoning:
+  - deepseek-ai/deepseek-v4-pro
+  - deepseek-ai/deepseek-v3.2
+
+vision:
+  - meta/llama-4-maverick-17b-128e-instruct
+  - meta/llama-4-scout-17b-16e-instruct
+
+embeddings:
+  - nvidia/nv-embedqa-e5-v5

@@ -1,0 +1,447 @@
+---
+title: "POST Create a response (agentic loop with auto tool calling)"
+description: "Create a response (agentic loop with auto tool calling)"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Create a response (agentic loop with auto tool calling)</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400">POST</span>
+    <code className="text-sm text-fd-muted-foreground">/v1/responses</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="post"
+  path="/v1/responses"
+  parameters={[]}
+  defaultBody={`{
+  "model": "string",
+  "instructions": "string",
+  "input": [
+    {
+      "type": "string",
+      "role": "ROLE_UNSPECIFIED",
+      "content": [],
+      "itemId": "string"
+    }
+  ],
+  "tools": [
+    {
+      "type": "string",
+      "function": {
+        "name": "string",
+        "description": "string"
+      }
+    }
+  ],
+  "builtinTools": [
+    {
+      "type": "string",
+      "webSearch": {
+        "maxResults": 0,
+        "searchContextSize": "string"
+      },
+      "fileSearch": {
+        "vectorStoreIds": [],
+        "maxNumResults": 0
+      },
+      "computerUse": {
+        "environment": "string",
+        "displayWidth": 0,
+        "displayHeight": 0
+      },
+      "mcp": {
+        "url": "string",
+        "name": "string",
+        "requireApproval": true,
+        "allowedTools": []
+      }
+    }
+  ],
+  "toolChoice": {
+    "mode": "string",
+    "specificTool": {
+      "type": "string",
+      "function": {
+        "name": "string",
+        "description": "string"
+      }
+    }
+  },
+  "parallelToolCalls": true,
+  "text": {
+    "format": {
+      "type": "string"
+    }
+  },
+  "reasoning": {
+    "effort": "string",
+    "generateSummary": "string"
+  },
+  "maxOutputTokens": 0,
+  "temperature": 0,
+  "topP": 0,
+  "truncation": {
+    "type": "string",
+    "lastMessages": 0
+  },
+  "store": true,
+  "previousResponseId": "string",
+  "stream": true
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X POST "http://localhost:8089/v1/responses" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"string","instructions":"string","input":[{"type":"string","role":"ROLE_UNSPECIFIED","content":[],"itemId":"string"}],"tools":[{"type":"string","function":{"name":"string","description":"string"}}],"builtinTools":[{"type":"string","webSearch":{"maxResults":0,"searchContextSize":"string"},"fileSearch":{"vectorStoreIds":[],"maxNumResults":0},"computerUse":{"environment":"string","displayWidth":0,"displayHeight":0},"mcp":{"url":"string","name":"string","requireApproval":true,"allowedTools":[]}}],"toolChoice":{"mode":"string","specificTool":{"type":"string","function":{"name":"string","description":"string"}}},"parallelToolCalls":true,"text":{"format":{"type":"string"}},"reasoning":{"effort":"string","generateSummary":"string"},"maxOutputTokens":0,"temperature":0,"topP":0,"truncation":{"type":"string","lastMessages":0},"store":true,"previousResponseId":"string","stream":true}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/responses", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "model": "string",
+  "instructions": "string",
+  "input": [
+    {
+      "type": "string",
+      "role": "ROLE_UNSPECIFIED",
+      "content": [],
+      "itemId": "string"
+    }
+  ],
+  "tools": [
+    {
+      "type": "string",
+      "function": {
+        "name": "string",
+        "description": "string"
+      }
+    }
+  ],
+  "builtinTools": [
+    {
+      "type": "string",
+      "webSearch": {
+        "maxResults": 0,
+        "searchContextSize": "string"
+      },
+      "fileSearch": {
+        "vectorStoreIds": [],
+        "maxNumResults": 0
+      },
+      "computerUse": {
+        "environment": "string",
+        "displayWidth": 0,
+        "displayHeight": 0
+      },
+      "mcp": {
+        "url": "string",
+        "name": "string",
+        "requireApproval": true,
+        "allowedTools": []
+      }
+    }
+  ],
+  "toolChoice": {
+    "mode": "string",
+    "specificTool": {
+      "type": "string",
+      "function": {
+        "name": "string",
+        "description": "string"
+      }
+    }
+  },
+  "parallelToolCalls": true,
+  "text": {
+    "format": {
+      "type": "string"
+    }
+  },
+  "reasoning": {
+    "effort": "string",
+    "generateSummary": "string"
+  },
+  "maxOutputTokens": 0,
+  "temperature": 0,
+  "topP": 0,
+  "truncation": {
+    "type": "string",
+    "lastMessages": 0
+  },
+  "store": true,
+  "previousResponseId": "string",
+  "stream": true
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8089/v1/responses",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "model": "string",
+  "instructions": "string",
+  "input": [
+    {
+      "type": "string",
+      "role": "ROLE_UNSPECIFIED",
+      "content": [],
+      "itemId": "string"
+    }
+  ],
+  "tools": [
+    {
+      "type": "string",
+      "function": {
+        "name": "string",
+        "description": "string"
+      }
+    }
+  ],
+  "builtinTools": [
+    {
+      "type": "string",
+      "webSearch": {
+        "maxResults": 0,
+        "searchContextSize": "string"
+      },
+      "fileSearch": {
+        "vectorStoreIds": [],
+        "maxNumResults": 0
+      },
+      "computerUse": {
+        "environment": "string",
+        "displayWidth": 0,
+        "displayHeight": 0
+      },
+      "mcp": {
+        "url": "string",
+        "name": "string",
+        "requireApproval": true,
+        "allowedTools": []
+      }
+    }
+  ],
+  "toolChoice": {
+    "mode": "string",
+    "specificTool": {
+      "type": "string",
+      "function": {
+        "name": "string",
+        "description": "string"
+      }
+    }
+  },
+  "parallelToolCalls": true,
+  "text": {
+    "format": {
+      "type": "string"
+    }
+  },
+  "reasoning": {
+    "effort": "string",
+    "generateSummary": "string"
+  },
+  "maxOutputTokens": 0,
+  "temperature": 0,
+  "topP": 0,
+  "truncation": {
+    "type": "string",
+    "lastMessages": 0
+  },
+  "store": true,
+  "previousResponseId": "string",
+  "stream": true
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "result": {
+    "id": "string",
+    "object": "string",
+    "createdAt": "string",
+    "status": "string",
+    "error": {
+      "code": "string",
+      "message": "string"
+    },
+    "incompleteDetails": {
+      "reason": "string"
+    },
+    "model": "string",
+    "output": [
+      {
+        "id": "string",
+        "type": "string",
+        "status": "string",
+        "role": "ROLE_UNSPECIFIED",
+        "content": [],
+        "callId": "string",
+        "name": "string",
+        "arguments": "string",
+        "output": "string"
+      }
+    ],
+    "usage": {
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "totalTokens": 0,
+      "inputTokensDetails": {
+        "cachedTokens": 0,
+        "textTokens": 0,
+        "audioTokens": 0,
+        "imageTokens": 0,
+        "reasoningTokens": 0
+      },
+      "outputTokensDetails": {
+        "cachedTokens": 0,
+        "textTokens": 0,
+        "audioTokens": 0,
+        "imageTokens": 0,
+        "reasoningTokens": 0
+      }
+    },
+    "temperature": 0,
+    "topP": 0,
+    "maxOutputTokens": 0,
+    "previousResponseId": "string",
+    "reasoning": {
+      "effort": "string",
+      "generateSummary": "string"
+    },
+    "truncation": {
+      "type": "string",
+      "lastMessages": 0
+    }
+  },
+  "error": {
+    "code": 0,
+    "message": "string",
+    "details": [
+      {
+        "@type": "string"
+      }
+    ]
+  }
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `model` | `string` | No |  |
+| `instructions` | `string` | No |  |
+| `input` | `object[]` | No |  |
+| `tools` | `object[]` | No |  |
+| `builtinTools` | `object[]` | No |  |
+| `toolChoice` | `object` | No |  |
+| `parallelToolCalls` | `boolean` | No |  |
+| `text` | `object` | No |  |
+| `reasoning` | `object` | No |  |
+| `maxOutputTokens` | `integer` | No |  |
+| `temperature` | `number` | No |  |
+| `topP` | `number` | No |  |
+| `truncation` | `object` | No |  |
+| `store` | `boolean` | No |  |
+| `previousResponseId` | `string` | No |  |
+| `stream` | `boolean` | No |  |
+| `metadata` | `object` | No |  |
+
+
+### Responses
+
+#### 200 Generated response with tool calls
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `result` | `object` |  |
+| `error` | `object` |  |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

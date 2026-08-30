@@ -1,0 +1,18 @@
+---
+title: MCP
+description: MCP API endpoints
+---
+
+# MCP API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | [`/v1/mcp/servers`](./mcp/list-mcp-servers) |  |
+| `POST` | [`/v1/mcp/servers`](./mcp/register-mcp-server) |  |
+| `GET` | [`/v1/mcp/servers/{id}`](./mcp/get-mcp-server) |  |
+| `PATCH` | [`/v1/mcp/servers/{id}`](./mcp/update-mcp-server) |  |
+| `DELETE` | [`/v1/mcp/servers/{id}`](./mcp/delete-mcp-server) |  |
+| `GET` | [`/v1/mcp/servers/{id}/health`](./mcp/get-mcp-server-health) |  |
+| `GET` | [`/v1/mcp/servers/{serverId}/tools`](./mcp/discover-tools) |  |
+| `GET` | [`/v1/mcp/tools`](./mcp/list-federated-tools) |  |
+| `POST` | [`/v1/mcp/tools/call`](./mcp/call-tool) |  |

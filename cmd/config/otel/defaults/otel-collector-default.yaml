@@ -1,0 +1,72 @@
+# =============================================================================
+# Everstack OTEL Collector Default Configuration
+# =============================================================================
+# This is the bundled default OTEL collector configuration.
+# It's designed to work out-of-the-box with Everstack Gateway.
+#
+# Quick Start (Docker):
+#   docker run -d \
+#     --name everstack-otel-collector \
+#     --network host \
+#     otel/opentelemetry-collector-contrib:latest \
+#     --config=<(curl -s https://raw.githubusercontent.com/everstack/everstack/main/cmd/config/otel/defaults/otel-collector-default.yaml)
+#
+# Or save this config and run:
+#   docker run -d \
+#     --name everstack-otel-collector \
+#     --network host \
+#     -v $(pwd)/otel-collector-config.yaml:/etc/otel-collector-config.yaml \
+#     otel/opentelemetry-collector-contrib:latest \
+#     --config=/etc/otel-collector-config.yaml
+# =============================================================================
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        # Bind to all interfaces so gateway can connect
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Batch processor - groups telemetry data for efficient export
+  batch:
+    timeout: 1s
+    send_batch_size: 100
+    send_batch_max_size: 1000
+
+  # Memory limiter - prevents OOM
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+exporters:
+  # Debug exporter - logs to console (default for simplicity)
+  # Good for testing and development
+  debug:
+    verbosity: normal
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+service:
+  # Collector's own telemetry
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed
+
+  pipelines:
+    # Logs pipeline
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [debug]
+
+    # Traces pipeline
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [debug]

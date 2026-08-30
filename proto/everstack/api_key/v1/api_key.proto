@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package everstack.api_key.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/api_key/v1;api_key";
+
+enum ApiKeyType {
+  API_KEY_TYPE_UNSPECIFIED = 0;
+  API_KEY_TYPE_USER = 1;
+  API_KEY_TYPE_ORG = 2;
+}
+
+message ApiKey {
+  string id = 1;
+  string name = 2;
+  string hash = 3;
+  optional string user_id = 4;
+  optional string org_id = 5;
+  ApiKeyType type = 6;
+  string sensitive_id = 8;
+  google.protobuf.Timestamp last_used_at = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message CreateApiKeyRequest {
+  string name = 1;
+  string user_id = 2;
+  string org_id = 3;
+  ApiKeyType type = 4;
+}
+
+message CreateApiKeyResponse {
+  ApiKey api_key = 1;
+}
+
+message DeleteApiKeyRequest {
+  string id = 1;
+}
+
+message DeleteApiKeyResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetApiKeyRequest {
+  string id = 1;
+}
+
+message GetApiKeyResponse {
+  ApiKey api_key = 1;
+}
+
+message ListApiKeysRequest {
+  optional string user_id = 1;
+  optional string org_id = 2;
+  optional ApiKeyType type = 3;
+}
+
+message ListApiKeysResponse {
+  repeated ApiKey api_keys = 1;
+}
+
+message RegenerateApiKeyRequest {
+  string id = 1;
+}
+
+message RegenerateApiKeyResponse {
+  ApiKey api_key = 1;
+}
+
+message UpdateApiKeyRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string user_id = 3;
+  optional string org_id = 4;
+  optional ApiKeyType type = 5;
+}
+
+message UpdateApiKeyResponse {
+  ApiKey api_key = 1;
+}

@@ -1,0 +1,78 @@
+---
+title: Rate Limiting
+description: Per-key and per-provider request rate limits.
+icon: Gauge
+---
+
+Rate limiting protects your LLM providers from being overwhelmed and gives you control over how request budgets are distributed across tenants and API keys. The gateway uses a token bucket algorithm that provides smooth, burst-tolerant throttling.
+
+## When to use rate limiting
+
+Enable rate limiting when you want to:
+
+- prevent a single tenant or API key from consuming all provider capacity
+- enforce usage tiers (free vs. paid plans with different request budgets)
+- protect against runaway loops or misconfigured clients that send requests too fast
+- stay within provider-side rate limits by throttling before requests leave the gateway
+
+## How it works
+
+The gateway uses the token bucket algorithm (backed by `golang.org/x/time/rate`). Each rate limiter maintains a bucket that refills at a steady rate and allows short bursts up to a configured maximum.
+
+For example, with `requests_per_minute: 600` and `burst: 100`, a client can send up to 100 requests instantly, then sustain 10 requests per second as the bucket refills.
+
+## Configuration
+
+```yaml
+gateway:
+  rate_limit:
+    enabled: true
+    requests_per_minute: 500
+    burst: 100
+    key_source: "correlation"
+```
+
+Key settings:
+
+- `enabled` -- turns rate limiting on or off
+- `requests_per_minute` -- the sustained request rate
+- `burst` -- the maximum number of requests allowed in a single burst
+- `key_source` -- determines how requests are grouped for rate limiting
+
+## Key sources
+
+The `key_source` setting controls how the gateway identifies distinct clients for rate limiting purposes:
+
+- **correlation** (default) -- uses the correlation ID from the request context. This is the most flexible option because it respects however your application identifies request streams.
+- **api_key** -- rate limits by the API key used to authenticate. Each key gets its own bucket.
+- **user_id** -- rate limits by the user ID from the authenticated context. Useful when multiple keys belong to the same user.
+- **ip** -- rate limits by the client's IP address. Useful as a blunt defense against unauthenticated abuse, but less precise behind load balancers or proxies.
+
+## Tenant isolation
+
+Rate limits are enforced per-tenant. Tenant A's traffic never counts against tenant B's budget, regardless of the key source setting.
+
+Within a tenant, the key source determines the granularity. For example, with `key_source: "api_key"`, each of tenant A's API keys gets its own independent rate limit bucket.
+
+## Response headers
+
+When a request is rate-limited, the gateway returns HTTP 429 with headers that help clients implement backoff:
+
+- `Retry-After` -- seconds until the client should retry
+- `X-RateLimit-Limit` -- the configured requests-per-minute ceiling
+- `X-RateLimit-Remaining` -- how many requests are left in the current window
+- `X-RateLimit-Reset` -- Unix timestamp when the bucket fully refills
+
+Clients that respect `Retry-After` will recover gracefully without flooding the gateway with retries.
+
+## Idle cleanup
+
+Rate limiter state is maintained in memory. To avoid unbounded memory growth, limiters that have not been used for 10 minutes are automatically cleaned up. The next request from that client creates a fresh limiter with a full bucket.
+
+## Multi-replica note
+
+The current rate limiter is in-memory and local to each gateway replica. If you are running multiple replicas behind a load balancer, each replica maintains its own independent rate limit state. This means the effective rate limit is multiplied by the number of replicas.
+
+For strict global rate limiting across replicas, a shared Redis-backed limiter is planned but not yet available. In the meantime, you can account for this by dividing your target rate by the replica count.
+
+For endpoint details, see the [Gateway API Reference](/api-reference/gateway).

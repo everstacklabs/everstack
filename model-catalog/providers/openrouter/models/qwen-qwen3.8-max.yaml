@@ -1,0 +1,68 @@
+name: "qwen/qwen3.8-max"
+display_name: "Qwen3.8 Max (OpenRouter)"
+family: "qwen"
+status: "stable"
+release_date: "2026-08-03"
+
+cost:
+  input_per_1k: 0.002
+  output_per_1k: 0.006
+  cache_read_per_1k: 0.00025
+  cache_write_per_1k: 0.0025
+
+limits:
+  max_tokens: 1000000
+  max_completion_tokens: 131072
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image","video"]
+  output: ["text"]
+
+notes: "Qwen vision-language model for visual reasoning, documents, and agent tasks"
+
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 131072
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+  - key: "frequency_penalty"
+    display_name: "Frequency penalty"
+    type: "number"
+    min_value: -2
+    has_min_value: true
+    max_value: 2
+    has_max_value: true
+  - key: "presence_penalty"
+    display_name: "Presence penalty"
+    type: "number"
+    min_value: -2
+    has_min_value: true
+    max_value: 2
+    has_max_value: true
+  - key: "seed"
+    display_name: "Seed"
+    type: "integer"

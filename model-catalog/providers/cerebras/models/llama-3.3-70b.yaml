@@ -1,0 +1,20 @@
+name: "llama-3.3-70b"
+display_name: "Llama 3.3 70B"
+family: "llama"
+status: "deprecated"
+
+cost:
+  input_per_1k: 0.0006
+  output_per_1k: 0.0008
+
+limits:
+  max_tokens: 131072
+  max_completion_tokens: 16384
+
+capabilities:
+  - chat
+  - function_calling
+
+modalities:
+  input: ["text"]
+  output: ["text"]

@@ -1,0 +1,39 @@
+name: "gpt-5.1-codex"
+display_name: "GPT-5.1 Codex"
+family: "gpt-5"
+status: "stable"
+
+cost:
+  input_per_1k: 0.00125
+  output_per_1k: 0.01
+  cache_read_per_1k: 0.000125
+
+limits:
+  max_tokens: 400000
+  max_completion_tokens: 128000
+
+api_type: "responses"
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+  - coding
+
+modalities:
+  input: ["text", "image"]
+  output: ["text"]
+
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 128000
+    has_max_value: true
+  - key: "verbosity"
+    display_name: "Verbosity"
+    type: "enum"
+    options: ["low","medium","high"]

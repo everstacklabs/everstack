@@ -1,0 +1,28 @@
+name: "text-embedding-ada-002"
+display_name: "Text Embedding Ada 002"
+family: "embedding"
+status: "stable"
+release_date: "2022-12-15"
+
+cost:
+  input_per_1k: 0.0001
+  output_per_1k: 0
+
+limits:
+  max_tokens: 8192
+  max_completion_tokens: 1536
+
+capabilities:
+  - chat
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 1536
+    has_max_value: true

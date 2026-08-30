@@ -1,0 +1,19 @@
+version: v2
+plugins:
+  - protoc_builtin: go
+    out: .artifacts/grpc
+  - protoc_builtin: go-grpc
+    out: .artifacts/grpc
+  - protoc_builtin: grpc-gateway
+    out: .artifacts/grpc
+    opt:
+      - allow_delete_body=true
+  - protoc_builtin: openapiv2
+    out: .artifacts/grpc
+    opt:
+      - allow_delete_body=true
+  - protoc_builtin: validate
+    out: .artifacts/grpc
+    opt: lang=go
+  - protoc_builtin: connect-go
+    out: .artifacts/grpc

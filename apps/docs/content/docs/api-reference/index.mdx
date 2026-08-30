@@ -1,0 +1,63 @@
+---
+title: API Reference
+description: Everstack REST API reference — OpenAI-compatible gateway and platform APIs.
+icon: FileCode
+---
+
+Everstack exposes an OpenAI-compatible gateway API for LLM operations, plus platform APIs for agents, memory, workflows, functions, and more.
+
+All endpoints are served on the same port (default `8089`) and require an API key in the `Authorization` header.
+
+```bash
+curl https://{instance}.{region}.everstack.ai/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "Hello"}]}'
+```
+
+## Gateway
+
+OpenAI-compatible endpoints — drop-in replacement for any OpenAI SDK.
+
+<Cards>
+  <Card title="Gateway API" href="/api-reference/gateway">
+    Chat completions, embeddings, images, audio, moderations, and responses.
+  </Card>
+</Cards>
+
+## Platform
+
+<Cards>
+  <Card title="Agents API" href="/api-reference/agents">
+    Create and manage agents, sessions, and HITL approvals.
+  </Card>
+  <Card title="Workflows API" href="/api-reference/workflows">
+    Workflow CRUD and execution management.
+  </Card>
+  <Card title="Memory API" href="/api-reference/memory">
+    Vector memory collections and semantic search.
+  </Card>
+  <Card title="Functions API" href="/api-reference/functions">
+    Isolated function management and execution.
+  </Card>
+  <Card title="Providers API" href="/api-reference/providers">
+    Configure and manage LLM provider integrations.
+  </Card>
+  <Card title="API Keys" href="/api-reference/api-keys">
+    Create, list, and revoke API keys.
+  </Card>
+  <Card title="MCP API" href="/api-reference/mcp">
+    Model Context Protocol server management.
+  </Card>
+</Cards>
+
+## System
+
+<Cards>
+  <Card title="Config API" href="/api-reference/config">
+    Runtime configuration management.
+  </Card>
+  <Card title="Auth API" href="/api-reference/auth">
+    Authentication, sessions, and user management.
+  </Card>
+</Cards>

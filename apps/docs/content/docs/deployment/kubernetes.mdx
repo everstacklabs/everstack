@@ -1,0 +1,174 @@
+---
+title: Kubernetes
+description: Deploy Everstack on Kubernetes with Helm charts for production workloads.
+icon: Server
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+## When to use Kubernetes
+
+Use Kubernetes when you need horizontal scaling, high availability, or multi-tenant isolation. Everstack ships a Helm chart that deploys the full platform -- gateway, API server, and agent runtime -- with built-in support for autoscaling, secrets management, and network policies. For simpler setups, see [Docker](/deployment/docker).
+
+## Prerequisites
+
+- Kubernetes 1.27+ cluster (k3s, EKS, GKE, or AKS all work)
+- Helm 3.12+
+- `kubectl` configured to access your cluster
+- PostgreSQL 15+ and ClickHouse 24+ (managed services or in-cluster). See [Database Setup](/deployment/database-setup).
+
+## Helm chart installation
+
+Add the Everstack Helm repository and install:
+
+```bash
+helm repo add everstack https://charts.everstack.ai
+helm repo update
+
+helm install everstack everstack/everstack \
+  --namespace everstack \
+  --create-namespace \
+  -f values.yaml
+```
+
+Or install from a local chart archive:
+
+```bash
+helm install everstack ./everstack-chart.tgz \
+  --namespace everstack \
+  --create-namespace \
+  -f values.yaml
+```
+
+## Key values.yaml settings
+
+```yaml title="values.yaml"
+# Server configuration
+server:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/everstacklabs/everstack
+    tag: latest
+
+# Database connections
+database:
+  url: "postgres://everstack:changeme@postgres:5432/everstack?sslmode=require"
+clickhouse:
+  url: "clickhouse://clickhouse:9000/everstack"
+redis:
+  url: "redis://redis:6379"
+
+# Ingress
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: everstack.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: everstack-tls
+      hosts:
+        - everstack.example.com
+
+# Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+```
+
+## Service architecture
+
+The Helm chart deploys the following components:
+
+| Component | Role | Scaling |
+| --- | --- | --- |
+| Gateway | gRPC/HTTP ingress, routing, rate limiting | HPA (CPU-based) |
+| API Server | Business logic, authentication, tenant resolution | HPA (CPU-based) |
+| Agent Runtime | Sandbox orchestration, agent execution | Per-node or HPA |
+
+All components run as a single binary (`everstack serve`) by default. You can split them into separate deployments by setting the server mode in values:
+
+```yaml
+server:
+  mode: gateway-only  # runs only the gateway
+```
+
+## Scaling with HPA
+
+The chart includes a `HorizontalPodAutoscaler` for the gateway. Enable it in your values:
+
+```yaml
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+```
+
+The HPA scales gateway pods based on CPU utilization. For agent runtime scaling, consider dedicated node pools with appropriate resource requests.
+
+## Secrets management
+
+Store sensitive values (database credentials, auth secrets) in Kubernetes secrets rather than plain values.yaml. The chart supports referencing existing secrets:
+
+```yaml
+server:
+  existingSecret: everstack-credentials
+```
+
+For production clusters, use Sealed Secrets or an external secrets operator to manage credentials safely in Git:
+
+```bash
+kubeseal --format yaml < secret.yaml > sealed-secret.yaml
+```
+
+<Callout type="warn">
+  Never commit plain-text secrets to version control. Use sealed-secrets or an external secret store for all credentials.
+</Callout>
+
+## Network policies
+
+The chart can deploy `NetworkPolicy` resources to restrict traffic between pods. Enable them in values:
+
+```yaml
+networkPolicy:
+  enabled: true
+```
+
+This ensures only the gateway can reach the API server, and only the API server can reach the databases.
+
+## Upgrades
+
+Upgrade to a new chart version with:
+
+```bash
+# Run migrations first
+kubectl run everstack-migrate --rm -it \
+  --image=ghcr.io/everstacklabs/everstack:latest \
+  --restart=Never \
+  -- migrate up
+
+# Then upgrade the release
+helm upgrade everstack everstack/everstack \
+  --namespace everstack \
+  -f values.yaml
+```
+
+Helm performs a rolling update by default, so there is no downtime during the upgrade.
+
+## Monitoring
+
+The chart exposes Prometheus metrics on the `/metrics` endpoint. If you run the kube-prometheus-stack, the chart can create a `ServiceMonitor` automatically:
+
+```yaml
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+```
+
+This gives you request latency, error rates, and resource utilization dashboards out of the box.

@@ -1,0 +1,87 @@
+---
+title: Provider Keys
+description: Managing LLM provider API keys and credentials.
+icon: Key
+---
+
+Provider keys are the API credentials that let Everstack call LLM providers on your behalf. When an agent or workflow sends a request to OpenAI, Anthropic, Google, or any other supported provider, Everstack uses the provider keys you have configured in the Vault to authenticate that request.
+
+## Why Vault manages your keys
+
+Storing API keys directly in application code, environment variables, or agent configurations creates security and operational problems. Keys get committed to repos, duplicated across services, and are hard to rotate without downtime.
+
+Vault centralizes credential management. You add your keys once, Everstack encrypts and stores them, and every agent and workflow in the tenant uses them transparently. This gives you a single place to rotate, disable, or audit key usage.
+
+## Adding keys via the admin UI
+
+To add a provider key:
+
+1. Navigate to **Vault** in the admin sidebar
+2. Select the provider (e.g., OpenAI, Anthropic, Google, Mistral)
+3. Click **Add Key**
+4. Paste your API key
+5. Optionally set a label (e.g., "production", "dev-team", "high-priority")
+6. Save
+
+The key is encrypted immediately and never displayed in full again. You can verify a key is configured by its label and last-four characters, but Everstack will not show you the complete key after creation.
+
+## Multiple keys per provider
+
+You can add more than one key for the same provider. This is useful when you want:
+
+- **Separate billing** -- different keys for different teams, projects, or cost centers
+- **Rate limit distribution** -- spread requests across multiple keys to avoid hitting a single key's rate limits
+- **Gradual rotation** -- add a new key before removing the old one, with no downtime
+
+When multiple keys exist for a provider, Everstack selects which key to use for each request based on weight-based rotation.
+
+## Weight-based rotation
+
+Each key has a configurable weight that determines how often it is selected relative to other keys for the same provider. Weights are integers. The probability of a key being selected is its weight divided by the total weight of all active keys for that provider.
+
+| Key | Weight | Selection probability |
+| --- | --- | --- |
+| key-A | 3 | 60% |
+| key-B | 2 | 40% |
+
+This lets you ramp up a new key gradually. Start with a low weight, monitor for errors, then increase it. Or assign a higher weight to a key with a larger rate limit quota.
+
+If all keys have the same weight (or only one key exists), selection is uniform.
+
+## Toggling active and inactive
+
+Each key can be toggled between active and inactive states. An inactive key is never selected for requests, but it is not deleted. This is useful when:
+
+- A key is approaching its rate limit and you want to temporarily stop using it
+- You suspect a key may be compromised and want to stop using it while you investigate
+- You are debugging and want to isolate which key is causing an issue
+
+Toggling a key inactive is immediate. Any in-flight request that already selected that key will complete, but no new requests will use it.
+
+<Callout type="warn">
+  If you deactivate all keys for a provider, requests to that provider will fail. Make sure at least one active key exists for every provider your agents and workflows depend on.
+</Callout>
+
+## Encryption at rest
+
+All provider keys are encrypted at rest using AES-256. Keys are decrypted only at the moment a request needs to be authenticated, held in memory for the duration of the API call, and never written to disk in plaintext. Encryption keys are managed separately from the application database.
+
+## When to rotate keys
+
+Rotate your provider keys when:
+
+- A team member who had access to the key leaves the organization
+- You suspect a key may have been exposed (logs, screenshots, shared configs)
+- Your security policy requires periodic rotation (e.g., every 90 days)
+- A provider recommends rotation due to a security incident on their side
+
+The rotation process with Vault is straightforward: add the new key, set its weight, verify it works, then deactivate or delete the old key. There is no downtime because both keys can be active simultaneously during the transition.
+
+## Supported providers
+
+Vault supports keys for all providers that Everstack's gateway can route to. Adding a new provider to the gateway automatically makes it available in Vault. See [Providers](/getting-started/providers) for the full list of supported LLM providers.
+
+## Next steps
+
+- [Providers](/getting-started/providers) -- Supported LLM providers and how to configure them.
+- [Vault API Reference](/getting-started/vault/api-keys) -- Full API documentation for managing provider keys programmatically.

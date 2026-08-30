@@ -1,0 +1,47 @@
+name: "claude-opus-4-1"
+display_name: "Claude Opus 4.1 (latest)"
+family: "claude-opus"
+status: "deprecated"
+release_date: "2025-08-05"
+
+cost:
+  input_per_1k: 0.015
+  output_per_1k: 0.075
+  cache_read_per_1k: 0.0015
+  cache_write_per_1k: 0.01875
+
+limits:
+  max_tokens: 200000
+  max_completion_tokens: 32000
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - extended_thinking
+  - computer_use
+
+modalities:
+  input: ["text","image","pdf"]
+  output: ["text"]
+
+knowledge_cutoff: "2025-03-31"
+notes: "Flagship Claude model for deep reasoning, coding, and long-horizon agents"
+
+structured_output: true
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 32000
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "reasoning_budget_tokens"
+    display_name: "Reasoning token budget"
+    type: "integer"
+    min_value: 1024
+    has_min_value: true

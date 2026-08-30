@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS idx_agent_memories_unique_session_summary;

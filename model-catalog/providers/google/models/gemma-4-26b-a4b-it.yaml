@@ -1,0 +1,51 @@
+name: "gemma-4-26b-a4b-it"
+display_name: "Gemma 4 26B A4B IT"
+family: "gemma"
+status: "stable"
+release_date: "2026-04-02"
+
+cost:
+  input_per_1k: 0
+  output_per_1k: 0
+
+limits:
+  max_tokens: 262144
+  max_completion_tokens: 32768
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image"]
+  output: ["text"]
+
+notes: "Open Gemma instruction model for efficient chat and self-hosted deployments"
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 32768
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "reasoning_enabled"
+    display_name: "Reasoning"
+    type: "boolean"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true

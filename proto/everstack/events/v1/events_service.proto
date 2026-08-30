@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package everstack.events.v1;
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/events/v1;events";
+
+message Event {
+  string id = 1;
+  string type = 2;
+  string api_key_hash = 3;
+  string correlation_id = 4;
+  string created_at = 5; // ISO-8601
+  uint64 payload_size_bytes = 6;
+  bytes payload = 7;
+  string blob_id = 8; // nullable on wire if not externalized
+}
+
+message ListEventsRequest {
+  string type = 1;
+  string api_key_hash = 2;
+  string from = 3;
+  string to = 4;
+  uint32 page_size = 5;
+  string page_token = 6;
+}
+message ListEventsResponse {
+  repeated Event events = 1;
+  string next_page_token = 2;
+}
+
+message GetEventRequest {
+  string id = 1;
+}
+message GetEventResponse {
+  Event event = 1;
+}
+
+message GetEventPayloadRequest {
+  string id = 1;
+}
+message GetEventPayloadResponse {
+  bytes payload = 1;
+}
+
+service EventsService {
+  rpc ListEvents(ListEventsRequest) returns (stream ListEventsResponse);
+  rpc GetEvent(GetEventRequest) returns (GetEventResponse);
+  rpc GetEventPayload(GetEventPayloadRequest) returns (GetEventPayloadResponse);
+}

@@ -1,0 +1,26 @@
+chat:
+  - kimi-k2.6
+  - kimi-k2.5
+  - kimi-k2-thinking
+  - kimi-k2-thinking-turbo
+  - kimi-k2-0905-preview
+  - kimi-k2-turbo-preview
+  - kimi-k2-0711-preview
+
+function_calling:
+  - kimi-k2.6
+  - kimi-k2.5
+  - kimi-k2-thinking
+  - kimi-k2-thinking-turbo
+  - kimi-k2-0905-preview
+  - kimi-k2-turbo-preview
+  - kimi-k2-0711-preview
+
+reasoning:
+  - kimi-k2.6
+  - kimi-k2.5
+  - kimi-k2-thinking
+  - kimi-k2-thinking-turbo
+
+vision:
+  - kimi-k2.6

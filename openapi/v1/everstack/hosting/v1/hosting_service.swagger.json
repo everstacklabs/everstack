@@ -1,0 +1,995 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "everstack/hosting/v1/hosting_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "SitesService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/hosting/capabilities": {
+      "get": {
+        "summary": "Retained as a customer-safe capability probe. Cross-tenant operator\nauthorization is intentionally always false on this service.",
+        "operationId": "SitesService_GetHostingCapabilities",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1HostingCapabilitiesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "SitesService"
+        ]
+      }
+    },
+    "/v1/hosting/request-code": {
+      "post": {
+        "operationId": "SitesService_RequestCode",
+        "responses": {
+          "200": {
+            "description": "Request a sign-in code by email",
+            "schema": {
+              "$ref": "#/definitions/v1RequestCodeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RequestCodeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SitesService"
+        ]
+      }
+    },
+    "/v1/hosting/verify-code": {
+      "post": {
+        "operationId": "SitesService_VerifyCode",
+        "responses": {
+          "200": {
+            "description": "Verify an emailed code and receive an API key",
+            "schema": {
+              "$ref": "#/definitions/v1VerifyCodeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1VerifyCodeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SitesService"
+        ]
+      }
+    },
+    "/v1/publish": {
+      "post": {
+        "operationId": "SitesService_PublishSite",
+        "responses": {
+          "200": {
+            "description": "Register a publish and receive presigned upload URLs",
+            "schema": {
+              "$ref": "#/definitions/v1PublishSiteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1PublishSiteRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SitesService"
+        ]
+      }
+    },
+    "/v1/publish/{slug}/finalize": {
+      "post": {
+        "operationId": "SitesService_FinalizeSite",
+        "responses": {
+          "200": {
+            "description": "Verify uploads and make the version live",
+            "schema": {
+              "$ref": "#/definitions/v1FinalizeSiteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SitesServiceFinalizeSiteBody"
+            }
+          }
+        ],
+        "tags": [
+          "SitesService"
+        ]
+      }
+    },
+    "/v1/sites": {
+      "get": {
+        "operationId": "SitesService_ListSites",
+        "responses": {
+          "200": {
+            "description": "List sites owned by the caller",
+            "schema": {
+              "$ref": "#/definitions/v1ListSitesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SitesService"
+        ]
+      }
+    },
+    "/v1/sites/{slug}": {
+      "get": {
+        "operationId": "SitesService_GetSite",
+        "responses": {
+          "200": {
+            "description": "Get site by slug",
+            "schema": {
+              "$ref": "#/definitions/v1GetSiteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SitesService"
+        ]
+      },
+      "delete": {
+        "operationId": "SitesService_DeleteSite",
+        "responses": {
+          "200": {
+            "description": "Delete a site and its content",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteSiteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SitesService"
+        ]
+      },
+      "patch": {
+        "operationId": "SitesService_UpdateSite",
+        "responses": {
+          "200": {
+            "description": "Update site settings",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateSiteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SitesServiceUpdateSiteBody"
+            }
+          }
+        ],
+        "tags": [
+          "SitesService"
+        ]
+      }
+    },
+    "/v1/sites/{slug}/claim": {
+      "post": {
+        "operationId": "SitesService_ClaimSite",
+        "responses": {
+          "200": {
+            "description": "Start claiming an anonymous site",
+            "schema": {
+              "$ref": "#/definitions/v1ClaimSiteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SitesServiceClaimSiteBody"
+            }
+          }
+        ],
+        "tags": [
+          "SitesService"
+        ]
+      }
+    },
+    "/v1/sites/{slug}/report": {
+      "post": {
+        "operationId": "SitesService_ReportSite",
+        "responses": {
+          "200": {
+            "description": "Accept an abuse report without revealing whether the site exists",
+            "schema": {
+              "$ref": "#/definitions/v1ReportSiteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SitesServiceReportSiteBody"
+            }
+          }
+        ],
+        "tags": [
+          "SitesService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "SitesServiceClaimSiteBody": {
+      "type": "object",
+      "properties": {
+        "claimToken": {
+          "type": "string",
+          "description": "Claim token from FinalizeSiteResponse.claim_url."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email to bind the site to; a one-time code is sent to it."
+        }
+      }
+    },
+    "SitesServiceFinalizeSiteBody": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "finalizeToken": {
+          "type": "string"
+        }
+      }
+    },
+    "SitesServiceReportSiteBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "$ref": "#/definitions/v1AbuseReason"
+        },
+        "details": {
+          "type": "string",
+          "description": "Optional bounded context for an operator. Required when reason is OTHER."
+        },
+        "pagePath": {
+          "type": "string",
+          "description": "Optional path on this site, for example \"/login\". Absolute URLs are not\naccepted."
+        }
+      }
+    },
+    "SitesServiceUpdateSiteBody": {
+      "type": "object",
+      "properties": {
+        "spaFallback": {
+          "type": "boolean"
+        },
+        "access": {
+          "$ref": "#/definitions/v1SiteAccess"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AbuseReason": {
+      "type": "string",
+      "enum": [
+        "ABUSE_REASON_UNSPECIFIED",
+        "ABUSE_REASON_PHISHING",
+        "ABUSE_REASON_MALWARE",
+        "ABUSE_REASON_IMPERSONATION",
+        "ABUSE_REASON_PRIVACY",
+        "ABUSE_REASON_COPYRIGHT",
+        "ABUSE_REASON_OTHER"
+      ],
+      "default": "ABUSE_REASON_UNSPECIFIED",
+      "description": "AbuseReason is the reporter-selected category used to triage the operator\nqueue. Free-form context belongs in ReportSiteRequest.details."
+    },
+    "v1AbuseReport": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/definitions/v1AbuseReason"
+        },
+        "details": {
+          "type": "string"
+        },
+        "pagePath": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "resolvedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ClaimSiteResponse": {
+      "type": "object",
+      "properties": {
+        "codeSent": {
+          "type": "boolean",
+          "description": "Claim continues via VerifyCode with the emailed code."
+        }
+      }
+    },
+    "v1DeleteSiteResponse": {
+      "type": "object"
+    },
+    "v1FileManifestEntry": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Site-relative path, e.g. \"index.html\" or \"assets/app.js\"."
+        },
+        "sizeBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "contentType": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "description": "Optional lowercase hex sha256 of the file body."
+        }
+      },
+      "description": "FileManifestEntry describes one file the caller intends to upload."
+    },
+    "v1FileUpload": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "uploadUrl": {
+          "type": "string"
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "FileUpload is the presigned upload slot for one manifest entry."
+    },
+    "v1FinalizeSiteResponse": {
+      "type": "object",
+      "properties": {
+        "slug": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "url": {
+          "type": "string",
+          "title": "Live URL, e.g. https://{slug}.evs.run"
+        },
+        "claimUrl": {
+          "type": "string",
+          "description": "Present only for anonymous sites: visiting this URL (or calling\nClaimSite with the embedded token) makes the site permanent."
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1GetSiteResponse": {
+      "type": "object",
+      "properties": {
+        "site": {
+          "$ref": "#/definitions/v1Site"
+        }
+      }
+    },
+    "v1HostingCapabilitiesResponse": {
+      "type": "object",
+      "properties": {
+        "hostingEnabled": {
+          "type": "boolean"
+        },
+        "canOperate": {
+          "type": "boolean"
+        },
+        "anonymousPublishingEnabled": {
+          "type": "boolean"
+        },
+        "edgeEnforcementConfigured": {
+          "type": "boolean"
+        },
+        "baseDomain": {
+          "type": "string"
+        }
+      }
+    },
+    "v1HostingOverviewResponse": {
+      "type": "object",
+      "properties": {
+        "totalSites": {
+          "type": "string",
+          "format": "int64"
+        },
+        "activeSites": {
+          "type": "string",
+          "format": "int64"
+        },
+        "anonymousSites": {
+          "type": "string",
+          "format": "int64"
+        },
+        "expiringSites": {
+          "type": "string",
+          "format": "int64"
+        },
+        "disabledSites": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "openReports": {
+          "type": "string",
+          "format": "int64"
+        },
+        "pendingActions": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ListAbuseReportsResponse": {
+      "type": "object",
+      "properties": {
+        "reports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AbuseReport"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListOperatorSitesResponse": {
+      "type": "object",
+      "properties": {
+        "sites": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OperatorSite"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListSitesResponse": {
+      "type": "object",
+      "properties": {
+        "sites": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Site"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ModerationAction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/v1ModerationActionKind"
+        },
+        "status": {
+          "$ref": "#/definitions/v1ModerationActionStatus"
+        },
+        "reason": {
+          "$ref": "#/definitions/v1AbuseReason"
+        },
+        "note": {
+          "type": "string"
+        },
+        "actorId": {
+          "type": "string"
+        },
+        "attemptCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "lastError": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "appliedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ModerationActionKind": {
+      "type": "string",
+      "enum": [
+        "MODERATION_ACTION_KIND_UNSPECIFIED",
+        "MODERATION_ACTION_KIND_TAKEDOWN",
+        "MODERATION_ACTION_KIND_RESTORE"
+      ],
+      "default": "MODERATION_ACTION_KIND_UNSPECIFIED"
+    },
+    "v1ModerationActionStatus": {
+      "type": "string",
+      "enum": [
+        "MODERATION_ACTION_STATUS_UNSPECIFIED",
+        "MODERATION_ACTION_STATUS_PENDING",
+        "MODERATION_ACTION_STATUS_APPLIED",
+        "MODERATION_ACTION_STATUS_SUPERSEDED"
+      ],
+      "default": "MODERATION_ACTION_STATUS_UNSPECIFIED",
+      "description": " - MODERATION_ACTION_STATUS_APPLIED: The serving provider accepted the write. This does not claim that an\neventually-consistent KV update is already visible at every edge.\n - MODERATION_ACTION_STATUS_SUPERSEDED: A newer decision for the same site replaced this action before it could\nbe projected. Superseded actions are retained for audit but never retried."
+    },
+    "v1OperatorSite": {
+      "type": "object",
+      "properties": {
+        "site": {
+          "$ref": "#/definitions/v1Site"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "ownerUserId": {
+          "type": "string"
+        },
+        "anonymous": {
+          "type": "boolean"
+        },
+        "killSwitch": {
+          "type": "boolean"
+        },
+        "takedownReason": {
+          "type": "string"
+        },
+        "openReportCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "enforcementStatus": {
+          "$ref": "#/definitions/v1ModerationActionStatus"
+        }
+      }
+    },
+    "v1PublishSiteRequest": {
+      "type": "object",
+      "properties": {
+        "slug": {
+          "type": "string",
+          "description": "Optional; server generates a slug when empty. Must satisfy the slug\npattern and not be reserved."
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FileManifestEntry"
+          }
+        },
+        "spaFallback": {
+          "type": "boolean"
+        },
+        "access": {
+          "$ref": "#/definitions/v1SiteAccess"
+        }
+      }
+    },
+    "v1PublishSiteResponse": {
+      "type": "object",
+      "properties": {
+        "slug": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "uploads": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FileUpload"
+          }
+        },
+        "finalizeToken": {
+          "type": "string",
+          "description": "Opaque token required by FinalizeSite for this version."
+        }
+      }
+    },
+    "v1ReportSiteResponse": {
+      "type": "object",
+      "properties": {
+        "accepted": {
+          "type": "boolean",
+          "description": "Always true for a syntactically valid report, including an unknown slug,\nso the public endpoint cannot be used to enumerate sites."
+        }
+      }
+    },
+    "v1RequestCodeRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RequestCodeResponse": {
+      "type": "object",
+      "properties": {
+        "codeSent": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1RestoreSiteResponse": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "$ref": "#/definitions/v1ModerationAction"
+        }
+      }
+    },
+    "v1ReviewAbuseReportResponse": {
+      "type": "object",
+      "properties": {
+        "report": {
+          "$ref": "#/definitions/v1AbuseReport"
+        }
+      }
+    },
+    "v1Site": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1SiteStatus"
+        },
+        "access": {
+          "$ref": "#/definitions/v1SiteAccess"
+        },
+        "spaFallback": {
+          "type": "boolean"
+        },
+        "currentVersion": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "fileCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "url": {
+          "type": "string"
+        },
+        "claimed": {
+          "type": "boolean"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastPublishedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "Site is a hosted static site served at {slug}.evs.run."
+    },
+    "v1SiteAccess": {
+      "type": "string",
+      "enum": [
+        "SITE_ACCESS_UNSPECIFIED",
+        "SITE_ACCESS_PUBLIC",
+        "SITE_ACCESS_NOINDEX"
+      ],
+      "default": "SITE_ACCESS_UNSPECIFIED",
+      "description": "SiteAccess controls indexing/visibility of a site. Anonymous sites are\nalways served with noindex regardless of this value."
+    },
+    "v1SiteStatus": {
+      "type": "string",
+      "enum": [
+        "SITE_STATUS_UNSPECIFIED",
+        "SITE_STATUS_ACTIVE",
+        "SITE_STATUS_EXPIRED",
+        "SITE_STATUS_DISABLED"
+      ],
+      "default": "SITE_STATUS_UNSPECIFIED",
+      "description": "SiteStatus is the lifecycle state of a hosted site."
+    },
+    "v1TakedownSiteResponse": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "$ref": "#/definitions/v1ModerationAction"
+        }
+      }
+    },
+    "v1UpdateSiteResponse": {
+      "type": "object",
+      "properties": {
+        "site": {
+          "$ref": "#/definitions/v1Site"
+        }
+      }
+    },
+    "v1VerifyCodeRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string",
+          "description": "Optional: slug + claim token to finish a site claim in the same step."
+        },
+        "claimToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1VerifyCodeResponse": {
+      "type": "object",
+      "properties": {
+        "apiKey": {
+          "type": "string",
+          "description": "Returned exactly once; not retrievable later."
+        },
+        "orgId": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

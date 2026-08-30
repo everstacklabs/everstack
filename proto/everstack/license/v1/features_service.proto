@@ -1,0 +1,151 @@
+syntax = "proto3";
+
+package everstack.license.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/license/v1;license";
+
+// FeatureManagementService provides admin APIs for managing feature flags
+// and per-tenant overrides. Mutations trigger immediate manifest publishing
+// to Cloudflare KV for edge distribution.
+service FeatureManagementService {
+  // ListFeatures returns all feature definitions
+  rpc ListFeatures(ListFeaturesRequest) returns (ListFeaturesResponse);
+
+  // GetFeature returns a single feature definition
+  rpc GetFeature(GetFeatureRequest) returns (GetFeatureResponse);
+
+  // CreateFeature adds a new feature definition (no rebuild needed!)
+  rpc CreateFeature(CreateFeatureRequest) returns (CreateFeatureResponse);
+
+  // UpdateFeature modifies an existing feature definition
+  rpc UpdateFeature(UpdateFeatureRequest) returns (UpdateFeatureResponse);
+
+  // DeleteFeature removes a feature definition and all its overrides
+  rpc DeleteFeature(DeleteFeatureRequest) returns (DeleteFeatureResponse);
+
+  // ListTenantOverrides returns all overrides for a specific tenant
+  rpc ListTenantOverrides(ListTenantOverridesRequest) returns (ListTenantOverridesResponse);
+
+  // SetTenantOverride creates or updates a feature override for a tenant
+  rpc SetTenantOverride(SetTenantOverrideRequest) returns (SetTenantOverrideResponse);
+
+  // DeleteTenantOverride removes a feature override for a tenant
+  rpc DeleteTenantOverride(DeleteTenantOverrideRequest) returns (DeleteTenantOverrideResponse);
+
+  // ForcePublishManifest triggers immediate manifest generation and KV publish
+  rpc ForcePublishManifest(ForcePublishManifestRequest) returns (ForcePublishManifestResponse);
+}
+
+// Feature definition messages
+message FeatureDefinitionProto {
+  string key = 1;
+  string name = 2;
+  string description = 3;
+  string status = 4;           // development, beta, released, deprecated
+  bool enabled = 5;
+  repeated string categories = 6;
+  string min_tier = 7;          // empty = all tiers
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message FeatureOverrideProto {
+  string id = 1;
+  string tenant_id = 2;
+  string feature_key = 3;
+  bool enabled = 4;
+  google.protobuf.Timestamp expires_at = 5;
+  string reason = 6;
+  string created_by = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+// ListFeatures
+message ListFeaturesRequest {}
+message ListFeaturesResponse {
+  repeated FeatureDefinitionProto features = 1;
+}
+
+// GetFeature
+message GetFeatureRequest {
+  string key = 1;
+}
+message GetFeatureResponse {
+  FeatureDefinitionProto feature = 1;
+}
+
+// CreateFeature
+message CreateFeatureRequest {
+  string key = 1;
+  string name = 2;
+  string description = 3;
+  string status = 4;
+  bool enabled = 5;
+  repeated string categories = 6;
+  string min_tier = 7;
+}
+message CreateFeatureResponse {
+  FeatureDefinitionProto feature = 1;
+}
+
+// UpdateFeature
+message UpdateFeatureRequest {
+  string key = 1;
+  string name = 2;
+  string description = 3;
+  string status = 4;
+  bool enabled = 5;
+  repeated string categories = 6;
+  string min_tier = 7;
+}
+message UpdateFeatureResponse {
+  FeatureDefinitionProto feature = 1;
+}
+
+// DeleteFeature
+message DeleteFeatureRequest {
+  string key = 1;
+}
+message DeleteFeatureResponse {}
+
+// ListTenantOverrides
+message ListTenantOverridesRequest {
+  string tenant_id = 1;
+}
+message ListTenantOverridesResponse {
+  repeated FeatureOverrideProto overrides = 1;
+}
+
+// SetTenantOverride
+message SetTenantOverrideRequest {
+  string tenant_id = 1;
+  string feature_key = 2;
+  bool enabled = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  string reason = 5;
+  string created_by = 6;
+}
+message SetTenantOverrideResponse {
+  FeatureOverrideProto override = 1;
+}
+
+// DeleteTenantOverride
+message DeleteTenantOverrideRequest {
+  string tenant_id = 1;
+  string feature_key = 2;
+}
+message DeleteTenantOverrideResponse {}
+
+// ForcePublishManifest
+message ForcePublishManifestRequest {
+  // Optional: specific tenant ID to publish overlay for
+  // Empty = publish global manifest only
+  string tenant_id = 1;
+}
+message ForcePublishManifestResponse {
+  int64 version = 1;
+  string published_at = 2;
+}

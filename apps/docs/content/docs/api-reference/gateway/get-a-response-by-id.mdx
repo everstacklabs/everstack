@@ -1,0 +1,205 @@
+---
+title: "GET Get a response by ID"
+description: "Get a response by ID"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Get a response by ID</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-green-500/10 text-green-600 dark:text-green-400">GET</span>
+    <code className="text-sm text-fd-muted-foreground">{"/v1/responses/{responseId}"}</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="get"
+  path="/v1/responses/{responseId}"
+  parameters={[{"name":"responseId","in":"path","required":true,"schema":{"type":"string"}},{"name":"includeInput","in":"query","required":false,"schema":{"type":"boolean"}}]}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X GET "http://localhost:8089/v1/responses/{responseId}" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json"
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/responses/{responseId}", {
+  method: "GET",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.get(
+    "http://localhost:8089/v1/responses/{responseId}",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "response": {
+    "id": "string",
+    "object": "string",
+    "createdAt": "string",
+    "status": "string",
+    "error": {
+      "code": "string",
+      "message": "string"
+    },
+    "incompleteDetails": {
+      "reason": "string"
+    },
+    "model": "string",
+    "output": [
+      {
+        "id": "string",
+        "type": "string",
+        "status": "string",
+        "role": "ROLE_UNSPECIFIED",
+        "content": [],
+        "callId": "string",
+        "name": "string",
+        "arguments": "string",
+        "output": "string"
+      }
+    ],
+    "usage": {
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "totalTokens": 0,
+      "inputTokensDetails": {
+        "cachedTokens": 0,
+        "textTokens": 0,
+        "audioTokens": 0,
+        "imageTokens": 0,
+        "reasoningTokens": 0
+      },
+      "outputTokensDetails": {
+        "cachedTokens": 0,
+        "textTokens": 0,
+        "audioTokens": 0,
+        "imageTokens": 0,
+        "reasoningTokens": 0
+      }
+    },
+    "temperature": 0,
+    "topP": 0,
+    "maxOutputTokens": 0,
+    "previousResponseId": "string",
+    "reasoning": {
+      "effort": "string",
+      "generateSummary": "string"
+    },
+    "truncation": {
+      "type": "string",
+      "lastMessages": 0
+    }
+  },
+  "input": [
+    {
+      "type": "string",
+      "role": "ROLE_UNSPECIFIED",
+      "content": [],
+      "itemId": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+### Parameters
+
+| Name | In | Type | Required | Description |
+|------|-----|------|----------|-------------|
+| `responseId` | path | `string` | **Yes** | The response ID to retrieve |
+| `includeInput` | query | `boolean` | No | Include input items in the response |
+
+
+
+### Responses
+
+#### 200 The response
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `response` | `object` |  |
+| `input` | `object[]` |  |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

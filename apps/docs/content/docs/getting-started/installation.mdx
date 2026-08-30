@@ -1,0 +1,125 @@
+---
+title: Get Started
+description: Sign up for Everstack Cloud and install the CLI.
+icon: Rocket
+---
+
+Everstack is a **managed cloud platform**. There's nothing to install or operate -- you get a dedicated instance with its own gateway URL, dashboard, and isolated resources. The only thing you install locally is the optional CLI for power-user workflows.
+
+## 1. Sign up for Everstack Cloud
+
+Create your account at [app.everstack.ai](https://app.everstack.ai). During signup you choose:
+
+- A **workspace name** (used as your instance subdomain)
+- A **region** where your instance runs
+
+Once provisioned, you get:
+
+| Resource | URL |
+| --- | --- |
+| Dashboard | `https://app.everstack.ai` |
+| Your gateway | `https://{instance}.{region}.everstack.ai` |
+
+You can find your exact gateway URL in the dashboard under **Settings -> Instance**. Throughout these docs we use `{instance}.{region}` as a placeholder.
+
+<Callout type="info">
+  Regions currently available: `us-east`, `us-west`, `eu-west`, `ap-southeast`. More regions are added as demand grows.
+</Callout>
+
+## 2. Add an LLM provider
+
+Open the dashboard at [app.everstack.ai](https://app.everstack.ai) and head to **Vault -> LLM Providers**.
+
+Click **Add Provider**, select OpenAI, Anthropic, Google, or any of the [22 supported providers](/getting-started/providers), and paste your provider API key. Your gateway can now route requests to that provider.
+
+You can add as many providers as you want. The gateway routes requests based on the model name you send.
+
+## 3. Create an Everstack API key
+
+Go to **Vault -> API Keys** and click **Create Key**. Give it a name, optionally set an expiry, and copy the key. **The key is only shown once.**
+
+This is the key your application will use when calling your Everstack gateway.
+
+## 4. Install the CLI (optional)
+
+The CLI is useful for CI/CD pipelines, scripted operations, evaluation runs, and managing resources from your terminal. Everything the CLI does can also be done through the dashboard and SDKs.
+
+### Homebrew (macOS and Linux)
+
+```bash
+brew install everstacklabs/tap/evs
+```
+
+Upgrade later with `brew upgrade evs`.
+
+### Install script
+
+```bash
+curl -fsSL https://get.everstack.ai/install.sh | bash
+```
+
+The script auto-detects your OS and architecture, downloads the binary, verifies the SHA256 checksum, and installs it to `/usr/local/bin`.
+
+```bash
+evs --version
+```
+
+`everstack` is also installed as a backward-compatible alias.
+
+<Callout type="warn">
+  The installer aborts if the download does not match the checksum published in
+  the release's `SHA256SUMS.txt`. Pass `--no-verify` only if you have a specific
+  reason to skip that check.
+</Callout>
+
+**Options:**
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--version` | Install a specific version (`vX.Y.Z`) or `latest` | `latest` |
+| `--bin-dir` | Installation directory | `/usr/local/bin` |
+| `--no-verify` | Skip SHA256 checksum verification | `false` |
+
+```bash
+# Install a specific version
+curl -fsSL https://get.everstack.ai/install.sh | bash -s -- --version v0.1.22
+
+# Install to a custom directory (no sudo needed)
+curl -fsSL https://get.everstack.ai/install.sh | bash -s -- --bin-dir ~/.local/bin
+```
+
+Available versions are listed at
+[github.com/everstacklabs/everstack](https://github.com/everstacklabs/everstack/releases).
+
+**Authenticate:**
+
+```bash
+evs login
+```
+
+Opens a browser-based login flow and stores your credentials in `~/.config/everstack/credentials`. After login:
+
+```bash
+evs whoami
+```
+
+## Self-hosting
+
+If you need to self-host Everstack on your own infrastructure (regulated workloads, air-gapped environments, full control over data residency), see the [Deployment guide](/deployment/docker). The self-hosted edition has the same feature set as the cloud, plus you operate the binary, database, and dependencies yourself.
+
+## Next steps
+
+<Cards>
+  <Card title="Quick Start" href="/getting-started/quickstart">
+    Send your first request through the gateway in under five minutes.
+  </Card>
+  <Card title="TypeScript SDK" href="/sdks/typescript">
+    Typed client for gateway, agents, memory, evaluations, and more.
+  </Card>
+  <Card title="Providers" href="/getting-started/providers">
+    All 22 supported LLM providers and how to configure each.
+  </Card>
+  <Card title="Architecture" href="/getting-started/architecture">
+    How the gateway, agents, sandboxes, and storage fit together.
+  </Card>
+</Cards>

@@ -1,0 +1,77 @@
+---
+title: Guardrails Overview
+description: Runtime safety checks for LLM inputs and outputs.
+icon: Shield
+---
+
+Guardrails are runtime safety checks that inspect LLM inputs before they reach a model and outputs before they reach a user. They catch prompt injection attempts, PII leaks, toxic content, jailbreak markers, and other policy violations at the boundary where your application meets the model.
+
+## Why runtime guardrails matter
+
+Static rules and content policies only cover what you can predict in advance. LLM applications face a different problem: inputs are freeform, outputs are non-deterministic, and adversarial prompts evolve constantly. Guardrails give you a programmable safety layer that runs on every request, not just the ones you anticipated.
+
+Without guardrails, a single prompt injection can override your system prompt, a user can accidentally paste a credit card number into a chat, or a model can return content that violates your compliance requirements. Guardrails catch these at runtime so your application logic does not have to.
+
+## Input vs output guardrails
+
+Guardrails split into two stages that map to the request lifecycle.
+
+**Input guardrails** run before the request reaches the LLM. They inspect the user's message and decide whether to allow, block, or redact before tokens are spent. This is where PII detection, prompt injection prevention, and content filtering live.
+
+**Output guardrails** run after the model responds but before the response reaches the user. They inspect the model's output for jailbreak markers, toxic content, and other policy violations. This is where you enforce output safety without trusting the model to self-police.
+
+Both stages produce a clear **pass** or **block** result. When a guardrail blocks, the violation is recorded and the request or response is stopped before it crosses the boundary.
+
+## Where guardrails run
+
+Guardrails are available in two places depending on how you use Everstack.
+
+### Workflow Studio nodes
+
+In Workflow Studio, guardrails are drag-and-drop nodes. You place an **InputGuardrailsExecutor** node before your LLM node and an **OutputGuardrailsExecutor** node after it. Each node has two output handles: **pass** and **block**. You wire the pass handle to the next step and the block handle to your error-handling logic.
+
+This gives you full visual control over which checks run, what order they execute in, and how your workflow responds to violations.
+
+### Gateway YAML configuration
+
+For API-level protection, guardrails are configured in the gateway's YAML config. The defaults live in `guardrails.yaml` and cover prompt injection patterns, PII detection rules, content filtering categories, token limits, jailbreak detection, and code execution prevention.
+
+Gateway guardrails apply to every request that flows through the gateway, regardless of whether it originates from a workflow, an SDK call, or a raw HTTP request.
+
+<Callout type="info">
+  Guardrails are disabled by default in the gateway config (`guardrails.enabled: false`). You need to explicitly enable them. The dedicated UI page at `/gateway/guardrails` is a coming-soon stub -- for now, configure guardrails through YAML or Workflow Studio.
+</Callout>
+
+## Available checks at a glance
+
+### Input
+
+| Check | What it catches | Default action |
+| --- | --- | --- |
+| **PII Detection** | SSNs, credit card numbers, email addresses, phone numbers, IP addresses | Block or redact depending on type |
+| **Prompt Injection** | "ignore previous instructions", role impersonation, system prompt extraction | Block |
+| **Content Filter** | Hate, harassment, self-harm, sexual, violence (via moderation API, threshold 0.7) | Block |
+| **Token Limits** | Inputs exceeding configured token ceilings | Truncate |
+
+### Output
+
+| Check | What it catches | Default action |
+| --- | --- | --- |
+| **Jailbreak Detection** | Jailbreak markers, developer mode flags, refusal bypass patterns | Flag |
+| **Toxicity Detection** | Same five content categories as input, applied to model output | Block |
+| **Code Execution Prevention** | Dangerous function calls like `exec()`, `eval()`, `os.system` | Block |
+| **Hallucination Detection** | Unsourced claims, specific dates/numbers without references (reserved, not yet active) | Flag |
+
+## Availability
+
+Guardrails are available on all tiers. There is no minimum plan requirement to use them.
+
+## How violations are tracked
+
+When a guardrail fires, the violation is recorded in the `ExecutionContext` as an `input_guardrail_violation` or output equivalent. This means violations are visible in traces and workflow execution logs. You can use this data to audit policy enforcement, tune thresholds, and understand how often your guardrails intervene.
+
+## Next steps
+
+- [Input Guardrails](/getting-started/guardrails/input-guardrails) -- PII detection, prompt injection prevention, and content filtering in detail.
+- [Output Guardrails](/getting-started/guardrails/output-guardrails) -- Jailbreak detection, toxicity filtering, and output safety enforcement.
+- [Guardrails Configuration](/getting-started/guardrails/configuration) -- Enabling guardrails in gateway YAML, configuring workflow nodes, and using templates.

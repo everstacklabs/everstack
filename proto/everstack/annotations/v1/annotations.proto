@@ -1,0 +1,249 @@
+syntax = "proto3";
+
+package everstack.annotations.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/annotations/v1;annotations";
+
+// QueueStatus defines the lifecycle state of an annotation queue.
+enum QueueStatus {
+  QUEUE_STATUS_UNSPECIFIED = 0;
+  QUEUE_STATUS_ACTIVE = 1;
+  QUEUE_STATUS_PAUSED = 2;
+  QUEUE_STATUS_ARCHIVED = 3;
+}
+
+// AssignmentMode defines how items are assigned to annotators.
+enum AssignmentMode {
+  ASSIGNMENT_MODE_UNSPECIFIED = 0;
+  ASSIGNMENT_MODE_MANUAL = 1;
+  ASSIGNMENT_MODE_ROUND_ROBIN = 2;
+  ASSIGNMENT_MODE_RANDOM = 3;
+}
+
+// QueueItemStatus defines the lifecycle state of an annotation queue item.
+enum QueueItemStatus {
+  QUEUE_ITEM_STATUS_UNSPECIFIED = 0;
+  QUEUE_ITEM_STATUS_PENDING = 1;
+  QUEUE_ITEM_STATUS_IN_PROGRESS = 2;
+  QUEUE_ITEM_STATUS_COMPLETED = 3;
+  QUEUE_ITEM_STATUS_SKIPPED = 4;
+}
+
+// AnnotationQueue represents a queue for annotation work.
+message AnnotationQueue {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  QueueStatus status = 5;
+  repeated string score_config_ids = 6;
+  AssignmentMode assignment_mode = 7;
+  repeated string annotators = 8;
+  string auto_populate_config = 9; // JSON string
+  int32 items_pending = 10;
+  int32 items_completed = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+// AnnotationQueueItem represents a single item in an annotation queue.
+message AnnotationQueueItem {
+  string id = 1;
+  string queue_id = 2;
+  string tenant_id = 3;
+  string trace_id = 4;
+  string observation_id = 5;
+  string assigned_to = 6;
+  google.protobuf.Timestamp assigned_at = 7;
+  QueueItemStatus status = 8;
+  int32 priority = 9;
+  string completed_by = 10;
+  google.protobuf.Timestamp completed_at = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+// AnnotationItemScore links a queue item to a score configuration.
+message AnnotationItemScore {
+  string id = 1;
+  string queue_item_id = 2;
+  string score_config_id = 3;
+  string score_id = 4;
+  string tenant_id = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+// QueueStats provides aggregate statistics for a queue.
+message QueueStats {
+  string queue_id = 1;
+  int32 total_items = 2;
+  int32 pending_items = 3;
+  int32 in_progress_items = 4;
+  int32 completed_items = 5;
+  int32 skipped_items = 6;
+}
+
+// --- Request / Response pairs ---
+
+message CreateQueueRequest {
+  string tenant_id = 1;
+  string name = 2;
+  optional string description = 3;
+  optional QueueStatus status = 4;
+  repeated string score_config_ids = 5;
+  optional AssignmentMode assignment_mode = 6;
+  repeated string annotators = 7;
+  optional string auto_populate_config = 8;
+}
+
+message CreateQueueResponse {
+  AnnotationQueue queue = 1;
+}
+
+message GetQueueRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message GetQueueResponse {
+  AnnotationQueue queue = 1;
+}
+
+message ListQueuesRequest {
+  string tenant_id = 1;
+  optional QueueStatus status = 2;
+  optional int32 limit = 3;
+  optional int32 offset = 4;
+}
+
+message ListQueuesResponse {
+  repeated AnnotationQueue queues = 1;
+  int32 total = 2;
+}
+
+message UpdateQueueRequest {
+  string tenant_id = 1;
+  string id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional QueueStatus status = 5;
+  repeated string score_config_ids = 6;
+  optional AssignmentMode assignment_mode = 7;
+  repeated string annotators = 8;
+  optional string auto_populate_config = 9;
+}
+
+message UpdateQueueResponse {
+  AnnotationQueue queue = 1;
+}
+
+message DeleteQueueRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message DeleteQueueResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message AddItemToQueueRequest {
+  string tenant_id = 1;
+  string queue_id = 2;
+  string trace_id = 3;
+  optional string observation_id = 4;
+  optional int32 priority = 5;
+}
+
+message AddItemToQueueResponse {
+  AnnotationQueueItem item = 1;
+}
+
+message AddItemsToQueueBatchRequest {
+  string tenant_id = 1;
+  string queue_id = 2;
+  repeated AddItemToQueueBatchEntry items = 3;
+}
+
+message AddItemToQueueBatchEntry {
+  string trace_id = 1;
+  optional string observation_id = 2;
+  optional int32 priority = 3;
+}
+
+message AddItemsToQueueBatchResponse {
+  repeated AnnotationQueueItem items = 1;
+  int32 added_count = 2;
+}
+
+message GetNextItemRequest {
+  string tenant_id = 1;
+  string queue_id = 2;
+  optional string annotator_id = 3;
+}
+
+message GetNextItemResponse {
+  AnnotationQueueItem item = 1;
+}
+
+message SubmitAnnotationRequest {
+  string tenant_id = 1;
+  string item_id = 2;
+  string completed_by = 3;
+  repeated AnnotationScoreEntry scores = 4;
+}
+
+message AnnotationScoreEntry {
+  string score_config_id = 1;
+  string score_id = 2;
+}
+
+message SubmitAnnotationResponse {
+  AnnotationQueueItem item = 1;
+}
+
+message SkipItemRequest {
+  string tenant_id = 1;
+  string item_id = 2;
+  optional string skipped_by = 3;
+}
+
+message SkipItemResponse {
+  AnnotationQueueItem item = 1;
+}
+
+message ListQueueItemsRequest {
+  string tenant_id = 1;
+  string queue_id = 2;
+  optional QueueItemStatus status = 3;
+  optional string assigned_to = 4;
+  optional int32 limit = 5;
+  optional int32 offset = 6;
+}
+
+message ListQueueItemsResponse {
+  repeated AnnotationQueueItem items = 1;
+  int32 total = 2;
+}
+
+message GetQueueStatsRequest {
+  string tenant_id = 1;
+  string queue_id = 2;
+}
+
+message GetQueueStatsResponse {
+  QueueStats stats = 1;
+}
+
+message PopulateFromTracesRequest {
+  string tenant_id = 1;
+  string queue_id = 2;
+  optional string trace_filter = 3; // JSON filter criteria
+  optional int32 max_items = 4;
+}
+
+message PopulateFromTracesResponse {
+  int32 added_count = 1;
+}

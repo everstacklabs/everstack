@@ -1,0 +1,3665 @@
+providers:
+    anthropic:
+        base_url: https://api.anthropic.com/v1
+        models:
+            - capabilities:
+                - chat
+              display_name: Claude 2.0
+              input_cost_per_1k: 0.008
+              max_tokens: 100000
+              name: claude-2.0
+              output_cost_per_1k: 0.024
+              status: deprecated
+            - capabilities:
+                - chat
+              display_name: Claude 2.1
+              input_cost_per_1k: 0.008
+              max_tokens: 200000
+              name: claude-2.1
+              output_cost_per_1k: 0.024
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Claude 3.5 Haiku
+              input_cost_per_1k: 0.0008
+              max_tokens: 200000
+              name: claude-3-5-haiku-20241022
+              output_cost_per_1k: 0.004
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Claude 3.5 Sonnet (v1)
+              input_cost_per_1k: 0.003
+              max_tokens: 200000
+              name: claude-3-5-sonnet-20240620
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Claude 3.5 Sonnet
+              input_cost_per_1k: 0.003
+              max_tokens: 200000
+              name: claude-3-5-sonnet-20241022
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+              display_name: Claude 3.7 Sonnet
+              input_cost_per_1k: 0.003
+              max_tokens: 200000
+              name: claude-3-7-sonnet-20250219
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+              display_name: Claude 3.7 Sonnet (Latest)
+              input_cost_per_1k: 0.003
+              max_tokens: 200000
+              name: claude-3-7-sonnet-latest
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Claude 3 Haiku
+              input_cost_per_1k: 0.00025
+              max_tokens: 200000
+              name: claude-3-haiku-20240307
+              output_cost_per_1k: 0.00125
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Claude 3 Opus
+              input_cost_per_1k: 0.015
+              max_tokens: 200000
+              name: claude-3-opus-20240229
+              output_cost_per_1k: 0.075
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Claude 3 Sonnet
+              input_cost_per_1k: 0.003
+              max_tokens: 200000
+              name: claude-3-sonnet-20240229
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Claude Haiku 4.5
+              input_cost_per_1k: 0.001
+              max_tokens: 200000
+              name: claude-haiku-4-5-20251001
+              output_cost_per_1k: 0.005
+              status: stable
+            - capabilities:
+                - chat
+              display_name: Claude Instant 1.2
+              input_cost_per_1k: 0.0008
+              max_tokens: 100000
+              name: claude-instant-1.2
+              output_cost_per_1k: 0.0024
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+              display_name: Claude Opus 4.1
+              input_cost_per_1k: 0.015
+              max_tokens: 200000
+              name: claude-opus-4-1-20250805
+              output_cost_per_1k: 0.075
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+                - computer_use
+              display_name: Claude Opus 4
+              input_cost_per_1k: 0.015
+              max_tokens: 200000
+              name: claude-opus-4-20250514
+              output_cost_per_1k: 0.075
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+                - computer_use
+              display_name: Claude Opus 4.5
+              input_cost_per_1k: 0.005
+              max_tokens: 200000
+              name: claude-opus-4-5-20251101
+              output_cost_per_1k: 0.025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+                - computer_use
+              display_name: Claude Opus 4.6
+              input_cost_per_1k: 0.005
+              max_tokens: 200000
+              name: claude-opus-4-6
+              output_cost_per_1k: 0.025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+                - computer_use
+              display_name: Claude Opus 4.7
+              input_cost_per_1k: 0.005
+              max_tokens: 1000000
+              name: claude-opus-4-7
+              output_cost_per_1k: 0.025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+                - computer_use
+              display_name: Claude Opus 4.8
+              input_cost_per_1k: 0.005
+              max_tokens: 1000000
+              name: claude-opus-4-8
+              output_cost_per_1k: 0.025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+                - computer_use
+              display_name: Claude Opus 4 (Latest)
+              input_cost_per_1k: 0.005
+              max_tokens: 1000000
+              name: claude-opus-4-latest
+              output_cost_per_1k: 0.025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+                - computer_use
+              display_name: Claude Sonnet 4
+              input_cost_per_1k: 0.003
+              max_tokens: 200000
+              name: claude-sonnet-4-20250514
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Claude Sonnet 4.5
+              input_cost_per_1k: 0.003
+              max_tokens: 200000
+              name: claude-sonnet-4-5-20250929
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+                - computer_use
+              display_name: Claude Sonnet 4.6
+              input_cost_per_1k: 0.003
+              max_tokens: 1000000
+              name: claude-sonnet-4-6
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+                - computer_use
+              display_name: Claude Sonnet 4 (Latest)
+              input_cost_per_1k: 0.003
+              max_tokens: 1000000
+              name: claude-sonnet-4-latest
+              output_cost_per_1k: 0.015
+              status: stable
+        name: Anthropic
+    aws-bedrock:
+        base_url: https://bedrock-runtime.{region}.amazonaws.com
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Amazon Nova Pro
+              input_cost_per_1k: 0.0008
+              max_tokens: 300000
+              name: amazon.nova-pro-v1:0
+              output_cost_per_1k: 0.0032
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Claude 3.7 Sonnet
+              input_cost_per_1k: 0.003
+              max_tokens: 200000
+              name: anthropic.claude-3-7-sonnet-20250219-v1:0
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+              display_name: Claude Haiku 4.5 (Bedrock)
+              input_cost_per_1k: 0.001
+              max_tokens: 200000
+              name: anthropic.claude-haiku-4-5-20251001-v1:0
+              output_cost_per_1k: 0.005
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+              display_name: Claude Opus 4.1 (Bedrock)
+              input_cost_per_1k: 0.015
+              max_tokens: 200000
+              name: anthropic.claude-opus-4-1-20250805-v1:0
+              output_cost_per_1k: 0.075
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+              display_name: Claude Opus 4.5 (Bedrock)
+              input_cost_per_1k: 0.005
+              max_tokens: 200000
+              name: anthropic.claude-opus-4-5-20251101-v1:0
+              output_cost_per_1k: 0.025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+              display_name: Claude Opus 4.6 (Bedrock)
+              input_cost_per_1k: 0.005
+              max_tokens: 1000000
+              name: anthropic.claude-opus-4-6-v1
+              output_cost_per_1k: 0.025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+              display_name: Claude Opus 4.7 (Bedrock)
+              input_cost_per_1k: 0.005
+              max_tokens: 1000000
+              name: anthropic.claude-opus-4-7
+              output_cost_per_1k: 0.025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Claude Sonnet 4
+              input_cost_per_1k: 0.003
+              max_tokens: 200000
+              name: anthropic.claude-sonnet-4-20250514-v1:0
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+              display_name: Claude Sonnet 4.5 (Bedrock)
+              input_cost_per_1k: 0.003
+              max_tokens: 200000
+              name: anthropic.claude-sonnet-4-5-20250929-v1:0
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+              display_name: Claude Sonnet 4.6 (Bedrock)
+              input_cost_per_1k: 0.003
+              max_tokens: 1000000
+              name: anthropic.claude-sonnet-4-6
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: DeepSeek V3.2 (Bedrock)
+              input_cost_per_1k: 0.00062
+              max_tokens: 163840
+              name: deepseek.v3.2
+              output_cost_per_1k: 0.00185
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama 3.1 70B Instruct
+              input_cost_per_1k: 0.0009
+              max_tokens: 128000
+              name: meta.llama3-1-70b-instruct-v1:0
+              output_cost_per_1k: 0.0009
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama 3.3 70B Instruct
+              input_cost_per_1k: 0.00072
+              max_tokens: 128000
+              name: meta.llama3-3-70b-instruct-v1:0
+              output_cost_per_1k: 0.00072
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Mistral Large 2407
+              input_cost_per_1k: 0.003
+              max_tokens: 128000
+              name: mistral.mistral-large-2407-v1:0
+              output_cost_per_1k: 0.009
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Mistral Large 3 (Bedrock)
+              input_cost_per_1k: 0.0005
+              max_tokens: 256000
+              name: mistral.mistral-large-3-675b-instruct
+              output_cost_per_1k: 0.0015
+              status: stable
+        name: AWS Bedrock
+    azure-openai:
+        base_url: https://{resource}.openai.azure.com
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4.1 Mini
+              input_cost_per_1k: 0.0004
+              max_tokens: 1047576
+              name: gpt-4.1-mini
+              output_cost_per_1k: 0.0016
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4.1 Nano (Azure)
+              input_cost_per_1k: 0.0001
+              max_tokens: 1047576
+              name: gpt-4.1-nano
+              output_cost_per_1k: 0.0004
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4.1
+              input_cost_per_1k: 0.002
+              max_tokens: 1047576
+              name: gpt-4.1
+              output_cost_per_1k: 0.008
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4o Mini
+              input_cost_per_1k: 0.00015
+              max_tokens: 128000
+              name: gpt-4o-mini
+              output_cost_per_1k: 0.0006
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4o
+              input_cost_per_1k: 0.0025
+              max_tokens: 128000
+              name: gpt-4o
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+                - coding
+              display_name: GPT-5 Codex (Azure)
+              input_cost_per_1k: 0.00125
+              max_tokens: 400000
+              name: gpt-5-codex
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5 Mini (Azure)
+              input_cost_per_1k: 0.00025
+              max_tokens: 272000
+              name: gpt-5-mini
+              output_cost_per_1k: 0.002
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: GPT-5 Nano (Azure)
+              input_cost_per_1k: 5e-05
+              max_tokens: 272000
+              name: gpt-5-nano
+              output_cost_per_1k: 0.0004
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5.1 (Azure)
+              input_cost_per_1k: 0.00125
+              max_tokens: 272000
+              name: gpt-5.1
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5.2 (Azure)
+              input_cost_per_1k: 0.00175
+              max_tokens: 400000
+              name: gpt-5.2
+              output_cost_per_1k: 0.014
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5 (Azure)
+              input_cost_per_1k: 0.00125
+              max_tokens: 272000
+              name: gpt-5
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: o3-mini
+              input_cost_per_1k: 0.0011
+              max_tokens: 200000
+              name: o3-mini
+              output_cost_per_1k: 0.0044
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: o3 (Azure)
+              input_cost_per_1k: 0.002
+              max_tokens: 200000
+              name: o3
+              output_cost_per_1k: 0.008
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: o4-mini (Azure)
+              input_cost_per_1k: 0.0011
+              max_tokens: 200000
+              name: o4-mini
+              output_cost_per_1k: 0.0044
+              status: stable
+            - capabilities:
+                - embeddings
+              display_name: text-embedding-3-large
+              input_cost_per_1k: 0.00013
+              max_tokens: 8191
+              name: text-embedding-3-large
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - embeddings
+              display_name: text-embedding-3-small
+              input_cost_per_1k: 2e-05
+              max_tokens: 8191
+              name: text-embedding-3-small
+              output_cost_per_1k: 0
+              status: stable
+        name: Azure OpenAI
+    cerebras:
+        base_url: https://api.cerebras.ai/v1
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: DeepSeek R1 Distill Llama 70B
+              input_cost_per_1k: 0.0008
+              max_tokens: 131072
+              name: deepseek-r1-distill-llama-70b
+              output_cost_per_1k: 0.001
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: GPT OSS 120B
+              input_cost_per_1k: 0.00025
+              max_tokens: 131072
+              name: gpt-oss-120b
+              output_cost_per_1k: 0.00069
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama 3.3 70B
+              input_cost_per_1k: 0.0006
+              max_tokens: 131072
+              name: llama-3.3-70b
+              output_cost_per_1k: 0.0008
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama 4 Scout 17B 16E Instruct
+              input_cost_per_1k: 0.0008
+              max_tokens: 128000
+              name: llama-4-scout-17b-16e-instruct
+              output_cost_per_1k: 0.0012
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama 3.1 8B
+              input_cost_per_1k: 0.0001
+              max_tokens: 32000
+              name: llama3.1-8b
+              output_cost_per_1k: 0.0001
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Qwen 3 235B Instruct
+              input_cost_per_1k: 0.0006
+              max_tokens: 131000
+              name: qwen-3-235b-a22b-instruct-2507
+              output_cost_per_1k: 0.0012
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Qwen 3 32B
+              input_cost_per_1k: 0.0005
+              max_tokens: 131072
+              name: qwen-3-32b
+              output_cost_per_1k: 0.0007
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Z.AI GLM-4.7
+              input_cost_per_1k: 0.00225
+              max_tokens: 131072
+              name: zai-glm-4.7
+              output_cost_per_1k: 0.00275
+              status: stable
+        name: Cerebras
+    cohere:
+        base_url: https://api.cohere.com
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Command A
+              input_cost_per_1k: 0.0025
+              max_tokens: 256000
+              name: command-a-03-2025
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Command A Reasoning
+              input_cost_per_1k: 0.0025
+              max_tokens: 256000
+              name: command-a-reasoning-08-2025
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+              display_name: Command A Translate
+              input_cost_per_1k: 0.0025
+              max_tokens: 8000
+              name: command-a-translate-08-2025
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Command A Vision
+              input_cost_per_1k: 0.0025
+              max_tokens: 128000
+              name: command-a-vision-07-2025
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+              display_name: Command Light
+              input_cost_per_1k: 0.0003
+              max_tokens: 4096
+              name: command-light
+              output_cost_per_1k: 0.0006
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Command R
+              input_cost_per_1k: 0.00015
+              max_tokens: 128000
+              name: command-r-08-2024
+              output_cost_per_1k: 0.0006
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Command R+
+              input_cost_per_1k: 0.0025
+              max_tokens: 128000
+              name: command-r-plus-08-2024
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Command R 7B
+              input_cost_per_1k: 3.75e-05
+              max_tokens: 128000
+              name: command-r7b-12-2024
+              output_cost_per_1k: 0.00015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Command R 7B Arabic
+              input_cost_per_1k: 3.75e-05
+              max_tokens: 128000
+              name: command-r7b-arabic-02-2025
+              output_cost_per_1k: 0.00015
+              status: stable
+            - capabilities:
+                - embeddings
+              display_name: Embed English Light v3
+              input_cost_per_1k: 0.0001
+              max_tokens: 512
+              name: embed-english-light-v3.0
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - embeddings
+              display_name: Embed English v3.0
+              input_cost_per_1k: 0.0001
+              max_tokens: 512
+              name: embed-english-v3.0
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - embeddings
+              display_name: Embed Multilingual Light v3
+              input_cost_per_1k: 0.0001
+              max_tokens: 512
+              name: embed-multilingual-light-v3.0
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - embeddings
+              display_name: Embed Multilingual v3.0
+              input_cost_per_1k: 0.0001
+              max_tokens: 512
+              name: embed-multilingual-v3.0
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - embeddings
+                - vision
+              display_name: Embed v4
+              input_cost_per_1k: 0.00012
+              max_tokens: 128000
+              name: embed-v4.0
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - rerank
+              display_name: Rerank v3.5
+              input_cost_per_1k: 0.002
+              max_tokens: 4000
+              name: rerank-v3.5
+              output_cost_per_1k: 0
+              status: stable
+        name: Cohere
+    deepseek:
+        base_url: https://api.deepseek.com
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: DeepSeek Chat (V4)
+              input_cost_per_1k: 0.00014
+              max_tokens: 1000000
+              name: deepseek-chat
+              output_cost_per_1k: 0.00028
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: DeepSeek R1
+              input_cost_per_1k: 0.002
+              max_tokens: 64000
+              name: deepseek-r1
+              output_cost_per_1k: 0.008
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: DeepSeek Reasoner (V4)
+              input_cost_per_1k: 0.00014
+              max_tokens: 1000000
+              name: deepseek-reasoner
+              output_cost_per_1k: 0.00028
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: DeepSeek V3 0324
+              input_cost_per_1k: 0.0014
+              max_tokens: 64000
+              name: deepseek-v3-0324
+              output_cost_per_1k: 0.0028
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: DeepSeek V3
+              input_cost_per_1k: 0.0014
+              max_tokens: 64000
+              name: deepseek-v3
+              output_cost_per_1k: 0.0028
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: DeepSeek V4 Flash
+              input_cost_per_1k: 0.00014
+              max_tokens: 1000000
+              name: deepseek-v4-flash
+              output_cost_per_1k: 0.00028
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: DeepSeek V4 Pro
+              input_cost_per_1k: 0.00174
+              max_tokens: 1000000
+              name: deepseek-v4-pro
+              output_cost_per_1k: 0.00348
+              status: stable
+        name: DeepSeek
+    fireworks:
+        base_url: https://api.fireworks.ai/inference/v1
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: DeepSeek V3
+              input_cost_per_1k: 0.0012
+              max_tokens: 131072
+              name: accounts/fireworks/models/deepseek-v3
+              output_cost_per_1k: 0.0012
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: DeepSeek V3.1 (Fireworks)
+              input_cost_per_1k: 0.00056
+              max_tokens: 163840
+              name: accounts/fireworks/models/deepseek-v3p1
+              output_cost_per_1k: 0.00168
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: DeepSeek V3.2 (Fireworks)
+              input_cost_per_1k: 0.00056
+              max_tokens: 160000
+              name: accounts/fireworks/models/deepseek-v3p2
+              output_cost_per_1k: 0.00168
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: DeepSeek V4 Pro (Fireworks)
+              input_cost_per_1k: 0.00174
+              max_tokens: 1000000
+              name: accounts/fireworks/models/deepseek-v4-pro
+              output_cost_per_1k: 0.00348
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: GLM-4.5 Air (Fireworks)
+              input_cost_per_1k: 0.00022
+              max_tokens: 131072
+              name: accounts/fireworks/models/glm-4p5-air
+              output_cost_per_1k: 0.00088
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: GLM-4.5 (Fireworks)
+              input_cost_per_1k: 0.00055
+              max_tokens: 131072
+              name: accounts/fireworks/models/glm-4p5
+              output_cost_per_1k: 0.00219
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: GLM-4.7 (Fireworks)
+              input_cost_per_1k: 0.0006
+              max_tokens: 198000
+              name: accounts/fireworks/models/glm-4p7
+              output_cost_per_1k: 0.0022
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: GLM-5 (Fireworks)
+              input_cost_per_1k: 0.001
+              max_tokens: 202752
+              name: accounts/fireworks/models/glm-5
+              output_cost_per_1k: 0.0032
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: GLM-5.1 (Fireworks)
+              input_cost_per_1k: 0.0014
+              max_tokens: 202800
+              name: accounts/fireworks/models/glm-5p1
+              output_cost_per_1k: 0.0044
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: GPT OSS 120B (Fireworks)
+              input_cost_per_1k: 0.00015
+              max_tokens: 131072
+              name: accounts/fireworks/models/gpt-oss-120b
+              output_cost_per_1k: 0.0006
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: GPT OSS 20B (Fireworks)
+              input_cost_per_1k: 5e-05
+              max_tokens: 131072
+              name: accounts/fireworks/models/gpt-oss-20b
+              output_cost_per_1k: 0.0002
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Kimi K2 Instruct (Fireworks)
+              input_cost_per_1k: 0.001
+              max_tokens: 128000
+              name: accounts/fireworks/models/kimi-k2-instruct
+              output_cost_per_1k: 0.003
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Kimi K2 Thinking (Fireworks)
+              input_cost_per_1k: 0.0006
+              max_tokens: 256000
+              name: accounts/fireworks/models/kimi-k2-thinking
+              output_cost_per_1k: 0.0025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Kimi K2.5 (Fireworks)
+              input_cost_per_1k: 0.0006
+              max_tokens: 256000
+              name: accounts/fireworks/models/kimi-k2p5
+              output_cost_per_1k: 0.003
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Kimi K2.6 (Fireworks)
+              input_cost_per_1k: 0.00095
+              max_tokens: 262000
+              name: accounts/fireworks/models/kimi-k2p6
+              output_cost_per_1k: 0.004
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama v3.1 8B Instruct
+              input_cost_per_1k: 0.0002
+              max_tokens: 131072
+              name: accounts/fireworks/models/llama-v3p1-8b-instruct
+              output_cost_per_1k: 0.0002
+              status: deprecated
+            - capabilities:
+                - chat
+                - vision
+              display_name: Llama v3.2 90B Vision Instruct
+              input_cost_per_1k: 0.00095
+              max_tokens: 131072
+              name: accounts/fireworks/models/llama-v3p2-90b-vision-instruct
+              output_cost_per_1k: 0.00095
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama v3.3 70B Instruct
+              input_cost_per_1k: 0.0009
+              max_tokens: 131072
+              name: accounts/fireworks/models/llama-v3p3-70b-instruct
+              output_cost_per_1k: 0.0009
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: MiniMax M2.1 (Fireworks)
+              input_cost_per_1k: 0.0003
+              max_tokens: 200000
+              name: accounts/fireworks/models/minimax-m2p1
+              output_cost_per_1k: 0.0012
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: MiniMax M2.5 (Fireworks)
+              input_cost_per_1k: 0.0003
+              max_tokens: 196608
+              name: accounts/fireworks/models/minimax-m2p5
+              output_cost_per_1k: 0.0012
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: MiniMax M2.7 (Fireworks)
+              input_cost_per_1k: 0.0003
+              max_tokens: 196608
+              name: accounts/fireworks/models/minimax-m2p7
+              output_cost_per_1k: 0.0012
+              status: stable
+            - capabilities:
+                - embeddings
+              display_name: Nomic Embed Text v1.5
+              input_cost_per_1k: 8e-05
+              max_tokens: 8192
+              name: accounts/fireworks/models/nomic-embed-text-v1.5
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Qwen 2.5 72B Instruct
+              input_cost_per_1k: 0.0012
+              max_tokens: 131072
+              name: accounts/fireworks/models/qwen2p5-72b-instruct
+              output_cost_per_1k: 0.0012
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Qwen 3.6 Plus (Fireworks)
+              input_cost_per_1k: 0.0005
+              max_tokens: 128000
+              name: accounts/fireworks/models/qwen3p6-plus
+              output_cost_per_1k: 0.003
+              status: stable
+        name: Fireworks AI
+    google:
+        base_url: https://generativelanguage.googleapis.com/v1
+        models:
+            - capabilities:
+                - chat
+                - vision
+                - function_calling
+              display_name: Gemini 1.5 Flash 8B
+              input_cost_per_1k: 3.75e-05
+              max_tokens: 1000000
+              name: gemini-1.5-flash-8b
+              output_cost_per_1k: 0.00015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gemini 1.5 Flash
+              input_cost_per_1k: 7.5e-05
+              max_tokens: 1048576
+              name: gemini-1.5-flash
+              output_cost_per_1k: 0.0003
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gemini 1.5 Pro
+              input_cost_per_1k: 0.00125
+              max_tokens: 1000000
+              name: gemini-1.5-pro
+              output_cost_per_1k: 0.005
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Gemini 2.0 Flash Lite
+              input_cost_per_1k: 7.5e-05
+              max_tokens: 1048576
+              name: gemini-2.0-flash-lite
+              output_cost_per_1k: 0.0003
+              status: stable
+            - capabilities:
+                - chat
+                - vision
+                - function_calling
+              display_name: Gemini 2.0 Flash
+              input_cost_per_1k: 0.0001
+              max_tokens: 1048576
+              name: gemini-2.0-flash
+              output_cost_per_1k: 0.0004
+              status: stable
+            - capabilities:
+                - chat
+                - vision
+                - function_calling
+                - reasoning
+              display_name: Gemini 2.5 Flash Lite
+              input_cost_per_1k: 0.0001
+              max_tokens: 1048576
+              name: gemini-2.5-flash-lite
+              output_cost_per_1k: 0.0004
+              status: stable
+            - capabilities:
+                - chat
+                - vision
+                - function_calling
+                - reasoning
+              display_name: Gemini 2.5 Flash
+              input_cost_per_1k: 0.0003
+              max_tokens: 1048576
+              name: gemini-2.5-flash
+              output_cost_per_1k: 0.0025
+              status: stable
+            - capabilities:
+                - chat
+                - vision
+                - function_calling
+                - reasoning
+              display_name: Gemini 2.5 Pro
+              input_cost_per_1k: 0.00125
+              max_tokens: 1048576
+              name: gemini-2.5-pro
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - vision
+                - function_calling
+                - reasoning
+              display_name: Gemini 3 Flash (Preview)
+              input_cost_per_1k: 0.0005
+              max_tokens: 1048576
+              name: gemini-3-flash-preview
+              output_cost_per_1k: 0.003
+              status: preview
+            - capabilities:
+                - chat
+                - vision
+                - function_calling
+                - reasoning
+              display_name: Gemini 3 Pro (Preview)
+              input_cost_per_1k: 0.002
+              max_tokens: 1000000
+              name: gemini-3-pro-preview
+              output_cost_per_1k: 0.012
+              status: preview
+            - capabilities:
+                - chat
+                - vision
+                - function_calling
+                - reasoning
+              display_name: Gemini 3.1 Flash Lite
+              input_cost_per_1k: 0.00025
+              max_tokens: 1048576
+              name: gemini-3.1-flash-lite
+              output_cost_per_1k: 0.0015
+              status: stable
+            - capabilities:
+                - chat
+                - vision
+                - function_calling
+                - reasoning
+              display_name: Gemini 3.1 Pro (Preview)
+              input_cost_per_1k: 0.002
+              max_tokens: 1048576
+              name: gemini-3.1-pro-preview
+              output_cost_per_1k: 0.012
+              status: preview
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Gemini Pro
+              input_cost_per_1k: 0.0005
+              max_tokens: 32768
+              name: gemini-pro
+              output_cost_per_1k: 0.0015
+              status: deprecated
+        name: Google
+    groq:
+        base_url: https://api.groq.com/openai/v1
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: DeepSeek R1 Distill Llama 70B
+              input_cost_per_1k: 0.00075
+              max_tokens: 131072
+              name: deepseek-r1-distill-llama-70b
+              output_cost_per_1k: 0.00099
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama 3.1 8B Instant
+              input_cost_per_1k: 5e-05
+              max_tokens: 131072
+              name: llama-3.1-8b-instant
+              output_cost_per_1k: 8e-05
+              status: stable
+            - capabilities:
+                - chat
+                - vision
+              display_name: Llama 3.2 90B Vision Preview
+              input_cost_per_1k: 0.0009
+              max_tokens: 131072
+              name: llama-3.2-90b-vision-preview
+              output_cost_per_1k: 0.0012
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama 3.3 70B Versatile
+              input_cost_per_1k: 0.00059
+              max_tokens: 131072
+              name: llama-3.3-70b-versatile
+              output_cost_per_1k: 0.00079
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama 4 Maverick 17B 128E (Groq)
+              input_cost_per_1k: 0.0002
+              max_tokens: 131072
+              name: meta-llama/llama-4-maverick-17b-128e-instruct
+              output_cost_per_1k: 0.0006
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama 4 Scout 17B 16E (Groq)
+              input_cost_per_1k: 0.00011
+              max_tokens: 131072
+              name: meta-llama/llama-4-scout-17b-16e-instruct
+              output_cost_per_1k: 0.00034
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Kimi K2 Instruct 0905 (Groq)
+              input_cost_per_1k: 0.001
+              max_tokens: 262144
+              name: moonshotai/kimi-k2-instruct-0905
+              output_cost_per_1k: 0.003
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: GPT OSS 120B (Groq)
+              input_cost_per_1k: 0.00015
+              max_tokens: 131072
+              name: openai/gpt-oss-120b
+              output_cost_per_1k: 0.0006
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: GPT OSS 20B (Groq)
+              input_cost_per_1k: 7.5e-05
+              max_tokens: 131072
+              name: openai/gpt-oss-20b
+              output_cost_per_1k: 0.0003
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Qwen 3 32B (Groq)
+              input_cost_per_1k: 0.00029
+              max_tokens: 131072
+              name: qwen/qwen3-32b
+              output_cost_per_1k: 0.00059
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Qwen QwQ 32B
+              input_cost_per_1k: 0.00029
+              max_tokens: 131072
+              name: qwen-qwq-32b
+              output_cost_per_1k: 0.00039
+              status: stable
+        name: Groq
+    huggingface:
+        base_url: https://router.huggingface.co/v1
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: DeepSeek V4 Pro (HF)
+              input_cost_per_1k: 0.00174
+              max_tokens: 1048576
+              name: deepseek-ai/DeepSeek-V4-Pro
+              output_cost_per_1k: 0.00348
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: GPT-3.5 Turbo
+              input_cost_per_1k: 0.0005
+              max_tokens: 16385
+              name: huggingface/gpt-3.5-turbo
+              output_cost_per_1k: 0.0015
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4 Turbo
+              input_cost_per_1k: 0.01
+              max_tokens: 128000
+              name: huggingface/gpt-4-turbo
+              output_cost_per_1k: 0.03
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: GPT-4
+              input_cost_per_1k: 0.03
+              max_tokens: 8192
+              name: huggingface/gpt-4
+              output_cost_per_1k: 0.06
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4o Mini
+              input_cost_per_1k: 0.00015
+              max_tokens: 128000
+              name: huggingface/gpt-4o-mini
+              output_cost_per_1k: 0.0006
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4o
+              input_cost_per_1k: 0.005
+              max_tokens: 128000
+              name: huggingface/gpt-4o
+              output_cost_per_1k: 0.015
+              status: deprecated
+            - capabilities:
+                - embeddings
+              display_name: Text Embedding Ada 002
+              input_cost_per_1k: 0.0001
+              max_tokens: 8191
+              name: huggingface/text-embedding-ada-002
+              output_cost_per_1k: 0
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Kimi K2.6 (HF)
+              input_cost_per_1k: 0.00095
+              max_tokens: 262144
+              name: moonshotai/Kimi-K2.6
+              output_cost_per_1k: 0.004
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - coding
+              display_name: Qwen3 Coder 480B (HF)
+              input_cost_per_1k: 0.002
+              max_tokens: 262144
+              name: Qwen/Qwen3-Coder-480B-A35B-Instruct
+              output_cost_per_1k: 0.002
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Qwen3 Next 80B Instruct (HF)
+              input_cost_per_1k: 0.0005
+              max_tokens: 262144
+              name: Qwen/Qwen3-Next-80B-A3B-Instruct
+              output_cost_per_1k: 0.0015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: GLM-5.1 (HF)
+              input_cost_per_1k: 0.001
+              max_tokens: 202752
+              name: zai-org/GLM-5.1
+              output_cost_per_1k: 0.0032
+              status: stable
+        name: Hugging Face
+    minimax:
+        base_url: https://api.minimax.io/v1
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: MiniMax M1
+              input_cost_per_1k: 0.0005
+              max_tokens: 128000
+              name: MiniMax-M1
+              output_cost_per_1k: 0.002
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: MiniMax M2.1 Highspeed
+              input_cost_per_1k: 0.0015
+              max_tokens: 200000
+              name: MiniMax-M2.1-highspeed
+              output_cost_per_1k: 0.005
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: MiniMax M2.1
+              input_cost_per_1k: 0.0003
+              max_tokens: 204800
+              name: MiniMax-M2.1
+              output_cost_per_1k: 0.0012
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: MiniMax M2.5 Highspeed
+              input_cost_per_1k: 0.0006
+              max_tokens: 204800
+              name: MiniMax-M2.5-highspeed
+              output_cost_per_1k: 0.0024
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: MiniMax M2.5
+              input_cost_per_1k: 0.0003
+              max_tokens: 204800
+              name: MiniMax-M2.5
+              output_cost_per_1k: 0.0012
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: MiniMax M2.7 Highspeed
+              input_cost_per_1k: 0.0006
+              max_tokens: 204800
+              name: MiniMax-M2.7-highspeed
+              output_cost_per_1k: 0.0024
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: MiniMax M2.7
+              input_cost_per_1k: 0.0003
+              max_tokens: 204800
+              name: MiniMax-M2.7
+              output_cost_per_1k: 0.0012
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: MiniMax M2
+              input_cost_per_1k: 0.0003
+              max_tokens: 196608
+              name: MiniMax-M2
+              output_cost_per_1k: 0.0012
+              status: stable
+        name: MiniMax
+    mistral:
+        base_url: https://api.mistral.ai/v1
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Codestral
+              input_cost_per_1k: 0.0003
+              max_tokens: 256000
+              name: codestral-latest
+              output_cost_per_1k: 0.0009
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - coding
+              display_name: Devstral Medium (Latest)
+              input_cost_per_1k: 0.0004
+              max_tokens: 262144
+              name: devstral-medium-latest
+              output_cost_per_1k: 0.002
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Magistral Medium (Latest)
+              input_cost_per_1k: 0.002
+              max_tokens: 128000
+              name: magistral-medium-latest
+              output_cost_per_1k: 0.005
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Magistral Small 1.2
+              input_cost_per_1k: 0.0005
+              max_tokens: 128000
+              name: magistral-small-2509
+              output_cost_per_1k: 0.0015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Ministral 3B (Latest)
+              input_cost_per_1k: 4e-05
+              max_tokens: 128000
+              name: ministral-3b-latest
+              output_cost_per_1k: 4e-05
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Ministral 8B
+              input_cost_per_1k: 0.0001
+              max_tokens: 128000
+              name: ministral-8b-latest
+              output_cost_per_1k: 0.0001
+              status: stable
+            - capabilities:
+                - embeddings
+              display_name: Mistral Embed
+              input_cost_per_1k: 0.0001
+              max_tokens: 8192
+              name: mistral-embed
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Mistral Large 2411
+              input_cost_per_1k: 0.002
+              max_tokens: 131072
+              name: mistral-large-2411
+              output_cost_per_1k: 0.006
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Mistral Large (Latest)
+              input_cost_per_1k: 0.0005
+              max_tokens: 262144
+              name: mistral-large-latest
+              output_cost_per_1k: 0.0015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Mistral Medium (Latest)
+              input_cost_per_1k: 0.0015
+              max_tokens: 262144
+              name: mistral-medium-latest
+              output_cost_per_1k: 0.0075
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Mistral Small (Latest)
+              input_cost_per_1k: 0.00015
+              max_tokens: 256000
+              name: mistral-small-latest
+              output_cost_per_1k: 0.0006
+              status: stable
+            - capabilities:
+                - chat
+                - vision
+                - function_calling
+              display_name: Pixtral Large
+              input_cost_per_1k: 0.002
+              max_tokens: 128000
+              name: pixtral-large-latest
+              output_cost_per_1k: 0.006
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Voxtral Small
+              input_cost_per_1k: 0.005
+              max_tokens: 128000
+              name: voxtral-small-2507
+              output_cost_per_1k: 0.015
+              status: stable
+        name: Mistral AI
+    moonshot:
+        base_url: https://api.moonshot.ai/v1
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Kimi K2 0711
+              input_cost_per_1k: 0.0006
+              max_tokens: 131072
+              name: kimi-k2-0711-preview
+              output_cost_per_1k: 0.0025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Kimi K2 0905
+              input_cost_per_1k: 0.0006
+              max_tokens: 262144
+              name: kimi-k2-0905-preview
+              output_cost_per_1k: 0.0025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Kimi K2 Thinking Turbo
+              input_cost_per_1k: 0.00115
+              max_tokens: 262144
+              name: kimi-k2-thinking-turbo
+              output_cost_per_1k: 0.008
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Kimi K2 Thinking
+              input_cost_per_1k: 0.0006
+              max_tokens: 262144
+              name: kimi-k2-thinking
+              output_cost_per_1k: 0.0025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Kimi K2 Turbo
+              input_cost_per_1k: 0.0024
+              max_tokens: 262144
+              name: kimi-k2-turbo-preview
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Kimi K2.5
+              input_cost_per_1k: 0.0006
+              max_tokens: 262144
+              name: kimi-k2.5
+              output_cost_per_1k: 0.003
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Kimi K2.6
+              input_cost_per_1k: 0.00095
+              max_tokens: 262144
+              name: kimi-k2.6
+              output_cost_per_1k: 0.004
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Moonshot V1 128K
+              input_cost_per_1k: 0.002
+              max_tokens: 131072
+              name: moonshot-v1-128k
+              output_cost_per_1k: 0.005
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Moonshot V1 32K
+              input_cost_per_1k: 0.001
+              max_tokens: 32768
+              name: moonshot-v1-32k
+              output_cost_per_1k: 0.003
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Moonshot V1 8K
+              input_cost_per_1k: 0.0002
+              max_tokens: 8192
+              name: moonshot-v1-8k
+              output_cost_per_1k: 0.002
+              status: deprecated
+        name: Moonshot AI
+    nvidia-nim:
+        base_url: https://integrate.api.nvidia.com/v1
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: DeepSeek V3.2 (NIM)
+              input_cost_per_1k: 0
+              max_tokens: 163840
+              name: deepseek-ai/deepseek-v3.2
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: DeepSeek V4 Pro (NIM)
+              input_cost_per_1k: 0.00174
+              max_tokens: 1048576
+              name: deepseek-ai/deepseek-v4-pro
+              output_cost_per_1k: 0.00348
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama 3.1 405B Instruct
+              input_cost_per_1k: 0.005
+              max_tokens: 131072
+              name: meta/llama-3.1-405b-instruct
+              output_cost_per_1k: 0.005
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama 3.1 70B Instruct
+              input_cost_per_1k: 0.0009
+              max_tokens: 131072
+              name: meta/llama-3.1-70b-instruct
+              output_cost_per_1k: 0.0009
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama 3.3 70B Instruct
+              input_cost_per_1k: 0
+              max_tokens: 128000
+              name: meta/llama-3.3-70b-instruct
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Llama 4 Maverick 17B 128E
+              input_cost_per_1k: 0
+              max_tokens: 128000
+              name: meta/llama-4-maverick-17b-128e-instruct
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Llama 4 Scout 17B 16E
+              input_cost_per_1k: 0
+              max_tokens: 128000
+              name: meta/llama-4-scout-17b-16e-instruct
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Nemotron 70B Instruct
+              input_cost_per_1k: 0.0012
+              max_tokens: 131072
+              name: nvidia/llama-3.1-nemotron-70b-instruct
+              output_cost_per_1k: 0.0012
+              status: stable
+            - capabilities:
+                - embeddings
+              display_name: NV EmbedQA E5 v5
+              input_cost_per_1k: 8e-05
+              max_tokens: 8192
+              name: nvidia/nv-embedqa-e5-v5
+              output_cost_per_1k: 0
+              status: stable
+        name: NVIDIA NIM
+    ollama:
+        base_url: http://localhost:11434
+        models: []
+        name: Ollama
+    openai:
+        base_url: https://api.openai.com/v1
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Chatgpt 4o Latest
+              max_tokens: 128000
+              name: chatgpt-4o-latest
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Chatgpt Image Latest
+              max_tokens: 128000
+              name: chatgpt-image-latest
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: GPT-3.5 Turbo 16K
+              max_tokens: 16385
+              name: gpt-3.5-turbo-16k
+              status: stable
+            - capabilities:
+                - chat
+              display_name: GPT-3.5 Turbo Instruct
+              max_tokens: 16385
+              name: gpt-3.5-turbo-instruct
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: GPT-3.5 Turbo
+              input_cost_per_1k: 0.0005
+              max_tokens: 16385
+              name: gpt-3.5-turbo
+              output_cost_per_1k: 0.0015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4 Turbo 2024 04 09
+              max_tokens: 128000
+              name: gpt-4-turbo-2024-04-09
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gpt 4 Turbo Preview
+              max_tokens: 128000
+              name: gpt-4-turbo-preview
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4 Turbo
+              input_cost_per_1k: 0.01
+              max_tokens: 128000
+              name: gpt-4-turbo
+              output_cost_per_1k: 0.03
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4.1 2025 04 14
+              max_tokens: 128000
+              name: gpt-4.1-2025-04-14
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4.1 Mini 2025 04 14
+              max_tokens: 128000
+              name: gpt-4.1-mini-2025-04-14
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4.1 Mini
+              input_cost_per_1k: 0.0004
+              max_tokens: 128000
+              name: gpt-4.1-mini
+              output_cost_per_1k: 0.0016
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4.1 Nano 2025 04 14
+              max_tokens: 128000
+              name: gpt-4.1-nano-2025-04-14
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4.1 Nano
+              input_cost_per_1k: 0.0001
+              max_tokens: 128000
+              name: gpt-4.1-nano
+              output_cost_per_1k: 0.0004
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4.1
+              input_cost_per_1k: 0.002
+              max_tokens: 128000
+              name: gpt-4.1
+              output_cost_per_1k: 0.008
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: GPT-4
+              input_cost_per_1k: 0.03
+              max_tokens: 128000
+              name: gpt-4
+              output_cost_per_1k: 0.06
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4o 2024 05 13
+              max_tokens: 128000
+              name: gpt-4o-2024-05-13
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4o 2024 08 06
+              max_tokens: 128000
+              name: gpt-4o-2024-08-06
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4o 2024 11 20
+              max_tokens: 128000
+              name: gpt-4o-2024-11-20
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4o Audio Preview 2024 12 17
+              max_tokens: 128000
+              name: gpt-4o-audio-preview-2024-12-17
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4o Audio Preview 2025 06 03
+              max_tokens: 128000
+              name: gpt-4o-audio-preview-2025-06-03
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gpt 4o Audio Preview
+              max_tokens: 128000
+              name: gpt-4o-audio-preview
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4o Mini 2024 07 18
+              max_tokens: 128000
+              name: gpt-4o-mini-2024-07-18
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4o Mini Audio Preview 2024 12 17
+              max_tokens: 128000
+              name: gpt-4o-mini-audio-preview-2024-12-17
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gpt 4o Mini Audio Preview
+              max_tokens: 128000
+              name: gpt-4o-mini-audio-preview
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4o Mini Realtime Preview 2024 12 17
+              max_tokens: 128000
+              name: gpt-4o-mini-realtime-preview-2024-12-17
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gpt 4o Mini Realtime Preview
+              max_tokens: 128000
+              name: gpt-4o-mini-realtime-preview
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4o Mini Search Preview 2025 03 11
+              max_tokens: 128000
+              name: gpt-4o-mini-search-preview-2025-03-11
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gpt 4o Mini Search Preview
+              max_tokens: 128000
+              name: gpt-4o-mini-search-preview
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4o Mini Transcribe 2025 03 20
+              max_tokens: 128000
+              name: gpt-4o-mini-transcribe-2025-03-20
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4o Mini Transcribe 2025 12 15
+              max_tokens: 128000
+              name: gpt-4o-mini-transcribe-2025-12-15
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gpt 4o Mini Transcribe
+              max_tokens: 128000
+              name: gpt-4o-mini-transcribe
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4o Mini Tts 2025 03 20
+              max_tokens: 128000
+              name: gpt-4o-mini-tts-2025-03-20
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4o Mini Tts 2025 12 15
+              max_tokens: 128000
+              name: gpt-4o-mini-tts-2025-12-15
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gpt 4o Mini Tts
+              max_tokens: 128000
+              name: gpt-4o-mini-tts
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4o Mini
+              input_cost_per_1k: 0.00015
+              max_tokens: 128000
+              name: gpt-4o-mini
+              output_cost_per_1k: 0.0006
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4o Realtime Preview 2024 12 17
+              max_tokens: 128000
+              name: gpt-4o-realtime-preview-2024-12-17
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4o Realtime Preview 2025 06 03
+              max_tokens: 128000
+              name: gpt-4o-realtime-preview-2025-06-03
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gpt 4o Realtime Preview
+              max_tokens: 128000
+              name: gpt-4o-realtime-preview
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 4o Search Preview 2025 03 11
+              max_tokens: 128000
+              name: gpt-4o-search-preview-2025-03-11
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gpt 4o Search Preview
+              max_tokens: 128000
+              name: gpt-4o-search-preview
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gpt 4o Transcribe Diarize
+              max_tokens: 128000
+              name: gpt-4o-transcribe-diarize
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gpt 4o Transcribe
+              max_tokens: 128000
+              name: gpt-4o-transcribe
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4o
+              input_cost_per_1k: 0.005
+              max_tokens: 128000
+              name: gpt-4o
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 5 2025 08 07
+              max_tokens: 128000
+              name: gpt-5-2025-08-07
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-5 Chat (Latest)
+              input_cost_per_1k: 0.00125
+              max_tokens: 400000
+              name: gpt-5-chat-latest
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+                - coding
+              display_name: GPT-5 Codex
+              input_cost_per_1k: 0.00125
+              max_tokens: 400000
+              name: gpt-5-codex
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 5 Mini 2025 08 07
+              max_tokens: 128000
+              name: gpt-5-mini-2025-08-07
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5 Mini
+              input_cost_per_1k: 0.00025
+              max_tokens: 400000
+              name: gpt-5-mini
+              output_cost_per_1k: 0.002
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 5 Nano 2025 08 07
+              max_tokens: 128000
+              name: gpt-5-nano-2025-08-07
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5 Nano
+              input_cost_per_1k: 5e-05
+              max_tokens: 400000
+              name: gpt-5-nano
+              output_cost_per_1k: 0.0004
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 5 Pro 2025 10 06
+              max_tokens: 128000
+              name: gpt-5-pro-2025-10-06
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5 Pro
+              input_cost_per_1k: 0.015
+              max_tokens: 400000
+              name: gpt-5-pro
+              output_cost_per_1k: 0.12
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 5 Search Api 2025 10 14
+              max_tokens: 128000
+              name: gpt-5-search-api-2025-10-14
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gpt 5 Search Api
+              max_tokens: 128000
+              name: gpt-5-search-api
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 5.1 2025 11 13
+              max_tokens: 128000
+              name: gpt-5.1-2025-11-13
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-5.1 Chat (Latest)
+              input_cost_per_1k: 0.00125
+              max_tokens: 400000
+              name: gpt-5.1-chat-latest
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+                - coding
+              display_name: GPT-5.1 Codex Max
+              input_cost_per_1k: 0.00125
+              max_tokens: 400000
+              name: gpt-5.1-codex-max
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+                - coding
+              display_name: GPT-5.1 Codex Mini
+              input_cost_per_1k: 0.00025
+              max_tokens: 400000
+              name: gpt-5.1-codex-mini
+              output_cost_per_1k: 0.002
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+                - coding
+              display_name: GPT-5.1 Codex
+              input_cost_per_1k: 0.00125
+              max_tokens: 400000
+              name: gpt-5.1-codex
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5.1
+              input_cost_per_1k: 0.00125
+              max_tokens: 400000
+              name: gpt-5.1
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 5.2 2025 12 11
+              max_tokens: 128000
+              name: gpt-5.2-2025-12-11
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gpt 5.2 Chat Latest
+              max_tokens: 128000
+              name: gpt-5.2-chat-latest
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+                - coding
+              display_name: GPT-5.2 Codex
+              input_cost_per_1k: 0.00175
+              max_tokens: 400000
+              name: gpt-5.2-codex
+              output_cost_per_1k: 0.014
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT 5.2 Pro 2025 12 11
+              max_tokens: 128000
+              name: gpt-5.2-pro-2025-12-11
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-5.2 Pro
+              max_tokens: 128000
+              name: gpt-5.2-pro
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5.2
+              input_cost_per_1k: 0.00175
+              max_tokens: 400000
+              name: gpt-5.2
+              output_cost_per_1k: 0.014
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-5.3 Chat (Latest)
+              input_cost_per_1k: 0.00175
+              max_tokens: 400000
+              name: gpt-5.3-chat-latest
+              output_cost_per_1k: 0.014
+              status: stable
+            - capabilities:
+                - chat
+                - completions
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5.3 Codex Spark
+              input_cost_per_1k: 0.00175
+              max_tokens: 400000
+              name: gpt-5.3-codex-spark
+              output_cost_per_1k: 0.014
+              status: preview
+            - capabilities:
+                - chat
+                - completions
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5.3 Codex
+              input_cost_per_1k: 0.00175
+              max_tokens: 400000
+              name: gpt-5.3-codex
+              output_cost_per_1k: 0.014
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5.4 Mini
+              input_cost_per_1k: 0.00075
+              max_tokens: 400000
+              name: gpt-5.4-mini
+              output_cost_per_1k: 0.0045
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5.4 Nano
+              input_cost_per_1k: 0.0002
+              max_tokens: 400000
+              name: gpt-5.4-nano
+              output_cost_per_1k: 0.00125
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5.4 Pro
+              input_cost_per_1k: 0.03
+              max_tokens: 1050000
+              name: gpt-5.4-pro
+              output_cost_per_1k: 0.18
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5.4
+              input_cost_per_1k: 0.0025
+              max_tokens: 1050000
+              name: gpt-5.4
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5.5 Pro
+              input_cost_per_1k: 0.03
+              max_tokens: 1050000
+              name: gpt-5.5-pro
+              output_cost_per_1k: 0.18
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5.5
+              input_cost_per_1k: 0.005
+              max_tokens: 1050000
+              name: gpt-5.5
+              output_cost_per_1k: 0.03
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5
+              input_cost_per_1k: 0.00125
+              max_tokens: 400000
+              name: gpt-5
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: GPT Audio 2025 08 28
+              max_tokens: 128000
+              name: gpt-audio-2025-08-28
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: GPT Audio Mini 2025 10 06
+              max_tokens: 128000
+              name: gpt-audio-mini-2025-10-06
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: GPT Audio Mini 2025 12 15
+              max_tokens: 128000
+              name: gpt-audio-mini-2025-12-15
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Gpt Audio Mini
+              max_tokens: 128000
+              name: gpt-audio-mini
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Gpt Audio
+              max_tokens: 128000
+              name: gpt-audio
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Gpt Image 1 Mini
+              max_tokens: 128000
+              name: gpt-image-1-mini
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Gpt Image 1.5
+              max_tokens: 128000
+              name: gpt-image-1.5
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Gpt Image 1
+              max_tokens: 128000
+              name: gpt-image-1
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: GPT Realtime 2025 08 28
+              max_tokens: 128000
+              name: gpt-realtime-2025-08-28
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: GPT Realtime Mini 2025 10 06
+              max_tokens: 128000
+              name: gpt-realtime-mini-2025-10-06
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: GPT Realtime Mini 2025 12 15
+              max_tokens: 128000
+              name: gpt-realtime-mini-2025-12-15
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Gpt Realtime Mini
+              max_tokens: 128000
+              name: gpt-realtime-mini
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Gpt Realtime
+              max_tokens: 128000
+              name: gpt-realtime
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: O1 2024 12 17
+              max_tokens: 200000
+              name: o1-2024-12-17
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: O1 Pro 2025 03 19
+              max_tokens: 200000
+              name: o1-pro-2025-03-19
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: O1 Pro
+              max_tokens: 200000
+              name: o1-pro
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: O1
+              input_cost_per_1k: 0.015
+              max_tokens: 200000
+              name: o1
+              output_cost_per_1k: 0.06
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: O3 2025 04 16
+              max_tokens: 200000
+              name: o3-2025-04-16
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+                - deep_research
+              display_name: o3 Deep Research
+              input_cost_per_1k: 0.01
+              max_tokens: 200000
+              name: o3-deep-research
+              output_cost_per_1k: 0.04
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: O3 Mini 2025 01 31
+              max_tokens: 200000
+              name: o3-mini-2025-01-31
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: O3 Mini
+              input_cost_per_1k: 0.0011
+              max_tokens: 200000
+              name: o3-mini
+              output_cost_per_1k: 0.0044
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: o3-pro
+              input_cost_per_1k: 0.02
+              max_tokens: 200000
+              name: o3-pro
+              output_cost_per_1k: 0.08
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: o3
+              input_cost_per_1k: 0.002
+              max_tokens: 200000
+              name: o3
+              output_cost_per_1k: 0.008
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: O4 Mini 2025 04 16
+              max_tokens: 128000
+              name: o4-mini-2025-04-16
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: O4 Mini Deep Research 2025 06 26
+              max_tokens: 128000
+              name: o4-mini-deep-research-2025-06-26
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: O4 Mini Deep Research
+              max_tokens: 200000
+              name: o4-mini-deep-research
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: o4-mini
+              input_cost_per_1k: 0.0011
+              max_tokens: 200000
+              name: o4-mini
+              output_cost_per_1k: 0.0044
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Omni Moderation 2024 09 26
+              max_tokens: 128000
+              name: omni-moderation-2024-09-26
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Omni Moderation Latest
+              max_tokens: 128000
+              name: omni-moderation-latest
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Sora 2 Pro
+              max_tokens: 128000
+              name: sora-2-pro
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Sora 2
+              max_tokens: 128000
+              name: sora-2
+              status: stable
+            - capabilities:
+                - embeddings
+              display_name: Text Embedding 3 Large
+              input_cost_per_1k: 0.00013
+              max_tokens: 8191
+              name: text-embedding-3-large
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - embeddings
+              display_name: Text Embedding 3 Small
+              input_cost_per_1k: 2e-05
+              max_tokens: 8191
+              name: text-embedding-3-small
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - embeddings
+              display_name: Text Embedding Ada 002
+              input_cost_per_1k: 0.0001
+              max_tokens: 8191
+              name: text-embedding-ada-002
+              output_cost_per_1k: 0
+              status: stable
+        name: OpenAI
+    openrouter:
+        base_url: https://openrouter.ai/api/v1
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Claude Haiku 4.5 (OR)
+              input_cost_per_1k: 0.001
+              max_tokens: 200000
+              name: anthropic/claude-haiku-4.5
+              output_cost_per_1k: 0.005
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Claude Opus 4.7 (OR)
+              input_cost_per_1k: 0.005
+              max_tokens: 1000000
+              name: anthropic/claude-opus-4.7
+              output_cost_per_1k: 0.025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Claude Sonnet 4.6 (OR)
+              input_cost_per_1k: 0.003
+              max_tokens: 1000000
+              name: anthropic/claude-sonnet-4.6
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Claude Sonnet 4
+              input_cost_per_1k: 0.003
+              max_tokens: 200000
+              name: anthropic/claude-sonnet-4
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: DeepSeek R1
+              input_cost_per_1k: 0.002
+              max_tokens: 64000
+              name: deepseek/deepseek-r1
+              output_cost_per_1k: 0.008
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: DeepSeek V4 Pro (OR)
+              input_cost_per_1k: 0.00174
+              max_tokens: 1048576
+              name: deepseek/deepseek-v4-pro
+              output_cost_per_1k: 0.00348
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gemini 2.5 Pro
+              input_cost_per_1k: 0.0035
+              max_tokens: 1048576
+              name: google/gemini-2.5-pro
+              output_cost_per_1k: 0.0105
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Gemini 3 Pro (Preview, OR)
+              input_cost_per_1k: 0.002
+              max_tokens: 1050000
+              name: google/gemini-3-pro-preview
+              output_cost_per_1k: 0.012
+              status: preview
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama 3.3 70B Instruct
+              input_cost_per_1k: 0.00088
+              max_tokens: 131072
+              name: meta-llama/llama-3.3-70b-instruct
+              output_cost_per_1k: 0.00088
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Mistral Large
+              input_cost_per_1k: 0.003
+              max_tokens: 128000
+              name: mistralai/mistral-large
+              output_cost_per_1k: 0.009
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Kimi K2.6 (OR)
+              input_cost_per_1k: 0.00095
+              max_tokens: 262144
+              name: moonshotai/kimi-k2.6
+              output_cost_per_1k: 0.004
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: GPT-3.5 Turbo
+              input_cost_per_1k: 0.0005
+              max_tokens: 16385
+              name: openai/gpt-3.5-turbo
+              output_cost_per_1k: 0.0015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4 Turbo
+              input_cost_per_1k: 0.01
+              max_tokens: 128000
+              name: openai/gpt-4-turbo
+              output_cost_per_1k: 0.03
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: GPT-4
+              input_cost_per_1k: 0.03
+              max_tokens: 8192
+              name: openai/gpt-4
+              output_cost_per_1k: 0.06
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4o Mini
+              input_cost_per_1k: 0.00015
+              max_tokens: 128000
+              name: openai/gpt-4o-mini
+              output_cost_per_1k: 0.0006
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: GPT-4o
+              input_cost_per_1k: 0.005
+              max_tokens: 128000
+              name: openai/gpt-4o
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5.5 (OR)
+              input_cost_per_1k: 0.005
+              max_tokens: 1050000
+              name: openai/gpt-5.5
+              output_cost_per_1k: 0.03
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: GPT-5 (OR)
+              input_cost_per_1k: 0.00125
+              max_tokens: 400000
+              name: openai/gpt-5
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - embeddings
+              display_name: text-embedding-3-large
+              input_cost_per_1k: 0.00013
+              max_tokens: 8191
+              name: openai/text-embedding-3-large
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - embeddings
+              display_name: Text Embedding Ada 002
+              input_cost_per_1k: 0.0001
+              max_tokens: 8191
+              name: openai/text-embedding-ada-002
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Grok 3 Beta
+              input_cost_per_1k: 0.003
+              max_tokens: 131072
+              name: x-ai/grok-3-beta
+              output_cost_per_1k: 0.015
+              status: preview
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Grok 4 (OR)
+              input_cost_per_1k: 0.003
+              max_tokens: 256000
+              name: x-ai/grok-4
+              output_cost_per_1k: 0.015
+              status: stable
+        name: OpenRouter
+    perplexity:
+        base_url: https://api.perplexity.ai
+        models:
+            - capabilities:
+                - chat
+                - reasoning
+                - search
+              display_name: Sonar Deep Research
+              input_cost_per_1k: 0.002
+              max_tokens: 128000
+              name: sonar-deep-research
+              output_cost_per_1k: 0.008
+              status: preview
+            - capabilities:
+                - chat
+                - search
+              display_name: Sonar Pro
+              input_cost_per_1k: 0.003
+              max_tokens: 200000
+              name: sonar-pro
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - reasoning
+                - search
+              display_name: Sonar Reasoning Pro
+              input_cost_per_1k: 0.002
+              max_tokens: 128000
+              name: sonar-reasoning-pro
+              output_cost_per_1k: 0.008
+              status: stable
+            - capabilities:
+                - chat
+              display_name: Sonar Reasoning
+              input_cost_per_1k: 0.002
+              max_tokens: 127000
+              name: sonar-reasoning
+              output_cost_per_1k: 0.008
+              status: deprecated
+            - capabilities:
+                - chat
+                - search
+              display_name: Sonar
+              input_cost_per_1k: 0.001
+              max_tokens: 128000
+              name: sonar
+              output_cost_per_1k: 0.001
+              status: stable
+        name: Perplexity
+    qwen:
+        base_url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Qwen VL Max
+              input_cost_per_1k: 0.003
+              max_tokens: 131072
+              name: qwen-vl-max
+              output_cost_per_1k: 0.009
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Qwen VL Plus
+              input_cost_per_1k: 0.001
+              max_tokens: 131072
+              name: qwen-vl-plus
+              output_cost_per_1k: 0.003
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Qwen2.5 72B Instruct
+              input_cost_per_1k: 0.0006
+              max_tokens: 131072
+              name: qwen2.5-72b-instruct
+              output_cost_per_1k: 0.0016
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Qwen3 14B
+              input_cost_per_1k: 0.0002
+              max_tokens: 131072
+              name: qwen3-14b
+              output_cost_per_1k: 0.0006
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Qwen3 235B A22B
+              input_cost_per_1k: 0.0007
+              max_tokens: 131072
+              name: qwen3-235b-a22b
+              output_cost_per_1k: 0.0028
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Qwen3 32B
+              input_cost_per_1k: 0.0007
+              max_tokens: 131072
+              name: qwen3-32b
+              output_cost_per_1k: 0.0028
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Qwen3 8B
+              input_cost_per_1k: 0.0001
+              max_tokens: 131072
+              name: qwen3-8b
+              output_cost_per_1k: 0.0004
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - coding
+              display_name: Qwen3 Coder 480B-A35B
+              input_cost_per_1k: 0.002
+              max_tokens: 262144
+              name: qwen3-coder-480b-a35b-instruct
+              output_cost_per_1k: 0.002
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - coding
+              display_name: Qwen3 Coder Plus
+              input_cost_per_1k: 0.001
+              max_tokens: 1048576
+              name: qwen3-coder-plus
+              output_cost_per_1k: 0.005
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Qwen3 Max
+              input_cost_per_1k: 0.0012
+              max_tokens: 262144
+              name: qwen3-max
+              output_cost_per_1k: 0.006
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Qwen3 Next 80B-A3B Thinking
+              input_cost_per_1k: 0.0005
+              max_tokens: 131072
+              name: qwen3-next-80b-a3b-thinking
+              output_cost_per_1k: 0.006
+              status: stable
+            - capabilities:
+                - audio
+              display_name: Qwen3 TTS Flash
+              input_cost_per_1k: 0.0001
+              max_tokens: 4096
+              name: qwen3-tts-flash
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - audio
+              display_name: Qwen3 TTS Instruct Flash
+              input_cost_per_1k: 0.00015
+              max_tokens: 4096
+              name: qwen3-tts-instruct-flash
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - audio
+              display_name: Qwen3 TTS Voice Clone
+              input_cost_per_1k: 0.0002
+              max_tokens: 4096
+              name: qwen3-tts-vc
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - audio
+              display_name: Qwen3 TTS Voice Design
+              input_cost_per_1k: 0.0002
+              max_tokens: 4096
+              name: qwen3-tts-vd
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Qwen3-VL Plus
+              input_cost_per_1k: 0.0002
+              max_tokens: 262144
+              name: qwen3-vl-plus
+              output_cost_per_1k: 0.0016
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Qwen3.5 122B-A10B
+              input_cost_per_1k: 0.0004
+              max_tokens: 262144
+              name: qwen3.5-122b-a10b
+              output_cost_per_1k: 0.0032
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Qwen3.5 Flash
+              input_cost_per_1k: 0.0001
+              max_tokens: 1000000
+              name: qwen3.5-flash
+              output_cost_per_1k: 0.0004
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Qwen3.5 Plus
+              input_cost_per_1k: 0.0008
+              max_tokens: 1000000
+              name: qwen3.5-plus
+              output_cost_per_1k: 0.002
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: QwQ Plus
+              input_cost_per_1k: 0.0008
+              max_tokens: 131072
+              name: qwq-plus
+              output_cost_per_1k: 0.002
+              status: stable
+            - capabilities:
+                - embeddings
+              display_name: Qwen Text Embedding V3
+              input_cost_per_1k: 7e-05
+              max_tokens: 8192
+              name: text-embedding-v3
+              output_cost_per_1k: 0
+              status: stable
+        name: Qwen
+    together:
+        base_url: https://api.together.xyz/v1
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: DeepSeek V3
+              input_cost_per_1k: 0.00125
+              max_tokens: 131072
+              name: deepseek-ai/DeepSeek-V3
+              output_cost_per_1k: 0.00125
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: DeepSeek V4 Pro (Together)
+              input_cost_per_1k: 0.0021
+              max_tokens: 512000
+              name: deepseek-ai/DeepSeek-V4-Pro
+              output_cost_per_1k: 0.0044
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama 3.1 8B Instruct Turbo
+              input_cost_per_1k: 0.00018
+              max_tokens: 131072
+              name: meta-llama/Llama-3.1-8B-Instruct-Turbo
+              output_cost_per_1k: 0.00018
+              status: deprecated
+            - capabilities:
+                - chat
+                - vision
+              display_name: Llama 3.2 11B Vision Instruct Turbo
+              input_cost_per_1k: 0.0009
+              max_tokens: 131072
+              name: meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo
+              output_cost_per_1k: 0.0009
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama 3.3 70B Instruct Turbo
+              input_cost_per_1k: 0.00088
+              max_tokens: 131072
+              name: meta-llama/Llama-3.3-70B-Instruct-Turbo
+              output_cost_per_1k: 0.00088
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Kimi K2.6 (Together)
+              input_cost_per_1k: 0.0012
+              max_tokens: 262144
+              name: moonshotai/Kimi-K2.6
+              output_cost_per_1k: 0.0045
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: GPT OSS 120B (Together)
+              input_cost_per_1k: 0.00015
+              max_tokens: 131072
+              name: openai/gpt-oss-120b
+              output_cost_per_1k: 0.0006
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Qwen 2.5 72B Instruct Turbo
+              input_cost_per_1k: 0.0012
+              max_tokens: 131072
+              name: Qwen/Qwen2.5-72B-Instruct-Turbo
+              output_cost_per_1k: 0.0012
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - coding
+              display_name: Qwen3 Coder 480B FP8 (Together)
+              input_cost_per_1k: 0.002
+              max_tokens: 262144
+              name: Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8
+              output_cost_per_1k: 0.002
+              status: stable
+            - capabilities:
+                - embeddings
+              display_name: M2 BERT 80M Retrieval
+              input_cost_per_1k: 1e-05
+              max_tokens: 8192
+              name: togethercomputer/m2-bert-80M-8k-retrieval
+              output_cost_per_1k: 0
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: GLM-5.1 (Together)
+              input_cost_per_1k: 0.001
+              max_tokens: 202752
+              name: zai-org/GLM-5.1
+              output_cost_per_1k: 0.0032
+              status: stable
+        name: Together AI
+    vertex-ai:
+        base_url: https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Claude 3.7 Sonnet
+              input_cost_per_1k: 0.003
+              max_tokens: 200000
+              name: claude-3-7-sonnet@20250219
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Claude Haiku 4.5 (Vertex)
+              input_cost_per_1k: 0.001
+              max_tokens: 200000
+              name: claude-haiku-4-5@20251001
+              output_cost_per_1k: 0.005
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Claude Opus 4.5 (Vertex)
+              input_cost_per_1k: 0.005
+              max_tokens: 200000
+              name: claude-opus-4-5@20251101
+              output_cost_per_1k: 0.025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Claude Opus 4.6 (Vertex)
+              input_cost_per_1k: 0.005
+              max_tokens: 1000000
+              name: claude-opus-4-6@default
+              output_cost_per_1k: 0.025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Claude Opus 4.7 (Vertex)
+              input_cost_per_1k: 0.005
+              max_tokens: 1000000
+              name: claude-opus-4-7@default
+              output_cost_per_1k: 0.025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Claude Sonnet 4.5 (Vertex)
+              input_cost_per_1k: 0.003
+              max_tokens: 200000
+              name: claude-sonnet-4-5@20250929
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Claude Sonnet 4.6 (Vertex)
+              input_cost_per_1k: 0.003
+              max_tokens: 200000
+              name: claude-sonnet-4-6@default
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gemini 1.5 Flash
+              input_cost_per_1k: 7.5e-05
+              max_tokens: 1048576
+              name: gemini-1.5-flash
+              output_cost_per_1k: 0.0003
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Gemini 1.5 Pro
+              input_cost_per_1k: 0.00125
+              max_tokens: 1048576
+              name: gemini-1.5-pro
+              output_cost_per_1k: 0.005
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Gemini 2.5 Flash (Vertex)
+              input_cost_per_1k: 0.0003
+              max_tokens: 1048576
+              name: gemini-2.5-flash
+              output_cost_per_1k: 0.0025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Gemini 2.5 Pro (Vertex)
+              input_cost_per_1k: 0.00125
+              max_tokens: 1048576
+              name: gemini-2.5-pro
+              output_cost_per_1k: 0.01
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Gemini 3 Flash (Preview, Vertex)
+              input_cost_per_1k: 0.0005
+              max_tokens: 1048576
+              name: gemini-3-flash-preview
+              output_cost_per_1k: 0.003
+              status: preview
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Gemini 3 Pro (Preview, Vertex)
+              input_cost_per_1k: 0.002
+              max_tokens: 1000000
+              name: gemini-3-pro-preview
+              output_cost_per_1k: 0.012
+              status: preview
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Llama 3.1 70B Instruct
+              input_cost_per_1k: 0.0009
+              max_tokens: 131072
+              name: llama-3.1-70b-instruct-maas
+              output_cost_per_1k: 0.0009
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Mistral Large 2411
+              input_cost_per_1k: 0.003
+              max_tokens: 128000
+              name: mistral-large-2411
+              output_cost_per_1k: 0.009
+              status: stable
+        name: Vertex AI
+    xai:
+        base_url: https://api.x.ai/v1
+        models:
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+              display_name: Grok 3 Beta
+              input_cost_per_1k: 0.003
+              max_tokens: 131072
+              name: grok-3-beta
+              output_cost_per_1k: 0.015
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Grok 3 Fast Beta
+              input_cost_per_1k: 0.0015
+              max_tokens: 131072
+              name: grok-3-fast-beta
+              output_cost_per_1k: 0.0075
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Grok 3 Mini Beta
+              input_cost_per_1k: 0.0008
+              max_tokens: 131072
+              name: grok-3-mini-beta
+              output_cost_per_1k: 0.004
+              status: deprecated
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Grok 3 Mini
+              input_cost_per_1k: 0.0003
+              max_tokens: 131072
+              name: grok-3-mini
+              output_cost_per_1k: 0.0005
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+              display_name: Grok 3
+              input_cost_per_1k: 0.003
+              max_tokens: 131072
+              name: grok-3
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Grok 4.1 Fast
+              input_cost_per_1k: 0.0002
+              max_tokens: 2000000
+              name: grok-4-1-fast
+              output_cost_per_1k: 0.0005
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Grok 4 Fast
+              input_cost_per_1k: 0.0002
+              max_tokens: 2000000
+              name: grok-4-fast
+              output_cost_per_1k: 0.0005
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Grok 4.20 Reasoning
+              input_cost_per_1k: 0.002
+              max_tokens: 2000000
+              name: grok-4.20-0309-reasoning
+              output_cost_per_1k: 0.006
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+              display_name: Grok 4.3
+              input_cost_per_1k: 0.00125
+              max_tokens: 1000000
+              name: grok-4.3
+              output_cost_per_1k: 0.0025
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+              display_name: Grok 4
+              input_cost_per_1k: 0.003
+              max_tokens: 256000
+              name: grok-4
+              output_cost_per_1k: 0.015
+              status: stable
+            - capabilities:
+                - chat
+                - function_calling
+                - reasoning
+                - coding
+              display_name: Grok Code Fast
+              input_cost_per_1k: 0.0002
+              max_tokens: 256000
+              name: grok-code-fast-1
+              output_cost_per_1k: 0.0015
+              status: stable
+        name: xAI

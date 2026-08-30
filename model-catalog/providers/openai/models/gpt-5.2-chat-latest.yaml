@@ -1,0 +1,45 @@
+name: gpt-5.2-chat-latest
+display_name: Gpt 5.2 Chat Latest
+family: gpt-5
+status: "stable"
+release_date: "2025-12-11"
+cost:
+  input_per_1k: 0.00175
+  output_per_1k: 0.014
+  cache_read_per_1k: 0.000175
+
+limits:
+  max_tokens: 128000
+  max_completion_tokens: 16384
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image"]
+  output: ["text"]
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 16384
+    has_max_value: true
+  - key: "reasoning_effort"
+    display_name: "Reasoning effort"
+    type: "enum"
+    options: ["medium"]
+  - key: "verbosity"
+    display_name: "Verbosity"
+    type: "enum"
+    options: ["low","medium","high"]
+variants:
+  - id: "medium"
+    display_name: "Medium reasoning"
+    description: "Balanced reasoning for general-purpose work."
+    parameters:
+      reasoning_effort: "medium"

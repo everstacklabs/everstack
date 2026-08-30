@@ -1,0 +1,22 @@
+name: "huggingface/gpt-4-turbo"
+display_name: "GPT-4 Turbo"
+family: "gpt-4"
+status: "deprecated"
+
+cost:
+  input_per_1k: 0.01
+  output_per_1k: 0.03
+
+limits:
+  max_tokens: 128000
+  max_completion_tokens: 4096
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+
+modalities:
+  input: ["text", "image"]
+  output: ["text"]
+

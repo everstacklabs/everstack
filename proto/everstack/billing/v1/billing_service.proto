@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package everstack.billing.v1;
+
+import "everstack/billing/v1/billing.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/billing/v1;billing";
+
+// BillingService provides billing and subscription management for Cloud Edition
+service BillingService {
+  // GetSubscription returns the subscription for an organization
+  rpc GetSubscription(GetSubscriptionRequest) returns (GetSubscriptionResponse);
+  
+  // CreateCheckoutSession creates a Stripe checkout session for plan upgrade
+  rpc CreateCheckoutSession(CreateCheckoutSessionRequest) returns (CreateCheckoutSessionResponse);
+  
+  // CreateBillingPortalSession creates a Stripe billing portal session
+  rpc CreateBillingPortalSession(CreateBillingPortalSessionRequest) returns (CreateBillingPortalSessionResponse);
+  
+  // CancelSubscription cancels a subscription at period end
+  rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse);
+  
+  // ResumeSubscription resumes a cancelled subscription
+  rpc ResumeSubscription(ResumeSubscriptionRequest) returns (ResumeSubscriptionResponse);
+  
+  // ListInvoices lists invoices for an organization
+  rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
+  
+  // GetUsage returns current usage metrics for an organization
+  rpc GetUsage(GetUsageRequest) returns (GetUsageResponse);
+
+  // GetUsageHistory returns time-series usage data for charts.
+  // Aggregates across instances when instance_id is empty.
+  rpc GetUsageHistory(GetUsageHistoryRequest) returns (GetUsageHistoryResponse);
+
+  // ReportUsage reports usage for metered billing (for license service)
+  rpc ReportUsage(ReportUsageRequest) returns (ReportUsageResponse);
+
+  // ReportOverageUsage reports overage usage to Stripe Meters (for license service)
+  rpc ReportOverageUsage(ReportOverageUsageRequest) returns (ReportOverageUsageResponse);
+
+  // ReportInstanceSnapshot records a per-instance daily snapshot of resource
+  // counts (agents, datasets, etc.) for historical usage charts.
+  rpc ReportInstanceSnapshot(ReportInstanceSnapshotRequest) returns (ReportInstanceSnapshotResponse);
+
+  // SyncPlans syncs plans from plans.json to Stripe (admin only)
+  rpc SyncPlans(SyncPlansRequest) returns (SyncPlansResponse);
+
+  // GetPlans returns the current synced plan IDs and plan definitions
+  rpc GetPlans(GetPlansRequest) returns (GetPlansResponse);
+
+  // GetPendingActivation retrieves pending activation tokens for an organization
+  rpc GetPendingActivation(GetPendingActivationRequest) returns (GetPendingActivationResponse);
+
+  // RetryActivation attempts to retry the gateway activation callback
+  rpc RetryActivation(RetryActivationRequest) returns (RetryActivationResponse);
+
+  // RegenerateActivation regenerates an activation token for an organization
+  rpc RegenerateActivation(RegenerateActivationRequest) returns (RegenerateActivationResponse);
+
+  // GetActivationStatus checks the processing status of webhook events
+  rpc GetActivationStatus(GetActivationStatusRequest) returns (GetActivationStatusResponse);
+
+  // GetInstanceOrganization looks up the organization associated with a gateway instance
+  rpc GetInstanceOrganization(GetInstanceOrganizationRequest) returns (GetInstanceOrganizationResponse);
+
+  // CreateInstanceMapping creates a mapping between a gateway instance and an organization
+  rpc CreateInstanceMapping(CreateInstanceMappingRequest) returns (CreateInstanceMappingResponse);
+
+  // GetSpendLimits retrieves all spend limits for an organization
+  rpc GetSpendLimits(GetSpendLimitsRequest) returns (GetSpendLimitsResponse);
+
+  // SetSpendLimit creates or updates a spend limit
+  rpc SetSpendLimit(SetSpendLimitRequest) returns (SetSpendLimitResponse);
+
+  // DeleteSpendLimit removes a spend limit
+  rpc DeleteSpendLimit(DeleteSpendLimitRequest) returns (DeleteSpendLimitResponse);
+
+  // MigrateSubscription migrates a multi-item subscription to single-item (admin only)
+  rpc MigrateSubscription(MigrateSubscriptionRequest) returns (MigrateSubscriptionResponse);
+
+  // AdjustSeats changes the number of paid extra admin seats on an
+  // org's subscription. Positive delta adds, negative removes (clamped
+  // at 0). Free / Enterprise tiers reject. Stripe handles proration on
+  // the per-seat line item with create_prorations.
+  rpc AdjustSeats(AdjustSeatsRequest) returns (AdjustSeatsResponse);
+}
+
+

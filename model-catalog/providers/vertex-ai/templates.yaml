@@ -1,0 +1,12 @@
+default:
+  name: "Default"
+  description: "Standard Vertex AI settings"
+  settings:
+    timeout: 60s
+    retry_attempts: 3
+
+gemini_first:
+  name: "Gemini First"
+  recommended_models:
+    - gemini-1.5-pro
+    - gemini-1.5-flash

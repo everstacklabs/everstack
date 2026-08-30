@@ -1,0 +1,69 @@
+name: "google/gemini-3.7-flash"
+display_name: "Gemini 3.7 Flash (OpenRouter)"
+family: "gemini-flash"
+status: "stable"
+release_date: "2026-08-13"
+
+cost:
+  input_per_1k: 0.000375
+  output_per_1k: 0.001875
+  cache_read_per_1k: 0.0000375
+  cache_write_per_1k: 0.000020833
+
+limits:
+  max_tokens: 1048576
+  max_completion_tokens: 65536
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image","video","audio","pdf"]
+  output: ["text"]
+
+knowledge_cutoff: "2026-03"
+notes: "Fast Gemini model balancing multimodal reasoning, tool use, and cost"
+
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 65536
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+  - key: "frequency_penalty"
+    display_name: "Frequency penalty"
+    type: "number"
+    min_value: -2
+    has_min_value: true
+    max_value: 2
+    has_max_value: true
+  - key: "presence_penalty"
+    display_name: "Presence penalty"
+    type: "number"
+    min_value: -2
+    has_min_value: true
+    max_value: 2
+    has_max_value: true
+  - key: "seed"
+    display_name: "Seed"
+    type: "integer"

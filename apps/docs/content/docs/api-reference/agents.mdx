@@ -1,0 +1,87 @@
+---
+title: Agents
+description: Agents API endpoints
+---
+
+# Agents API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | [`/v1/agent-triggers/{id}`](./agents/get-agent-trigger) |  |
+| `PATCH` | [`/v1/agent-triggers/{id}`](./agents/update-agent-trigger) |  |
+| `DELETE` | [`/v1/agent-triggers/{id}`](./agents/delete-agent-trigger) |  |
+| `POST` | [`/v1/agent-triggers/{id}/test`](./agents/test-agent-trigger) |  |
+| `GET` | [`/v1/agent-triggers/{triggerId}/executions`](./agents/list-agent-trigger-executions) |  |
+| `GET` | [`/v1/agents`](./agents/list-agents) |  |
+| `POST` | [`/v1/agents`](./agents/agent-crud) | Agent CRUD |
+| `POST` | [`/v1/agents/import/opencode`](./agents/import-agent-from-opencode) |  |
+| `PATCH` | [`/v1/agents/memories/{memoryId}`](./agents/update-agent-memory) |  |
+| `DELETE` | [`/v1/agents/memories/{memoryId}`](./agents/delete-agent-memory) |  |
+| `POST` | [`/v1/agents/memories/{memoryId}/deactivate`](./agents/deactivate-agent-memory) |  |
+| `POST` | [`/v1/agents/memory/setup`](./agents/memory-setup) | Memory Setup |
+| `GET` | [`/v1/agents/reviews`](./agents/list-reviews) |  |
+| `GET` | [`/v1/agents/reviews/{reviewId}`](./agents/get-review) |  |
+| `POST` | [`/v1/agents/reviews/{reviewId}/submit`](./agents/hitl-approval-gate) | HITL Approval Gate |
+| `GET` | [`/v1/agents/sessions`](./agents/list-sessions) |  |
+| `POST` | [`/v1/agents/sessions`](./agents/session-management) | Session management |
+| `GET` | [`/v1/agents/sessions/{id}`](./agents/get-session) |  |
+| `POST` | [`/v1/agents/sessions/{sessionId}/cancel`](./agents/cancel-session) |  |
+| `POST` | [`/v1/agents/sessions/{sessionId}/complete`](./agents/complete-session) |  |
+| `GET` | [`/v1/agents/sessions/{sessionId}/spawn-nodes`](./agents/list-spawn-nodes) |  |
+| `POST` | [`/v1/agents/sessions/{sessionId}/steer`](./agents/steer-session) |  |
+| `POST` | [`/v1/agents/sessions/{sessionId}/turns`](./agents/runtime) | Runtime |
+| `POST` | [`/v1/agents/sessions/{sessionId}/turns/stream`](./agents/streaming-runtime) | Streaming runtime |
+| `GET` | [`/v1/agents/spawn-trees/{treeId}`](./agents/spawn-tree) | Spawn Tree |
+| `POST` | [`/v1/agents/{agentId}/deploy`](./agents/deploy-agent) |  |
+| `GET` | [`/v1/agents/{agentId}/deployments`](./agents/list-deployments) |  |
+| `GET` | [`/v1/agents/{agentId}/memories`](./agents/list-agent-memories) |  |
+| `POST` | [`/v1/agents/{agentId}/memories`](./agents/create-agent-memory) |  |
+| `GET` | [`/v1/agents/{agentId}/triggers`](./agents/list-agent-triggers) |  |
+| `POST` | [`/v1/agents/{agentId}/triggers`](./agents/create-agent-trigger) |  |
+| `GET` | [`/v1/agents/{id}`](./agents/get-agent) |  |
+| `PATCH` | [`/v1/agents/{id}`](./agents/update-agent) |  |
+| `DELETE` | [`/v1/agents/{id}`](./agents/delete-agent) |  |
+| `GET` | [`/v1/agents/{id}/export/opencode`](./agents/export-agent-to-opencode) |  |
+| `DELETE` | [`/v1/deployments/keys/{keyId}`](./agents/revoke-deployment-key) |  |
+| `GET` | [`/v1/deployments/{deploymentId}/invocations`](./agents/list-deployment-invocations) |  |
+| `GET` | [`/v1/deployments/{deploymentId}/keys`](./agents/list-deployment-keys) |  |
+| `POST` | [`/v1/deployments/{deploymentId}/keys`](./agents/create-deployment-key) |  |
+| `GET` | [`/v1/deployments/{id}`](./agents/get-deployment) |  |
+| `PATCH` | [`/v1/deployments/{id}`](./agents/update-deployment) |  |
+| `GET` | [`/v1/integrations/github/installations`](./agents/list-git-hub-installations) |  |
+| `POST` | [`/v1/integrations/github/installations/link`](./agents/link-git-hub-installation) |  |
+| `DELETE` | [`/v1/integrations/github/installations/{installationId}`](./agents/remove-git-hub-installation) |  |
+| `GET` | [`/v1/integrations/github/installations/{installationId}/repos`](./agents/list-git-hub-repositories) |  |
+| `GET` | [`/v1/integrations/github/installations/{installationId}/repos/{owner}/{repo}/branches`](./agents/list-git-hub-branches) |  |
+| `POST` | [`/v1/sandbox`](./agents/sandbox-management) | Sandbox Management |
+| `GET` | [`/v1/sandbox/crons`](./agents/list-crons) |  |
+| `POST` | [`/v1/sandbox/crons`](./agents/crons) | Crons |
+| `PATCH` | [`/v1/sandbox/crons/{id}`](./agents/update-cron) |  |
+| `DELETE` | [`/v1/sandbox/crons/{id}`](./agents/delete-cron) |  |
+| `GET` | [`/v1/sandbox/instances`](./agents/list-sandbox-instances) |  |
+| `GET` | [`/v1/sandbox/instances/{sandboxId}`](./agents/get-sandbox-instance) |  |
+| `GET` | [`/v1/sandbox/overview`](./agents/get-sandbox-overview) |  |
+| `POST` | [`/v1/sandbox/recreate`](./agents/recreate-sandbox) |  |
+| `GET` | [`/v1/sandbox/templates`](./agents/sandbox-templates-read-only-catalog) | Sandbox Templates (read-only catalog) |
+| `GET` | [`/v1/sandbox/templates/{templateId}`](./agents/get-sandbox-template) |  |
+| `GET` | [`/v1/sandbox/triggers`](./agents/triggers-shared-history) | Triggers (shared history) |
+| `GET` | [`/v1/sandbox/webhooks`](./agents/list-webhooks) |  |
+| `POST` | [`/v1/sandbox/webhooks`](./agents/webhooks) | Webhooks |
+| `DELETE` | [`/v1/sandbox/webhooks/{id}`](./agents/delete-webhook) |  |
+| `GET` | [`/v1/sandbox/{sandboxId}/events`](./agents/sandbox-events) | Sandbox Events |
+| `GET` | [`/v1/sandbox/{sandboxId}/executions`](./agents/list-sandbox-executions) |  |
+| `POST` | [`/v1/sandbox/{sandboxId}/revive`](./agents/revive-sandbox) |  |
+| `POST` | [`/v1/sandbox/{sandboxId}/ssh/access`](./agents/grant-sandbox-sshaccess) |  |
+| `DELETE` | [`/v1/sandbox/{sandboxId}/ssh/access/{userId}`](./agents/revoke-sandbox-sshaccess) |  |
+| `GET` | [`/v1/sandbox/{sandboxId}/ssh/info`](./agents/get-sandbox-sshinfo) |  |
+| `POST` | [`/v1/sandbox/{sandboxId}/stop`](./agents/stop-sandbox) |  |
+| `POST` | [`/v1/sandbox/{sandboxId}/terminate`](./agents/terminate-sandbox) |  |
+| `DELETE` | [`/v1/sandbox/{sessionId}`](./agents/destroy-sandbox) |  |
+| `GET` | [`/v1/sandbox/{sessionId}/ports`](./agents/list-exposed-ports) |  |
+| `POST` | [`/v1/sandbox/{sessionId}/ports`](./agents/port-exposure) | Port Exposure |
+| `GET` | [`/v1/sandbox/{sessionId}/ports/detect`](./agents/detect-listening-ports) |  |
+| `DELETE` | [`/v1/sandbox/{sessionId}/ports/{port}`](./agents/unexpose-port) |  |
+| `GET` | [`/v1/sandbox/{sessionId}/stats`](./agents/get-sandbox-stats) |  |
+| `GET` | [`/v1/settings/ssh-keys`](./agents/list-sshkeys) |  |
+| `POST` | [`/v1/settings/ssh-keys`](./agents/add-sshkey) |  |
+| `DELETE` | [`/v1/settings/ssh-keys/{keyId}`](./agents/delete-sshkey) |  |

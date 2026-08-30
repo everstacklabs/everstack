@@ -1,0 +1,1418 @@
+syntax = "proto3";
+
+package everstack.agents.v1;
+
+import "google/api/annotations.proto";
+import "everstack/agents/v1/agents.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/agents/v1;agents";
+
+service AgentsService {
+  // Agent CRUD
+  rpc CreateAgent(CreateAgentRequest) returns (CreateAgentResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a new agent definition"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents"
+      body: "*"
+    };
+  }
+
+  rpc GetAgent(GetAgentRequest) returns (GetAgentResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get agent by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agents/{id}"};
+  }
+
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List all agents for tenant"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agents"};
+  }
+
+  rpc UpdateAgent(UpdateAgentRequest) returns (UpdateAgentResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update agent definition"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/agents/{id}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteAgent(DeleteAgentRequest) returns (DeleteAgentResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete agent definition"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/agents/{id}"};
+  }
+
+  rpc ImportAgentFromOpencode(ImportAgentFromOpencodeRequest) returns (ImportAgentFromOpencodeResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Import an Opencode-compatible agent payload"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/import/opencode"
+      body: "*"
+    };
+  }
+
+  rpc ExportAgentToOpencode(ExportAgentToOpencodeRequest) returns (ExportAgentToOpencodeResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Export an agent as an Opencode-compatible payload"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agents/{id}/export/opencode"};
+  }
+
+  // Session management
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a new agent session"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/sessions"
+      body: "*"
+    };
+  }
+
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get session by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agents/sessions/{id}"};
+  }
+
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List sessions"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agents/sessions"};
+  }
+
+  // Runtime
+  rpc RunTurn(RunTurnRequest) returns (RunTurnResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Run a single turn in an agent session"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/sessions/{session_id}/turns"
+      body: "*"
+    };
+  }
+
+  rpc CancelSession(CancelSessionRequest) returns (CancelSessionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Cancel a running session"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/sessions/{session_id}/cancel"
+      body: "*"
+    };
+  }
+
+  rpc CompleteSession(CompleteSessionRequest) returns (CompleteSessionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Explicitly complete a session"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/sessions/{session_id}/complete"
+      body: "*"
+    };
+  }
+
+  // Streaming runtime
+  rpc RunTurnStream(RunTurnStreamRequest) returns (stream AgentEvent) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Run a turn with streaming events"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/sessions/{session_id}/turns/stream"
+      body: "*"
+    };
+  }
+
+  rpc SteerSession(SteerSessionRequest) returns (SteerSessionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Inject a message into a running session"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/sessions/{session_id}/steer"
+      body: "*"
+    };
+  }
+
+  // HITL Approval Gate
+  rpc SubmitReview(SubmitReviewRequest) returns (SubmitReviewResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Submit a review decision for a pending approval"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/reviews/{review_id}/submit"
+      body: "*"
+    };
+  }
+
+  rpc GetReview(GetReviewRequest) returns (GetReviewResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get an approval review by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agents/reviews/{review_id}"};
+  }
+
+  rpc ListReviews(ListReviewsRequest) returns (ListReviewsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List approval reviews"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agents/reviews"};
+  }
+
+  // Sandbox Management
+  rpc CreateSandbox(CreateSandboxRequest) returns (CreateSandboxResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a new sandbox instance"}
+      }
+    };
+    option (google.api.http) = {post: "/v1/sandbox" body: "*"};
+  }
+
+  rpc GetSandboxOverview(GetSandboxOverviewRequest) returns (GetSandboxOverviewResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get sandbox subsystem overview"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/overview"};
+  }
+
+  rpc ListSandboxInstances(ListSandboxInstancesRequest) returns (ListSandboxInstancesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List sandbox instances"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/instances"};
+  }
+
+  rpc GetSandboxInstance(GetSandboxInstanceRequest) returns (GetSandboxInstanceResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get a sandbox instance by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/instances/{sandbox_id}"};
+  }
+
+  rpc DestroySandbox(DestroySandboxRequest) returns (DestroySandboxResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Destroy a sandbox instance"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/sandbox/{session_id}"};
+  }
+
+  rpc ListSandboxExecutions(ListSandboxExecutionsRequest) returns (ListSandboxExecutionsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List executions for a sandbox"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/{sandbox_id}/executions"};
+  }
+
+  rpc GetSandboxStats(GetSandboxStatsRequest) returns (GetSandboxStatsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get live stats for a sandbox"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/{session_id}/stats"};
+  }
+
+  rpc RecreateSandbox(RecreateSandboxRequest) returns (CreateSandboxResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Recreate a sandbox from an expired instance's config"}
+      }
+    };
+    option (google.api.http) = {post: "/v1/sandbox/recreate" body: "*"};
+  }
+
+  // Sandbox Templates (read-only catalog)
+  rpc ListSandboxTemplates(ListSandboxTemplatesRequest) returns (ListSandboxTemplatesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List available sandbox templates"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/templates"};
+  }
+
+  rpc GetSandboxTemplate(GetSandboxTemplateRequest) returns (GetSandboxTemplateResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get a sandbox template by ID or slug"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/templates/{template_id}"};
+  }
+
+  // Spawn Tree
+  rpc GetSpawnTree(GetSpawnTreeRequest) returns (GetSpawnTreeResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get all nodes in a spawn tree"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agents/spawn-trees/{tree_id}"};
+  }
+
+  rpc ListSpawnNodes(ListSpawnNodesRequest) returns (ListSpawnNodesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List spawn nodes for a session"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agents/sessions/{session_id}/spawn-nodes"};
+  }
+
+  // Sandbox Events
+  rpc ListSandboxEvents(ListSandboxEventsRequest) returns (ListSandboxEventsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List lifecycle events for a sandbox"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/{sandbox_id}/events"};
+  }
+
+  // Port Exposure
+  rpc ExposePort(ExposePortRequest) returns (ExposePortResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Expose a sandbox port via subdomain"}
+      }
+    };
+    option (google.api.http) = {post: "/v1/sandbox/{session_id}/ports" body: "*"};
+  }
+
+  rpc UnexposePort(UnexposePortRequest) returns (UnexposePortResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Close an exposed port"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/sandbox/{session_id}/ports/{port}"};
+  }
+
+  rpc ListExposedPorts(ListExposedPortsRequest) returns (ListExposedPortsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List exposed ports for a sandbox"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/{session_id}/ports"};
+  }
+
+  rpc DetectListeningPorts(DetectListeningPortsRequest) returns (DetectListeningPortsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Auto-detect listening ports inside a sandbox"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/{session_id}/ports/detect"};
+  }
+
+  // Crons
+  rpc CreateCron(CreateCronRequest) returns (CreateCronResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a sandbox cron schedule"}
+      }
+    };
+    option (google.api.http) = {post: "/v1/sandbox/crons" body: "*"};
+  }
+
+  rpc UpdateCron(UpdateCronRequest) returns (UpdateCronResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update a sandbox cron schedule"}
+      }
+    };
+    option (google.api.http) = {patch: "/v1/sandbox/crons/{id}" body: "*"};
+  }
+
+  rpc DeleteCron(DeleteCronRequest) returns (DeleteCronResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete a sandbox cron schedule"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/sandbox/crons/{id}"};
+  }
+
+  rpc ListCrons(ListCronsRequest) returns (ListCronsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List sandbox cron schedules"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/crons"};
+  }
+
+  // Webhooks
+  rpc CreateWebhook(CreateWebhookRequest) returns (CreateWebhookResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a sandbox webhook"}
+      }
+    };
+    option (google.api.http) = {post: "/v1/sandbox/webhooks" body: "*"};
+  }
+
+  rpc DeleteWebhook(DeleteWebhookRequest) returns (DeleteWebhookResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete a sandbox webhook"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/sandbox/webhooks/{id}"};
+  }
+
+  rpc ListWebhooks(ListWebhooksRequest) returns (ListWebhooksResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List sandbox webhooks"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/webhooks"};
+  }
+
+  // Triggers (shared history)
+  rpc ListTriggers(ListTriggersRequest) returns (ListTriggersResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List trigger execution history"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/triggers"};
+  }
+
+  // Memory Setup
+  rpc SetupMemory(SetupMemoryRequest) returns (SetupMemoryResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Setup memory backend (pgvector extension + embeddings)"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/memory/setup"
+      body: "*"
+    };
+  }
+
+  // --- GitHub Integration ---
+
+  rpc ListGitHubInstallations(ListGitHubInstallationsRequest) returns (ListGitHubInstallationsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List active GitHub App installations for tenant"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/integrations/github/installations"};
+  }
+
+  rpc RemoveGitHubInstallation(RemoveGitHubInstallationRequest) returns (RemoveGitHubInstallationResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Unlink a GitHub App installation"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/integrations/github/installations/{installation_id}"};
+  }
+
+  rpc LinkGitHubInstallation(LinkGitHubInstallationRequest) returns (LinkGitHubInstallationResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Link a pending GitHub App installation to the current tenant"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/integrations/github/installations/link"
+      body: "*"
+    };
+  }
+
+  rpc ListGitHubRepositories(ListGitHubRepositoriesRequest) returns (ListGitHubRepositoriesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Paginated repo listing with search for an installation"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/integrations/github/installations/{installation_id}/repos"};
+  }
+
+  rpc ListGitHubBranches(ListGitHubBranchesRequest) returns (ListGitHubBranchesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List branches for a specific repo"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/integrations/github/installations/{installation_id}/repos/{owner}/{repo}/branches"};
+  }
+
+  // --- Sandbox Lifecycle ---
+
+  rpc StopSandbox(StopSandboxRequest) returns (StopSandboxResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Stop a running sandbox, preserving trooper snapshot"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/sandbox/{sandbox_id}/stop"
+      body: "*"
+    };
+  }
+
+  rpc ReviveSandbox(ReviveSandboxRequest) returns (ReviveSandboxResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Revive a stopped sandbox from its trooper snapshot"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/sandbox/{sandbox_id}/revive"
+      body: "*"
+    };
+  }
+
+  rpc TerminateSandbox(TerminateSandboxRequest) returns (TerminateSandboxResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Permanently destroy a sandbox (non-revivable)"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/sandbox/{sandbox_id}/terminate"
+      body: "*"
+    };
+  }
+
+  rpc UpdateSandboxAutoIntervals(UpdateSandboxAutoIntervalsRequest) returns (UpdateSandboxAutoIntervalsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update the auto-stop/auto-archive/auto-delete intervals on a sandbox"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/sandbox/instances/{sandbox_id}/auto-intervals"
+      body: "*"
+    };
+  }
+
+  // --- SSH Key Management ---
+
+  rpc AddSSHKey(AddSSHKeyRequest) returns (AddSSHKeyResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Upload a user's public SSH key"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/settings/ssh-keys"
+      body: "*"
+    };
+  }
+
+  rpc ListSSHKeys(ListSSHKeysRequest) returns (ListSSHKeysResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List user's SSH keys"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/settings/ssh-keys"};
+  }
+
+  rpc DeleteSSHKey(DeleteSSHKeyRequest) returns (DeleteSSHKeyResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Remove an SSH key"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/settings/ssh-keys/{key_id}"};
+  }
+
+  rpc GrantSandboxSSHAccess(GrantSandboxSSHAccessRequest) returns (GrantSandboxSSHAccessResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Grant a user SSH access to a sandbox"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/sandbox/{sandbox_id}/ssh/access"
+      body: "*"
+    };
+  }
+
+  rpc RevokeSandboxSSHAccess(RevokeSandboxSSHAccessRequest) returns (RevokeSandboxSSHAccessResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Revoke SSH access from a sandbox"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/sandbox/{sandbox_id}/ssh/access/{user_id}"};
+  }
+
+  rpc GetSandboxSSHInfo(GetSandboxSSHInfoRequest) returns (GetSandboxSSHInfoResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get SSH connection info for a sandbox"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/{sandbox_id}/ssh/info"};
+  }
+
+  rpc CreateSandboxSSHToken(CreateSandboxSSHTokenRequest) returns (CreateSandboxSSHTokenResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a temporary SSH token for a sandbox"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/sandbox/{sandbox_id}/ssh-tokens"
+      body: "*"
+    };
+  }
+
+  rpc ListSandboxSSHTokens(ListSandboxSSHTokensRequest) returns (ListSandboxSSHTokensResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List active temporary SSH tokens for a sandbox"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/{sandbox_id}/ssh-tokens"};
+  }
+
+  rpc RevokeSandboxSSHToken(RevokeSandboxSSHTokenRequest) returns (RevokeSandboxSSHTokenResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Revoke a temporary SSH token for a sandbox"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/sandbox/{sandbox_id}/ssh-tokens/{token_id}"};
+  }
+
+  // GetSandboxPreviewUrl generates a signed preview URL for a sandbox port.
+  // The URL embeds an HMAC-SHA256 auth token so it can be shared directly
+  // without requiring custom HTTP headers (iframe embeds, link sharing).
+  rpc GetSandboxPreviewUrl(GetSandboxPreviewUrlRequest) returns (GetSandboxPreviewUrlResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Generate a signed preview URL for a sandbox port"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/sandbox/instances/{sandbox_id}/preview-url"
+      body: "*"
+    };
+  }
+
+  rpc ResizeSandbox(ResizeSandboxRequest) returns (ResizeSandboxResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Dynamically resize a sandbox's CPU/memory allocation"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/sandbox/instances/{sandbox_id}/resize"
+      body: "*"
+    };
+  }
+
+  rpc ContentSearch(ContentSearchRequest) returns (ContentSearchResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Search file contents inside a sandbox"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/sandbox/instances/{sandbox_id}/files/content-search"
+      body: "*"
+    };
+  }
+
+  rpc GlobalReplace(GlobalReplaceRequest) returns (GlobalReplaceResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Find-and-replace across files inside a sandbox"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/sandbox/instances/{sandbox_id}/files/global-replace"
+      body: "*"
+    };
+  }
+
+  rpc SandboxLSP(SandboxLSPRequest) returns (SandboxLSPResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Run a language-server operation inside a sandbox"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/sandbox/instances/{sandbox_id}/lsp/{lang}/{op}"
+      body: "*"
+    };
+  }
+
+  rpc SandboxLSPInfo(SandboxLSPInfoRequest) returns (SandboxLSPInfoResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List LSP capabilities for a sandbox"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/instances/{sandbox_id}/lsp"};
+  }
+
+  rpc SandboxMetricsHistory(SandboxMetricsHistoryRequest) returns (SandboxMetricsHistoryResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Time-series resource metrics for a sandbox"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/instances/{sandbox_id}/metrics/history"};
+  }
+
+  rpc SandboxMetricsBatch(SandboxMetricsBatchRequest) returns (SandboxMetricsBatchResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Latest metrics snapshot for multiple sandboxes"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/metrics/batch"};
+  }
+
+  rpc ComputerUse(ComputerUseRequest) returns (ComputerUseResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Computer Use op (screenshot, mouse/keyboard, recording)"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/sandbox/instances/{sandbox_id}/computer/{op=**}"
+      body: "*"
+    };
+  }
+
+  rpc ComputerUseInfo(ComputerUseInfoRequest) returns (ComputerUseInfoResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List Computer Use capabilities for a sandbox"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/sandbox/instances/{sandbox_id}/computer"};
+  }
+
+  // --- Persistent Agent Memory ---
+
+  rpc ListAgentMemories(ListAgentMemoriesRequest) returns (ListAgentMemoriesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List persistent memories for an agent"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agents/{agent_id}/memories"};
+  }
+
+  rpc CreateAgentMemory(CreateAgentMemoryRequest) returns (CreateAgentMemoryResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Manually create a persistent memory entry"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/{agent_id}/memories"
+      body: "*"
+    };
+  }
+
+  rpc UpdateAgentMemory(UpdateAgentMemoryRequest) returns (UpdateAgentMemoryResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update a persistent memory entry"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/agents/memories/{memory_id}"
+      body: "*"
+    };
+  }
+
+  rpc DeactivateAgentMemory(DeactivateAgentMemoryRequest) returns (DeactivateAgentMemoryResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Soft-delete (deactivate) a persistent memory entry"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/memories/{memory_id}/deactivate"
+      body: "*"
+    };
+  }
+
+  rpc DeleteAgentMemory(DeleteAgentMemoryRequest) returns (DeleteAgentMemoryResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete a persistent memory entry"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/agents/memories/{memory_id}"};
+  }
+
+  // --- Agent Deployments (Agent-as-API) ---
+
+  rpc DeployAgent(DeployAgentRequest) returns (DeployAgentResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Deploy an agent as an API endpoint"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/{agent_id}/deploy"
+      body: "*"
+    };
+  }
+
+  rpc ListDeployments(ListDeploymentsRequest) returns (ListDeploymentsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List deployments for an agent"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agents/{agent_id}/deployments"};
+  }
+
+  rpc GetDeployment(GetDeploymentRequest) returns (GetDeploymentResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get a deployment by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/deployments/{id}"};
+  }
+
+  rpc UpdateDeployment(UpdateDeploymentRequest) returns (UpdateDeploymentResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update a deployment's status or limits"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/deployments/{id}"
+      body: "*"
+    };
+  }
+
+  rpc CreateDeploymentKey(CreateDeploymentKeyRequest) returns (CreateDeploymentKeyResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create an API key for a deployment"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/deployments/{deployment_id}/keys"
+      body: "*"
+    };
+  }
+
+  rpc ListDeploymentKeys(ListDeploymentKeysRequest) returns (ListDeploymentKeysResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List API keys for a deployment"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/deployments/{deployment_id}/keys"};
+  }
+
+  rpc RevokeDeploymentKey(RevokeDeploymentKeyRequest) returns (RevokeDeploymentKeyResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Revoke an API key for a deployment"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/deployments/keys/{key_id}"};
+  }
+
+  rpc ListDeploymentInvocations(ListDeploymentInvocationsRequest) returns (ListDeploymentInvocationsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List invocation history for a deployment"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/deployments/{deployment_id}/invocations"};
+  }
+
+  // ─── Agent Triggers ──────────────────────────────────────────────
+
+  rpc CreateAgentTrigger(CreateAgentTriggerRequest) returns (CreateAgentTriggerResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a trigger for an agent"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/{agent_id}/triggers"
+      body: "*"
+    };
+  }
+
+  rpc ListAgentTriggers(ListAgentTriggersRequest) returns (ListAgentTriggersResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List triggers for an agent"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agents/{agent_id}/triggers"};
+  }
+
+  rpc GetAgentTrigger(GetAgentTriggerRequest) returns (GetAgentTriggerResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get a trigger by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agent-triggers/{id}"};
+  }
+
+  rpc UpdateAgentTrigger(UpdateAgentTriggerRequest) returns (UpdateAgentTriggerResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update a trigger"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/agent-triggers/{id}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteAgentTrigger(DeleteAgentTriggerRequest) returns (DeleteAgentTriggerResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete a trigger"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/agent-triggers/{id}"};
+  }
+
+  rpc TestAgentTrigger(TestAgentTriggerRequest) returns (TestAgentTriggerResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Test fire a trigger with a synthetic payload"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agent-triggers/{id}/test"
+      body: "*"
+    };
+  }
+
+  rpc ListAgentTriggerExecutions(ListAgentTriggerExecutionsRequest) returns (ListAgentTriggerExecutionsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List execution history for a trigger"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agent-triggers/{trigger_id}/executions"};
+  }
+
+  // ─── Agent Lifecycle (Persistent) ────────────────────────────────
+
+  rpc ProvisionAgent(ProvisionAgentRequest) returns (ProvisionAgentResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Provision a persistent agent sandbox"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/{agent_id}/provision"
+      body: "*"
+    };
+  }
+
+  rpc SleepAgent(SleepAgentRequest) returns (SleepAgentResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Put a persistent agent to sleep"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/{agent_id}/sleep"
+      body: "*"
+    };
+  }
+
+  rpc WakeAgent(WakeAgentRequest) returns (WakeAgentResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Wake a sleeping persistent agent"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/{agent_id}/wake"
+      body: "*"
+    };
+  }
+
+  // ─── Agent Links ───────────────────────────────────────────────────
+
+  rpc CreateAgentLink(CreateAgentLinkRequest) returns (CreateAgentLinkResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a link between agents"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/{source_agent_id}/links"
+      body: "*"
+    };
+  }
+
+  rpc ListAgentLinks(ListAgentLinksRequest) returns (ListAgentLinksResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List agent links"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agents/{agent_id}/links"};
+  }
+
+  rpc DeleteAgentLink(DeleteAgentLinkRequest) returns (DeleteAgentLinkResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete an agent link"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/agent-links/{link_id}"};
+  }
+
+  // ─── Agent Channel Bindings ────────────────────────────────────────
+
+  rpc BindAgentChannel(BindAgentChannelRequest) returns (BindAgentChannelResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Bind a channel to an agent"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/{agent_id}/channels"
+      body: "*"
+    };
+  }
+
+  rpc UnbindAgentChannel(UnbindAgentChannelRequest) returns (UnbindAgentChannelResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Unbind a channel from an agent"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/agents/{agent_id}/channels/{channel_config_id}"};
+  }
+
+  rpc ListAgentChannelBindings(ListAgentChannelBindingsRequest) returns (ListAgentChannelBindingsResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List channel bindings for an agent"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agents/{agent_id}/channels"};
+  }
+
+  // ─── Troopers (DEPRECATED — use unified Agent API with lifecycle_mode=PERSISTENT) ───
+
+  rpc CreateTrooper(CreateTrooperRequest) returns (CreateTrooperResponse) {
+    option deprecated = true;
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a new trooper"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/troopers"
+      body: "*"
+    };
+  }
+
+  rpc GetTrooper(GetTrooperRequest) returns (GetTrooperResponse) {
+    option deprecated = true;
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get trooper by ID"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/troopers/{id}"};
+  }
+
+  rpc ListTroopers(ListTroopersRequest) returns (ListTroopersResponse) {
+    option deprecated = true;
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List all troopers for tenant"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/troopers"};
+  }
+
+  rpc UpdateTrooper(UpdateTrooperRequest) returns (UpdateTrooperResponse) {
+    option deprecated = true;
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Update trooper"}
+      }
+    };
+    option (google.api.http) = {
+      patch: "/v1/troopers/{id}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteTrooper(DeleteTrooperRequest) returns (DeleteTrooperResponse) {
+    option deprecated = true;
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete trooper"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/troopers/{id}"};
+  }
+
+  rpc ProvisionTrooper(ProvisionTrooperRequest) returns (ProvisionTrooperResponse) {
+    option deprecated = true;
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Provision a trooper sandbox"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/troopers/{trooper_id}/provision"
+      body: "*"
+    };
+  }
+
+  rpc SleepTrooper(SleepTrooperRequest) returns (SleepTrooperResponse) {
+    option deprecated = true;
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Put trooper to sleep"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/troopers/{trooper_id}/sleep"
+      body: "*"
+    };
+  }
+
+  rpc WakeTrooper(WakeTrooperRequest) returns (WakeTrooperResponse) {
+    option deprecated = true;
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Wake a sleeping trooper"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/troopers/{trooper_id}/wake"
+      body: "*"
+    };
+  }
+
+  rpc CreateTrooperLink(CreateTrooperLinkRequest) returns (CreateTrooperLinkResponse) {
+    option deprecated = true;
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a link between trooper and another entity"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/troopers/{source_trooper_id}/links"
+      body: "*"
+    };
+  }
+
+  rpc ListTrooperLinks(ListTrooperLinksRequest) returns (ListTrooperLinksResponse) {
+    option deprecated = true;
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List links for a trooper"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/troopers/{trooper_id}/links"};
+  }
+
+  rpc DeleteTrooperLink(DeleteTrooperLinkRequest) returns (DeleteTrooperLinkResponse) {
+    option deprecated = true;
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete a trooper link"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/trooper-links/{link_id}"};
+  }
+
+  rpc BindChannelToTrooper(BindChannelToTrooperRequest) returns (BindChannelToTrooperResponse) {
+    option deprecated = true;
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Bind a channel to a trooper"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/troopers/{trooper_id}/channels"
+      body: "*"
+    };
+  }
+
+  rpc UnbindChannelFromTrooper(UnbindChannelFromTrooperRequest) returns (UnbindChannelFromTrooperResponse) {
+    option deprecated = true;
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Unbind a channel from a trooper"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/troopers/{trooper_id}/channels/{channel_config_id}"};
+  }
+
+  rpc ListTrooperChannelBindings(ListTrooperChannelBindingsRequest) returns (ListTrooperChannelBindingsResponse) {
+    option deprecated = true;
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List channel bindings for a trooper"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/troopers/{trooper_id}/channels"};
+  }
+
+  // Persistent sandbox volumes (POR-77).
+  rpc ListSandboxVolumes(ListSandboxVolumesRequest) returns (ListSandboxVolumesResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "List persistent volumes for the tenant"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/volumes"};
+  }
+
+  rpc CreateSandboxVolume(CreateSandboxVolumeRequest) returns (CreateSandboxVolumeResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create a persistent volume"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/volumes"
+      body: "*"
+    };
+  }
+
+  rpc DeleteSandboxVolume(DeleteSandboxVolumeRequest) returns (DeleteSandboxVolumeResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Delete a persistent volume"}
+      }
+    };
+    option (google.api.http) = {delete: "/v1/volumes/{volume_id}"};
+  }
+
+  // Immutable agent source revisions.
+  rpc CreateAgentRevision(CreateAgentRevisionRequest) returns (CreateAgentRevisionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Create and activate an immutable agent source revision"}
+      }
+    };
+    option (google.api.http) = {
+      post: "/v1/agents/{agent_id}/revisions"
+      body: "*"
+    };
+  }
+
+  rpc GetActiveAgentRevision(GetActiveAgentRevisionRequest) returns (GetActiveAgentRevisionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get the active source revision for an agent"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agents/{agent_id}/revisions/active"};
+  }
+
+  rpc GetAgentRevision(GetAgentRevisionRequest) returns (GetAgentRevisionResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {description: "Get an immutable agent source revision"}
+      }
+    };
+    option (google.api.http) = {get: "/v1/agent-revisions/{revision_id}"};
+  }
+}

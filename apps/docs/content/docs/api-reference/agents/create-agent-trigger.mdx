@@ -1,0 +1,223 @@
+---
+title: "POST Create Agent Trigger"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Create Agent Trigger</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400">POST</span>
+    <code className="text-sm text-fd-muted-foreground">{"/v1/agents/{agentId}/triggers"}</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="post"
+  path="/v1/agents/{agentId}/triggers"
+  parameters={[{"name":"agentId","in":"path","required":true,"schema":{"type":"string"}}]}
+  defaultBody={`{
+  "tenantId": "string",
+  "name": "string",
+  "triggerType": "string",
+  "cronExpression": "string",
+  "cronTimezone": "string",
+  "eventSourceAgentId": "string",
+  "eventType": "string",
+  "inputTemplate": "string",
+  "maxRetries": 0,
+  "retryDelaySeconds": 0,
+  "timeoutSeconds": 0,
+  "maxConcurrent": 0
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X POST "http://localhost:8089/v1/agents/{agentId}/triggers" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"tenantId":"string","name":"string","triggerType":"string","cronExpression":"string","cronTimezone":"string","eventSourceAgentId":"string","eventType":"string","inputTemplate":"string","maxRetries":0,"retryDelaySeconds":0,"timeoutSeconds":0,"maxConcurrent":0}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/agents/{agentId}/triggers", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "tenantId": "string",
+  "name": "string",
+  "triggerType": "string",
+  "cronExpression": "string",
+  "cronTimezone": "string",
+  "eventSourceAgentId": "string",
+  "eventType": "string",
+  "inputTemplate": "string",
+  "maxRetries": 0,
+  "retryDelaySeconds": 0,
+  "timeoutSeconds": 0,
+  "maxConcurrent": 0
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8089/v1/agents/{agentId}/triggers",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "tenantId": "string",
+  "name": "string",
+  "triggerType": "string",
+  "cronExpression": "string",
+  "cronTimezone": "string",
+  "eventSourceAgentId": "string",
+  "eventType": "string",
+  "inputTemplate": "string",
+  "maxRetries": 0,
+  "retryDelaySeconds": 0,
+  "timeoutSeconds": 0,
+  "maxConcurrent": 0
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "trigger": {
+    "id": "string",
+    "tenantId": "string",
+    "agentId": "string",
+    "name": "string",
+    "triggerType": "string",
+    "enabled": true,
+    "cronExpression": "string",
+    "cronTimezone": "string",
+    "webhookPath": "string",
+    "eventSourceAgentId": "string",
+    "eventType": "string",
+    "inputTemplate": "string",
+    "maxRetries": 0,
+    "timeoutSeconds": 0,
+    "maxConcurrent": 0,
+    "circuitState": "string",
+    "consecutiveFailures": 0,
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-01T00:00:00Z",
+    "retryDelaySeconds": 0
+  },
+  "webhookSecret": "string",
+  "webhookUrl": "string"
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+### Parameters
+
+| Name | In | Type | Required | Description |
+|------|-----|------|----------|-------------|
+| `agentId` | path | `string` | **Yes** |  |
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `tenantId` | `string` | No |  |
+| `name` | `string` | No |  |
+| `triggerType` | `string` | No |  |
+| `cronExpression` | `string` | No |  |
+| `cronTimezone` | `string` | No |  |
+| `eventSourceAgentId` | `string` | No |  |
+| `eventType` | `string` | No |  |
+| `eventFilter` | `object` | No |  |
+| `inputTemplate` | `string` | No |  |
+| `maxRetries` | `integer` | No |  |
+| `retryDelaySeconds` | `integer` | No |  |
+| `timeoutSeconds` | `integer` | No |  |
+| `maxConcurrent` | `integer` | No |  |
+
+
+### Responses
+
+#### 200 Create a trigger for an agent
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `trigger` | `object` |  |
+| `webhookSecret` | `string` |  |
+| `webhookUrl` | `string` |  |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

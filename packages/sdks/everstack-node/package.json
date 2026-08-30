@@ -1,0 +1,89 @@
+{
+  "name": "@everstack/node",
+  "version": "0.2.5",
+  "description": "Everstack Node.js SDK - OpenAI-style API for the Everstack AI Gateway",
+  "type": "module",
+  "license": "MIT",
+  "author": "Everstack Labs <hello@everstack.ai>",
+  "homepage": "https://everstack.ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/everstacklabs/everstack",
+    "directory": "packages/sdks/everstack-node"
+  },
+  "bugs": {
+    "url": "https://github.com/everstacklabs/everstack/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.js",
+      "require": "./dist/config.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/**",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "generate:models": "tsx scripts/generate-models.ts",
+    "prebuild": "pnpm generate:models",
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist .turbo node_modules",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "node --import tsx --test src/**/*.test.ts",
+    "example:test-sdk": "tsx examples/test-sdk.ts",
+    "example:test-all": "tsx examples/test-all.ts",
+    "example:agents": "tsx examples/agents-basic.ts",
+    "example:datasets": "tsx examples/datasets-evaluations.ts",
+    "example:webhooks-traces": "tsx examples/webhooks-traces.ts"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.2.2",
+    "@connectrpc/connect": "^2.0.0",
+    "@connectrpc/connect-node": "^2.1.0",
+    "@connectrpc/connect-web": "^2.0.0",
+    "@everstack/proto": "workspace:*"
+  },
+  "devDependencies": {
+    "@everstack/typescript-config": "workspace:*",
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.15.0",
+    "@typescript-eslint/parser": "^8.15.0",
+    "eslint": "^8.57.0",
+    "tsup": "^8.4.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.3",
+    "yaml": "^2.7.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "everstack",
+    "ai",
+    "llm",
+    "openai",
+    "anthropic",
+    "gateway",
+    "sdk",
+    "agents",
+    "sandboxes",
+    "observability"
+  ]
+}

@@ -1,0 +1,208 @@
+syntax = "proto3";
+
+package everstack.gateway.v1;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/gateway/v1;gateway";
+
+// =============================================================================
+// Text-to-Speech (TTS) Messages
+// =============================================================================
+
+message SpeechRequest {
+  // The model to use for speech synthesis
+  // Options: "tts-1", "tts-1-hd", "gpt-4o-mini-tts"
+  string model = 1;
+
+  // The text to generate audio for (max 4096 characters)
+  string input = 2;
+
+  // The voice to use for synthesis
+  // Options: "alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer", "verse"
+  string voice = 3;
+
+  // The format of the audio output
+  // Options: "mp3" (default), "opus", "aac", "flac", "wav", "pcm"
+  string response_format = 4;
+
+  // The speed of the generated audio (0.25 to 4.0, default 1.0)
+  float speed = 5;
+
+  // Optional per-call metadata
+  google.protobuf.Struct metadata = 6;
+
+  // Reference audio bytes for voice cloning
+  bytes reference_audio = 7;
+
+  // Transcript of the reference audio (improves clone quality)
+  string reference_text = 8;
+
+  // Reuse a previously created voice clone profile ID
+  string voice_clone_profile_id = 9;
+}
+
+message SpeechResponse {
+  // The generated audio data (binary)
+  bytes audio = 1;
+
+  // The format of the audio
+  string format = 2;
+
+  // Content type for the audio (e.g., "audio/mpeg")
+  string content_type = 3;
+
+  // Duration of the audio in seconds
+  float duration_seconds = 4;
+
+  // Character count of the input
+  int32 input_characters = 5;
+}
+
+// =============================================================================
+// Speech-to-Text (STT) Transcription Messages
+// =============================================================================
+
+message TranscriptionRequest {
+  // The audio file to transcribe (binary data)
+  bytes file = 1;
+
+  // The model to use for transcription
+  // Options: "whisper-1", "gpt-4o-transcribe", "gpt-4o-mini-transcribe"
+  string model = 2;
+
+  // The language of the audio in ISO-639-1 format (optional)
+  // If not provided, the model will auto-detect
+  string language = 3;
+
+  // An optional prompt to guide the transcription style
+  string prompt = 4;
+
+  // The format of the output
+  // Options: "json" (default), "text", "srt", "verbose_json", "vtt"
+  string response_format = 5;
+
+  // The sampling temperature (0 to 1, default 0)
+  float temperature = 6;
+
+  // Timestamp granularities (for verbose_json format)
+  // Options: "word", "segment"
+  repeated string timestamp_granularities = 7;
+
+  // The filename of the audio file (for content type detection)
+  string filename = 8;
+
+  // Optional per-call metadata
+  google.protobuf.Struct metadata = 9;
+}
+
+// Word-level timing information
+message TranscriptionWord {
+  // The word text
+  string word = 1;
+
+  // Start time in seconds
+  float start = 2;
+
+  // End time in seconds
+  float end = 3;
+}
+
+// Segment-level timing information
+message TranscriptionSegment {
+  // Segment ID
+  int32 id = 1;
+
+  // Seek position
+  int32 seek = 2;
+
+  // Start time in seconds
+  float start = 3;
+
+  // End time in seconds
+  float end = 4;
+
+  // The transcribed text
+  string text = 5;
+
+  // Token IDs
+  repeated int32 tokens = 6;
+
+  // Temperature used
+  float temperature = 7;
+
+  // Average log probability
+  float avg_logprob = 8;
+
+  // Compression ratio
+  float compression_ratio = 9;
+
+  // No speech probability
+  float no_speech_prob = 10;
+}
+
+message TranscriptionResponse {
+  // The transcribed text
+  string text = 1;
+
+  // The task type (always "transcribe")
+  string task = 2;
+
+  // The language of the audio
+  string language = 3;
+
+  // Duration of the audio in seconds
+  float duration = 4;
+
+  // Word-level timestamps (if requested)
+  repeated TranscriptionWord words = 5;
+
+  // Segment-level timestamps (if requested)
+  repeated TranscriptionSegment segments = 6;
+}
+
+// =============================================================================
+// Speech-to-Text (STT) Translation Messages
+// =============================================================================
+
+message TranslationRequest {
+  // The audio file to translate (binary data)
+  bytes file = 1;
+
+  // The model to use for translation
+  // Options: "whisper-1"
+  string model = 2;
+
+  // An optional prompt to guide the translation style
+  string prompt = 3;
+
+  // The format of the output
+  // Options: "json" (default), "text", "srt", "verbose_json", "vtt"
+  string response_format = 4;
+
+  // The sampling temperature (0 to 1, default 0)
+  float temperature = 5;
+
+  // The filename of the audio file (for content type detection)
+  string filename = 6;
+
+  // Optional per-call metadata
+  google.protobuf.Struct metadata = 7;
+}
+
+message TranslationResponse {
+  // The translated text (in English)
+  string text = 1;
+
+  // The task type (always "translate")
+  string task = 2;
+
+  // The detected language of the source audio
+  string language = 3;
+
+  // Duration of the audio in seconds
+  float duration = 4;
+
+  // Segment-level information (if verbose_json format)
+  repeated TranscriptionSegment segments = 5;
+}

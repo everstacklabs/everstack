@@ -1,0 +1,121 @@
+---
+title: Webhooks
+description: HTTP webhook triggers for starting agent sessions and workflows.
+icon: Webhook
+---
+
+Webhooks let any system that can send an HTTP POST start an agent session or continue an existing workflow. They are the simplest integration type and the most flexible, because they do not require a platform-specific connector.
+
+<Callout type="info">
+  Webhook triggers are in **beta**. The handler is stable, but trigger configuration options may expand before the 1.0 release.
+</Callout>
+
+## When to use webhooks
+
+Use webhooks when you need to trigger agents from systems that Everstack does not have a native integration for. Common examples:
+
+- **CI/CD pipelines** -- trigger an agent when a build fails or a deployment completes
+- **Monitoring alerts** -- start a diagnostic agent when PagerDuty, Datadog, or Grafana fires an alert
+- **Internal tools** -- connect custom admin panels or backoffice systems to agent workflows
+- **Third-party SaaS** -- Stripe payment events, Twilio SMS callbacks, or any platform with outbound webhooks
+- **GitHub and GitLab** -- when you want a lighter-weight trigger than the full GitHub App integration
+
+If the source platform is Slack, Discord, or Telegram, use the [Channels](/getting-started/integrations/channels) integration instead. Channels provide richer bidirectional messaging that webhooks cannot replicate.
+
+## How it works
+
+1. You create a webhook trigger in Everstack, which generates a unique endpoint URL.
+2. You configure the external system to POST to that URL when the event you care about occurs.
+3. Everstack receives the payload, validates it, and routes it to the configured agent or workflow.
+4. The agent session starts (or continues) with the webhook payload available as context.
+
+Each webhook endpoint is scoped to a tenant and optionally to a specific agent or workflow.
+
+## Setting up a webhook trigger
+
+<Steps>
+
+<Step>
+## Create the trigger
+
+In the Everstack dashboard, go to **Settings > Integrations > Webhooks** and click **Add Webhook**. Configure:
+
+- **Name** -- a human-readable label for the trigger
+- **Agent or workflow** -- which agent session to start when the webhook fires
+- **Secret** (optional) -- a shared secret for HMAC signature verification
+
+Everstack generates a unique endpoint URL for the trigger.
+</Step>
+
+<Step>
+## Configure the source system
+
+Copy the endpoint URL and paste it into the external system's webhook configuration. If you set a secret, configure the source system to sign payloads using HMAC-SHA256 with that secret.
+
+The endpoint accepts any JSON payload. Everstack does not impose a schema on the request body.
+</Step>
+
+<Step>
+## Test the trigger
+
+Send a test payload to verify the end-to-end flow:
+
+```bash
+curl -X POST https://your-everstack-instance/webhooks/trg_abc123 \
+  -H "Content-Type: application/json" \
+  -d '{"event": "test", "message": "Hello from curl"}'
+```
+
+You should see a new agent session appear in the dashboard with the webhook payload as the initial context.
+</Step>
+
+</Steps>
+
+## Payload handling
+
+Webhook payloads are passed to the agent session as structured context. The agent receives:
+
+- The full JSON body
+- HTTP headers (filtered to safe headers)
+- The trigger metadata (name, source, timestamp)
+
+Agents can use this information to decide how to respond. For example, a CI failure webhook might include the build log URL, and the agent can fetch and analyze it.
+
+## Security
+
+### Signature verification
+
+When a secret is configured on the trigger, Everstack verifies the HMAC-SHA256 signature on every incoming request. Requests with missing or invalid signatures are rejected with a 401 response.
+
+The signature header follows the `X-Hub-Signature-256` convention (the same format GitHub uses), making it compatible with most webhook sources out of the box.
+
+### Body size limits
+
+Webhook payloads are limited to 256KB. Requests exceeding this limit are rejected with a 413 response. If your source system sends larger payloads, include a URL to the full data instead of the data itself.
+
+### Delivery deduplication
+
+Everstack tracks delivery IDs to prevent duplicate processing when a source system retries a failed delivery. If the same delivery ID is received twice, the second request is acknowledged but not processed again.
+
+### Tenant scoping
+
+Every webhook endpoint includes a tenant-scoped identifier. There is no global webhook namespace. A trigger created by one tenant cannot be invoked by or confused with a trigger from another tenant.
+
+## Managing triggers
+
+You can create, list, update, and delete webhook triggers through both the dashboard and the API. See the [API Reference](/api-reference) for endpoint details.
+
+| Operation | Description |
+| --- | --- |
+| Create | Generate a new endpoint URL tied to an agent or workflow |
+| List | See all webhook triggers for the tenant |
+| Update | Change the target agent, secret, or configuration |
+| Delete | Remove the trigger and stop accepting requests at that URL |
+
+Deleting a trigger immediately invalidates the endpoint URL. Any subsequent requests to that URL receive a 404 response.
+
+## Next steps
+
+- [GitHub](/getting-started/integrations/github) -- richer source control integration with repo access and PR workflows
+- [Channels](/getting-started/integrations/channels) -- bidirectional messaging with Slack, Discord, and Telegram
+- [Agents](/getting-started/agents/overview) -- build the agents that respond to webhook triggers

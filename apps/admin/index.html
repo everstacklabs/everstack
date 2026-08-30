@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="theme-color" content="#000000" />
+    <script>
+      // Set the theme before first paint so the app never flashes the wrong
+      // palette. Mirrors next-themes' storage: raw "light"/"dark"/"system"
+      // under the shared "everstack-theme" key.
+      ;(function () {
+        var theme = 'dark'
+        try {
+          var stored = localStorage.getItem('everstack-theme')
+          if (stored === 'light' || stored === 'dark') theme = stored
+          else if (stored === 'system')
+            theme = window.matchMedia('(prefers-color-scheme: light)').matches
+              ? 'light'
+              : 'dark'
+        } catch (e) {}
+        document.documentElement.setAttribute('data-theme', theme)
+        var density = 'compact'
+        try {
+          var storedDensity = localStorage.getItem('everstack-density')
+          if (storedDensity === 'comfortable' || storedDensity === 'compact')
+            density = storedDensity
+        } catch (e) {}
+        document.documentElement.setAttribute('data-density', density)
+        var meta = document.querySelector('meta[name="theme-color"]')
+        if (meta)
+          meta.setAttribute(
+            'content',
+            theme === 'light' ? '#fafafa' : '#000000',
+          )
+      })()
+    </script>
+    <meta
+      name="description"
+      content="Web site created using create-tsrouter-app"
+    />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>Everstack by Everstack Labs</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

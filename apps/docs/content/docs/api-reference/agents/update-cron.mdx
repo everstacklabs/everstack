@@ -1,0 +1,192 @@
+---
+title: "PATCH Update Cron"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Update Cron</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-orange-500/10 text-orange-600 dark:text-orange-400">PATCH</span>
+    <code className="text-sm text-fd-muted-foreground">{"/v1/sandbox/crons/{id}"}</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="patch"
+  path="/v1/sandbox/crons/{id}"
+  parameters={[{"name":"id","in":"path","required":true,"schema":{"type":"string"}}]}
+  defaultBody={`{
+  "tenantId": "string",
+  "name": "string",
+  "schedule": "string",
+  "command": "string",
+  "enabled": true,
+  "timeoutSeconds": 0
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X PATCH "http://localhost:8089/v1/sandbox/crons/{id}" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"tenantId":"string","name":"string","schedule":"string","command":"string","enabled":true,"timeoutSeconds":0}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/sandbox/crons/{id}", {
+  method: "PATCH",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "tenantId": "string",
+  "name": "string",
+  "schedule": "string",
+  "command": "string",
+  "enabled": true,
+  "timeoutSeconds": 0
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.patch(
+    "http://localhost:8089/v1/sandbox/crons/{id}",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "tenantId": "string",
+  "name": "string",
+  "schedule": "string",
+  "command": "string",
+  "enabled": true,
+  "timeoutSeconds": 0
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "cron": {
+    "id": "string",
+    "tenantId": "string",
+    "sandboxId": "string",
+    "sessionId": "string",
+    "name": "string",
+    "schedule": "string",
+    "command": "string",
+    "workDir": "string",
+    "timeoutSeconds": 0,
+    "enabled": true,
+    "lastRunAt": "2024-01-01T00:00:00Z",
+    "nextRunAt": "2024-01-01T00:00:00Z",
+    "runCount": 0,
+    "errorCount": 0,
+    "lastError": "string",
+    "autoRecreate": true,
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+### Parameters
+
+| Name | In | Type | Required | Description |
+|------|-----|------|----------|-------------|
+| `id` | path | `string` | **Yes** |  |
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `tenantId` | `string` | No |  |
+| `name` | `string` | No |  |
+| `schedule` | `string` | No |  |
+| `command` | `string` | No |  |
+| `enabled` | `boolean` | No |  |
+| `timeoutSeconds` | `integer` | No |  |
+
+
+### Responses
+
+#### 200 Update a sandbox cron schedule
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `cron` | `object` |  |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

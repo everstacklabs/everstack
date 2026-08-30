@@ -1,0 +1,22 @@
+chat:
+  - deepseek-chat
+  - deepseek-reasoner
+  - deepseek-v4-flash
+  - deepseek-v4-pro
+
+function_calling:
+  - deepseek-chat
+  - deepseek-reasoner
+  - deepseek-v4-flash
+  - deepseek-v4-pro
+
+reasoning:
+  - deepseek-reasoner
+  - deepseek-v4-flash
+  - deepseek-v4-pro
+
+long_context:
+  - deepseek-chat
+  - deepseek-reasoner
+  - deepseek-v4-flash
+  - deepseek-v4-pro

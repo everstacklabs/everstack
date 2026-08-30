@@ -1,0 +1,5 @@
+node_modules/
+.turbo/
+
+# Generated package outputs are intentionally committed so consumers can use
+# @everstack/proto without installing the protobuf toolchain.

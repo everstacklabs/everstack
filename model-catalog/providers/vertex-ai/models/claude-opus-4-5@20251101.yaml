@@ -1,0 +1,48 @@
+name: "claude-opus-4-5@20251101"
+display_name: "Claude Opus 4.5 (Vertex)"
+family: "claude-4"
+status: "stable"
+release_date: "2025-11-01"
+
+cost:
+  input_per_1k: 0.005
+  output_per_1k: 0.025
+  cache_read_per_1k: 0.0005
+  cache_write_per_1k: 0.00625
+
+limits:
+  max_tokens: 200000
+  max_completion_tokens: 64000
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image","pdf"]
+  output: ["text"]
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 64000
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
