@@ -18,7 +18,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN pnpm --filter @everstack/admin... build
 
-FROM golang:1.25-alpine AS go-builder
+FROM golang:1.27-alpine AS go-builder
 WORKDIR /src
 RUN apk add --no-cache ca-certificates git tzdata
 
