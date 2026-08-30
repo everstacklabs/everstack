@@ -41,7 +41,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
         -X github.com/everstacklabs/everstack/cmd/build.date=$BUILD_DATE" \
       -o /out/everstack .
 
-FROM alpine:3.21
+FROM alpine:3.24
 RUN apk add --no-cache ca-certificates tzdata wget && \
     addgroup -g 1000 everstack && \
     adduser -D -u 1000 -G everstack everstack
