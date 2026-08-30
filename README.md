@@ -1,8 +1,6 @@
 <div align="center">
   <h1>Everstack</h1>
 
-  <hr />
-
   <p><strong>The open-source control plane for production AI.</strong></p>
   <p>
     Route models, run durable agents, execute code in isolated sandboxes,
