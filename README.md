@@ -1,5 +1,11 @@
 <div align="center">
   <a href="https://github.com/everstacklabs/everstack">
+    <img src="assets/everstack-cover.png" alt="Everstack infrastructure for agentic environments" width="1200" />
+  </a>
+
+  <br />
+
+  <a href="https://github.com/everstacklabs/everstack">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="assets/everstack-wordmark-light.png" />
       <source media="(prefers-color-scheme: light)" srcset="assets/everstack-wordmark-dark.png" />
