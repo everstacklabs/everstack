@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:20-alpine AS ui-builder
+FROM node:26-alpine AS ui-builder
 WORKDIR /src
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
