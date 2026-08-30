@@ -1,9 +1,7 @@
 <div align="center">
   <a href="https://github.com/everstacklabs/everstack">
-    <img src="assets/everstack-cover.png" alt="Everstack open-source AI infrastructure platform" width="1200" />
+    <img src="assets/everstack-platform-cover.png" alt="Everstack open-source AI infrastructure platform" width="1200" />
   </a>
-
-  <h1>Everstack</h1>
 
   <p><strong>Self-hosted runtime and control plane for production AI agents.</strong></p>
   <p>Run model routing, isolated execution, browser automation, workflows, MCP tools, memory, and end-to-end traces from one platform.</p>
