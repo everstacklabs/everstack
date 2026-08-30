@@ -10,11 +10,11 @@
   </p>
 
   <p>
-    <a href="https://github.com/everstacklabs/everstack/actions/workflows/ci.yml"><img src="https://github.com/everstacklabs/everstack/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-    <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="Apache 2.0" /></a>
-    <a href="https://github.com/everstacklabs/everstack/releases"><img src="https://img.shields.io/github/v/release/everstacklabs/everstack?display_name=tag" alt="Release" /></a>
-    <a href="https://github.com/everstacklabs/everstack/stargazers"><img src="https://img.shields.io/github/stars/everstacklabs/everstack" alt="GitHub stars" /></a>
-    <a href="./go.mod"><img src="https://img.shields.io/github/go-mod/go-version/everstacklabs/everstack" alt="Go version" /></a>
+    <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/license-Apache_2.0-2563eb?style=flat-square" alt="Apache 2.0" /></a>
+    <a href="./examples/quickstart/README.md"><img src="https://img.shields.io/badge/self--hosted-ready-2ea44f?style=flat-square" alt="Self-hosted" /></a>
+    <a href="https://docs.everstack.ai"><img src="https://img.shields.io/badge/OpenTelemetry-native-7c3aed?style=flat-square&logo=opentelemetry&logoColor=white" alt="OpenTelemetry native" /></a>
+    <a href="./go.mod"><img src="https://img.shields.io/badge/Go-1.25%2B-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.25+" /></a>
+    <a href="./examples/quickstart/README.md"><img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Compose" /></a>
   </p>
 
   <p>
