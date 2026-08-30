@@ -30,7 +30,7 @@
   <br />
 
   <a href="https://everstack.ai">
-    <img src="assets/everstack-platform-showcase-cover.png" alt="Everstack platform control plane showing live AI observability" width="1200" />
+    <img src="assets/everstack-app-cover.png" alt="Everstack platform control plane showing live AI observability" width="1200" />
   </a>
 </div>
 
@@ -95,7 +95,7 @@ remain available as observability data.
 | --- | --- |
 | **AI gateway** | OpenAI-compatible APIs, 17+ provider adapters, routing, fallback, load balancing, key rotation, semantic caching, and rate limits |
 | **Agent runtime** | Stateful sessions, streaming, approvals, child-agent spawning, skills, triggers, and deploy-as-API |
-| **Isolated execution** | Docker, Firecracker, and Kubernetes backends with shell, files, network policy, resource controls, and lifecycle management |
+| **Isolated execution** | isolated container and Kubernetes backends with shell, files, network policy, resource controls, and lifecycle management |
 | **Browser automation** | Browser sessions, screenshots, action events, navigation, and isolated execution |
 | **Memory** | PgVector, Qdrant, Pinecone, and Weaviate vector-memory backends |
 | **MCP and tools** | MCP server registration, tool discovery, federated tool calling, and serverless functions |
@@ -108,7 +108,7 @@ remain available as observability data.
 
 - A multi-provider model gateway with routing, retries, fallback, caching, and usage controls.
 - Durable agents with sessions, tools, memory, approvals, child agents, and API deployments.
-- Secure code-execution products backed by Docker, Firecracker microVMs, or Kubernetes.
+- Secure code-execution products backed by containers or Kubernetes.
 - Retrieval and long-term memory systems that can move between supported vector stores.
 - MCP-powered tool platforms with centralized discovery, policy, and execution.
 - AI workflows that combine agents, functions, webhooks, schedules, and human checkpoints.
@@ -139,7 +139,7 @@ Your application or agent framework
              v            v            v
           Memory       MCP/tools    Sandboxes
                                       |
-                              Docker | Firecracker | K8s
+                              Containers | Kubernetes
 
         Traces | metrics | logs | evals | alerts
 ```
@@ -176,7 +176,7 @@ truth for Connect/gRPC services, OpenAPI specifications, and generated clients.
 | **PostgreSQL** | Platform state, configuration, sessions, and metadata | Managed or self-hosted PostgreSQL |
 | **ClickHouse** | Traces, logs, metrics, usage, and evaluation data | Managed or self-hosted ClickHouse |
 | **Redis** | Cache, rate limits, and coordination | Managed or self-hosted Redis |
-| **Sandbox backend** | Isolated code, tools, browsers, and jobs | Docker host, Firecracker hosts, or Kubernetes |
+| **Sandbox backend** | Isolated code, tools, browsers, and jobs | container hosts or Kubernetes |
 | **Telemetry export** | Optional downstream traces and metrics | Any OpenTelemetry-compatible backend |
 
 The Docker Compose quickstart is intended for evaluation and development.
@@ -192,7 +192,7 @@ everstack/
 ├── internal/
 │   ├── providers/        # model-provider adapters and routing
 │   ├── agents/           # agent runtime, sessions, skills, and deployment
-│   ├── sandbox/          # Docker, Firecracker, and Kubernetes execution
+│   ├── sandbox/          # container and Kubernetes execution
 │   ├── memory/           # vector-memory interfaces and backends
 │   ├── mcp/              # MCP registration, discovery, and tool calls
 │   ├── workflows/        # workflow and DAG execution
