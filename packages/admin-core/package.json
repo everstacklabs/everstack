@@ -60,27 +60,27 @@
     "@everstack/ui": "workspace:*",
     "@everstack/utils": "workspace:*",
     "@iconify/react": "^6.0.2",
-    "@tanstack/react-query": "^5.66.5",
-    "@tanstack/react-table": "^8.21.2",
-    "@tanstack/react-virtual": "^3.13.12",
+    "@tanstack/react-query": "^5.102.8",
+    "@tanstack/react-table": "^9.2.3",
+    "@tanstack/react-virtual": "^3.14.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "dayjs": "^1.11.18",
-    "framer-motion": "^12.23.22",
+    "dayjs": "^1.11.23",
+    "framer-motion": "^13.1.1",
     "react-markdown": "^10.1.0",
-    "react18-json-view": "^0.2.9",
-    "tailwind-merge": "^3.0.2",
-    "zod": "^3.24.2",
-    "zustand": "^5.0.8"
+    "react18-json-view": "^0.2.10",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@everstack/eslint-config": "workspace:*",
     "@everstack/tailwind-config": "workspace:*",
     "@everstack/typescript-config": "workspace:*",
-    "@types/react": "^19.0.8",
-    "@types/react-dom": "^19.0.3",
-    "eslint": "^9.33.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "eslint": "^10.9.1",
     "tsup": "^8.4.0",
-    "typescript": "^5.7.2"
+    "typescript": "^7.0.2"
   }
 }
