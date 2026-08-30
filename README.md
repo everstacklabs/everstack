@@ -1,16 +1,6 @@
 <div align="center">
   <a href="https://github.com/everstacklabs/everstack">
-    <img src="assets/everstack-cover.png" alt="Everstack infrastructure for agentic environments" width="1200" />
-  </a>
-
-  <br />
-
-  <a href="https://github.com/everstacklabs/everstack">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="assets/everstack-wordmark-light.png" />
-      <source media="(prefers-color-scheme: light)" srcset="assets/everstack-wordmark-dark.png" />
-      <img src="assets/everstack-wordmark-dark.png" alt="Everstack" width="360" />
-    </picture>
+    <img src="assets/everstack-cover.png" alt="Everstack open-source AI infrastructure platform" width="1200" />
   </a>
 
   <h1>Everstack</h1>
