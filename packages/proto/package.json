@@ -80,10 +80,10 @@
     "clean": "rm -rf everstack .turbo node_modules google protoc-gen-openapiv2 validate cjs types es esquery"
   },
   "dependencies": {
-    "@bufbuild/protobuf": "^2.6.1"
+    "@bufbuild/protobuf": "^2.14.0"
   },
   "devDependencies": {
-    "@bufbuild/buf": "^1.55.1",
-    "glob": "^11.0.0"
+    "@bufbuild/buf": "^1.72.0",
+    "glob": "^13.0.6"
   }
 }

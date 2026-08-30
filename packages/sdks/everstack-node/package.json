@@ -54,22 +54,22 @@
     "example:webhooks-traces": "tsx examples/webhooks-traces.ts"
   },
   "dependencies": {
-    "@bufbuild/protobuf": "^2.2.2",
-    "@connectrpc/connect": "^2.0.0",
-    "@connectrpc/connect-node": "^2.1.0",
-    "@connectrpc/connect-web": "^2.0.0",
+    "@bufbuild/protobuf": "^2.14.0",
+    "@connectrpc/connect": "^2.1.2",
+    "@connectrpc/connect-node": "^2.1.2",
+    "@connectrpc/connect-web": "^2.1.2",
     "@everstack/proto": "workspace:*"
   },
   "devDependencies": {
     "@everstack/typescript-config": "workspace:*",
-    "@types/node": "^22.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.15.0",
-    "@typescript-eslint/parser": "^8.15.0",
-    "eslint": "^8.57.0",
+    "@types/node": "^26.4.0",
+    "@typescript-eslint/eslint-plugin": "^8.68.0",
+    "@typescript-eslint/parser": "^8.68.0",
+    "eslint": "^10.9.1",
     "tsup": "^8.4.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.8.3",
-    "yaml": "^2.7.0"
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2",
+    "yaml": "^2.9.0"
   },
   "engines": {
     "node": ">=18"
