@@ -1,0 +1,228 @@
+---
+title: "POST Computer Use"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Computer Use</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400">POST</span>
+    <code className="text-sm text-fd-muted-foreground">{"/v1/sandbox/instances/{sandboxId}/computer/{op}"}</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="post"
+  path="/v1/sandbox/instances/{sandboxId}/computer/{op}"
+  parameters={[{"name":"sandboxId","in":"path","required":true,"schema":{"type":"string"}},{"name":"op","in":"path","required":true,"schema":{"type":"string"}}]}
+  defaultBody={`{
+  "format": "string",
+  "quality": 0,
+  "x": 0,
+  "y": 0,
+  "button": "string",
+  "doubleClick": true,
+  "text": "string",
+  "key": "string",
+  "direction": "string",
+  "amount": 0,
+  "toX": 0,
+  "toY": 0,
+  "fps": 0,
+  "label": "string",
+  "recordingId": "string"
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X POST "http://localhost:8089/v1/sandbox/instances/{sandboxId}/computer/{op}" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"format":"string","quality":0,"x":0,"y":0,"button":"string","doubleClick":true,"text":"string","key":"string","direction":"string","amount":0,"toX":0,"toY":0,"fps":0,"label":"string","recordingId":"string"}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/sandbox/instances/{sandboxId}/computer/{op}", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "format": "string",
+  "quality": 0,
+  "x": 0,
+  "y": 0,
+  "button": "string",
+  "doubleClick": true,
+  "text": "string",
+  "key": "string",
+  "direction": "string",
+  "amount": 0,
+  "toX": 0,
+  "toY": 0,
+  "fps": 0,
+  "label": "string",
+  "recordingId": "string"
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8089/v1/sandbox/instances/{sandboxId}/computer/{op}",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "format": "string",
+  "quality": 0,
+  "x": 0,
+  "y": 0,
+  "button": "string",
+  "doubleClick": true,
+  "text": "string",
+  "key": "string",
+  "direction": "string",
+  "amount": 0,
+  "toX": 0,
+  "toY": 0,
+  "fps": 0,
+  "label": "string",
+  "recordingId": "string"
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "status": "string",
+  "image": "string",
+  "format": "string",
+  "displays": [
+    {
+      "id": 0,
+      "display": "string",
+      "width": 0,
+      "height": 0,
+      "isPrimary": true
+    }
+  ],
+  "recordingId": "string",
+  "file": "string"
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+### Parameters
+
+| Name | In | Type | Required | Description |
+|------|-----|------|----------|-------------|
+| `sandboxId` | path | `string` | **Yes** |  |
+| `op` | path | `string` | **Yes** | screenshot \| displays \| mouse/click \| mouse/move \| mouse/scroll \| mouse/drag \| keyboard/type \| keyboard/key \| recording/start \| recording/stop |
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `format` | `string` | No |  |
+| `quality` | `integer` | No |  |
+| `x` | `integer` | No |  |
+| `y` | `integer` | No |  |
+| `button` | `string` | No |  |
+| `doubleClick` | `boolean` | No |  |
+| `text` | `string` | No |  |
+| `key` | `string` | No |  |
+| `direction` | `string` | No |  |
+| `amount` | `integer` | No |  |
+| `toX` | `integer` | No |  |
+| `toY` | `integer` | No |  |
+| `fps` | `integer` | No |  |
+| `label` | `string` | No |  |
+| `recordingId` | `string` | No |  |
+
+
+### Responses
+
+#### 200 Computer Use op (screenshot, mouse/keyboard, recording)
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `status` | `string` |  |
+| `image` | `string` |  |
+| `format` | `string` |  |
+| `displays` | `object[]` |  |
+| `recordingId` | `string` |  |
+| `file` | `string` |  |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

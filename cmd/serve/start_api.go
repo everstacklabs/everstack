@@ -1,12 +1,15 @@
 package serve
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -26,6 +29,11 @@ import (
 	"github.com/everstacklabs/everstack/internal/agents/agentrun"
 	agentdeploy "github.com/everstacklabs/everstack/internal/agents/deployment"
 	agentmem "github.com/everstacklabs/everstack/internal/agents/memory"
+	openaiapi "github.com/everstacklabs/everstack/internal/agents/openaiapi"
+	openaiapiartifacts "github.com/everstacklabs/everstack/internal/agents/openaiapi/artifacts"
+	openaiapiexe "github.com/everstacklabs/everstack/internal/agents/openaiapi/executor"
+	openaiapiusage "github.com/everstacklabs/everstack/internal/agents/openaiapi/observability"
+	openaiapitools "github.com/everstacklabs/everstack/internal/agents/openaiapi/tools"
 	agentrevision "github.com/everstacklabs/everstack/internal/agents/revision"
 	agentrt "github.com/everstacklabs/everstack/internal/agents/runtime"
 	agenttrigger "github.com/everstacklabs/everstack/internal/agents/trigger"
@@ -52,6 +60,7 @@ import (
 	modelmetricssvc "github.com/everstacklabs/everstack/internal/api/grpc/modelmetrics/v1"
 	observability "github.com/everstacklabs/everstack/internal/api/grpc/observability/v1"
 	onboardingsvc "github.com/everstacklabs/everstack/internal/api/grpc/onboarding/v1"
+	openaiagentssvc "github.com/everstacklabs/everstack/internal/api/grpc/openai_agents/v1"
 	prompts "github.com/everstacklabs/everstack/internal/api/grpc/prompts/v1"
 	providers "github.com/everstacklabs/everstack/internal/api/grpc/providers/v1"
 	grpcmw "github.com/everstacklabs/everstack/internal/api/grpc/server/middleware"
@@ -85,9 +94,11 @@ import (
 	"github.com/everstacklabs/everstack/internal/domain/provider_config"
 	rtconfig "github.com/everstacklabs/everstack/internal/domain/runtime_config"
 	"github.com/everstacklabs/everstack/internal/domain/voice_clone"
+	"github.com/everstacklabs/everstack/internal/email"
 	"github.com/everstacklabs/everstack/internal/enterprise"
 	internalevents "github.com/everstacklabs/everstack/internal/events"
 	edgefeatures "github.com/everstacklabs/everstack/internal/features"
+	functionexecutor "github.com/everstacklabs/everstack/internal/functions/executor"
 	ingressgw "github.com/everstacklabs/everstack/internal/gateway"
 	ghpkg "github.com/everstacklabs/everstack/internal/github"
 	"github.com/everstacklabs/everstack/internal/interop"
@@ -128,6 +139,7 @@ import (
 	catalogsvc "github.com/everstacklabs/everstack/internal/services/catalog"
 	"github.com/everstacklabs/everstack/internal/services/catalog_sync"
 	servicescfg "github.com/everstacklabs/everstack/internal/services/config"
+	"github.com/everstacklabs/everstack/internal/services/encryption"
 	evalrunner "github.com/everstacklabs/everstack/internal/services/eval_runner"
 	licensemonitor "github.com/everstacklabs/everstack/internal/services/license_monitor"
 	"github.com/everstacklabs/everstack/internal/services/trial"
@@ -178,10 +190,70 @@ var (
 // primary if unset (CE single-binary mode where both DBs collapse).
 var cookieSessionAuthDB *sqlx.DB
 
-// dbHealth implements the API health check by delegating to a provided function.
-type dbHealth struct{ check func(context.Context) error }
+func databaseDependencyChecks(config *validator.Config) []api.DependencyCheck {
+	if config == nil || config.Database == nil {
+		return nil
+	}
 
-func (d dbHealth) Health(c context.Context) error { return d.check(c) }
+	newCheck := func(name string, dbType database.Type, dsn string, required bool) api.DependencyCheck {
+		return api.DependencyCheck{
+			Name:     name,
+			Required: required,
+			Check: func(ctx context.Context) error {
+				if strings.TrimSpace(dsn) == "" {
+					return fmt.Errorf("%s DSN is not configured", name)
+				}
+				pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+				defer cancel()
+				conn, err := database.Open(pingCtx, database.Config{Type: dbType, DSN: dsn})
+				if err != nil {
+					return err
+				}
+				defer conn.Close(pingCtx)
+				if conn.RW == nil {
+					return fmt.Errorf("%s connection not initialized", name)
+				}
+				return conn.RW.PingContext(pingCtx)
+			},
+		}
+	}
+
+	if strings.EqualFold(config.Database.Mode, "hybrid") {
+		return []api.DependencyCheck{
+			newCheck("postgres", database.TypePostgres, database.PostgresDSN(config), true),
+			newCheck("clickhouse", database.TypeClickHouse, database.ClickHouseDSN(config), !config.Database.ClickHouse.Optional),
+		}
+	}
+
+	switch strings.ToLower(strings.TrimSpace(config.Database.Type)) {
+	case "memory":
+		return nil
+	case "clickhouse":
+		return []api.DependencyCheck{newCheck("clickhouse", database.TypeClickHouse, database.ClickHouseDSN(config), true)}
+	default:
+		return []api.DependencyCheck{newCheck("postgres", database.TypePostgres, database.PostgresDSN(config), true)}
+	}
+}
+
+func gatewayDependencyChecks(config *validator.Config, redisClient *cache.RedisClient) []api.DependencyCheck {
+	checks := databaseDependencyChecks(config)
+	if config == nil || config.Cache == nil || !config.Cache.Redis.Required {
+		return checks
+	}
+	checks = append(checks, api.DependencyCheck{
+		Name:     "redis",
+		Required: true,
+		Check: func(ctx context.Context) error {
+			if redisClient == nil {
+				return errors.New("required Redis client is not initialized")
+			}
+			pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			defer cancel()
+			return redisClient.Ping(pingCtx)
+		},
+	})
+	return checks
+}
 
 func newStorageCredentialStore(db *sqlx.DB, config *validator.Config) (storagecredentials.Store, error) {
 	if db == nil {
@@ -574,10 +646,17 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 	// Initialize Redis client early if configured (shared across components)
 	// This prevents duplicate Redis connections for license monitoring and caching
 	var redisClient *cache.RedisClient
-	if config != nil && config.Cache != nil && config.Cache.Type == "redis" && config.Cache.Redis.Address != "" {
+	redisRequired := config != nil && config.Cache != nil && config.Cache.Redis.Required
+	if redisRequired && !strings.EqualFold(strings.TrimSpace(config.Cache.Type), "redis") {
+		return nil, errors.New("Redis is required but cache.type is not redis")
+	}
+	if config != nil && config.Cache != nil && strings.EqualFold(strings.TrimSpace(config.Cache.Type), "redis") {
 		var err error
 		redisClient, err = cache.NewRedisClient(config.Cache.Redis)
 		if err != nil {
+			if redisRequired {
+				return nil, fmt.Errorf("required Redis initialization failed: %w", err)
+			}
 			logger.WithError(err).Warn("Failed to connect to Redis, continuing with in-memory storage")
 		} else {
 			logger.Info("Redis client connected for usage persistence")
@@ -646,12 +725,13 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 			}
 		}
 
-		// Register trace handlers if ClickHouse is available (hybrid mode, or shared mode with analytics)
-		hasClickHouse := (strings.ToLower(initRes.Mode) == "hybrid" || initRes.Analytics != nil) && config != nil && config.Database != nil && config.Database.ClickHouse.DSN != ""
+		// Register trace handlers only when startup established a usable
+		// analytics connection. Hybrid mode alone does not prove availability.
+		hasClickHouse := initRes.Analytics != nil && config != nil && config.Database != nil && database.ClickHouseDSN(config) != ""
 		if hasClickHouse {
 			// Parse ClickHouse DSN to extract connection parameters
 			// Format: clickhouse://user:password@host:port/database
-			dsn := config.Database.ClickHouse.DSN
+			dsn := database.ClickHouseDSN(config)
 
 			// Use clickhouse.ParseDSN to properly parse the DSN
 			opts, err := clickhouse.ParseDSN(dsn)
@@ -767,8 +847,6 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 		// pre-opened SharedDB or EVS_PLATFORM_DSN.
 		if managedGateway {
 			logger.Info("managed gateway mode: skipping self-hosted license/trial/activation")
-		} else if !shouldStartSelfHostedCloudLicensing(managedGateway) {
-			logger.Info("community edition: cloud license, trial, activation, and usage sync disabled")
 		} else {
 			// Load license policy from services config if available, else viper
 			lp := policy.FromGlobal()
@@ -1004,7 +1082,7 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 	// Instance activation: ensure a pending row and start async activation manager
 	// Skip in every managed cloud topology — the control plane manages instance lifecycle.
 	var instanceMgr enterprise.InstanceManager
-	if shouldStartSelfHostedCloudLicensing(managedGateway) && initRes != nil && initRes.Primary != nil && initRes.Primary.RW != nil {
+	if !managedGateway && initRes != nil && initRes.Primary != nil && initRes.Primary.RW != nil {
 		actCfg := enterprise.InstanceConfig{}
 		if svcCfg, err := servicescfg.Load(""); err == nil && svcCfg != nil {
 			actCfg.PlatformURL = svcCfg.GetLicenseServiceURL()
@@ -1322,6 +1400,16 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 	// Gorilla mux matches routes in registration order, so these specific routes
 	// take priority over the generic /v1 prefix handler.
 	var sandboxShellHandler, sandboxShellByIDHandler, sandboxLogsHandler, sandboxStatsHandler, sandboxEventsHandler, sandboxFilesHandler, sandboxFileSearchHandler, sandboxSSHInfoHandler http.Handler
+	var openAIAgentsHandler http.Handler
+	var openAIAgentsService *openaiapi.Service
+	var openAIExecutorManager *openaiapiexe.Manager
+	router.PathPrefix("/v1/openai-agents").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if openAIAgentsHandler == nil {
+			http.Error(w, `{"error":{"code":"unavailable","message":"OpenAI Agents API integration is unavailable"}}`, http.StatusServiceUnavailable)
+			return
+		}
+		openAIAgentsHandler.ServeHTTP(w, r)
+	})
 	var sandboxShellSessionsHandler, sandboxKillShellSessionHandler, sandboxRestoreHandler, sandboxRecoverHandler http.Handler
 	var sandboxStartVerbHandler, sandboxStopVerbHandler, sandboxArchiveVerbHandler, sandboxDeleteVerbHandler http.Handler
 	var sandboxFSListHandler, sandboxFSUploadHandler, sandboxFSDownloadHandler, sandboxFSMkdirHandler, sandboxFSDeleteHandler, sandboxFSMoveHandler, sandboxFSPermissionsHandler http.Handler
@@ -1911,44 +1999,10 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 		return nil, err
 	}
 
-	// Wire readiness/health checks: in hybrid, ping both Postgres and ClickHouse
-	if config != nil && strings.ToLower(config.Database.Mode) == "hybrid" {
-		pgDSN := config.Database.Postgres.DSN
-		chDSN := config.Database.ClickHouse.DSN
-		apis.SetHealth(dbHealth{check: func(c context.Context) error {
-			ctxPing, cancel := context.WithTimeout(c, 3*time.Second)
-			defer cancel()
-			if pgDSN == "" {
-				return fmt.Errorf("postgres dsn missing for hybrid health")
-			}
-			pgConn, err := database.Open(ctxPing, database.Config{Type: database.TypePostgres, DSN: pgDSN})
-			if err != nil {
-				return err
-			}
-			defer pgConn.Close(ctxPing)
-			if pgConn.RW == nil {
-				return fmt.Errorf("postgres connection not initialized")
-			}
-			if err := pgConn.RW.PingContext(ctxPing); err != nil {
-				return err
-			}
-			if chDSN == "" {
-				return fmt.Errorf("clickhouse dsn missing for hybrid health")
-			}
-			chConn, err := database.Open(ctxPing, database.Config{Type: database.TypeClickHouse, DSN: chDSN})
-			if err != nil {
-				return err
-			}
-			defer chConn.Close(ctxPing)
-			if chConn.RW == nil {
-				return fmt.Errorf("clickhouse connection not initialized")
-			}
-			if err := chConn.RW.PingContext(ctxPing); err != nil {
-				return err
-			}
-			return nil
-		}})
-	}
+	// Transactional dependencies participate in readiness. Optional analytics
+	// dependencies remain visible at /debug/health/dependencies but do not take
+	// customer APIs out of service.
+	apis.SetDependencies(gatewayDependencyChecks(config, redisClient))
 
 	// Initialize registry BEFORE registering services so all services get proper interceptors
 	serviceRegistry := registry.New(registry.AuthPolicy{
@@ -3129,6 +3183,91 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 		}
 	}
 
+	// OpenAI Agents API is deliberately unavailable without durable Postgres and
+	// credential encryption. Its route was reserved before the generic /v1
+	// gateway so it cannot shadow native agent sessions.
+	if agentsDB != nil {
+		cipher, cipherErr := encryption.NewService(apikeylib.GetSecret())
+		store, storeErr := openaiapi.NewPostgresStore(agentsDB)
+		if cipherErr != nil || storeErr != nil {
+			logger.WithFields("cipher_error", cipherErr, "store_error", storeErr).Warn("openai agents API unavailable")
+		} else {
+			var environmentManager openaiapi.EnvironmentManager
+			if sandboxMgr != nil && openaiapiexe.SupportedBackend(sandboxMgr.BackendName()) {
+				openAIExecutorManager = openaiapiexe.New(openaiapiexe.NewManagerBackend(sandboxMgr))
+				environmentManager = openaiapi.ExecutorAdapter{Service: openAIExecutorManager, BackendName: sandboxMgr.BackendName()}
+			} else if sandboxMgr != nil {
+				logger.WithFields("backend", sandboxMgr.BackendName()).Info("openai agents self_hosted environment unavailable: sandbox backend lacks enforced egress support")
+			}
+			allowedModels := []string{}
+			for _, model := range strings.Split(os.Getenv("EVS_OPENAI_AGENTS_ALLOWED_MODELS"), ",") {
+				if model = strings.TrimSpace(model); model != "" {
+					allowedModels = append(allowedModels, model)
+				}
+			}
+			service, serviceErr := openaiapi.NewService(store, cipher, openaiapi.UpstreamAdapter{
+				BaseURL: strings.TrimSpace(os.Getenv("EVS_OPENAI_AGENTS_BASE_URL")),
+			}, environmentManager, nil, openaiapi.Config{
+				AllowedModels:    allowedModels,
+				EnvironmentImage: strings.TrimSpace(os.Getenv("EVS_OPENAI_AGENTS_EXECUTOR_IMAGE")),
+				ExecutorVersion:  openaiapiexe.ExecutorVersion,
+			})
+			if serviceErr != nil {
+				logger.WithError(serviceErr).Warn("openai agents API unavailable")
+			} else {
+				if usageRepo, usageErr := openaiapiusage.NewPostgresRepository(agentsDB); usageErr == nil {
+					if usageRecorder, recorderErr := openaiapiusage.NewRecorder(usageRepo); recorderErr == nil {
+						service.SetUsageRecorder(usageRecorder)
+					}
+				}
+				openAIAgentsService = service
+				if err := apis.RegisterService(ctx, openaiagentssvc.NewServer(service, func() (bool, string) {
+					return enterprise.LicenseMonitorFromContext(ctx).IsSpendBlocked()
+				})); err != nil {
+					return nil, err
+				}
+				authorizationDB := cookieSessionAuthDB
+				if authorizationDB == nil {
+					authorizationDB = agentsDB
+				}
+				apiKeyInterceptor := middleware.NewAPIKeyInterceptorWithSessionDB(false, authorizationDB)
+				var handler http.Handler = openaiapi.NewHTTPHandler(service)
+				handler = apiKeyInterceptor.WithAPIKeyValidation(handler)
+				if recoveryAuthorizer, recoveryAuthErr := openaiapi.NewPostgresRecoveryAuthorizer(authorizationDB); recoveryAuthErr == nil {
+					service.SetRecoveryAuthorizer(recoveryAuthorizer)
+				} else {
+					logger.WithError(recoveryAuthErr).Warn("openai agents background authorization unavailable")
+				}
+				handler = openaiapi.WithDeviceTokenAuth(handler, cliDeviceTokens, authorizationDB)
+				handler = enterprise.LicenseEnforcerFromContext(ctx).WithLicenseEnforcement(handler)
+				base := handler
+				handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					paidOperation := r.Method == http.MethodPost && (r.URL.Path == "/v1/openai-agents/sessions" || strings.HasSuffix(r.URL.Path, "/input"))
+					if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/resolve") {
+						body, _ := io.ReadAll(io.LimitReader(r.Body, 2<<20))
+						r.Body = io.NopCloser(bytes.NewReader(body))
+						var decision struct {
+							Decision string `json:"decision"`
+						}
+						_ = json.Unmarshal(body, &decision)
+						paidOperation = decision.Decision == "approved"
+					}
+					if paidOperation {
+						if blocked, reason := enterprise.LicenseMonitorFromContext(ctx).IsSpendBlocked(); blocked {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusPaymentRequired)
+							_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "spend_limit_exceeded", "message": reason}})
+							return
+						}
+					}
+					base.ServeHTTP(w, r)
+				})
+				openAIAgentsHandler = handler
+				logger.WithFields("executor_version", openaiapiexe.ExecutorVersion, "environments", "none,self_hosted").Info("openai agents API registered")
+			}
+		}
+	}
+
 	// Initialize GitHub App integration if env vars are configured.
 	// Webhook endpoint is registered before auth middleware (uses own HMAC verification).
 	{
@@ -3514,6 +3653,25 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 			runtime.managedStorageDefaults = managedStorage.defaults
 		}
 		logger.WithFields("cell_id", managedStorage.cellID).Info("managed storage: Everstack Storage default enabled")
+		if openAIAgentsService != nil && openAIExecutorManager != nil && agentsDB != nil {
+			lifecycle := storagepkg.NewPostgresUploadLifecycle(agentsDB)
+			resolver := openaiapiartifacts.ResolverFunc(func(resolveCtx context.Context, scope openaiapiartifacts.Scope) (openaiapiartifacts.Backend, error) {
+				connection, resolveErr := managedStorage.defaults.EnsureDefault(resolveCtx, scope.OrganizationID)
+				if resolveErr != nil {
+					return openaiapiartifacts.Backend{}, resolveErr
+				}
+				objects, resolveErr := managedStorage.resolver.ResolveManagedStore(resolveCtx, *connection)
+				if resolveErr != nil {
+					return openaiapiartifacts.Backend{}, resolveErr
+				}
+				return openaiapiartifacts.Backend{Objects: objects, Uploader: storagepkg.NewDirectUploader(objects, lifecycle, ""), ConfigID: connection.ConfigID}, nil
+			})
+			artifactStore := openaiapiartifacts.NewStore(agentsDB, lifecycle, resolver)
+			sessionStore, sessionStoreErr := openaiapi.NewPostgresStore(agentsDB)
+			if sessionStoreErr == nil {
+				openAIAgentsService.SetArtifacts(openaiapi.ArtifactAdapter{Store: artifactStore, Executor: openAIExecutorManager, Sessions: sessionStore})
+			}
+		}
 	}
 	storageUploadReconciler := storagepkg.NewUploadReconciler(
 		storagepkg.NewPostgresUploadLifecycle(initRes.Primary.RW),
@@ -3554,6 +3712,9 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 	if mgr := agentsServer.GetSessionManager(); mgr != nil {
 		origShutdown := mgr.GracefulShutdown
 		globalAgentsShutdown = func(shutdownCtx context.Context) error {
+			if openAIAgentsService != nil {
+				_ = openAIAgentsService.Close(shutdownCtx)
+			}
 			if channelMgr != nil {
 				_ = channelMgr.Stop(shutdownCtx)
 			}
@@ -3576,6 +3737,27 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 	// Register MCP Gateway gRPC service (Connect)
 	if agentsDB != nil {
 		mcpRegistry := mcp.NewRegistry(nil)
+		if openAIAgentsService != nil {
+			toolStore, toolStoreErr := openaiapitools.NewPostgresStore(agentsDB, 2*time.Minute)
+			approvalGate, approvalErr := openaiapitools.NewPostgresApprovalGate(agentsDB, 15*time.Minute)
+			functionRegistry := functionexecutor.NewRegistry()
+			functionRegistry.RegisterExecutor(functionexecutor.NewWebhookExecutor())
+			functionRegistry.RegisterExecutor(functionexecutor.NewProxyExecutor())
+			functionAdapter, functionErr := openaiapitools.NewFunctionAdapter(agentsDB, functionRegistry)
+			toolManager, toolErr := openaiapitools.NewManager(toolStore, functionAdapter, mcpRegistry, approvalGate, 30*time.Second)
+			if toolStoreErr == nil && approvalErr == nil && functionErr == nil && toolErr == nil {
+				adapter := openaiapi.ToolsAdapter{Manager: toolManager, Approvals: approvalGate}
+				openAIAgentsService.SetTools(adapter)
+				openAIAgentsService.SetApprovals(adapter)
+			} else {
+				logger.WithFields("store_error", toolStoreErr, "approval_error", approvalErr, "function_error", functionErr, "manager_error", toolErr).Warn("openai agents tools unavailable")
+			}
+			go func() {
+				if recoveryErr := openAIAgentsService.StartRecovery(ctx); recoveryErr != nil {
+					logger.WithError(recoveryErr).Warn("openai agents recovery scan failed")
+				}
+			}()
+		}
 		mcpHealth := mcp.NewHealthChecker(mcpRegistry, 30*time.Second, 5*time.Second, nil)
 		// Persist health status to DB on every background check
 		mcpHealth.SetOnHealthUpdate(func(serverID string, status mcp.HealthStatus) {
@@ -3775,6 +3957,18 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 				SessionSameSite:   sessionSameSite,
 				ExternalURL:       authExternalURL(config.Server),
 				DeviceTokens:      cliDeviceTokens,
+			}
+			// Built here from the environment rather than injected. The
+			// gateway runs as its own binary on instance hosts, so anything
+			// handed in by the cloud process would not reach them.
+			if sender := email.NewSenderFromEnv(); sender != nil {
+				authConfig.EmailSender = sender
+			}
+			if authConfig.EmailSender == nil {
+				// Worth saying out loud: without this, magic-link and invitation
+				// mail is never sent, and the flows appear to succeed while the
+				// token only reaches the log.
+				logger.Warn("auth: no email sender configured; magic-link and invitation tokens will be logged instead of mailed")
 			}
 			seatLimit := builtinCfg.SeatLimit
 			authServer, err := selfhostedauth.CreateServer(initRes.Primary.RW, authConfig, seatLimit)
@@ -4304,6 +4498,14 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 	// - GetPlans (replaces /api/v1/license/plans)
 	// - GetTrialStatus (replaces /api/v1/trial/status)
 
+	// Tenant readiness, before the SPA catch-all so it is not swallowed by it.
+	// See registerTenantReadiness for why the lookup uses the platform DB.
+	var primaryDB *sqlx.DB
+	if initRes != nil && initRes.Primary != nil {
+		primaryDB = initRes.Primary.RW
+	}
+	registerTenantReadiness(router, cookieSessionAuthDB, primaryDB, managedGateway)
+
 	// SPA catch-all MUST be last — use a MatcherFunc to exclude known API paths
 	spaHandler := ui.NewSPAHandler()
 	router.PathPrefix("/").MatcherFunc(func(r *http.Request, rm *mux.RouteMatch) bool {
@@ -4346,10 +4548,6 @@ func newTrialManager(ctx context.Context, managedGateway bool, redisClient *cach
 		return nil, err
 	}
 	return trialMgr, nil
-}
-
-func shouldStartSelfHostedCloudLicensing(managedGateway bool) bool {
-	return !managedGateway && enterprise.Edition() != "ce"
 }
 
 // legacy loader removed; activation now uses services/config/config.yaml

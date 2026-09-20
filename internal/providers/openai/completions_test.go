@@ -14,6 +14,12 @@ import (
 func TestIsResponsesModel(t *testing.T) {
 	p := &Provider{cfg: Config{
 		ResponsesModels: []string{"custom-responses-model"},
+		APITypeForModel: func(model string) string {
+			if strings.EqualFold(model, "gpt-6-astra") {
+				return "responses"
+			}
+			return ""
+		},
 	}}
 
 	tests := []struct {
@@ -26,6 +32,7 @@ func TestIsResponsesModel(t *testing.T) {
 		{"gpt-5.3-codex-spark", true},
 		{"custom-responses-model", true},
 		{"Custom-Responses-Model", true}, // case-insensitive
+		{"gpt-6-astra", true},            // catalog-routed
 		{"gpt-4o", false},
 		{"gpt-5", false},
 		{"o1-preview", false},
@@ -129,6 +136,10 @@ func TestResponsesToGatewayResponse(t *testing.T) {
 			InputTokens:  10,
 			OutputTokens: 5,
 			TotalTokens:  15,
+			InputTokensDetails: &oaResponsesInputTokensDetails{
+				CachedTokens:     4,
+				CacheWriteTokens: 2,
+			},
 		},
 	}
 
@@ -146,14 +157,20 @@ func TestResponsesToGatewayResponse(t *testing.T) {
 	if resp.Choices[0].FinishReason != "stop" {
 		t.Errorf("FinishReason = %q, want stop", resp.Choices[0].FinishReason)
 	}
-	if len(resp.Choices[0].Message.Content) != 1 {
-		t.Fatalf("len(Content) = %d, want 1", len(resp.Choices[0].Message.Content))
+	if _, ok := responsesOutputSequenceFromContent(resp.Choices[0].Message.Content); !ok {
+		t.Fatal("native Responses output sequence was not preserved")
 	}
-	if *resp.Choices[0].Message.Content[0].Text != "print('hello')" {
-		t.Errorf("Content text = %q, want print('hello')", *resp.Choices[0].Message.Content[0].Text)
+	if got := messageTextForResponses(resp.Choices[0].Message.Content); got != "print('hello')" {
+		t.Errorf("Content text = %q, want print('hello')", got)
 	}
 	if resp.Usage.PromptTokens != 10 || resp.Usage.CompletionTokens != 5 || resp.Usage.TotalTokens != 15 {
 		t.Errorf("Usage = %+v, want 10/5/15", resp.Usage)
+	}
+	if resp.Usage.PromptDetails == nil {
+		t.Fatal("expected input token details")
+	}
+	if got := resp.Usage.PromptDetails; got.CachedTokens != 6 || got.CacheReadTokens != 4 || got.CacheWriteTokens != 2 {
+		t.Errorf("PromptDetails = %+v, want aggregate/read/write 6/4/2", got)
 	}
 }
 
@@ -265,7 +282,7 @@ func TestChatViaResponsesEndpoint(t *testing.T) {
 	if resp.ID != "resp-test" {
 		t.Errorf("resp.ID = %q, want resp-test", resp.ID)
 	}
-	if len(resp.Choices) != 1 || *resp.Choices[0].Message.Content[0].Text != "completed text" {
+	if len(resp.Choices) != 1 || messageTextForResponses(resp.Choices[0].Message.Content) != "completed text" {
 		t.Errorf("unexpected response content")
 	}
 }
@@ -293,7 +310,7 @@ func TestChatStreamViaResponsesEndpoint(t *testing.T) {
 		flusher.Flush()
 
 		// Send completion
-		completedJSON := `{"id":"resp-stream","model":"gpt-5.2-codex","status":"completed","output":[],"usage":{"input_tokens":5,"output_tokens":3,"total_tokens":8}}`
+		completedJSON := `{"id":"resp-stream","model":"gpt-5.2-codex","status":"completed","output":[],"usage":{"input_tokens":5,"output_tokens":3,"total_tokens":8,"input_tokens_details":{"cached_tokens":2,"cache_write_tokens":1}}}`
 		fmt.Fprintf(w, "event: response.completed\ndata: %s\n\n", completedJSON)
 		flusher.Flush()
 	}))
@@ -346,6 +363,9 @@ func TestChatStreamViaResponsesEndpoint(t *testing.T) {
 	}
 	if lastChunk.Usage.PromptTokens != 5 || lastChunk.Usage.CompletionTokens != 3 {
 		t.Errorf("Usage = %+v, want 5/3", lastChunk.Usage)
+	}
+	if got := lastChunk.Usage.PromptDetails; got == nil || got.CachedTokens != 3 || got.CacheReadTokens != 2 || got.CacheWriteTokens != 1 {
+		t.Errorf("PromptDetails = %+v, want aggregate/read/write 3/2/1", got)
 	}
 }
 

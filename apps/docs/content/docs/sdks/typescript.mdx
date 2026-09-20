@@ -6,6 +6,8 @@ icon: Code2
 
 The official TypeScript SDK provides typed access to every Everstack API from Node.js and TypeScript applications.
 
+OpenAI-managed sessions are available through `client.openaiAgents` or the exported `OpenAIAgents` resource. They use bearer authentication for mutations and preserve caller-supplied idempotency keys. See the [OpenAI Agents API guide](/getting-started/agents/openai-agents-api).
+
 ## Installation
 
 ```bash
@@ -346,7 +348,7 @@ import { createOpenAIConfig } from "@everstack/node/compat";
 const openai = new OpenAI(
   createOpenAIConfig({
     apiKey: process.env.EVERSTACK_API_KEY!,
-    baseURL: "https://{instance}.{region}.everstack.ai",
+    baseURL: "https://{instance}.{region}.everstack.ai/openai/v1",
   })
 );
 ```

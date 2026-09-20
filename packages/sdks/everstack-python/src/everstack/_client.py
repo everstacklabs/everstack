@@ -18,6 +18,7 @@ from .resources.datasets import Datasets, AsyncDatasets
 from .resources.evaluations import Evaluations, AsyncEvaluations
 from .resources.observability import Observability, AsyncObservability
 from .resources.traces import Traces, AsyncTraces
+from .resources.openai_agents import AsyncOpenAIAgents, OpenAIAgents
 
 
 class Everstack:
@@ -48,25 +49,30 @@ class Everstack:
     evaluations: Evaluations
     observability: Observability
     traces: Traces
+    openai_agents: OpenAIAgents
 
     def __init__(
         self,
-        api_key: str,
+        api_key: str = "",
         *,
         base_url: Optional[str] = None,
         provider: Optional[str] = None,
         org_id: Optional[str] = None,
         user_id: Optional[str] = None,
         headers: Optional[Dict[str, str]] = None,
+        access_token: Optional[str] = None,
         timeout: float = 60.0,
     ) -> None:
+        auth_headers = dict(headers or {})
+        if access_token:
+            auth_headers["Authorization"] = f"Bearer {access_token}"
         self._transport = Transport(
             base_url=base_url or GATEWAY_URL,
             api_key=api_key,
             provider=provider,
             org_id=org_id,
             user_id=user_id,
-            headers=headers,
+            headers=auth_headers,
             timeout=timeout,
         )
         self._api_key = api_key
@@ -84,6 +90,7 @@ class Everstack:
         self.evaluations = Evaluations(self._transport)
         self.observability = Observability(self._transport)
         self.traces = Traces(self._transport)
+        self.openai_agents = OpenAIAgents(self._transport)
 
     def capture_exception(self, error: BaseException, **kwargs: object) -> Dict:
         """Report a caught exception so it surfaces as an Issue.
@@ -140,25 +147,30 @@ class AsyncEverstack:
     evaluations: AsyncEvaluations
     observability: AsyncObservability
     traces: AsyncTraces
+    openai_agents: AsyncOpenAIAgents
 
     def __init__(
         self,
-        api_key: str,
+        api_key: str = "",
         *,
         base_url: Optional[str] = None,
         provider: Optional[str] = None,
         org_id: Optional[str] = None,
         user_id: Optional[str] = None,
         headers: Optional[Dict[str, str]] = None,
+        access_token: Optional[str] = None,
         timeout: float = 60.0,
     ) -> None:
+        auth_headers = dict(headers or {})
+        if access_token:
+            auth_headers["Authorization"] = f"Bearer {access_token}"
         self._transport = AsyncTransport(
             base_url=base_url or GATEWAY_URL,
             api_key=api_key,
             provider=provider,
             org_id=org_id,
             user_id=user_id,
-            headers=headers,
+            headers=auth_headers,
             timeout=timeout,
         )
         self._api_key = api_key
@@ -176,6 +188,7 @@ class AsyncEverstack:
         self.evaluations = AsyncEvaluations(self._transport)
         self.observability = AsyncObservability(self._transport)
         self.traces = AsyncTraces(self._transport)
+        self.openai_agents = AsyncOpenAIAgents(self._transport)
 
     async def capture_exception(self, error: BaseException, **kwargs: object) -> Dict:
         """Async mirror of :meth:`Everstack.capture_exception`."""

@@ -52,16 +52,22 @@ type CreditPricing struct {
 
 // Plan defines a license and billing tier.
 type Plan struct {
-	Tier              string       `json:"tier"`
-	Name              string       `json:"name"`
-	Description       string       `json:"description,omitempty"`
-	TrialDurationDays int          `json:"trial_duration_days,omitempty"`
-	Pricing           Pricing      `json:"pricing"`
-	Highlight         bool         `json:"highlight"`
-	SeatLimit         int          `json:"seat_limit"`
-	InstanceLimit     int          `json:"instance_limit"`
-	Features          []Feature    `json:"features"`
-	UsageLimits       []UsageLimit `json:"usage_limits"`
+	Tier        string `json:"tier"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	// Deprecated: never populated in plans.json, so it is zero for every plan
+	// and every consumer fell back to a private default. Use Trial.
+	TrialDurationDays int `json:"trial_duration_days,omitempty"`
+	// Trial is the plan's trial contract, or nil for a perpetual plan.
+	// `"trial": null` is required rather than omitted so that "decided: no
+	// trial" is distinguishable from "nobody decided".
+	Trial         *TrialPolicy `json:"trial"`
+	Pricing       Pricing      `json:"pricing"`
+	Highlight     bool         `json:"highlight"`
+	SeatLimit     int          `json:"seat_limit"`
+	InstanceLimit int          `json:"instance_limit"`
+	Features      []Feature    `json:"features"`
+	UsageLimits   []UsageLimit `json:"usage_limits"`
 
 	// Usage-credit wallet grant (see CreditPricing for the rate card). The
 	// subscription fee is granted as fungible credit each period; usage debits
@@ -288,35 +294,29 @@ func (p *Plan) ToProtoFeatures() []*licv1.FeatureFlag {
 	return features
 }
 
-// ToProtoUsageLimits converts plan usage limits to license protobuf limits.
-func (p *Plan) ToProtoUsageLimits() []*licv1.UsageLimits {
+// ToProtoUsageLimits converts catalog limits without dropping their identity.
+// STORAGE is the legacy wire name for the catalog's object STORAGE_BYTES.
+func (p *Plan) ToProtoUsageLimits() ([]*licv1.UsageLimits, error) {
 	limits := make([]*licv1.UsageLimits, 0, len(p.UsageLimits))
+	seen := make(map[licv1.UsageLimitsType]bool, len(p.UsageLimits))
 	for _, limit := range p.UsageLimits {
-		limits = append(limits, &licv1.UsageLimits{
-			Type:  parseUsageLimitType(limit.Type),
-			Value: limit.Value,
-		})
+		name := limit.Type
+		if name == "STORAGE_BYTES" {
+			name = "STORAGE"
+		}
+		value, ok := licv1.UsageLimitsType_value["USAGE_LIMITS_TYPE_"+name]
+		if !ok || value == 0 {
+			return nil, fmt.Errorf("plan %q: unsupported usage limit %q", p.Tier, limit.Type)
+		}
+		kind := licv1.UsageLimitsType(value)
+		if seen[kind] {
+			return nil, fmt.Errorf("plan %q: duplicate usage limit %q", p.Tier, limit.Type)
+		}
+		if limit.Value < -1 {
+			return nil, fmt.Errorf("plan %q: usage limit %q must be -1 or nonnegative", p.Tier, limit.Type)
+		}
+		seen[kind] = true
+		limits = append(limits, &licv1.UsageLimits{Type: kind, Value: limit.Value})
 	}
-	return limits
-}
-
-func parseUsageLimitType(limitType string) licv1.UsageLimitsType {
-	switch limitType {
-	case "REQUESTS":
-		return licv1.UsageLimitsType_USAGE_LIMITS_TYPE_REQUESTS
-	case "EXECUTIONS":
-		return licv1.UsageLimitsType_USAGE_LIMITS_TYPE_EXECUTIONS
-	case "STORAGE":
-		return licv1.UsageLimitsType_USAGE_LIMITS_TYPE_STORAGE
-	case "BANDWIDTH":
-		return licv1.UsageLimitsType_USAGE_LIMITS_TYPE_BANDWIDTH
-	case "RPS":
-		return licv1.UsageLimitsType_USAGE_LIMITS_TYPE_RPS
-	case "RPM":
-		return licv1.UsageLimitsType_USAGE_LIMITS_TYPE_RPM
-	case "RPH":
-		return licv1.UsageLimitsType_USAGE_LIMITS_TYPE_RPH
-	default:
-		return licv1.UsageLimitsType_USAGE_LIMITS_TYPE_UNSPECIFIED
-	}
+	return limits, nil
 }

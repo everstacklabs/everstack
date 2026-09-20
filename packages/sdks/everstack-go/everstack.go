@@ -32,6 +32,7 @@ type Client struct {
 	Evaluations   *EvaluationsResource
 	Observability *ObservabilityResource
 	Traces        *TracesResource
+	OpenAIAgents  *OpenAIAgentsResource
 
 	transport *Transport
 }
@@ -64,6 +65,7 @@ func NewClient(apiKey string, opts ...Option) *Client {
 	c.Evaluations = newEvaluationsResource(t)
 	c.Observability = newObservabilityResource(t)
 	c.Traces = newTracesResource(t)
+	c.OpenAIAgents = newOpenAIAgentsResource(t)
 
 	return c
 }

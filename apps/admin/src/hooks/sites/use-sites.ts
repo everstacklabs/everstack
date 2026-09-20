@@ -7,9 +7,11 @@ import {
 } from '@tanstack/react-query'
 import {
     deleteSite,
+    getHostingCapabilities,
     getSite,
     listAllSites,
     updateSite,
+    type HostingCapabilities,
     type Site,
     type UpdateSiteParams,
 } from '@/server/sites'
@@ -19,6 +21,25 @@ import {
 // server scopes by the authenticated tenant.
 
 const SITES_QUERY_KEY = ['sites']
+
+/**
+ * Whether this deployment has hosting configured at all. Answers even when
+ * hosting is off, so the UI can distinguish "switched off here" from "the
+ * request failed". Deployment-level and effectively immutable for the life
+ * of the session, hence no refetching.
+ */
+export function useHostingCapabilities(): UseQueryResult<
+    HostingCapabilities,
+    Error
+> {
+    return useQuery({
+        queryKey: [...SITES_QUERY_KEY, 'capabilities'],
+        queryFn: getHostingCapabilities,
+        refetchOnWindowFocus: false,
+        staleTime: Infinity,
+        retry: false,
+    })
+}
 
 export function useSites(): UseQueryResult<Site[], Error> {
     return useQuery({

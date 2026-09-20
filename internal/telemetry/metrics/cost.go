@@ -15,13 +15,12 @@ type CostDetails struct {
 	CarbonSavedGrams float64
 	InputTokens      int
 	OutputTokens     int
-	CachedTokens     int // Number of tokens served from cache
+	CachedTokens     int // CacheReadTokens + CacheWriteTokens
 
 	// Cost split, in USD. Traces report input and output separately, so this
 	// calculator has to expose the breakdown it already computes rather than
-	// only the total. CachedCost is the cache-read portion; for OpenAI-shaped
-	// providers those tokens are a subset of the input count, so InputCost
-	// covers only the non-cached remainder.
+	// only the total. CachedCost includes cache reads and writes; InputCost
+	// covers only the fresh, non-cached remainder.
 	InputCost  float64
 	CachedCost float64
 	OutputCost float64
@@ -63,11 +62,55 @@ func (cc *CostCalculator) models() *catalog.Cache {
 	return nil
 }
 
-// CalculateCost calculates the cost for a request using the model catalog.
-// The catalog is the single source of truth for pricing. If the model is not
-// found in the catalog, cost is returned as zero rather than using hardcoded
-// estimates — accurate data is better than wrong data.
+// CalculateCost preserves the original API's provider-specific token-counting
+// contract: Anthropic inputTokens is fresh-only and cachedTokens is separate;
+// other providers report cachedTokens as a subset of inputTokens. New live
+// Usage call sites should use CalculateCostWithCacheTokens, whose input is
+// provider-neutral and inclusive.
 func (cc *CostCalculator) CalculateCost(provider, model string, inputTokens, outputTokens, cachedTokens int) CostDetails {
+	inclusiveInputTokens := inputTokens
+	if cachedTokens > 0 && usesAnthropicCachePricing(provider, model) {
+		inclusiveInputTokens += cachedTokens
+	}
+	result := cc.calculateCostWithCacheTokens(
+		provider,
+		model,
+		inclusiveInputTokens,
+		outputTokens,
+		cachedTokens,
+		0,
+		inputTokens,
+	)
+	// Preserve the legacy result field as well as its input convention.
+	result.InputTokens = inputTokens
+	return result
+}
+
+// CalculateCostWithCacheTokens calculates request cost from the catalog using
+// the gateway usage invariant: inputTokens is inclusive, while cache reads and
+// writes are non-overlapping subsets of it. If the model is not found, cost is
+// returned as zero rather than using hardcoded estimates.
+func (cc *CostCalculator) CalculateCostWithCacheTokens(provider, model string, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens int) CostDetails {
+	return cc.calculateCostWithCacheTokens(
+		provider,
+		model,
+		inputTokens,
+		outputTokens,
+		cacheReadTokens,
+		cacheWriteTokens,
+		inputTokens,
+	)
+}
+
+func (cc *CostCalculator) calculateCostWithCacheTokens(provider, model string, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, thresholdInputTokens int) CostDetails {
+	if cacheReadTokens < 0 {
+		cacheReadTokens = 0
+	}
+	if cacheWriteTokens < 0 {
+		cacheWriteTokens = 0
+	}
+	cachedTokens := cacheReadTokens + cacheWriteTokens
+
 	// Get model from catalog. Try the exact id, then a prefix match for
 	// date-versioned models ("gpt-4o-2024-08-06" → "gpt-4o"), then both again
 	// against a variant-normalized id so context-window markers like
@@ -82,17 +125,7 @@ func (cc *CostCalculator) CalculateCost(provider, model string, inputTokens, out
 			CachedTokens: cachedTokens,
 		}
 	}
-	modelDef, found := models.GetModel(provider, model)
-	if !found {
-		modelDef, found = models.GetModelByPrefix(provider, model)
-	}
-	if !found {
-		if norm := normalizeModelID(model); norm != model {
-			if modelDef, found = models.GetModel(provider, norm); !found {
-				modelDef, found = models.GetModelByPrefix(provider, norm)
-			}
-		}
-	}
+	modelDef, resolvedProvider, found := resolveCatalogModel(models, provider, model)
 	if !found {
 		// Model not in catalog — return zero cost. Do not use hardcoded pricing.
 		return CostDetails{
@@ -103,48 +136,52 @@ func (cc *CostCalculator) CalculateCost(provider, model string, inputTokens, out
 		}
 	}
 
-	// Calculate costs
-	// Prices in catalog are per 1k tokens, convert to per-token
-	inputPricePerToken := modelDef.InputCostPer1k / 1000.0
-	outputPricePerToken := modelDef.OutputCostPer1k / 1000.0
+	// Prices in the catalog are per 1k tokens; convert to per-token rates.
+	baseInputPricePerToken := modelDef.InputCostPer1k / 1000.0
+	baseOutputPricePerToken := modelDef.OutputCostPer1k / 1000.0
+	inputMultiplier, cacheMultiplier, outputMultiplier := 1.0, 1.0, 1.0
+	if modelDef.LongContextThresholdTokens > 0 && thresholdInputTokens > modelDef.LongContextThresholdTokens {
+		if modelDef.LongContextInputMultiplier > 0 {
+			inputMultiplier = modelDef.LongContextInputMultiplier
+		}
+		if modelDef.LongContextCacheMultiplier > 0 {
+			cacheMultiplier = modelDef.LongContextCacheMultiplier
+		}
+		if modelDef.LongContextOutputMultiplier > 0 {
+			outputMultiplier = modelDef.LongContextOutputMultiplier
+		}
+	}
+	inputPricePerToken := baseInputPricePerToken * inputMultiplier
+	outputPricePerToken := baseOutputPricePerToken * outputMultiplier
 
-	// Cache pricing differs by provider along two independent axes.
-	//
-	// COUNTING. For Anthropic, cache-read tokens are a SEPARATE count from
-	// input_tokens (not a subset). For OpenAI-style providers, cached tokens
-	// are a SUBSET of the prompt/input tokens. This is a difference in what
-	// providers report, not in what they charge, and it is unchanged here.
-	//
-	// PRICE. Previously both branches multiplied the input rate by a constant
-	// (0.1x Anthropic, 0.5x otherwise). The catalog publishes an exact
-	// cache_read rate per model, so prefer it. The constants survive only as a
-	// fallback for models with no published rate, which keeps behaviour
-	// identical for catalogs synced before cache rates were carried through.
-	// The old 0.5x constant was right for Groq and wrong elsewhere, over-
-	// charging cached tokens 5x on OpenAI and Google and 25x on DeepSeek.
-	anthropicShaped := usesAnthropicCachePricing(provider, model)
-
+	// Prefer exact catalog rates. The historical provider-shaped cache-read
+	// multipliers remain only for older catalogs without those fields. Cache
+	// writes default to the common 1.25x input rate for the same compatibility
+	// reason; current OpenAI and Anthropic models publish an exact write rate.
 	fallbackMultiplier := 0.5
-	if anthropicShaped {
+	if usesAnthropicCachePricing(resolvedProvider, model) {
 		fallbackMultiplier = 0.1
 	}
-	cachedPricePerToken := inputPricePerToken * fallbackMultiplier
+	cacheReadPricePerToken := baseInputPricePerToken * fallbackMultiplier
 	if modelDef.CacheReadCostPer1k > 0 {
-		cachedPricePerToken = modelDef.CacheReadCostPer1k / 1000.0
+		cacheReadPricePerToken = modelDef.CacheReadCostPer1k / 1000.0
 	}
+	cacheReadPricePerToken *= cacheMultiplier
 
-	var inputCost, cachedCost float64
-	if anthropicShaped {
-		inputCost = float64(inputTokens) * inputPricePerToken
-		cachedCost = float64(cachedTokens) * cachedPricePerToken
-	} else {
-		nonCachedInputTokens := inputTokens - cachedTokens
-		if nonCachedInputTokens < 0 {
-			nonCachedInputTokens = 0
-		}
-		inputCost = float64(nonCachedInputTokens) * inputPricePerToken
-		cachedCost = float64(cachedTokens) * cachedPricePerToken
+	cacheWritePricePerToken := baseInputPricePerToken * 1.25
+	if modelDef.CacheWriteCostPer1k > 0 {
+		cacheWritePricePerToken = modelDef.CacheWriteCostPer1k / 1000.0
 	}
+	cacheWritePricePerToken *= cacheMultiplier
+
+	freshInputTokens := inputTokens - cachedTokens
+	if freshInputTokens < 0 {
+		freshInputTokens = 0
+	}
+	inputCost := float64(freshInputTokens) * inputPricePerToken
+	cacheReadCost := float64(cacheReadTokens) * cacheReadPricePerToken
+	cacheWriteCost := float64(cacheWriteTokens) * cacheWritePricePerToken
+	cachedCost := cacheReadCost + cacheWriteCost
 	outputCost := float64(outputTokens) * outputPricePerToken
 	totalCost := inputCost + cachedCost + outputCost
 
@@ -163,6 +200,57 @@ func (cc *CostCalculator) CalculateCost(provider, model string, inputTokens, out
 	}
 }
 
+func resolveCatalogModel(models *catalog.Cache, provider, model string) (*catalog.ModelDefinition, string, bool) {
+	model = strings.TrimSpace(model)
+	provider = strings.TrimSpace(provider)
+	if strings.HasPrefix(model, "@") {
+		if parts := strings.SplitN(strings.TrimPrefix(model, "@"), "/", 2); len(parts) == 2 {
+			if provider == "" {
+				provider = parts[0]
+			}
+			model = parts[1]
+		}
+	}
+
+	lookup := func(providerName string) (*catalog.ModelDefinition, bool) {
+		definition, found := models.GetModel(providerName, model)
+		if !found {
+			definition, found = models.GetModelByPrefix(providerName, model)
+		}
+		if !found {
+			if normalized := normalizeModelID(model); normalized != model {
+				if definition, found = models.GetModel(providerName, normalized); !found {
+					definition, found = models.GetModelByPrefix(providerName, normalized)
+				}
+			}
+		}
+		return definition, found
+	}
+
+	if provider != "" {
+		definition, found := lookup(provider)
+		return definition, provider, found
+	}
+
+	// Historical agent events did not persist a provider. Resolve an
+	// unqualified model only when the catalog match is unique; ambiguous model
+	// names remain unpriced rather than being attributed to the wrong vendor.
+	var matchedDefinition *catalog.ModelDefinition
+	matchedProvider := ""
+	for providerName := range models.GetModelWhitelist() {
+		definition, found := lookup(providerName)
+		if !found {
+			continue
+		}
+		if matchedDefinition != nil {
+			return nil, "", false
+		}
+		matchedDefinition = definition
+		matchedProvider = providerName
+	}
+	return matchedDefinition, matchedProvider, matchedDefinition != nil
+}
+
 // normalizeModelID strips a trailing context-window / variant marker such as
 // the "[1m]" in "claude-opus-4-8[1m]" so the base model resolves in the
 // catalog. Returns the input unchanged when there is no bracket suffix.
@@ -173,15 +261,16 @@ func normalizeModelID(model string) string {
 	return model
 }
 
-// usesAnthropicCachePricing reports whether a request should be priced with
-// Anthropic prompt-caching semantics — cache-read tokens are a separate count
-// billed at ~0.1x input — rather than the OpenAI model where cached tokens are
-// a subset of input billed at ~0.5x. Covers Claude served via any route.
+// usesAnthropicCachePricing selects the historical 0.1x cache-read fallback
+// for catalogs that do not publish an exact rate. It covers Claude served via
+// any route; token counting itself is provider-neutral and always follows the
+// inclusive gateway Usage contract.
 func usesAnthropicCachePricing(provider, model string) bool {
 	if strings.Contains(strings.ToLower(provider), "anthropic") {
 		return true
 	}
-	return strings.HasPrefix(strings.ToLower(model), "claude")
+	model = strings.ToLower(model)
+	return strings.HasPrefix(model, "claude") || strings.HasPrefix(model, "@anthropic/claude")
 }
 
 // CalculateCacheSavings calculates cost savings from cache hit
@@ -307,6 +396,28 @@ func CalculateCost(provider, model string, inputTokens, outputTokens, cachedToke
 		InputTokens:  inputTokens,
 		OutputTokens: outputTokens,
 		CachedTokens: cachedTokens,
+	}
+}
+
+// CalculateCostWithCacheTokens is the full cache-aware global cost helper.
+// It keeps cache reads and writes separate so each catalog rate is applied to
+// the correct subset of the inclusive prompt token count.
+func CalculateCostWithCacheTokens(provider, model string, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens int) CostDetails {
+	if globalCalculator != nil {
+		return globalCalculator.CalculateCostWithCacheTokens(
+			provider,
+			model,
+			inputTokens,
+			outputTokens,
+			cacheReadTokens,
+			cacheWriteTokens,
+		)
+	}
+	return CostDetails{
+		PricingModel: "unknown",
+		InputTokens:  inputTokens,
+		OutputTokens: outputTokens,
+		CachedTokens: cacheReadTokens + cacheWriteTokens,
 	}
 }
 

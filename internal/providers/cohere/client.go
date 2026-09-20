@@ -9,7 +9,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 	providerutil "github.com/everstacklabs/everstack/internal/providers"
@@ -21,14 +20,21 @@ import (
 type Provider struct {
 	cfg    Config
 	client *http.Client
+
+	// unaryClient serves non-streaming calls. It omits the shared transport's
+	// ResponseHeaderTimeout, which would otherwise cap total generation time,
+	// since a unary upstream withholds response headers until the completion
+	// is finished.
+	unaryClient *http.Client
 }
 
 // NewProvider creates a new Cohere provider
 func NewProvider(cfg Config) *Provider {
 	cli := clientx.Default()
 	return &Provider{
-		cfg:    cfg,
-		client: cli,
+		cfg:         cfg,
+		client:      cli,
+		unaryClient: clientx.Unary(),
 	}
 }
 
@@ -138,14 +144,14 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	cohereReq.Thinking = cohereThinkingFor(req.Sampling)
 
 	body, _ := json.Marshal(cohereReq)
-	ctx, cancel := context.WithTimeout(ctx, providerutil.ChatRequestTimeout(req.Sampling, 12*time.Second))
+	ctx, cancel := context.WithTimeout(ctx, providerutil.ChatRequestTimeout(req.Sampling))
 	defer cancel()
 
 	httpReq, _ := http.NewRequestWithContext(ctx, "POST", p.cfg.BaseURL+"/v2/chat", bytes.NewReader(body))
 	httpReq.Header.Set("Authorization", "Bearer "+p.cfg.APIKey)
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	resp, err := p.client.Do(httpReq)
+	resp, err := p.unaryClient.Do(httpReq)
 	if err != nil {
 		return gw.ChatCompletionResponse{}, err
 	}

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	everstack "github.com/everstacklabs/everstack-go"
+	everstack "github.com/everstacklabs/everstack/packages/sdks/everstack-go"
 )
 
 func main() {

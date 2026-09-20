@@ -334,6 +334,9 @@ message ResponseUsageDetails {
 
   // Reasoning tokens
   int32 reasoning_tokens = 5;
+
+  // Tokens written to the provider prompt cache
+  int32 cache_write_tokens = 6;
 }
 
 // Incomplete status details

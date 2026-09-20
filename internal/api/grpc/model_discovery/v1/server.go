@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
-	"github.com/jmoiron/sqlx"
 	"github.com/everstacklabs/everstack/internal/domain/custom_models"
 	"github.com/everstacklabs/everstack/internal/domain/provider_api_keys"
 	"github.com/everstacklabs/everstack/internal/domain/provider_config"
@@ -14,6 +13,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/services/model_discovery"
 	providerspb "github.com/everstacklabs/everstack/pkg/grpc/everstack/providers/model_discovery/v1"
 	modeldiscoveryconnect "github.com/everstacklabs/everstack/pkg/grpc/everstack/providers/model_discovery/v1/model_discoveryconnect"
+	"github.com/jmoiron/sqlx"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -342,11 +342,13 @@ func CreateServerWithContext(ctx context.Context) (*Server, error) {
 }
 
 // Connect server plumbing
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	all := make([]connect.Interceptor, 0, len(s.serviceInterceptors)+len(interceptors))
-	all = append(all, s.serviceInterceptors...)
-	all = append(all, interceptors...)
-	return modeldiscoveryconnect.NewModelDiscoveryServiceHandler(s, connect.WithInterceptors(all...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	// The service\'s own interceptors run first, then whatever the caller
+	// supplied. connect accumulates interceptors across options, so this
+	// preserves the previous ordering while letting the caller pass other
+	// handler options through untouched.
+	all := append([]connect.HandlerOption{connect.WithInterceptors(s.serviceInterceptors...)}, opts...)
+	return modeldiscoveryconnect.NewModelDiscoveryServiceHandler(s, all...)
 }
 
 func (s *Server) FileDescriptor() protoreflect.FileDescriptor {

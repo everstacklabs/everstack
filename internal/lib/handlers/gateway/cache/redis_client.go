@@ -3,6 +3,7 @@ package cache
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"strings"
 	"sync/atomic"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/everstacklabs/everstack/cmd/config/gateway/validator"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/everstacklabs/everstack/internal/redistls"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -20,10 +22,41 @@ type RedisClient struct {
 	connected atomic.Bool
 }
 
+type redisConnectionMode string
+
+const (
+	redisConnectionDirect   redisConnectionMode = "direct"
+	redisConnectionSentinel redisConnectionMode = "sentinel"
+)
+
+func connectionMode(cfg validator.RedisCacheConfig) (redisConnectionMode, error) {
+	hasMaster := strings.TrimSpace(cfg.SentinelMasterName) != ""
+	hasSentinels := len(cfg.SentinelAddresses) > 0
+	if hasMaster != hasSentinels {
+		return "", fmt.Errorf("redis sentinel master name and addresses must be configured together")
+	}
+	if hasMaster {
+		return redisConnectionSentinel, nil
+	}
+	if strings.TrimSpace(cfg.Address) == "" {
+		return "", fmt.Errorf("redis address is required when Sentinel is not configured")
+	}
+	return redisConnectionDirect, nil
+}
+
 // NewRedisClient creates a new Redis client with the given configuration
 func NewRedisClient(cfg validator.RedisCacheConfig) (*RedisClient, error) {
-	if cfg.Address == "" {
-		return nil, fmt.Errorf("redis address is required")
+	mode, err := connectionMode(cfg)
+	if err != nil {
+		return nil, err
+	}
+	tlsConfig, err := redistls.Load(redistls.Config{
+		Enabled:    cfg.TLSEnabled,
+		CAFile:     cfg.TLSCAFile,
+		ServerName: cfg.TLSServerName,
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	logger.WithFields(
@@ -39,19 +72,25 @@ func NewRedisClient(cfg validator.RedisCacheConfig) (*RedisClient, error) {
 		poolSize = 100
 	}
 
-	client := redis.NewClient(&redis.Options{
-		Addr:     cfg.Address,
-		Password: cfg.Password,
-		DB:       cfg.DB,
-		PoolSize: poolSize,
-	})
+	var client *redis.Client
+	if mode == redisConnectionSentinel {
+		client = redis.NewFailoverClient(newRedisFailoverOptions(cfg, poolSize, tlsConfig))
+	} else {
+		client = redis.NewClient(&redis.Options{
+			Addr:      cfg.Address,
+			Password:  cfg.Password,
+			DB:        cfg.DB,
+			PoolSize:  poolSize,
+			TLSConfig: tlsConfig,
+		})
+	}
 
 	// Test connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
-		return nil, fmt.Errorf("redis connection failed to %s: %w", cfg.Address, err)
+		return nil, fmt.Errorf("redis %s connection failed: %w", mode, err)
 	}
 
 	rc := &RedisClient{
@@ -75,6 +114,18 @@ func NewRedisClient(cfg validator.RedisCacheConfig) (*RedisClient, error) {
 	}
 
 	return rc, nil
+}
+
+func newRedisFailoverOptions(cfg validator.RedisCacheConfig, poolSize int, tlsConfig *tls.Config) *redis.FailoverOptions {
+	return &redis.FailoverOptions{
+		MasterName:       cfg.SentinelMasterName,
+		SentinelAddrs:    cfg.SentinelAddresses,
+		Password:         cfg.Password,
+		SentinelPassword: cfg.Password,
+		DB:               cfg.DB,
+		PoolSize:         poolSize,
+		TLSConfig:        tlsConfig,
+	}
 }
 
 // validateRedisSearch checks if the RedisSearch module is loaded
@@ -209,7 +260,7 @@ func (rc *RedisClient) IsConnected() bool {
 
 // Ping checks if the Redis connection is alive
 func (rc *RedisClient) Ping(ctx context.Context) error {
-	if !rc.connected.Load() {
+	if rc == nil || rc.client == nil {
 		return fmt.Errorf("redis client not connected")
 	}
 
@@ -217,6 +268,7 @@ func (rc *RedisClient) Ping(ctx context.Context) error {
 		rc.connected.Store(false)
 		return fmt.Errorf("redis ping failed: %w", err)
 	}
+	rc.connected.Store(true)
 
 	return nil
 }

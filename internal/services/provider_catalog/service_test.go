@@ -62,14 +62,14 @@ func TestCurrentCatalogExposesNewestOpenAIModelsFirst(t *testing.T) {
 	if !ok {
 		t.Fatal("OpenAI provider not found")
 	}
-	if len(openAI.Models) < 4 {
-		t.Fatalf("OpenAI model count = %d, want at least 4", len(openAI.Models))
+	if len(openAI.Models) < 5 {
+		t.Fatalf("OpenAI model count = %d, want at least 5", len(openAI.Models))
 	}
-	got := make([]string, 0, 4)
-	for _, model := range openAI.Models[:4] {
+	got := make([]string, 0, 5)
+	for _, model := range openAI.Models[:5] {
 		got = append(got, model.Name)
 	}
-	want := []string{"gpt-5.6", "gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra"}
+	want := []string{"gpt-6-astra", "gpt-5.6", "gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("newest OpenAI models = %v, want %v", got, want)
 	}

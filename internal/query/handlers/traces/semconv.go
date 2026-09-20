@@ -80,6 +80,11 @@ var (
 		"gen_ai.usage.cache_creation_input_tokens",
 		"cache_creation_tokens",
 	}
+	reasoningTokensAttrs = []string{
+		"llm.tokens.reasoning",
+		"gen_ai.usage.reasoning_tokens",
+		"reasoning_tokens",
+	}
 	inputAttrs = []string{
 		"trace.input",
 		"llm.request.messages",  // Everstack-native full message array
@@ -277,6 +282,26 @@ func latestSuccessfulGenExpr(frag, providerFrag, modelFrag string) string {
 	)
 }
 
+// sumGenerationSQL rolls a per-span usage fragment up to the trace.
+//
+// The gateway wrapper span (gateway.chat.completion) repeats the token and cost
+// attributes of the provider call it wraps, so a plain sum() over every span
+// double-counts a single completion, and inflates an agent loop by once per
+// wrapper. Summing only generation spans attributes the usage exactly once,
+// while still adding up genuinely distinct provider calls (retries, fallback,
+// agent turns).
+//
+// Traces whose usage lives solely on non-generation spans (coding agents
+// ingested over OTLP never name a span provider.* nor set observation.type)
+// keep the previous whole-trace sum, so this narrows double counting without
+// zeroing any trace that reports usage some other way.
+func sumGenerationSQL(frag string) string {
+	return fmt.Sprintf(
+		"if(countIf((%[1]s) != 0 AND %[2]s) > 0, sumIf(%[1]s, %[2]s), sum(%[1]s))",
+		frag, isGenerationSpanSQL,
+	)
+}
+
 // costSQL is the canonical fragment for a span's total LLM cost in USD.
 func costSQL(extra ...string) string {
 	return coalesceFloat("SpanAttributes", withExtra(costAttrs, extra))
@@ -294,6 +319,9 @@ func cacheReadTokensSQL(extra ...string) string {
 }
 func cacheWriteTokensSQL(extra ...string) string {
 	return coalesceInt64("SpanAttributes", withExtra(cacheWriteTokensAttrs, extra))
+}
+func reasoningTokensSQL(extra ...string) string {
+	return coalesceInt64("SpanAttributes", withExtra(reasoningTokensAttrs, extra))
 }
 
 // totalTokensSQL prefers an explicit total key; when none is present (coding

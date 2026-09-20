@@ -3202,6 +3202,8 @@ func (m *ResponseUsageDetails) validate(all bool) error {
 
 	// no validation rules for ReasoningTokens
 
+	// no validation rules for CacheWriteTokens
+
 	if len(errors) > 0 {
 		return ResponseUsageDetailsMultiError(errors)
 	}

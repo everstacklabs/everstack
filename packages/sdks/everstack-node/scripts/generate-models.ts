@@ -210,12 +210,11 @@ function generateModelsFile(catalog: Catalog, metadata: CatalogMetadata): string
         const typeName = `${toTitleCase(providerId)}Model`;
         const modelLiterals: string[] = [];
 
-        // Filter out deprecated models and sort by name
-        const activeModels = provider.models
-            .filter((m) => m.status !== "deprecated")
-            .sort((a, b) => a.name.localeCompare(b.name));
+        // Keep deprecated identifiers in the public union for source
+        // compatibility. Their lifecycle remains visible in metadata.
+        const sdkModels = [...provider.models].sort((a, b) => a.name.localeCompare(b.name));
 
-        for (const model of activeModels) {
+        for (const model of sdkModels) {
             const fullModelId = `@${providerId}/${model.name}`;
             modelLiterals.push(`  | ${quote(fullModelId)}`);
             allModelStrings.push(fullModelId);
@@ -274,7 +273,7 @@ function generateModelsFile(catalog: Catalog, metadata: CatalogMetadata): string
     lines.push(" */");
     lines.push(`export const providers = [`);
     for (const [providerId, provider] of sortedProviders) {
-        if (provider.models?.some((model) => model.status !== "deprecated")) {
+        if (provider.models?.length) {
             lines.push(`  ${quote(providerId)},`);
         }
     }
@@ -405,7 +404,7 @@ async function main() {
     // Count models
     let totalModels = 0;
     for (const provider of Object.values(catalog.providers)) {
-        totalModels += provider.models?.filter((m) => m.status !== "deprecated").length ?? 0;
+        totalModels += provider.models?.length ?? 0;
     }
     console.log(`Total models: ${totalModels}`);
 }

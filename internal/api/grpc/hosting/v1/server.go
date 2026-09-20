@@ -31,7 +31,7 @@ import (
 )
 
 var _ interface {
-	RegisterConnectServer(...connect.Interceptor) (string, http.Handler)
+	RegisterConnectServer(...connect.HandlerOption) (string, http.Handler)
 	FileDescriptor() protoreflect.FileDescriptor
 } = (*Server)(nil)
 
@@ -151,8 +151,8 @@ func (s *Server) SetCodeSender(f CodeSender) { s.sendCode = f }
 // SetOwnerProvisioner wires user+org find-or-create for the claim flow.
 func (s *Server) SetOwnerProvisioner(f OwnerProvisioner) { s.provisionOwner = f }
 
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return hostingconnect.NewSitesServiceHandler(s, connect.WithInterceptors(interceptors...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return hostingconnect.NewSitesServiceHandler(s, opts...)
 }
 
 func (s *Server) FileDescriptor() protoreflect.FileDescriptor {

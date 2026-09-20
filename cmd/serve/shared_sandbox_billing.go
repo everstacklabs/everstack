@@ -40,7 +40,13 @@ type tenantSandboxUsageReporter interface {
 }
 
 type tenantSandboxStopper interface {
-	StopTenantSandboxes(ctx context.Context, tenantID string) error
+	StopTenantSandboxes(ctx context.Context, tenantID string) (stopped int, err error)
+	// SuspendTenantAgents parks persistent agents so the reconciler stops
+	// reviving them; ResumeTenantAgents releases them when access returns.
+	// Stopping a sandbox without this does not hold — see
+	// SandboxManager.SuspendTenantAgents.
+	SuspendTenantAgents(ctx context.Context, tenantID string) (suspended int, err error)
+	ResumeTenantAgents(ctx context.Context, tenantID string) (resumed int, err error)
 }
 
 type tenantBrowserUsageTotals interface {
@@ -213,25 +219,134 @@ func (r *sharedSandboxBillingReporter) reportAll(ctx context.Context) error {
 	}
 
 	var reportErrors []error
-	for _, tenantID := range tenants {
-		access, err := r.ReportTenant(ctx, tenantID)
+	for _, group := range r.groupTenantsByOrganization(ctx, tenants) {
+		// Every alias in the group resolves to the same organization, so one
+		// snapshot covers all of them: ReportTenant sums usage across the whole
+		// alias set regardless of which member it is called with.
+		access, err := r.ReportTenant(ctx, group.aliases[0])
 		if err != nil {
-			reportErrors = append(reportErrors, fmt.Errorf("tenant %s: %w", tenantID, err))
+			reportErrors = append(reportErrors, fmt.Errorf("tenant %s: %w", group.aliases[0], err))
 			continue
 		}
-		if !access.SandboxAllowed && r.stopper != nil {
-			if err := r.stopper.StopTenantSandboxes(ctx, tenantID); err != nil {
-				reportErrors = append(reportErrors, fmt.Errorf("stop tenant %s after starter credit exhaustion: %w", tenantID, err))
-			} else {
-				logger.WithFields(
-					"tenant_id", tenantID,
-					"starter_credit_micros", access.StarterCreditMicros,
-					"starter_credit_used_micros", access.StarterCreditUsedMicros,
-				).Info("sandbox billing: stopped tenant compute after starter credit exhaustion")
+		if r.stopper == nil {
+			continue
+		}
+		if access.SandboxAllowed {
+			// Access restored. Nothing else clears the suspended status: the
+			// reconciler skips it by design and neither wake path accepts it,
+			// so a paying tenant would stay parked forever without this.
+			// Normally a no-op affecting zero rows.
+			for _, tenantID := range group.aliases {
+				resumed, err := r.stopper.ResumeTenantAgents(ctx, tenantID)
+				if err != nil {
+					reportErrors = append(reportErrors, fmt.Errorf("resume tenant %s: %w", tenantID, err))
+					continue
+				}
+				if resumed > 0 {
+					logger.WithFields(
+						"tenant_id", tenantID,
+						"organization_id", group.organizationID,
+						"resumed", resumed,
+					).Info("sandbox billing: released agents suspended for billing")
+				}
 			}
+			continue
+		}
+		// Sandboxes are stored under the alias that provisioned them, so
+		// enforcement still has to sweep every alias even though billing
+		// resolved to one organization.
+		for _, tenantID := range group.aliases {
+			stopped, err := r.stopper.StopTenantSandboxes(ctx, tenantID)
+			if err != nil {
+				reportErrors = append(reportErrors, fmt.Errorf("stop tenant %s (%s): %w", tenantID, sandboxStopReason(access), err))
+				continue
+			}
+			fields := []interface{}{
+				"tenant_id", tenantID,
+				"organization_id", group.organizationID,
+				"reason", sandboxStopReason(access),
+				"stopped", stopped,
+				"starter_credit_micros", access.StarterCreditMicros,
+				"starter_credit_used_micros", access.StarterCreditUsedMicros,
+			}
+			// Park the agents too. Stopping the VM alone loses to the
+			// persistent-agent reconciler, which reprovisions any live agent
+			// whose sandbox went missing: that fight is why these tenants kept
+			// running through ~8,640 stop calls a day.
+			suspended, err := r.stopper.SuspendTenantAgents(ctx, tenantID)
+			if err != nil {
+				reportErrors = append(reportErrors, fmt.Errorf("suspend agents for tenant %s: %w", tenantID, err))
+			}
+			fields = append(fields, "suspended", suspended)
+
+			if stopped == 0 && suspended == 0 {
+				// Nothing was running. Saying so at Info once per tick is how
+				// this loop produced 8,640 identical lines a day on
+				// eu-gra-1-prod while stopping nothing at all.
+				logger.WithFields(fields...).Debug("sandbox billing: tenant compute already stopped")
+				continue
+			}
+			logger.WithFields(fields...).Info("sandbox billing: stopped tenant compute")
 		}
 	}
 	return errors.Join(reportErrors...)
+}
+
+// tenantOrganizationGroup is one organization and every metered tenant alias
+// that resolves to it.
+type tenantOrganizationGroup struct {
+	organizationID string
+	aliases        []string
+}
+
+// groupTenantsByOrganization collapses the metered tenant list to one entry per
+// billing organization, preserving input order for determinism.
+//
+// listMeteredTenants returns raw tenant IDs off the sandbox tables, and a single
+// organization commonly owns several: its own ID plus one per managed instance.
+// Reporting each one separately POSTed the same organization-wide cumulative
+// snapshot several times per tick. Central billing's watermark made that
+// harmless but not free — on eu-gra-1-prod three aliases of one organization
+// tripled every tick's work.
+//
+// A tenant whose organization cannot be resolved is kept as its own group so a
+// resolution outage degrades to the previous per-tenant behaviour rather than
+// dropping the tenant from enforcement.
+func (r *sharedSandboxBillingReporter) groupTenantsByOrganization(ctx context.Context, tenants []string) []tenantOrganizationGroup {
+	groups := make([]tenantOrganizationGroup, 0, len(tenants))
+	index := make(map[string]int, len(tenants))
+	for _, tenantID := range tenants {
+		key := tenantID
+		if organization, _, err := r.resolveBillingIdentity(ctx, tenantID); err == nil && strings.TrimSpace(organization) != "" {
+			key = organization
+		}
+		if at, ok := index[key]; ok {
+			groups[at].aliases = append(groups[at].aliases, tenantID)
+			continue
+		}
+		index[key] = len(groups)
+		groups = append(groups, tenantOrganizationGroup{organizationID: key, aliases: []string{tenantID}})
+	}
+	return groups
+}
+
+// sandboxStopReason names why central billing refused compute.
+//
+// The old message said "starter credit exhaustion" unconditionally. For an
+// organization whose subscription lapsed, billingcredit.Resolve returns from the
+// subscription branch with a zero-valued Credit, so the line read "stopped after
+// starter credit exhaustion starter_credit_micros=0 starter_credit_used_micros=0"
+// — a credit that was never granted, reported as spent. The three cases need
+// different operator actions, so the line has to tell them apart.
+func sandboxStopReason(access sharedSandboxBillingAccess) string {
+	switch {
+	case access.BillingConfigured && !access.BillingActive:
+		return "subscription inactive"
+	case access.StarterCreditMicros > 0:
+		return "starter credit exhausted"
+	default:
+		return "no active subscription or starter credit"
+	}
 }
 
 func (r *sharedSandboxBillingReporter) listMeteredTenants(ctx context.Context) ([]string, error) {

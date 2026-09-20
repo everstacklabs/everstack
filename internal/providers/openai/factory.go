@@ -13,6 +13,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/providers/ratelimit"
 	"github.com/everstacklabs/everstack/internal/providers/tracing"
 	"github.com/everstacklabs/everstack/internal/services/api_key_selector"
+	"github.com/everstacklabs/everstack/internal/services/catalog"
 )
 
 // Register the OpenAI provider factory into the global registry.
@@ -69,6 +70,7 @@ func init() {
 			APIKey:          apiKey,
 			BaseURL:         base,
 			SupportedModels: dedupeLower(in.Models),
+			APITypeForModel: catalogAPITypeLookup(in.CatalogCache),
 		})
 
 		// Wrap with tracing middleware (innermost) - with cost calculation if catalog available
@@ -83,6 +85,19 @@ func init() {
 			logging.SelectExtractor(baseProvider.Name()),
 		), nil
 	})
+}
+
+func catalogAPITypeLookup(cache *catalog.Cache) func(string) string {
+	if cache == nil {
+		return nil
+	}
+	return func(model string) string {
+		definition, ok := cache.GetModel("openai", model)
+		if !ok {
+			return ""
+		}
+		return definition.APIType
+	}
 }
 
 func dedupeLower(models []string) []string {

@@ -93,9 +93,25 @@ func protoErrorToOpenAI(body []byte, fallbackStatus int) ([]byte, int, bool) {
 		return nil, 0, false
 	}
 
+	// `code` arrives in two different dialects and they must not be conflated.
+	//
+	// The gateway's own error middleware writes an HTTP status there
+	// ({"error":{"code":401,...}}), while grpc-gateway writes a gRPC code
+	// ({"code":16,...}). Running an HTTP status through the gRPC table sends
+	// every one of them to the default arm: 401, 403, 404, 400 and 429 all
+	// came back to the caller as 500. That is worst for 429, because an
+	// OpenAI SDK backs off on a rate limit but treats 500 as a server fault
+	// and retries it differently, and for 401, where a wrong key looked like
+	// an outage instead of a wrong key.
+	//
+	// The two ranges cannot collide: gRPC codes are 0-16, HTTP statuses are
+	// 100-599.
 	status := fallbackStatus
-	if mapped := grpcCodeToHTTPStatus(code); code != 0 {
-		status = mapped
+	switch {
+	case code >= 100 && code < 600:
+		status = code
+	case code > 0:
+		status = grpcCodeToHTTPStatus(code)
 	}
 	if status < 400 {
 		status = http.StatusInternalServerError

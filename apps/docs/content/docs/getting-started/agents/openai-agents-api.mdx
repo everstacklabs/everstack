@@ -1,0 +1,295 @@
+---
+title: OpenAI Agents API
+description: Connect an OpenAI-managed agent to an Everstack instance and its isolated compute.
+---
+
+The OpenAI Agents API runs the agent harness at OpenAI. Everstack owns the connection to your project, maps each session to its instance, and provides isolated compute when you select an Everstack sandbox. Manage these sessions in the existing **Agents** area alongside Everstack sessions; OpenAI sessions do not use a separate dashboard.
+
+This integration is undergoing release qualification. The complete development journey, including Firecracker compute, retained files, SDK follow-up, browser review and cleanup, passed at the qualified source revision. Production rollout and final native RPC qualification remain pending. Treat the capability and environment modes returned by your instance as authoritative.
+
+## Credentials
+
+Use two different OpenAI credentials for an Everstack sandbox:
+
+| Credential | Where it runs | Required access |
+| --- | --- | --- |
+| Application key | Everstack gateway server | `api.agents.read`, `api.agents.write`, `api.responses.write` |
+| Restricted executor key | Isolated sandbox executor | Environment connection only; all other permissions set to None |
+
+Both keys must belong to the same OpenAI organization, project and user or service account. Create the restricted key on [OpenAI's environment keys page](https://platform.openai.com/agents?tab=environments&environment_view=keys). The application key must never enter the sandbox.
+
+Also enable **List models: Read** on the application key. Session creation checks model access and returns HTTP 403 without it.
+
+For a session without a sandbox (`environment.type: "none"`), only the application key is required. OpenAI remains responsible for the harness and session state; Everstack does not start an executor or provide a workspace for this mode.
+
+Your Everstack login is separate from these OpenAI credentials. Use the instance Admin console or an authenticated device-login bearer token to create connections and run sessions. Instance API keys currently provide read access to this integration.
+
+## Configure the server
+
+The integration requires PostgreSQL and the existing gateway credential-encryption secret. Run the gateway migrations before using a new release.
+
+Server-controlled configuration:
+
+- `EVS_OPENAI_AGENTS_ALLOWED_MODELS`: optional comma-separated permitted upstream model IDs.
+- `EVS_OPENAI_AGENTS_EXECUTOR_IMAGE`: the executor template alias. For Firecracker, use `everstack/openai-codex-firecracker-rootfs:openai-codex-0.154.0-r3` after installing and verifying the matching ext4 file on every Firecracker host.
+- `EVS_OPENAI_AGENTS_BASE_URL`: optional upstream API URL override for trusted deployments and protocol testing.
+
+Self-hosted executor environments require a configured Firecracker or remote Firecracker Agent sandbox backend. Docker and Kubernetes are not available for OpenAI executor environments in this release. The pinned r3 Firecracker guest, restricted-key connection and retained-file journey have passed development qualification; production remains a separate release gate.
+
+Do not give customers arbitrary upstream URL overrides. The application key is attached to upstream requests.
+
+The compatibility target is the `agents=v1` API and Codex executor `0.154.0`. The release workflow builds and smokes linux/amd64 and linux/arm64 before publishing the immutable version tag. Copy the digest-qualified reference from the successful **Publish OpenAI Codex Executor** workflow run:
+
+| Component | Intended compatible release |
+| --- | --- |
+| Everstack gateway | `v0.1.45` |
+| OpenAI Agents API | `agents=v1` |
+| Codex executor | `0.154.0` |
+| Node SDK (`@everstack/node`) | `0.2.7` |
+| Python SDK (`everstack`) | `0.1.1` |
+| Go SDK (`github.com/everstacklabs/everstack/packages/sdks/everstack-go`) | Prepared as `v0.1.0`; unavailable until the public module tag is published and install-verified |
+
+These are release targets, not a statement that the integration is generally available. Do not install an SDK version until its registry reports that exact version. The Go SDK source and public release workflow are prepared, but there is no installable tagged module at its declared module path yet.
+
+Firecracker does not pull this setting as an OCI image. It takes the suffix after the colon and opens a local file with that name under `FC_ROOTFS_DIR`. Once the immutable `openai-codex-0.154.0-r3` release exists in `everstacklabs/releases`, download and verify both the compressed asset and expanded filesystem:
+
+```bash
+mkdir -p dist/firecracker-rootfs
+cd dist/firecracker-rootfs
+base_url='https://github.com/everstacklabs/releases/releases/download/openai-codex-0.154.0-r3'
+curl -fLO "$base_url/openai-codex-0.154.0-r3.ext4.gz"
+curl -fLO "$base_url/openai-codex-0.154.0-r3.ext4.gz.sha256"
+curl -fLO "$base_url/openai-codex-0.154.0-r3.ext4.sha256"
+sha256sum -c openai-codex-0.154.0-r3.ext4.gz.sha256
+gzip -d openai-codex-0.154.0-r3.ext4.gz
+sha256sum -c openai-codex-0.154.0-r3.ext4.sha256
+```
+
+Do not install from a workflow artifact or use these commands before the exact public release exists. To build and qualify an artifact from source, run `infra/images/prepare-openai-codex-firecracker-rootfs.sh dist/firecracker-rootfs` from the repository root. The script composes the checked-in canonical sandbox rootfs recipe with a public digest-pinned Ubuntu amd64 base, then applies the pinned Codex overlay. Package repositories used by Ubuntu, NodeSource, Go modules and npm remain network inputs, so the resulting ext4 checksum is authoritative for that qualification run; rebuilding is not assumed to reproduce identical bytes.
+
+Copy `openai-codex-0.154.0-r3.ext4` and its checksum to every Firecracker host, verify the checksum there, and install the image as:
+
+```text
+$FC_ROOTFS_DIR/openai-codex-0.154.0-r3.ext4
+```
+
+`FC_ROOTFS_DIR` defaults to `/var/lib/everstack/rootfs`; use the configured Helm `firecrackerAgent.firecracker.rootfsDir` when it differs. Only after the exact file exists and its checksum passes on every eligible host, configure:
+
+```bash
+export EVS_OPENAI_AGENTS_EXECUTOR_IMAGE='everstack/openai-codex-firecracker-rootfs:openai-codex-0.154.0-r3'
+```
+
+The generic Firecracker startup preflight accepts any ext4 image. It does not prove this named template exists. If the named file is missing, the current backend warns and boots `base.ext4`, so deployment automation must treat the exact-file and checksum checks as a fail-closed gate. The preparation script verifies `codex-cli 0.154.0`, `codex exec-server --help`, the guest `sandbox-agent`, and the r3 version marker before producing the artifact. Never bake the restricted executor key into the image or its environment configuration.
+
+## Start from Admin or Cloud
+
+Open the owning instance's Admin console. Cloud's instance link uses the existing authentication relay. In **Agents**, start a session and choose the **OpenAI Agents API** runtime:
+
+1. Add a connection with the application key and, for sandbox execution, the restricted executor key.
+2. Choose a permitted OpenAI model.
+3. Choose **No sandbox** for a simple conversational task, or **Everstack sandbox** for code and files.
+4. Submit a task and follow its saved progress.
+5. Find the session under **Sessions** and continue it after returning to the page. The runtime label distinguishes OpenAI sessions from Everstack sessions.
+
+The session detail uses the same transcript and composer interaction as native Agent sessions. Its compact runtime panel shows the fixed model, upstream state and sandbox readiness. Files appear in the secondary **Files** panel only when retained storage is available. A refresh error does not erase already saved history, but mutation controls stay disabled until current capabilities are confirmed.
+
+Review pending tool requests under **Approvals**. OpenAI approval history is not currently available in this view.
+
+**Create Agent** continues to create reusable Everstack agent definitions. Starting an OpenAI session does not create an Everstack definition, and native-only settings such as agent memory, peers, and deployments do not apply to it.
+
+Only server-reported environment modes are selectable. A saved connection, a booted sandbox, an idle session and a successful task are different states.
+
+## CLI
+
+Log in with the existing Everstack device-login flow, then select the intended instance/context.
+
+Use `evs agents openai --help` and its `connections` and `sessions` subcommands for the exact command surface. Create the connection in Admin, or provide connection JSON through a protected file or stdin so credentials never appear in process arguments. Do not place an OpenAI key directly in a shell command.
+
+Create a session request file:
+
+```json
+{
+  "connection_id": "your-everstack-connection-id",
+  "idempotency_key": "a-unique-persisted-request-id",
+  "model": "your-enabled-openai-model",
+  "environment": { "type": "none" },
+  "input": "Suggest three small milestones for my first agent project."
+}
+```
+
+Then create the session and page through its durable Everstack history:
+
+```bash
+evs agents openai sessions create --file openai-session.json > openai-session-result.json
+session_id="$(jq -er '.id' openai-session-result.json)"
+evs agents openai sessions events "$session_id" --after 0 --limit 100
+evs agents openai sessions get "$session_id"
+```
+
+For a sandbox task, change the environment to `{ "type": "self_hosted" }` only when the instance reports that mode, and ask for work that needs the connected `/workspace`. That path also requires the matching restricted executor key and the installed Firecracker guest described above.
+
+The CLI uses the currently selected, device-authenticated instance. Session IDs and event cursors are safe to persist. Treat response bodies and temporary artifact download URLs as sensitive operational data.
+
+Retain the request ID after a timeout. Check the saved session before retrying a creation or follow-up. Everstack does not promise exactly-once execution when the upstream outcome is unknown.
+
+## Node SDK
+
+The official SDK exports a dedicated resource for bearer-authenticated operations:
+
+```ts
+import { OpenAIAgents } from '@everstack/node'
+
+const agents = new OpenAIAgents({
+  baseUrl: process.env.EVS_API_URL!,
+  accessToken: process.env.EVS_ACCESS_TOKEN!,
+})
+
+const session = await agents.sessions.create({
+  connection_id: process.env.EVS_OPENAI_CONNECTION_ID!,
+  idempotency_key: crypto.randomUUID(), // Persist this before sending.
+  model: process.env.OPENAI_MODEL!,
+  environment: { type: 'none' },
+  input: 'Describe the next steps for a small coding task.',
+})
+
+const history = await agents.sessions.events(session.id)
+console.log(session.status, history.data)
+```
+
+A callback can supply a refreshed bearer token for each request. The resource never retries mutations automatically. Continue pagination with `history.next_cursor` while `history.has_more` is true.
+
+The Python SDK exposes `client.openai_agents`; the Go SDK exposes `client.OpenAIAgents`. Both use the same instance-owned session IDs and durable event cursor.
+
+## Tools, approvals and files
+
+Select enabled webhook or proxy functions and MCP tools when creating the session. Resource ownership and session grants are checked again before each invocation. Native isolated-mode functions are not currently supported by this integration.
+
+Approval requests show the tool, resource and sanitized arguments. An instance owner or administrator can approve or deny them. If tool execution may have succeeded but its result could not be saved, Everstack reports `recovery_required` and does not automatically execute the action again.
+
+For a connected Everstack sandbox, upload an input and specify its workspace destination to make it available to the agent:
+
+```ts
+await agents.sessions.uploadInput(session.id, {
+  filename: 'input.txt',
+  content_type: 'text/plain',
+  content_base64: Buffer.from('Example input').toString('base64'),
+  destination: '/workspace/input.txt',
+})
+
+const artifact = await agents.sessions.exportArtifact(session.id, '/workspace/result.txt')
+const download = await agents.sessions.artifactDownload(session.id, artifact.object_id)
+// download.url is temporary. Keep signed download URLs out of logs.
+```
+
+Omitting `destination` retains the input in storage without attaching it to the workspace. The Admin upload control accepts files up to 1 MiB. Storage quota and retention checks still apply. File export requires an existing file inside the session workspace.
+
+Retained inputs, exports and download links require a configured Everstack Storage service. In Everstack Cloud, that means the environment's managed-storage cell, bucket-scoped credential, tenant placement and gateway switch must all be enabled and healthy. A working Firecracker workspace alone does not make files durable. If storage is unavailable, use the conversation without files; do not interpret an empty Files panel as proof that an upload or export succeeded.
+
+| Capability | Supported behavior |
+| --- | --- |
+| Conversation | No-sandbox sessions and follow-ups with retained history |
+| Compute | Configured Everstack executor; restricted environment key required |
+| Functions | Existing webhook and proxy functions |
+| MCP | Instance-owned tools with durable session grants and required approvals |
+| Files | Retained inputs, workspace attachment, export, temporary downloads and deletion |
+| Usage | Sparse provider-reported tokens; missing counters remain unavailable |
+| Upstream replay | Not supported by OpenAI; Everstack reconciles saved items |
+| Exactly-once side effects | Not promised across ambiguous failures; automatic re-execution is disabled |
+
+## API surface and common setup errors
+
+Choose the transport that fits your client:
+
+- **REST** uses the instance-owned `/v1/openai-agents` paths below and is what the CLI and language SDK resources call.
+- **ConnectRPC** uses `everstack.openai_agents.v1.OpenAIAgentsService` over HTTP/1.1 or HTTP/2 with Connect framing.
+- **gRPC** uses the same protobuf service over HTTP/2.
+
+The generated protobuf messages and RPC methods are the contract for gRPC and ConnectRPC. The Connect JSON reference documents their procedure-style POST paths. The separate REST reference is maintained from the custom HTTP handler's wire contract. All three transports apply the same authenticated organization and instance scope, permissions, durable idempotency intent, and cleanup rules. REST clients must keep creation and input idempotency keys across ambiguous outcomes; switching transports or minting a new key does not make an unknown mutation safe to repeat.
+
+Connect JSON clients use the generated service descriptor and attach the Everstack bearer token to each request:
+
+```ts
+import { createClient } from '@connectrpc/connect'
+import { createConnectTransport } from '@connectrpc/connect-node'
+import { OpenAIAgentsService } from '@everstack/node'
+
+const transport = createConnectTransport({
+  baseUrl: process.env.EVS_API_URL!,
+  httpVersion: '2',
+  useBinaryFormat: false,
+  interceptors: [(next) => async (request) => {
+    request.header.set('Authorization', `Bearer ${process.env.EVS_ACCESS_TOKEN!}`)
+    return next(request)
+  }],
+})
+const rpc = createClient(OpenAIAgentsService, transport)
+const capabilities = await rpc.getCapabilities({})
+```
+
+For native gRPC, use TLS and the generated Go client. The target is the gateway authority without an `https://` prefix:
+
+```go
+creds := credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})
+conn, err := grpc.NewClient(os.Getenv("EVS_GRPC_TARGET"), grpc.WithTransportCredentials(creds))
+if err != nil { log.Fatal(err) }
+defer conn.Close()
+
+client := openaiagents.NewOpenAIAgentsServiceClient(conn)
+ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "Bearer "+os.Getenv("EVS_ACCESS_TOKEN"))
+capabilities, err := client.GetCapabilities(ctx, &openaiagents.GetCapabilitiesRequest{})
+```
+
+Use imports from `google.golang.org/grpc`, `google.golang.org/grpc/credentials`, `google.golang.org/grpc/metadata`, and `github.com/everstacklabs/everstack/pkg/grpc/everstack/openai_agents/v1`. Keep credentials in environment or an approved credential provider, not source code.
+
+REST endpoints:
+
+| Operation | Endpoint |
+| --- | --- |
+| Capabilities | `GET /v1/openai-agents/capabilities` |
+| Connections | `GET, POST /v1/openai-agents/connections` |
+| Sessions | `GET, POST /v1/openai-agents/sessions` |
+| Continue a session | `POST /v1/openai-agents/sessions/{session-id}/input` |
+| Durable history | `GET /v1/openai-agents/sessions/{session-id}/events` |
+| Cancel or delete | `POST .../cancel`, `DELETE /v1/openai-agents/sessions/{session-id}` |
+| Files and exports | `.../inputs`, `.../artifacts`, `.../artifacts/export` |
+| Usage | `GET /v1/openai-agents/sessions/{session-id}/usage` |
+| Approvals | `GET /v1/openai-agents/approvals`, `POST .../{approval-id}/resolve` |
+
+Every resource is scoped to the authenticated organization and instance. Use a device-login bearer token for writes; instance API keys are read-only for this integration. List-session-events pagination uses Everstack's durable `after` cursor and bounded `limit`; advance with `next_cursor` while `has_more` is true. It is separate from the non-replayable upstream stream cursor.
+
+Usage counters are optional. A reported or unavailable response may omit `input_tokens`, `output_tokens`, `total_tokens`, and `updated_at`; generated protobuf clients represent those absent counters as unset optional fields. Do not turn absence into zero.
+
+See [Authentication](/getting-started/authentication), the [OpenAI Agents REST reference](/api-reference/openai-agents-rest), the [OpenAI Agents Connect JSON reference](/api-reference/openai-agents), the [native Everstack Agents API reference](/api-reference/agents), [Storage](/getting-started/storage), and [Sandboxes](/getting-started/sandboxes) for the surrounding contracts.
+
+| Symptom | What to check |
+| --- | --- |
+| Connection validation returns 403 | The application key has `List models: Read`, the model is permitted, and the key belongs to the configured organization and project. |
+| Environment connection fails | The executor key and application key have the same organization, project and principal owner; the executor key is restricted to Environment connection. |
+| `self_hosted` is absent | The gateway has no supported Firecracker backend. Do not force an unreported mode. |
+| `self_hosted` is offered but startup fails | Read `last_error` and verify the named executor rootfs is installed on every eligible Firecracker host. Capability discovery does not validate that host file. |
+| Session remains pending or reports failed readiness | Read `last_error`; upstream session creation, sandbox creation and environment connection are separate phases. |
+| Files are unavailable | Verify the Storage service and, on Cloud, the managed-storage cell and tenant placement. The workspace and retained artifacts have different lifetimes. |
+| Usage says unavailable | OpenAI has not reported token counters for the saved turns. This does not mean zero usage or zero cost. |
+| Input or tool result says recovery is required | Preserve the idempotency key and inspect saved events. Do not create a new key or repeat an external side effect until the prior outcome is reconciled. |
+
+## Readiness, recovery and cleanup
+
+An Everstack sandbox is ready only after OpenAI reports `agent.session.environment.connected`. Pending or failed executor connections must not be displayed as ready.
+
+A successful turn is reported by `agent.session.turn.completed`. Inspect individual tool outcomes too. `agent.session.idle` alone is not evidence of success.
+
+Upstream streams do not replay old events. Everstack's history cursor addresses retained local events; recovery must also reconcile saved upstream items. A disconnected stream must not automatically submit the task again.
+
+Export the files you need before deleting a session or terminating its compute. Sandbox workspace files, retained Everstack artifacts and upstream-held files have different lifetimes. Cleanup failures remain visible and retryable.
+
+## Data and usage
+
+OpenAI retains session state. The Agents API currently supports US data residency and does not support Zero Data Retention, including when using self-hosted compute.
+
+Provider-reported model usage is distinct from Everstack sandbox and retained-storage usage. Missing provider data must be shown as unavailable. Do not infer a zero balance, a zero charge, or an enforceable upstream spending cap from missing usage.
+
+## Qualification status
+
+Protocol tests, a live upstream session, image validation, a local product test and a deployed Cloud/self-hosted journey are separate evidence levels. Passing one does not qualify the others. Check the release notes and your instance's capabilities before enabling this integration; this page does not claim a completed production release.
+
+Official references: [overview](https://developers.openai.com/api/docs/guides/agents-api/overview), [self-hosted environments](https://developers.openai.com/api/docs/guides/agents-api/environments/self-hosted), [sessions](https://developers.openai.com/api/docs/guides/agents-api/sessions).

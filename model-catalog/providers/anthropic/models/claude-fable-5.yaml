@@ -2,13 +2,14 @@ name: "claude-fable-5"
 display_name: "Claude Fable 5"
 family: "claude-fable"
 status: "stable"
-release_date: "2026-06-07"
+release_date: "2026-06-09"
 
 cost:
   input_per_1k: 0.01
   output_per_1k: 0.05
   cache_read_per_1k: 0.001
   cache_write_per_1k: 0.0125
+  cache_write_1h_per_1k: 0.02
 
 limits:
   max_tokens: 1000000
@@ -25,6 +26,7 @@ modalities:
   input: ["text","image","pdf"]
   output: ["text"]
 
+knowledge_cutoff: "2026-01"
 notes: "Claude model for creative writing, analysis, and controlled agent workflows"
 parameters:
   - key: "max_output_tokens"

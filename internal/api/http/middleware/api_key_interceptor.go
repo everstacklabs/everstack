@@ -210,13 +210,19 @@ func (i *APIKeyInterceptor) WithAPIKeyValidation(next http.Handler) http.Handler
 			return
 		}
 
-		// Explicitly reject Authorization header for non-exempt routes
+		// Explicitly reject Authorization header for non-exempt routes.
+		// A Bearer token here is almost always an OpenAI SDK pointed at /v1
+		// instead of /openai/v1, so name the endpoint that does accept Bearer
+		// rather than only the header this surface wants.
 		if hasAuthBearer(r.Header) {
-			i.writeErrorResponse(w, http.StatusUnauthorized, "Invalid authorization token; use "+common.EverstackApiKey, correlationID)
+			i.writeErrorResponse(w, http.StatusUnauthorized,
+				"Invalid authorization token; use "+common.EverstackApiKey+
+					", or send OpenAI-compatible requests to /openai/v1, which accepts Authorization: Bearer",
+				correlationID)
 			return
 		}
 		if !i.validateAPIKey(r) {
-			i.writeErrorResponse(w, http.StatusUnauthorized, "API key is required. Create one from the dashboard (Settings > Vault > API Keys). Docs: https://docs.everstack.dev/docs/documentation/vault/api-keys", correlationID)
+			i.writeErrorResponse(w, http.StatusUnauthorized, "API key is required. Create one from the dashboard (Settings > Vault > API Keys). Docs: https://docs.everstack.ai/getting-started/vault/api-keys", correlationID)
 			return
 		}
 		validateDuration := time.Since(validateStart)

@@ -1,4 +1,4 @@
-module github.com/everstacklabs/everstack-go
+module github.com/everstacklabs/everstack/packages/sdks/everstack-go
 
 go 1.22.0
 

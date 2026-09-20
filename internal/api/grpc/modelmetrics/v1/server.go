@@ -25,10 +25,10 @@ func NewServer(service *modelmetrics.Service) *Server {
 	return &Server{service: service}
 }
 
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
 	return modelmetricsconnect.NewPublicModelMetricsServiceHandler(
 		s,
-		connect.WithInterceptors(interceptors...),
+		opts...,
 	)
 }
 

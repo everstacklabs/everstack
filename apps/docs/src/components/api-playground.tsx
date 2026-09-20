@@ -61,7 +61,7 @@ function HighlightedCode({ code, lang }: { code: string; lang: string }) {
 export function APIPlayground({
   method,
   path,
-  baseUrl = "https://gateway.everstack.ai",
+  baseUrl = "",
   defaultBody,
   parameters = [],
 }: APIPlaygroundProps) {
@@ -136,7 +136,7 @@ export function APIPlayground({
         <button
           type="button"
           onClick={send}
-          disabled={loading}
+          disabled={loading || !serverUrl.trim()}
           className="rounded-md bg-fd-primary px-3 py-1.5 text-xs font-medium text-fd-primary-foreground hover:opacity-90 disabled:opacity-50"
         >
           {loading ? "Sending..." : "Send"}
@@ -149,15 +149,20 @@ export function APIPlayground({
             className="mb-1 block text-xs font-medium text-fd-muted-foreground"
             htmlFor="api-playground-base-url"
           >
-            Base URL
+            Base URL <span className="text-red-500">*</span>
           </label>
           <input
             id="api-playground-base-url"
             type="text"
             value={serverUrl}
             onChange={(e) => setServerUrl(e.target.value)}
-            className="w-full rounded-md border border-fd-border bg-fd-background px-3 py-1.5 text-sm text-fd-foreground"
+            placeholder="https://{instance}.{region}.everstack.ai"
+            className="w-full rounded-md border border-fd-border bg-fd-background px-3 py-1.5 text-sm text-fd-foreground placeholder:text-fd-muted-foreground"
           />
+          <p className="mt-1 text-xs text-fd-muted-foreground">
+            Your instance endpoint, shown on the instance page in the dashboard.
+            Each instance has its own host; there is no shared API host.
+          </p>
         </div>
 
         <div>

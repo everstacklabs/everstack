@@ -5,6 +5,7 @@ import { SitesService } from '@everstack/proto/everstack/hosting/v1/hosting_serv
 import {
   DeleteSiteRequestSchema,
   GetSiteRequestSchema,
+  HostingCapabilitiesRequestSchema,
   ListSitesRequestSchema,
   SiteAccess as ProtoSiteAccess,
   UpdateSiteRequestSchema,
@@ -123,6 +124,29 @@ const sitesClient = createClientFor(SitesService)(transport)
 export type ListSitesParams = {
   pageSize?: number
   pageToken?: string
+}
+
+/**
+ * Capability probe. Unlike every other call here it does NOT go through the
+ * server's ready() guard, so it still answers when hosting is switched off
+ * for the deployment. That is what lets the UI say "not enabled here"
+ * instead of surfacing a raw Unavailable from ListSites.
+ */
+export interface HostingCapabilities {
+  hostingEnabled: boolean
+  anonymousPublishingEnabled: boolean
+  baseDomain: string
+}
+
+export async function getHostingCapabilities(): Promise<HostingCapabilities> {
+  const response = await sitesClient.getHostingCapabilities(
+    create(HostingCapabilitiesRequestSchema, {}),
+  )
+  return {
+    hostingEnabled: response.hostingEnabled,
+    anonymousPublishingEnabled: response.anonymousPublishingEnabled,
+    baseDomain: response.baseDomain,
+  }
 }
 
 export async function listSites(

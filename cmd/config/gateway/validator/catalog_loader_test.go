@@ -1,12 +1,93 @@
 package validator
 
 import (
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 )
+
+func TestCurrentCatalogCarriesAstraAndFable51OfficialMetadata(t *testing.T) {
+	modelsYAML, _, err := LoadCatalogFromDirectory("../../../../model-catalog")
+	if err != nil {
+		t.Fatalf("LoadCatalogFromDirectory() error = %v", err)
+	}
+	models, err := ParseModelsDefaults(modelsYAML)
+	if err != nil {
+		t.Fatalf("ParseModelsDefaults() error = %v", err)
+	}
+
+	findModel := func(providerName, modelName string) DefaultModel {
+		t.Helper()
+		provider, ok := models.Providers[providerName]
+		if !ok {
+			t.Fatalf("provider %q is not in the catalog", providerName)
+		}
+		for _, model := range provider.Models {
+			if model.Name == modelName {
+				return model
+			}
+		}
+		t.Fatalf("%s/%s is not in the catalog", providerName, modelName)
+		return DefaultModel{}
+	}
+
+	assertEffortVariants := func(model DefaultModel) {
+		t.Helper()
+		got := make([]string, 0, len(model.Variants))
+		for _, variant := range model.Variants {
+			got = append(got, variant.ID)
+		}
+		want := []string{"low", "medium", "high", "xhigh", "max"}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%s variants = %v, want %v", model.Name, got, want)
+		}
+	}
+
+	astra := findModel("openai", "gpt-6-astra")
+	if astra.APIType != "responses" {
+		t.Errorf("gpt-6-astra API type = %q, want responses", astra.APIType)
+	}
+	if astra.ReleaseDate != "2026-09-03" || astra.MaxTokens != 1_050_000 || astra.MaxOutputTokens != 128_000 {
+		t.Errorf("gpt-6-astra release/limits = %q/%d/%d, want 2026-09-03/1050000/128000",
+			astra.ReleaseDate, astra.MaxTokens, astra.MaxOutputTokens)
+	}
+	if astra.InputCost != 0.01 || astra.OutputCost != 0.05 || astra.CacheReadCost != 0.001 || astra.CacheWriteCost != 0.0125 {
+		t.Errorf("gpt-6-astra costs = %g/%g/%g/%g, want .01/.05/.001/.0125",
+			astra.InputCost, astra.OutputCost, astra.CacheReadCost, astra.CacheWriteCost)
+	}
+	if astra.LongContextThresholdTokens != 272_000 || astra.LongContextInputMultiplier != 2 ||
+		astra.LongContextCacheMultiplier != 2 || astra.LongContextOutputMultiplier != 1.5 {
+		t.Errorf("gpt-6-astra long-context pricing = %d/%g/%g/%g, want 272000/2/2/1.5",
+			astra.LongContextThresholdTokens, astra.LongContextInputMultiplier,
+			astra.LongContextCacheMultiplier, astra.LongContextOutputMultiplier)
+	}
+	if !astra.StructuredOutput {
+		t.Error("gpt-6-astra must advertise structured output")
+	}
+	assertEffortVariants(astra)
+
+	fable51 := findModel("anthropic", "claude-fable-5-1")
+	if fable51.ReleaseDate != "2026-09-01" || fable51.MaxTokens != 1_000_000 || fable51.MaxOutputTokens != 128_000 {
+		t.Errorf("claude-fable-5-1 release/limits = %q/%d/%d, want 2026-09-01/1000000/128000",
+			fable51.ReleaseDate, fable51.MaxTokens, fable51.MaxOutputTokens)
+	}
+	if fable51.InputCost != 0.01 || fable51.OutputCost != 0.05 || fable51.CacheReadCost != 0.00025 || fable51.CacheWriteCost != 0.0125 {
+		t.Errorf("claude-fable-5-1 costs = %g/%g/%g/%g, want .01/.05/.00025/.0125",
+			fable51.InputCost, fable51.OutputCost, fable51.CacheReadCost, fable51.CacheWriteCost)
+	}
+	if fable51.CacheWrite1hCost != 0.02 {
+		t.Errorf("claude-fable-5-1 1h cache write cost = %g, want .02", fable51.CacheWrite1hCost)
+	}
+	assertEffortVariants(fable51)
+
+	fable5 := findModel("anthropic", "claude-fable-5")
+	if fable5.ReleaseDate != "2026-06-09" {
+		t.Errorf("claude-fable-5 release date = %q, want 2026-06-09", fable5.ReleaseDate)
+	}
+}
 
 func TestBuildLegacyModelsProviderPreservesReleaseDate(t *testing.T) {
 	t.Parallel()

@@ -23,18 +23,24 @@ const (
 	OperationsService_GetSession_FullMethodName               = "/everstack.operations.v1.OperationsService/GetSession"
 	OperationsService_GetOverview_FullMethodName              = "/everstack.operations.v1.OperationsService/GetOverview"
 	OperationsService_ListOrganizations_FullMethodName        = "/everstack.operations.v1.OperationsService/ListOrganizations"
+	OperationsService_GetOrganization_FullMethodName          = "/everstack.operations.v1.OperationsService/GetOrganization"
 	OperationsService_ListInstallations_FullMethodName        = "/everstack.operations.v1.OperationsService/ListInstallations"
 	OperationsService_ListLicenses_FullMethodName             = "/everstack.operations.v1.OperationsService/ListLicenses"
 	OperationsService_ListInstances_FullMethodName            = "/everstack.operations.v1.OperationsService/ListInstances"
 	OperationsService_GetInstance_FullMethodName              = "/everstack.operations.v1.OperationsService/GetInstance"
+	OperationsService_GetInstanceDiagnostics_FullMethodName   = "/everstack.operations.v1.OperationsService/GetInstanceDiagnostics"
+	OperationsService_ListInstanceAutomations_FullMethodName  = "/everstack.operations.v1.OperationsService/ListInstanceAutomations"
+	OperationsService_ChangeInstanceAutomation_FullMethodName = "/everstack.operations.v1.OperationsService/ChangeInstanceAutomation"
 	OperationsService_ChangeInstanceLifecycle_FullMethodName  = "/everstack.operations.v1.OperationsService/ChangeInstanceLifecycle"
 	OperationsService_ListSandboxes_FullMethodName            = "/everstack.operations.v1.OperationsService/ListSandboxes"
 	OperationsService_ListEnvironments_FullMethodName         = "/everstack.operations.v1.OperationsService/ListEnvironments"
 	OperationsService_GetEnvironment_FullMethodName           = "/everstack.operations.v1.OperationsService/GetEnvironment"
+	OperationsService_GetWorkload_FullMethodName              = "/everstack.operations.v1.OperationsService/GetWorkload"
 	OperationsService_ListEvents_FullMethodName               = "/everstack.operations.v1.OperationsService/ListEvents"
 	OperationsService_ListAuditEvents_FullMethodName          = "/everstack.operations.v1.OperationsService/ListAuditEvents"
 	OperationsService_GetIdentityOverview_FullMethodName      = "/everstack.operations.v1.OperationsService/GetIdentityOverview"
 	OperationsService_ListIdentityUsers_FullMethodName        = "/everstack.operations.v1.OperationsService/ListIdentityUsers"
+	OperationsService_GetCustomerUser_FullMethodName          = "/everstack.operations.v1.OperationsService/GetCustomerUser"
 	OperationsService_ListIdentitySessions_FullMethodName     = "/everstack.operations.v1.OperationsService/ListIdentitySessions"
 	OperationsService_RevokeIdentitySession_FullMethodName    = "/everstack.operations.v1.OperationsService/RevokeIdentitySession"
 	OperationsService_ListIdentityConnections_FullMethodName  = "/everstack.operations.v1.OperationsService/ListIdentityConnections"
@@ -45,6 +51,9 @@ const (
 	OperationsService_AcknowledgeIncident_FullMethodName      = "/everstack.operations.v1.OperationsService/AcknowledgeIncident"
 	OperationsService_SnoozeIncident_FullMethodName           = "/everstack.operations.v1.OperationsService/SnoozeIncident"
 	OperationsService_ResolveIncident_FullMethodName          = "/everstack.operations.v1.OperationsService/ResolveIncident"
+	OperationsService_AssignIncident_FullMethodName           = "/everstack.operations.v1.OperationsService/AssignIncident"
+	OperationsService_AddIncidentNote_FullMethodName          = "/everstack.operations.v1.OperationsService/AddIncidentNote"
+	OperationsService_ListIncidentsForSubject_FullMethodName  = "/everstack.operations.v1.OperationsService/ListIncidentsForSubject"
 	OperationsService_ListAlertRules_FullMethodName           = "/everstack.operations.v1.OperationsService/ListAlertRules"
 	OperationsService_ListNotificationTargets_FullMethodName  = "/everstack.operations.v1.OperationsService/ListNotificationTargets"
 	OperationsService_GetHostingOverview_FullMethodName       = "/everstack.operations.v1.OperationsService/GetHostingOverview"
@@ -65,18 +74,24 @@ type OperationsServiceClient interface {
 	GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*GetSessionResponse, error)
 	GetOverview(ctx context.Context, in *GetOverviewRequest, opts ...grpc.CallOption) (*GetOverviewResponse, error)
 	ListOrganizations(ctx context.Context, in *ListOrganizationsRequest, opts ...grpc.CallOption) (*ListOrganizationsResponse, error)
+	GetOrganization(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*GetOrganizationResponse, error)
 	ListInstallations(ctx context.Context, in *ListInstallationsRequest, opts ...grpc.CallOption) (*ListInstallationsResponse, error)
 	ListLicenses(ctx context.Context, in *ListLicensesRequest, opts ...grpc.CallOption) (*ListLicensesResponse, error)
 	ListInstances(ctx context.Context, in *ListInstancesRequest, opts ...grpc.CallOption) (*ListInstancesResponse, error)
 	GetInstance(ctx context.Context, in *GetInstanceRequest, opts ...grpc.CallOption) (*GetInstanceResponse, error)
+	GetInstanceDiagnostics(ctx context.Context, in *GetInstanceDiagnosticsRequest, opts ...grpc.CallOption) (*GetInstanceDiagnosticsResponse, error)
+	ListInstanceAutomations(ctx context.Context, in *ListInstanceAutomationsRequest, opts ...grpc.CallOption) (*ListInstanceAutomationsResponse, error)
+	ChangeInstanceAutomation(ctx context.Context, in *ChangeInstanceAutomationRequest, opts ...grpc.CallOption) (*ChangeInstanceAutomationResponse, error)
 	ChangeInstanceLifecycle(ctx context.Context, in *ChangeInstanceLifecycleRequest, opts ...grpc.CallOption) (*ChangeInstanceLifecycleResponse, error)
 	ListSandboxes(ctx context.Context, in *ListSandboxesRequest, opts ...grpc.CallOption) (*ListSandboxesResponse, error)
 	ListEnvironments(ctx context.Context, in *ListEnvironmentsRequest, opts ...grpc.CallOption) (*ListEnvironmentsResponse, error)
 	GetEnvironment(ctx context.Context, in *GetEnvironmentRequest, opts ...grpc.CallOption) (*GetEnvironmentResponse, error)
+	GetWorkload(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*GetWorkloadResponse, error)
 	ListEvents(ctx context.Context, in *ListEventsRequest, opts ...grpc.CallOption) (*ListEventsResponse, error)
 	ListAuditEvents(ctx context.Context, in *ListAuditEventsRequest, opts ...grpc.CallOption) (*ListAuditEventsResponse, error)
 	GetIdentityOverview(ctx context.Context, in *GetIdentityOverviewRequest, opts ...grpc.CallOption) (*GetIdentityOverviewResponse, error)
 	ListIdentityUsers(ctx context.Context, in *ListIdentityUsersRequest, opts ...grpc.CallOption) (*ListIdentityUsersResponse, error)
+	GetCustomerUser(ctx context.Context, in *GetCustomerUserRequest, opts ...grpc.CallOption) (*GetCustomerUserResponse, error)
 	ListIdentitySessions(ctx context.Context, in *ListIdentitySessionsRequest, opts ...grpc.CallOption) (*ListIdentitySessionsResponse, error)
 	RevokeIdentitySession(ctx context.Context, in *RevokeIdentitySessionRequest, opts ...grpc.CallOption) (*RevokeIdentitySessionResponse, error)
 	ListIdentityConnections(ctx context.Context, in *ListIdentityConnectionsRequest, opts ...grpc.CallOption) (*ListIdentityConnectionsResponse, error)
@@ -89,6 +104,9 @@ type OperationsServiceClient interface {
 	AcknowledgeIncident(ctx context.Context, in *AcknowledgeIncidentRequest, opts ...grpc.CallOption) (*AcknowledgeIncidentResponse, error)
 	SnoozeIncident(ctx context.Context, in *SnoozeIncidentRequest, opts ...grpc.CallOption) (*SnoozeIncidentResponse, error)
 	ResolveIncident(ctx context.Context, in *ResolveIncidentRequest, opts ...grpc.CallOption) (*ResolveIncidentResponse, error)
+	AssignIncident(ctx context.Context, in *AssignIncidentRequest, opts ...grpc.CallOption) (*AssignIncidentResponse, error)
+	AddIncidentNote(ctx context.Context, in *AddIncidentNoteRequest, opts ...grpc.CallOption) (*AddIncidentNoteResponse, error)
+	ListIncidentsForSubject(ctx context.Context, in *ListIncidentsForSubjectRequest, opts ...grpc.CallOption) (*ListIncidentsForSubjectResponse, error)
 	ListAlertRules(ctx context.Context, in *ListAlertRulesRequest, opts ...grpc.CallOption) (*ListAlertRulesResponse, error)
 	ListNotificationTargets(ctx context.Context, in *ListNotificationTargetsRequest, opts ...grpc.CallOption) (*ListNotificationTargetsResponse, error)
 	GetHostingOverview(ctx context.Context, in *v1.HostingOverviewRequest, opts ...grpc.CallOption) (*v1.HostingOverviewResponse, error)
@@ -137,6 +155,16 @@ func (c *operationsServiceClient) ListOrganizations(ctx context.Context, in *Lis
 	return out, nil
 }
 
+func (c *operationsServiceClient) GetOrganization(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*GetOrganizationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetOrganizationResponse)
+	err := c.cc.Invoke(ctx, OperationsService_GetOrganization_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *operationsServiceClient) ListInstallations(ctx context.Context, in *ListInstallationsRequest, opts ...grpc.CallOption) (*ListInstallationsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListInstallationsResponse)
@@ -171,6 +199,36 @@ func (c *operationsServiceClient) GetInstance(ctx context.Context, in *GetInstan
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetInstanceResponse)
 	err := c.cc.Invoke(ctx, OperationsService_GetInstance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *operationsServiceClient) GetInstanceDiagnostics(ctx context.Context, in *GetInstanceDiagnosticsRequest, opts ...grpc.CallOption) (*GetInstanceDiagnosticsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetInstanceDiagnosticsResponse)
+	err := c.cc.Invoke(ctx, OperationsService_GetInstanceDiagnostics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *operationsServiceClient) ListInstanceAutomations(ctx context.Context, in *ListInstanceAutomationsRequest, opts ...grpc.CallOption) (*ListInstanceAutomationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListInstanceAutomationsResponse)
+	err := c.cc.Invoke(ctx, OperationsService_ListInstanceAutomations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *operationsServiceClient) ChangeInstanceAutomation(ctx context.Context, in *ChangeInstanceAutomationRequest, opts ...grpc.CallOption) (*ChangeInstanceAutomationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ChangeInstanceAutomationResponse)
+	err := c.cc.Invoke(ctx, OperationsService_ChangeInstanceAutomation_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -217,6 +275,16 @@ func (c *operationsServiceClient) GetEnvironment(ctx context.Context, in *GetEnv
 	return out, nil
 }
 
+func (c *operationsServiceClient) GetWorkload(ctx context.Context, in *GetWorkloadRequest, opts ...grpc.CallOption) (*GetWorkloadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetWorkloadResponse)
+	err := c.cc.Invoke(ctx, OperationsService_GetWorkload_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *operationsServiceClient) ListEvents(ctx context.Context, in *ListEventsRequest, opts ...grpc.CallOption) (*ListEventsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListEventsResponse)
@@ -251,6 +319,16 @@ func (c *operationsServiceClient) ListIdentityUsers(ctx context.Context, in *Lis
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListIdentityUsersResponse)
 	err := c.cc.Invoke(ctx, OperationsService_ListIdentityUsers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *operationsServiceClient) GetCustomerUser(ctx context.Context, in *GetCustomerUserRequest, opts ...grpc.CallOption) (*GetCustomerUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCustomerUserResponse)
+	err := c.cc.Invoke(ctx, OperationsService_GetCustomerUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -357,6 +435,36 @@ func (c *operationsServiceClient) ResolveIncident(ctx context.Context, in *Resol
 	return out, nil
 }
 
+func (c *operationsServiceClient) AssignIncident(ctx context.Context, in *AssignIncidentRequest, opts ...grpc.CallOption) (*AssignIncidentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AssignIncidentResponse)
+	err := c.cc.Invoke(ctx, OperationsService_AssignIncident_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *operationsServiceClient) AddIncidentNote(ctx context.Context, in *AddIncidentNoteRequest, opts ...grpc.CallOption) (*AddIncidentNoteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddIncidentNoteResponse)
+	err := c.cc.Invoke(ctx, OperationsService_AddIncidentNote_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *operationsServiceClient) ListIncidentsForSubject(ctx context.Context, in *ListIncidentsForSubjectRequest, opts ...grpc.CallOption) (*ListIncidentsForSubjectResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListIncidentsForSubjectResponse)
+	err := c.cc.Invoke(ctx, OperationsService_ListIncidentsForSubject_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *operationsServiceClient) ListAlertRules(ctx context.Context, in *ListAlertRulesRequest, opts ...grpc.CallOption) (*ListAlertRulesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListAlertRulesResponse)
@@ -447,18 +555,24 @@ type OperationsServiceServer interface {
 	GetSession(context.Context, *GetSessionRequest) (*GetSessionResponse, error)
 	GetOverview(context.Context, *GetOverviewRequest) (*GetOverviewResponse, error)
 	ListOrganizations(context.Context, *ListOrganizationsRequest) (*ListOrganizationsResponse, error)
+	GetOrganization(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error)
 	ListInstallations(context.Context, *ListInstallationsRequest) (*ListInstallationsResponse, error)
 	ListLicenses(context.Context, *ListLicensesRequest) (*ListLicensesResponse, error)
 	ListInstances(context.Context, *ListInstancesRequest) (*ListInstancesResponse, error)
 	GetInstance(context.Context, *GetInstanceRequest) (*GetInstanceResponse, error)
+	GetInstanceDiagnostics(context.Context, *GetInstanceDiagnosticsRequest) (*GetInstanceDiagnosticsResponse, error)
+	ListInstanceAutomations(context.Context, *ListInstanceAutomationsRequest) (*ListInstanceAutomationsResponse, error)
+	ChangeInstanceAutomation(context.Context, *ChangeInstanceAutomationRequest) (*ChangeInstanceAutomationResponse, error)
 	ChangeInstanceLifecycle(context.Context, *ChangeInstanceLifecycleRequest) (*ChangeInstanceLifecycleResponse, error)
 	ListSandboxes(context.Context, *ListSandboxesRequest) (*ListSandboxesResponse, error)
 	ListEnvironments(context.Context, *ListEnvironmentsRequest) (*ListEnvironmentsResponse, error)
 	GetEnvironment(context.Context, *GetEnvironmentRequest) (*GetEnvironmentResponse, error)
+	GetWorkload(context.Context, *GetWorkloadRequest) (*GetWorkloadResponse, error)
 	ListEvents(context.Context, *ListEventsRequest) (*ListEventsResponse, error)
 	ListAuditEvents(context.Context, *ListAuditEventsRequest) (*ListAuditEventsResponse, error)
 	GetIdentityOverview(context.Context, *GetIdentityOverviewRequest) (*GetIdentityOverviewResponse, error)
 	ListIdentityUsers(context.Context, *ListIdentityUsersRequest) (*ListIdentityUsersResponse, error)
+	GetCustomerUser(context.Context, *GetCustomerUserRequest) (*GetCustomerUserResponse, error)
 	ListIdentitySessions(context.Context, *ListIdentitySessionsRequest) (*ListIdentitySessionsResponse, error)
 	RevokeIdentitySession(context.Context, *RevokeIdentitySessionRequest) (*RevokeIdentitySessionResponse, error)
 	ListIdentityConnections(context.Context, *ListIdentityConnectionsRequest) (*ListIdentityConnectionsResponse, error)
@@ -471,6 +585,9 @@ type OperationsServiceServer interface {
 	AcknowledgeIncident(context.Context, *AcknowledgeIncidentRequest) (*AcknowledgeIncidentResponse, error)
 	SnoozeIncident(context.Context, *SnoozeIncidentRequest) (*SnoozeIncidentResponse, error)
 	ResolveIncident(context.Context, *ResolveIncidentRequest) (*ResolveIncidentResponse, error)
+	AssignIncident(context.Context, *AssignIncidentRequest) (*AssignIncidentResponse, error)
+	AddIncidentNote(context.Context, *AddIncidentNoteRequest) (*AddIncidentNoteResponse, error)
+	ListIncidentsForSubject(context.Context, *ListIncidentsForSubjectRequest) (*ListIncidentsForSubjectResponse, error)
 	ListAlertRules(context.Context, *ListAlertRulesRequest) (*ListAlertRulesResponse, error)
 	ListNotificationTargets(context.Context, *ListNotificationTargetsRequest) (*ListNotificationTargetsResponse, error)
 	GetHostingOverview(context.Context, *v1.HostingOverviewRequest) (*v1.HostingOverviewResponse, error)
@@ -498,6 +615,9 @@ func (UnimplementedOperationsServiceServer) GetOverview(context.Context, *GetOve
 func (UnimplementedOperationsServiceServer) ListOrganizations(context.Context, *ListOrganizationsRequest) (*ListOrganizationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListOrganizations not implemented")
 }
+func (UnimplementedOperationsServiceServer) GetOrganization(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetOrganization not implemented")
+}
 func (UnimplementedOperationsServiceServer) ListInstallations(context.Context, *ListInstallationsRequest) (*ListInstallationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListInstallations not implemented")
 }
@@ -509,6 +629,15 @@ func (UnimplementedOperationsServiceServer) ListInstances(context.Context, *List
 }
 func (UnimplementedOperationsServiceServer) GetInstance(context.Context, *GetInstanceRequest) (*GetInstanceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetInstance not implemented")
+}
+func (UnimplementedOperationsServiceServer) GetInstanceDiagnostics(context.Context, *GetInstanceDiagnosticsRequest) (*GetInstanceDiagnosticsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetInstanceDiagnostics not implemented")
+}
+func (UnimplementedOperationsServiceServer) ListInstanceAutomations(context.Context, *ListInstanceAutomationsRequest) (*ListInstanceAutomationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListInstanceAutomations not implemented")
+}
+func (UnimplementedOperationsServiceServer) ChangeInstanceAutomation(context.Context, *ChangeInstanceAutomationRequest) (*ChangeInstanceAutomationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ChangeInstanceAutomation not implemented")
 }
 func (UnimplementedOperationsServiceServer) ChangeInstanceLifecycle(context.Context, *ChangeInstanceLifecycleRequest) (*ChangeInstanceLifecycleResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ChangeInstanceLifecycle not implemented")
@@ -522,6 +651,9 @@ func (UnimplementedOperationsServiceServer) ListEnvironments(context.Context, *L
 func (UnimplementedOperationsServiceServer) GetEnvironment(context.Context, *GetEnvironmentRequest) (*GetEnvironmentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetEnvironment not implemented")
 }
+func (UnimplementedOperationsServiceServer) GetWorkload(context.Context, *GetWorkloadRequest) (*GetWorkloadResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetWorkload not implemented")
+}
 func (UnimplementedOperationsServiceServer) ListEvents(context.Context, *ListEventsRequest) (*ListEventsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListEvents not implemented")
 }
@@ -533,6 +665,9 @@ func (UnimplementedOperationsServiceServer) GetIdentityOverview(context.Context,
 }
 func (UnimplementedOperationsServiceServer) ListIdentityUsers(context.Context, *ListIdentityUsersRequest) (*ListIdentityUsersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListIdentityUsers not implemented")
+}
+func (UnimplementedOperationsServiceServer) GetCustomerUser(context.Context, *GetCustomerUserRequest) (*GetCustomerUserResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCustomerUser not implemented")
 }
 func (UnimplementedOperationsServiceServer) ListIdentitySessions(context.Context, *ListIdentitySessionsRequest) (*ListIdentitySessionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListIdentitySessions not implemented")
@@ -563,6 +698,15 @@ func (UnimplementedOperationsServiceServer) SnoozeIncident(context.Context, *Sno
 }
 func (UnimplementedOperationsServiceServer) ResolveIncident(context.Context, *ResolveIncidentRequest) (*ResolveIncidentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResolveIncident not implemented")
+}
+func (UnimplementedOperationsServiceServer) AssignIncident(context.Context, *AssignIncidentRequest) (*AssignIncidentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AssignIncident not implemented")
+}
+func (UnimplementedOperationsServiceServer) AddIncidentNote(context.Context, *AddIncidentNoteRequest) (*AddIncidentNoteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AddIncidentNote not implemented")
+}
+func (UnimplementedOperationsServiceServer) ListIncidentsForSubject(context.Context, *ListIncidentsForSubjectRequest) (*ListIncidentsForSubjectResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListIncidentsForSubject not implemented")
 }
 func (UnimplementedOperationsServiceServer) ListAlertRules(context.Context, *ListAlertRulesRequest) (*ListAlertRulesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAlertRules not implemented")
@@ -663,6 +807,24 @@ func _OperationsService_ListOrganizations_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OperationsService_GetOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOrganizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OperationsServiceServer).GetOrganization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OperationsService_GetOrganization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OperationsServiceServer).GetOrganization(ctx, req.(*GetOrganizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _OperationsService_ListInstallations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListInstallationsRequest)
 	if err := dec(in); err != nil {
@@ -731,6 +893,60 @@ func _OperationsService_GetInstance_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(OperationsServiceServer).GetInstance(ctx, req.(*GetInstanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OperationsService_GetInstanceDiagnostics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetInstanceDiagnosticsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OperationsServiceServer).GetInstanceDiagnostics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OperationsService_GetInstanceDiagnostics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OperationsServiceServer).GetInstanceDiagnostics(ctx, req.(*GetInstanceDiagnosticsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OperationsService_ListInstanceAutomations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListInstanceAutomationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OperationsServiceServer).ListInstanceAutomations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OperationsService_ListInstanceAutomations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OperationsServiceServer).ListInstanceAutomations(ctx, req.(*ListInstanceAutomationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OperationsService_ChangeInstanceAutomation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChangeInstanceAutomationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OperationsServiceServer).ChangeInstanceAutomation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OperationsService_ChangeInstanceAutomation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OperationsServiceServer).ChangeInstanceAutomation(ctx, req.(*ChangeInstanceAutomationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -807,6 +1023,24 @@ func _OperationsService_GetEnvironment_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OperationsService_GetWorkload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWorkloadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OperationsServiceServer).GetWorkload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OperationsService_GetWorkload_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OperationsServiceServer).GetWorkload(ctx, req.(*GetWorkloadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _OperationsService_ListEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListEventsRequest)
 	if err := dec(in); err != nil {
@@ -875,6 +1109,24 @@ func _OperationsService_ListIdentityUsers_Handler(srv interface{}, ctx context.C
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(OperationsServiceServer).ListIdentityUsers(ctx, req.(*ListIdentityUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OperationsService_GetCustomerUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCustomerUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OperationsServiceServer).GetCustomerUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OperationsService_GetCustomerUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OperationsServiceServer).GetCustomerUser(ctx, req.(*GetCustomerUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1059,6 +1311,60 @@ func _OperationsService_ResolveIncident_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OperationsService_AssignIncident_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AssignIncidentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OperationsServiceServer).AssignIncident(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OperationsService_AssignIncident_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OperationsServiceServer).AssignIncident(ctx, req.(*AssignIncidentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OperationsService_AddIncidentNote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddIncidentNoteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OperationsServiceServer).AddIncidentNote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OperationsService_AddIncidentNote_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OperationsServiceServer).AddIncidentNote(ctx, req.(*AddIncidentNoteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OperationsService_ListIncidentsForSubject_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListIncidentsForSubjectRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OperationsServiceServer).ListIncidentsForSubject(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OperationsService_ListIncidentsForSubject_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OperationsServiceServer).ListIncidentsForSubject(ctx, req.(*ListIncidentsForSubjectRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _OperationsService_ListAlertRules_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListAlertRulesRequest)
 	if err := dec(in); err != nil {
@@ -1223,6 +1529,10 @@ var OperationsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _OperationsService_ListOrganizations_Handler,
 		},
 		{
+			MethodName: "GetOrganization",
+			Handler:    _OperationsService_GetOrganization_Handler,
+		},
+		{
 			MethodName: "ListInstallations",
 			Handler:    _OperationsService_ListInstallations_Handler,
 		},
@@ -1237,6 +1547,18 @@ var OperationsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetInstance",
 			Handler:    _OperationsService_GetInstance_Handler,
+		},
+		{
+			MethodName: "GetInstanceDiagnostics",
+			Handler:    _OperationsService_GetInstanceDiagnostics_Handler,
+		},
+		{
+			MethodName: "ListInstanceAutomations",
+			Handler:    _OperationsService_ListInstanceAutomations_Handler,
+		},
+		{
+			MethodName: "ChangeInstanceAutomation",
+			Handler:    _OperationsService_ChangeInstanceAutomation_Handler,
 		},
 		{
 			MethodName: "ChangeInstanceLifecycle",
@@ -1255,6 +1577,10 @@ var OperationsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _OperationsService_GetEnvironment_Handler,
 		},
 		{
+			MethodName: "GetWorkload",
+			Handler:    _OperationsService_GetWorkload_Handler,
+		},
+		{
 			MethodName: "ListEvents",
 			Handler:    _OperationsService_ListEvents_Handler,
 		},
@@ -1269,6 +1595,10 @@ var OperationsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListIdentityUsers",
 			Handler:    _OperationsService_ListIdentityUsers_Handler,
+		},
+		{
+			MethodName: "GetCustomerUser",
+			Handler:    _OperationsService_GetCustomerUser_Handler,
 		},
 		{
 			MethodName: "ListIdentitySessions",
@@ -1309,6 +1639,18 @@ var OperationsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResolveIncident",
 			Handler:    _OperationsService_ResolveIncident_Handler,
+		},
+		{
+			MethodName: "AssignIncident",
+			Handler:    _OperationsService_AssignIncident_Handler,
+		},
+		{
+			MethodName: "AddIncidentNote",
+			Handler:    _OperationsService_AddIncidentNote_Handler,
+		},
+		{
+			MethodName: "ListIncidentsForSubject",
+			Handler:    _OperationsService_ListIncidentsForSubject_Handler,
 		},
 		{
 			MethodName: "ListAlertRules",

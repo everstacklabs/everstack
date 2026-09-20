@@ -27,6 +27,12 @@ type Provider struct {
 	version string
 	client  *http.Client
 	models  map[string]struct{}
+
+	// unaryClient serves non-streaming calls. It omits the shared transport's
+	// ResponseHeaderTimeout, which would otherwise cap total generation time,
+	// since a unary upstream withholds response headers until the completion
+	// is finished.
+	unaryClient *http.Client
 }
 
 func NewProvider(cfg Config) *Provider {
@@ -56,7 +62,10 @@ func NewProvider(cfg Config) *Provider {
 	}
 	cli.Transport = attrs.NewInstrumentedTransport(cli.Transport, "anthropic")
 
-	return &Provider{baseURL: base, apiKey: cfg.APIKey, version: ver, client: cli, models: m}
+	unary := clientx.Unary()
+	unary.Transport = attrs.NewInstrumentedTransport(unary.Transport, "anthropic")
+
+	return &Provider{baseURL: base, apiKey: cfg.APIKey, version: ver, client: cli, unaryClient: unary, models: m}
 }
 
 func (p *Provider) Name() string { return "anthropic" }
@@ -142,11 +151,26 @@ type claudeThinkingConfig struct {
 }
 
 type contentBlock struct {
-	Type  string          `json:"type"`
-	Text  string          `json:"text,omitempty"`
-	ID    string          `json:"id,omitempty"`
-	Name  string          `json:"name,omitempty"`
-	Input json.RawMessage `json:"input,omitempty"`
+	Type      string          `json:"type"`
+	Text      string          `json:"text,omitempty"`
+	Thinking  string          `json:"thinking,omitempty"`
+	Signature string          `json:"signature,omitempty"`
+	Data      string          `json:"data,omitempty"`
+	ID        string          `json:"id,omitempty"`
+	Name      string          `json:"name,omitempty"`
+	Input     json.RawMessage `json:"input,omitempty"`
+	Raw       json.RawMessage `json:"-"`
+}
+
+func (b *contentBlock) UnmarshalJSON(data []byte) error {
+	type wireContentBlock contentBlock
+	var decoded wireContentBlock
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*b = contentBlock(decoded)
+	b.Raw = append(json.RawMessage(nil), data...)
+	return nil
 }
 
 type usageBlock struct {
@@ -282,8 +306,15 @@ func (p *Provider) toClaude(req gw.ChatCompletionRequest) (messagesReq, error) {
 
 		if role == "assistant" {
 			var parts []interface{}
-			// Add text content
+			// Anthropic requires thinking and redacted_thinking blocks from the
+			// preceding assistant turn to be replayed unchanged when tools are
+			// used. ProviderJSON keeps those blocks native while normal text
+			// remains portable across providers.
 			for _, c := range m.Content {
+				if native, ok := anthropicThinkingBlock(c); ok {
+					parts = append(parts, native)
+					continue
+				}
 				if c.Type == "text" && c.Text != nil {
 					parts = append(parts, claudeContent{Type: "text", Text: *c.Text})
 				}
@@ -401,6 +432,27 @@ func stampLastBlock(content []interface{}, mark *cacheControl) {
 	}
 }
 
+func anthropicThinkingBlock(part gw.ContentPart) (json.RawMessage, bool) {
+	if part.ProviderJSON == nil || !json.Valid(*part.ProviderJSON) {
+		return nil, false
+	}
+	var header struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(*part.ProviderJSON, &header); err != nil {
+		return nil, false
+	}
+	if header.Type != "thinking" && header.Type != "redacted_thinking" {
+		return nil, false
+	}
+	return append(json.RawMessage(nil), (*part.ProviderJSON)...), true
+}
+
+func anthropicNativePart(block contentBlock) gw.ContentPart {
+	raw := append(json.RawMessage(nil), block.Raw...)
+	return gw.ContentPart{Type: block.Type, ProviderJSON: &raw}
+}
+
 func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.ChatCompletionResponse, error) {
 	wire, err := p.toClaude(req)
 	if err != nil {
@@ -408,7 +460,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	}
 	b, _ := json.Marshal(wire)
 	// Apply a per-request timeout for the unary call
-	ctx, cancel := context.WithTimeout(ctx, providerutil.ChatRequestTimeout(req.Sampling, 12*time.Second))
+	ctx, cancel := context.WithTimeout(ctx, providerutil.ChatRequestTimeout(req.Sampling))
 	defer cancel()
 	httpReq, _ := http.NewRequestWithContext(ctx, http.MethodPost, p.messagesURL(), bytes.NewReader(b))
 	httpReq.Header.Set("Content-Type", "application/json")
@@ -424,7 +476,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 		"stream", false,
 		"correlation_id", cid,
 	).Info("provider request issued")
-	resp, err := p.client.Do(httpReq)
+	resp, err := p.unaryClient.Do(httpReq)
 	if err != nil {
 		return gw.ChatCompletionResponse{}, err
 	}
@@ -464,6 +516,8 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 					Arguments: args,
 				},
 			})
+		case "thinking", "redacted_thinking":
+			parts = append(parts, anthropicNativePart(block))
 		}
 	}
 
@@ -552,6 +606,12 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 	var activeToolCalls []streamingToolCall
 	var currentBlockIndex int
 	var currentBlockIsToolUse bool
+	type streamingThinkingBlock struct {
+		fields    map[string]interface{}
+		thinking  strings.Builder
+		signature strings.Builder
+	}
+	activeThinkingBlocks := make(map[int]*streamingThinkingBlock)
 
 	// Track initial input tokens from message_start
 	for {
@@ -608,7 +668,8 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 				currentBlockIndex = int(idx)
 				currentBlockIsToolUse = false
 				if cb, ok := m["content_block"].(map[string]any); ok {
-					if cbType, _ := cb["type"].(string); cbType == "tool_use" {
+					cbType, _ := cb["type"].(string)
+					if cbType == "tool_use" {
 						currentBlockIsToolUse = true
 						tcID, _ := cb["id"].(string)
 						tcName, _ := cb["name"].(string)
@@ -620,6 +681,19 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 							ID:   tcID,
 							Name: tcName,
 						}
+					} else if cbType == "thinking" || cbType == "redacted_thinking" {
+						fields := make(map[string]interface{}, len(cb))
+						for key, value := range cb {
+							fields[key] = value
+						}
+						state := &streamingThinkingBlock{fields: fields}
+						if value, ok := cb["thinking"].(string); ok {
+							state.thinking.WriteString(value)
+						}
+						if value, ok := cb["signature"].(string); ok {
+							state.signature.WriteString(value)
+						}
+						activeThinkingBlocks[currentBlockIndex] = state
 					}
 				}
 
@@ -642,10 +716,49 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 								activeToolCalls[i].ArgsJSON.WriteString(partialJSON)
 							}
 						}
+					case "thinking_delta":
+						if value, ok := delta["thinking"].(string); ok {
+							idx, _ := m["index"].(float64)
+							if state := activeThinkingBlocks[int(idx)]; state != nil {
+								state.thinking.WriteString(value)
+							}
+						}
+					case "signature_delta":
+						if value, ok := delta["signature"].(string); ok {
+							idx, _ := m["index"].(float64)
+							if state := activeThinkingBlocks[int(idx)]; state != nil {
+								state.signature.WriteString(value)
+							}
+						}
 					}
 				}
 
 			case "content_block_stop":
+				idx, _ := m["index"].(float64)
+				blockIndex := int(idx)
+				if state := activeThinkingBlocks[blockIndex]; state != nil {
+					if state.thinking.Len() > 0 {
+						state.fields["thinking"] = state.thinking.String()
+					}
+					if state.signature.Len() > 0 {
+						state.fields["signature"] = state.signature.String()
+					}
+					encoded, marshalErr := json.Marshal(state.fields)
+					if marshalErr != nil {
+						return fmt.Errorf("marshal anthropic thinking block: %w", marshalErr)
+					}
+					native := json.RawMessage(encoded)
+					blockType, _ := state.fields["type"].(string)
+					part := gw.ContentPart{Type: blockType, ProviderJSON: &native}
+					delta := gw.ChoiceDelta{
+						Index: 0,
+						Delta: gw.Message{Role: gw.RoleAssistant, Content: []gw.ContentPart{part}},
+					}
+					if err := onChunk(gw.NewChatChunk(id, firstNonEmpty(model, req.Model), []gw.ChoiceDelta{delta})); err != nil {
+						return err
+					}
+					delete(activeThinkingBlocks, blockIndex)
+				}
 				// If a tool_use block just finished, emit it as a streaming delta
 				if currentBlockIsToolUse && currentBlockIndex < len(activeToolCalls) {
 					tc := activeToolCalls[currentBlockIndex]

@@ -96,6 +96,14 @@ func (s *Service) syncToDatabase(ctx context.Context, modelsYAML, providersYAML 
 	catalogModels := make([]*CatalogModel, 0)
 	for providerName, providerModels := range modelsConfig.Providers {
 		for _, model := range providerModels.Models {
+			config := map[string]interface{}{
+				"api_type":                       model.APIType,
+				"cache_write_1h_cost_per_1k":     model.CacheWrite1hCostPer1k,
+				"long_context_threshold_tokens":  model.LongContextThresholdTokens,
+				"long_context_input_multiplier":  model.LongContextInputMultiplier,
+				"long_context_cache_multiplier":  model.LongContextCacheMultiplier,
+				"long_context_output_multiplier": model.LongContextOutputMultiplier,
+			}
 			catalogModels = append(catalogModels, &CatalogModel{
 				ProviderName:        providerName,
 				ModelName:           model.Name,
@@ -107,6 +115,7 @@ func (s *Service) syncToDatabase(ctx context.Context, modelsYAML, providersYAML 
 				CacheWriteCostPer1k: model.CacheWriteCostPer1k,
 				Capabilities:        model.Capabilities,
 				Status:              model.Status,
+				Config:              config,
 			})
 		}
 	}
@@ -177,15 +186,21 @@ func convertModelsToYAML(models []*CatalogModel) ([]byte, error) {
 	providerModels := make(map[string][]ModelDefinition)
 	for _, model := range models {
 		providerModels[model.ProviderName] = append(providerModels[model.ProviderName], ModelDefinition{
-			Name:                model.ModelName,
-			DisplayName:         model.DisplayName,
-			MaxTokens:           model.MaxTokens,
-			InputCostPer1k:      model.InputCostPer1k,
-			OutputCostPer1k:     model.OutputCostPer1k,
-			CacheReadCostPer1k:  model.CacheReadCostPer1k,
-			CacheWriteCostPer1k: model.CacheWriteCostPer1k,
-			Capabilities:        model.Capabilities,
-			Status:              model.Status,
+			Name:                        model.ModelName,
+			DisplayName:                 model.DisplayName,
+			APIType:                     configString(model.Config, "api_type"),
+			MaxTokens:                   model.MaxTokens,
+			InputCostPer1k:              model.InputCostPer1k,
+			OutputCostPer1k:             model.OutputCostPer1k,
+			CacheReadCostPer1k:          model.CacheReadCostPer1k,
+			CacheWriteCostPer1k:         model.CacheWriteCostPer1k,
+			CacheWrite1hCostPer1k:       configFloat(model.Config, "cache_write_1h_cost_per_1k"),
+			LongContextThresholdTokens:  configInt(model.Config, "long_context_threshold_tokens"),
+			LongContextInputMultiplier:  configFloat(model.Config, "long_context_input_multiplier"),
+			LongContextCacheMultiplier:  configFloat(model.Config, "long_context_cache_multiplier"),
+			LongContextOutputMultiplier: configFloat(model.Config, "long_context_output_multiplier"),
+			Capabilities:                model.Capabilities,
+			Status:                      model.Status,
 		})
 	}
 
@@ -202,6 +217,30 @@ func convertModelsToYAML(models []*CatalogModel) ([]byte, error) {
 	}
 
 	return yaml.Marshal(modelsYAML)
+}
+
+func configString(config map[string]interface{}, key string) string {
+	value, _ := config[key].(string)
+	return value
+}
+
+func configFloat(config map[string]interface{}, key string) float64 {
+	switch value := config[key].(type) {
+	case float64:
+		return value
+	case float32:
+		return float64(value)
+	case int:
+		return float64(value)
+	case int64:
+		return float64(value)
+	default:
+		return 0
+	}
+}
+
+func configInt(config map[string]interface{}, key string) int {
+	return int(configFloat(config, key))
 }
 
 // convertProvidersToYAML converts database providers to YAML format

@@ -68,8 +68,8 @@ Also verify that:
 ## Release pipeline
 
 Catalog-only changes are released by `.github/workflows/sync-model-catalog.yaml`.
-Every job in that workflow runs on the existing
-`[self-hosted, macOS, X64, local]` runner. A merge to `master` that changes
+Every job in that workflow is pinned to
+`[self-hosted, macOS, X64, docker, catalog, arnabtarwani-mac-2]`. A merge to `master` that changes
 `model-catalog/**` performs this sequence:
 
 1. validate the complete source, manifest inventory, statistics, changelog,

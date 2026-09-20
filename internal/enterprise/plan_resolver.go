@@ -97,10 +97,20 @@ func reportShadowLimits(tenantID, tier string, limits map[UsageType]int64) {
 		if _, loaded := shadowSeen.LoadOrStore(key, struct{}{}); loaded {
 			continue
 		}
-		logger.Infof(
-			"entitlements shadow: tenant=%s tier=%s limit=%s value=%d would apply (not enforced)",
-			tenantID, tier, limitType, limit,
-		)
+		// EVS-6 shadow sink (Stage 0, slice 1): the Prometheus gauge feeds
+		// the per-tier exposure table; the operational structured log flows
+		// via OTEL to ClickHouse for per-tenant drill-down. Enforcement
+		// behavior is unchanged — this only observes.
+		entitlementShadowLimitedTenants.WithLabelValues(tier, string(limitType)).Inc()
+		logger.WithCategory(logger.CategoryOperational).
+			WithLogEvent("entitlements.shadow").
+			WithFields(map[string]interface{}{
+				"tenant":      tenantID,
+				"tier":        tier,
+				"limit_type":  string(limitType),
+				"limit_value": limit,
+			}).
+			Info("entitlements shadow: plan limit would apply (not enforced)")
 	}
 }
 

@@ -979,10 +979,21 @@
         "USAGE_LIMITS_TYPE_MESSAGES_MONTHLY",
         "USAGE_LIMITS_TYPE_CHANNEL_BINDINGS",
         "USAGE_LIMITS_TYPE_SPAWN_DEPTH",
-        "USAGE_LIMITS_TYPE_SESSION_RETENTION_DAYS"
+        "USAGE_LIMITS_TYPE_SESSION_RETENTION_DAYS",
+        "USAGE_LIMITS_TYPE_HOSTING_STORAGE_BYTES",
+        "USAGE_LIMITS_TYPE_TOKENS",
+        "USAGE_LIMITS_TYPE_HOSTED_SITES",
+        "USAGE_LIMITS_TYPE_DATASET_ITEMS",
+        "USAGE_LIMITS_TYPE_EVAL_RUNS_MONTHLY",
+        "USAGE_LIMITS_TYPE_ANNOTATION_QUEUES",
+        "USAGE_LIMITS_TYPE_CONCURRENT_SANDBOXES",
+        "USAGE_LIMITS_TYPE_CONCURRENT_BROWSERS",
+        "USAGE_LIMITS_TYPE_BROWSER_SESSION_MAX_SECONDS",
+        "USAGE_LIMITS_TYPE_CHANNELS",
+        "USAGE_LIMITS_TYPE_PERSISTENT_TROOPERS"
       ],
       "default": "USAGE_LIMITS_TYPE_UNSPECIFIED",
-      "title": "- USAGE_LIMITS_TYPE_AGENTS: Agent-related limits (added for unified agent/trooper model)"
+      "description": " - USAGE_LIMITS_TYPE_STORAGE: Object storage allowance in bytes. Keep wire value 3 for older clients.\n - USAGE_LIMITS_TYPE_AGENTS: Agent-related limits (added for unified agent/trooper model)\n - USAGE_LIMITS_TYPE_HOSTING_STORAGE_BYTES: Catalog limits. Hosting storage is distinct from object storage."
     },
     "v1UsageReport": {
       "type": "object",

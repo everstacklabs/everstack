@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	functionspb "github.com/everstacklabs/everstack/pkg/grpc/everstack/functions/v1"
 	"github.com/everstacklabs/everstack/pkg/grpc/everstack/functions/v1/functionsconnect"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -16,7 +16,7 @@ var _ functionspb.FunctionsServiceServer = (*GrpcServer)(nil)
 
 // Ensure Server implements ConnectServer contract from internal/api/grpc/server
 var _ interface {
-	RegisterConnectServer(...connect.Interceptor) (string, http.Handler)
+	RegisterConnectServer(...connect.HandlerOption) (string, http.Handler)
 	FileDescriptor() protoreflect.FileDescriptor
 } = (*Server)(nil)
 
@@ -46,8 +46,8 @@ func CreateClassicServerWithContext(ctx context.Context) functionspb.FunctionsSe
 }
 
 // Connect server plumbing
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return functionsconnect.NewFunctionsServiceHandler(s, connect.WithInterceptors(interceptors...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return functionsconnect.NewFunctionsServiceHandler(s, opts...)
 }
 
 func (s *Server) FileDescriptor() protoreflect.FileDescriptor {

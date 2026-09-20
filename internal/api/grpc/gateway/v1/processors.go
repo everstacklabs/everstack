@@ -56,7 +56,7 @@ func updateProviderLatency(d time.Duration) {
 func ProviderLatencyMsEWMA() int64 { return atomic.LoadInt64(&providerLatencyMsEWMA) }
 
 // Shared handler for ChatCompletion across Connect & gRPC
-func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.ChatCompletionRequest, send func(*gatewaypb.ChatCompletionResponse) error) error {
+func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.ChatCompletionRequest, send func(*gatewaypb.ChatCompletionResponse) error) (err error) {
 	// Per-tenant function-calling gate. Reject if the request includes
 	// `tools` while the tenant has function calling disabled. The chat
 	// itself still works without tools so we don't block the whole call.
@@ -92,11 +92,30 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 	)
 	defer span.End()
 
+	// Error exits have to mark this span, not just the inner provider span.
+	// Both the trace's status and trace_metrics_hourly's error_count read the
+	// status of gateway.chat.completion, so a failure that leaves it Unset is
+	// reported as a successful request: the traces view shows a green row for a
+	// 500 and the dashboard error rate stays at zero. Individual paths below
+	// already stamp it, but only the ones that were noticed; this catches every
+	// remaining exit. Registered after span.End() so it runs first, and setting
+	// Error twice is idempotent. The description stays fixed because an upstream
+	// provider error can quote the tenant's provider key back at us; RecordError
+	// carries the detail.
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "request failed")
+		}
+	}()
+
 	// Inference metering (shadow phase): accumulate platform-key cost as attempts
 	// complete and settle once on a detached context when the request ends. nil and
 	// every method is a no-op when metering does not apply (no billing DB / no org).
+	// G0 also tracks unbilled cost (fallback winners/losers, tool-loop
+	// iterations, retry failures, cancels) as shadow: observed, never debited.
 	meter := newInferenceMeter(ctx, base, correlationID)
-	defer meter.settle(ctx)
+	defer meter.settle(ctx, span)
 
 	// Tag trace span with tenant_id for cloud instance isolation
 	if tid := database.TenantSchemaFromContext(ctx); tid != "" {
@@ -416,7 +435,14 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 		recordStreamUsage := func() {
 			if streamUsage != nil {
 				streamProvider := base.getProviderForModel(ctx, streamModel)
-				costDetails := metrics.CalculateCost(streamProvider, streamModel, streamUsage.PromptTokens, streamUsage.CompletionTokens, streamUsage.CacheReadCount())
+				costDetails := metrics.CalculateCostWithCacheTokens(
+					streamProvider,
+					streamModel,
+					streamUsage.PromptTokens,
+					streamUsage.CompletionTokens,
+					streamUsage.CacheReadCount(),
+					streamUsage.CacheWriteCount(),
+				)
 
 				// Set attributes on root span for dashboard queries
 				span.SetAttributes(
@@ -486,6 +512,9 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 						"elapsed_ms", elapsed.Milliseconds(),
 						"retryable", retrypolicy.IsRetryable(err),
 					).Warn("stream attempt failed")
+					// G0 shadow: failed stream attempts report no usage.
+					// Count it, log-only.
+					meter.recordShadow(shadowRetryFailed, base.effectiveKeySource(ctx), 0)
 
 					// If auth error on first attempt, try key rotation before giving up on this alias
 					if a == 1 && retrypolicy.IsAuthenticationError(err) {
@@ -525,6 +554,8 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 							if !retrypolicy.IsAuthenticationError(err) {
 								break // Different error, stop rotating
 							}
+							// G0 shadow: failed rotation retry, no usage reported.
+							meter.recordShadow(shadowRetryFailed, base.effectiveKeySource(ctx), 0)
 							logger.WithCategory(logger.CategoryOperational).SetFields("alias", alias, "rotation_attempt", keyRotation+1).Info("gateway: stream key rotation failed")
 						}
 						// After all rotations, update lastErr and break to next alias
@@ -905,6 +936,19 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 		// If tool_choice was "required", the LLM would keep calling tools forever
 		norm.ToolChoice = nil
 
+		// G0 shadow: this response is about to be overwritten by the
+		// re-invocation below, so its upstream cost would vanish (only the
+		// final response is wallet-billed). Track it as unbilled, log-only.
+		if resp.Usage.TotalTokens > 0 {
+			iterProvider := base.getProviderForModel(ctx, resp.Model)
+			iterCost := metrics.CalculateCostWithCacheTokens(
+				iterProvider, resp.Model,
+				resp.Usage.PromptTokens, resp.Usage.CompletionTokens,
+				resp.Usage.CacheReadCount(), resp.Usage.CacheWriteCount(),
+			)
+			meter.recordShadow(shadowToolLoop, resp.KeySource, iterCost.EstimatedUSD)
+		}
+
 		// Re-invoke the LLM with the updated conversation
 		resp, err = gw.HandleChat(ctx, base.routerFor(ctx), norm)
 
@@ -983,7 +1027,14 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 		attrs.SetTraceOutput(span, resp.Choices)
 
 		// Calculate and set cost details using the resolved provider (respProvider resolved above)
-		costDetails := metrics.CalculateCost(respProvider, resp.Model, resp.Usage.PromptTokens, resp.Usage.CompletionTokens, resp.Usage.CacheReadCount())
+		costDetails := metrics.CalculateCostWithCacheTokens(
+			respProvider,
+			resp.Model,
+			resp.Usage.PromptTokens,
+			resp.Usage.CompletionTokens,
+			resp.Usage.CacheReadCount(),
+			resp.Usage.CacheWriteCount(),
+		)
 		attrs.SetCostDetails(span, costDetails.EstimatedUSD, costDetails.ActualUSD, costDetails.SavingsUSD, costDetails.CarbonSavedGrams, costDetails.PricingModel)
 
 		// Meter the served attempt against the wallet (platform-key only).
@@ -1258,9 +1309,21 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 						if fallbackSpan != nil {
 							fallbackSpan.SetStatus(codes.Ok, "parallel fallback succeeded")
 						}
+						// G0 shadow: the race winner returns at the fallback
+						// exit without wallet metering, and losers spent
+						// upstream tokens that vanish entirely. Track both as
+						// unbilled, log-only. recordShadow is mutex-guarded
+						// for these goroutines.
+						rrCost := metrics.CalculateCostWithCacheTokens(
+							base.getProviderForModel(ctx, rr.Model), rr.Model,
+							rr.Usage.PromptTokens, rr.Usage.CompletionTokens,
+							rr.Usage.CacheReadCount(), rr.Usage.CacheWriteCount(),
+						)
 						select {
 						case resCh <- rr:
+							meter.recordShadow(shadowFallbackServed, rr.KeySource, rrCost.EstimatedUSD)
 						default:
+							meter.recordShadow(shadowParallelLoser, rr.KeySource, rrCost.EstimatedUSD)
 						}
 					} else {
 						if fallbackSpan != nil {
@@ -1365,6 +1428,17 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 					)
 					span.SetStatus(codes.Ok, "fallback succeeded")
 
+					// G0 shadow: fallback-served responses return here without
+					// wallet metering. Track the served cost as unbilled, log-only.
+					if rr.Usage.TotalTokens > 0 {
+						fbCost := metrics.CalculateCostWithCacheTokens(
+							base.getProviderForModel(ctx, rr.Model), rr.Model,
+							rr.Usage.PromptTokens, rr.Usage.CompletionTokens,
+							rr.Usage.CacheReadCount(), rr.Usage.CacheWriteCount(),
+						)
+						meter.recordShadow(shadowFallbackServed, rr.KeySource, fbCost.EstimatedUSD)
+					}
+
 					return send(attachFallbackInfo(toProtoResponse(rr), requestedModel, rr.Model, step.Name, fallbackAttempts))
 				} else {
 					last = e
@@ -1384,6 +1458,9 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 						"elapsed_ms", elapsed.Milliseconds(),
 						"retryable", retrypolicy.IsRetryable(e),
 					).Warn("unary attempt failed")
+					// G0 shadow: the failed attempt reports no usage, so its
+					// upstream spend (if any) is invisible. Count it, log-only.
+					meter.recordShadow(shadowRetryFailed, base.effectiveKeySource(ctx), 0)
 					if !retrypolicy.IsRetryable(e) || a == attempts {
 						break
 					}
@@ -1669,6 +1746,9 @@ func processEmbeddings(ctx context.Context, base *Server, req *gatewaypb.Embeddi
 		}
 		costDetails := metrics.CalculateCost(providerName, model, inputTokens, 0, 0)
 		attrs.SetCostDetails(span, costDetails.EstimatedUSD, costDetails.ActualUSD, costDetails.SavingsUSD, costDetails.CarbonSavedGrams, costDetails.PricingModel)
+		// G0 shadow: the embeddings path has no wallet meter. Track the
+		// served cost as unbilled, log-only.
+		reportShadowCost(ctx, base, correlationID, "Embeddings", shadowUnmeteredProcedure, base.effectiveKeySource(ctx), costDetails.EstimatedUSD)
 
 		// Calculate embedding magnitude for meaningful metrics
 		var magnitude float64
@@ -1823,6 +1903,9 @@ func processEmbeddings(ctx context.Context, base *Server, req *gatewaypb.Embeddi
 				fallbackProvider := base.getProviderForModel(ctx, rr.Model)
 				fallbackCost := metrics.CalculateCost(fallbackProvider, rr.Model, fallbackTokens, 0, 0)
 				base.recordUsageMetrics(int64(fallbackTokens), 0, fallbackCost.EstimatedUSD, 0, false)
+				// G0 shadow: fallback winners cost extra upstream calls with
+				// no wallet meter on this path. Track as unbilled, log-only.
+				reportShadowCost(ctx, base, correlationID, "Embeddings", shadowFallbackServed, base.effectiveKeySource(ctx), fallbackCost.EstimatedUSD)
 
 				emb := make([]float32, len(rr.Embedding))
 				for i, v := range rr.Embedding {
@@ -1877,6 +1960,8 @@ func processEmbeddings(ctx context.Context, base *Server, req *gatewaypb.Embeddi
 				seqFallbackProvider := base.getProviderForModel(ctx, rr.Model)
 				seqFallbackCost := metrics.CalculateCost(seqFallbackProvider, rr.Model, fallbackTokens, 0, 0)
 				base.recordUsageMetrics(int64(fallbackTokens), 0, seqFallbackCost.EstimatedUSD, 0, false)
+				// G0 shadow: see parallel fallback above.
+				reportShadowCost(ctx, base, correlationID, "Embeddings", shadowFallbackServed, base.effectiveKeySource(ctx), seqFallbackCost.EstimatedUSD)
 
 				emb := make([]float32, len(rr.Embedding))
 				for i, v := range rr.Embedding {

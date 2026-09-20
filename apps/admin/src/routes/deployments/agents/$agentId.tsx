@@ -21,7 +21,7 @@ import { ChatSessionSwitcher } from '@/components/deployments/agents/chat-sessio
 import { Loader } from '@everstack/ui/components'
 import { ui } from '@everstack/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getSandboxInstance } from '@/server/sandbox'
 import { useSession } from '@/hooks/auth/use-auth'
 import {
@@ -33,6 +33,8 @@ import {
   Workflow,
 } from 'lucide-react'
 import { useSidePanelStore } from '@/stores/side-panel-store'
+import { useLicenseStatus } from '@/hooks/license/use-license-status'
+import { getCloudBillingUrl, isCloudManaged } from '@/lib/cloud-mode'
 
 export const Route = createFileRoute('/deployments/agents/$agentId')({
   component: AgentDetailLayout,
@@ -79,10 +81,17 @@ type SandboxHealthState =
   | { status: 'healthy' }
   | { status: 'loading'; message?: string }
   | { status: 'reconnecting'; message: string }
+  | { status: 'paused'; message: string }
   | { status: 'sleeping'; message: string }
   | { status: 'waking'; message: string }
   | { status: 'failed'; message: string }
   | { status: 'terminated'; message: string }
+
+const SANDBOX_PAUSED: SandboxHealthState = {
+  status: 'paused',
+  message:
+    'The organization starter credit is exhausted. Add or restore billing to continue.',
+}
 
 function useSandboxHealth(
   agent:
@@ -95,6 +104,15 @@ function useSandboxHealth(
   const sandboxId = agent?.sandboxId
   const isPersistent = agent?.lifecycleMode === AgentLifecycleMode.PERSISTENT
   const lifecycleStatus = agent?.lifecycleStatus
+
+  const { data: licenseData } = useLicenseStatus()
+  const managedCloud = useMemo(() => isCloudManaged(), [])
+  // Only meaningful once the license has loaded: the `?? false` default would
+  // otherwise read as "paused" on the first render for everyone.
+  const billingPaused =
+    managedCloud &&
+    licenseData !== undefined &&
+    !(licenseData.license?.sandbox_billing_enabled ?? false)
 
   const {
     data: sandboxInstance,
@@ -139,6 +157,9 @@ function useSandboxHealth(
     lifecycleStatus === AgentLifecycleStatus.PROVISIONING ||
     lifecycleStatus === AgentLifecycleStatus.CREATED
   ) {
+    // Paused compute never leaves CREATED: nothing is being provisioned, so
+    // don't promise a sandbox that will never arrive.
+    if (!sandboxId && billingPaused) return SANDBOX_PAUSED
     if (sandboxInstance?.status?.toLowerCase() === 'pending') {
       return {
         status: 'loading',
@@ -150,6 +171,7 @@ function useSandboxHealth(
 
   // For idle/running agents, verify the sandbox actually exists
   if (!sandboxId) {
+    if (billingPaused) return SANDBOX_PAUSED
     // No sandbox_id — server is likely auto-reprovisioning after restart
     return {
       status: 'reconnecting',
@@ -225,6 +247,33 @@ function SandboxHealthIndicator({
         <div className="flex items-center gap-2.5 rounded-md border border-brand-main-600/30 bg-brand-main-800/40 px-3 py-2">
           <Moon className="w-3.5 h-3.5 text-white/30 light:text-black/30 shrink-0" />
           <span className="text-xs text-white/50 light:text-black/50">{health.message}</span>
+        </div>
+      </div>
+    )
+  }
+
+  // Paused for billing — retrying will not help, send them to billing
+  if (health.status === 'paused') {
+    return (
+      <div className="mx-4 mt-2">
+        <div className="flex items-start gap-3 rounded-md border border-amber-500/25 bg-amber-500/5 px-3 py-2.5">
+          <AlertTriangle className="w-4 h-4 text-amber-400/80 light:text-amber-600/80 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-xs font-medium text-white/85 light:text-black/85">
+              Sandbox compute is paused
+            </p>
+            <p className="mt-1 text-[11px] text-white/50 light:text-black/55">
+              {health.message}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => window.open(getCloudBillingUrl(), '_blank')}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-colors
+                        border border-brand-main-600/40 bg-brand-main-900/80 hover:bg-brand-main-800 text-white/70 light:text-black/70 hover:text-white light:hover:text-brand-main-50 shrink-0"
+          >
+            Open Billing
+          </button>
         </div>
       </div>
     )
@@ -339,9 +388,12 @@ function AgentDetailLayout() {
     to: '/deployments/agents/$agentId/chat',
     params: { agentId },
   })
+  // While provisioning, the full-height panel below carries the message
+  // (including the paused one), so don't render it twice.
   const showHealthIndicator =
     isOnChatTab &&
     isPersistent &&
+    !isProvisioning &&
     sandboxHealth.status !== 'healthy' &&
     sandboxHealth.status !== 'loading'
 
@@ -442,18 +494,41 @@ function AgentDetailLayout() {
 
       <div className="flex-1 min-h-0 overflow-hidden">
         {isProvisioning && isOnChatTab ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
-            <div className="flex items-center gap-3">
-              <span className="h-5 w-5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
-              <span className="text-white/80 light:text-black/80 text-sm font-medium">
-                Provisioning agent...
-              </span>
+          sandboxHealth.status === 'paused' ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-6">
+              <AlertTriangle className="w-6 h-6 text-amber-400/80 light:text-amber-600/80" />
+              <div className="flex flex-col gap-1.5">
+                <span className="text-white/80 light:text-black/80 text-sm font-medium">
+                  Sandbox compute is paused
+                </span>
+                <p className="text-white/40 light:text-black/40 text-xs max-w-sm">
+                  {sandboxHealth.message} This agent stays in Created until
+                  compute resumes.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => window.open(getCloudBillingUrl(), '_blank')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors
+                            border border-brand-main-600/40 bg-brand-main-900/80 hover:bg-brand-main-800 text-white/70 light:text-black/70 hover:text-white light:hover:text-brand-main-50"
+              >
+                Open Billing
+              </button>
             </div>
-            <p className="text-white/40 light:text-black/40 text-xs max-w-sm">
-              Setting up the sandbox environment. This may take a moment. Chat
-              will be available once provisioning completes.
-            </p>
-          </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+              <div className="flex items-center gap-3">
+                <span className="h-5 w-5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
+                <span className="text-white/80 light:text-black/80 text-sm font-medium">
+                  Provisioning agent...
+                </span>
+              </div>
+              <p className="text-white/40 light:text-black/40 text-xs max-w-sm">
+                Setting up the sandbox environment. This may take a moment. Chat
+                will be available once provisioning completes.
+              </p>
+            </div>
+          )
         ) : (
           <Outlet />
         )}

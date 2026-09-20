@@ -1,0 +1,25 @@
+{
+  "pages": [
+    "cancel-session",
+    "create-connection",
+    "create-session",
+    "delete-connection",
+    "delete-session",
+    "delete-session-artifact",
+    "export-session-artifact",
+    "get-artifact-download",
+    "get-capabilities",
+    "get-connection",
+    "get-session",
+    "get-session-usage",
+    "list-approvals",
+    "list-connections",
+    "list-session-artifacts",
+    "list-session-events",
+    "list-sessions",
+    "resolve-approval",
+    "send-input",
+    "update-connection",
+    "upload-session-input"
+  ]
+}

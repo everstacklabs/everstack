@@ -222,16 +222,40 @@ func toProtoResponseFromChunk(ch gw.ChatResponseChunk) *gatewaypb.ChatCompletion
 	choice := &gatewaypb.Choice{
 		Index:   0,
 		Message: msg,
-		// We could propagate a finish_reason from the first delta if present,
-		// but many providers only set it on final chunk.
+	}
+	// Providers only set finish_reason on the final chunk, so carry it through
+	// when it is there. Without it the OpenAI-compatible surface reconstructs
+	// every response with a hardcoded "stop", which is wrong for a response
+	// truncated by max_tokens or halted by a content filter.
+	for _, d := range ch.Choices {
+		if d.FinishReason != "" {
+			choice.FinishReason = d.FinishReason
+			break
+		}
 	}
 
-	return &gatewaypb.ChatCompletionResponse{
+	resp := &gatewaypb.ChatCompletionResponse{
 		Id:      ch.ID,
 		Created: ch.Created.Unix(),
 		Model:   ch.Model,
 		Choices: []*gatewaypb.Choice{choice},
 	}
+
+	// Carry token usage through. The non-streaming path already does this (see
+	// toProtoResponse), but the streaming path did not, and the
+	// OpenAI-compatible surface reconstructs its response from these chunks --
+	// so a client on /openai/v1 received usage of zero for every request and
+	// could not attribute cost at all. The counts were already being read here
+	// for internal cost metrics; they were simply never returned to the caller.
+	if ch.Usage != nil {
+		resp.Usage = &gatewaypb.Usage{
+			PromptTokens:     int32(ch.Usage.PromptTokens),
+			CompletionTokens: int32(ch.Usage.CompletionTokens),
+			TotalTokens:      int32(ch.Usage.TotalTokens),
+		}
+	}
+
+	return resp
 }
 
 func toProtoMessage(m gw.Message) *gatewaypb.Message {

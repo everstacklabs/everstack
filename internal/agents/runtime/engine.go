@@ -223,10 +223,8 @@ func (e *Engine) ExecuteTurn(ctx context.Context, input *TurnInput) (*TurnResult
 		LatencyMs:        latency,
 		ToolCalls:        []byte("[]"),
 	}
-	if resp.Usage.PromptDetails != nil {
-		result.CacheReadTokens = int32(resp.Usage.PromptDetails.CacheReadTokens)
-		result.CacheWriteTokens = int32(resp.Usage.PromptDetails.CacheWriteTokens)
-	}
+	result.CacheReadTokens = int32(resp.Usage.CacheReadCount())
+	result.CacheWriteTokens = int32(resp.Usage.CacheWriteCount())
 
 	// Extract assistant output from first choice
 	if len(resp.Choices) > 0 {
@@ -511,7 +509,7 @@ func (e *Engine) ExecuteTurnStream(ctx context.Context, provider gw.ChatProvider
 	var accumulated gw.ChatCompletionResponse
 	var textBuilder strings.Builder
 	var toolCalls []gw.ToolCall
-	var providerParts []gw.ContentPart
+	var contentParts []gw.ContentPart
 
 	err := provider.ChatStream(ctx, req, func(chunk gw.ChatResponseChunk) error {
 		// Accumulate model and ID
@@ -523,18 +521,17 @@ func (e *Engine) ExecuteTurnStream(ctx context.Context, provider gw.ChatProvider
 		}
 
 		for _, delta := range chunk.Choices {
-			// Accumulate text content
+			// Preserve every content part in provider order. Provider-native
+			// thinking blocks and normalized visible text can arrive in separate
+			// chunks, and both are required in the assistant message: the native
+			// blocks are replayed on the next turn while text is shown to users.
 			if delta.Delta.Content != nil {
 				text := ""
 				for _, part := range delta.Delta.Content {
+					cloned := cloneContentPart(part)
+					contentParts = append(contentParts, cloned)
 					if part.Text != nil {
 						text += *part.Text
-					}
-					if part.ProviderJSON != nil {
-						native := append(json.RawMessage(nil), (*part.ProviderJSON)...)
-						cloned := part
-						cloned.ProviderJSON = &native
-						providerParts = append(providerParts, cloned)
 					}
 				}
 				if text != "" {
@@ -606,8 +603,8 @@ func (e *Engine) ExecuteTurnStream(ctx context.Context, provider gw.ChatProvider
 	}
 
 	finalText := textBuilder.String()
-	if len(providerParts) > 0 {
-		accumulated.Choices[0].Message.Content = providerParts
+	if len(contentParts) > 0 {
+		accumulated.Choices[0].Message.Content = contentParts
 	} else if finalText != "" {
 		accumulated.Choices[0].Message.Content = []gw.ContentPart{{
 			Type: "text",
@@ -620,6 +617,35 @@ func (e *Engine) ExecuteTurnStream(ctx context.Context, provider gw.ChatProvider
 	}
 
 	return &accumulated, nil
+}
+
+func cloneContentPart(part gw.ContentPart) gw.ContentPart {
+	cloned := part
+	if part.Text != nil {
+		value := *part.Text
+		cloned.Text = &value
+	}
+	if part.ImageURL != nil {
+		value := *part.ImageURL
+		cloned.ImageURL = &value
+	}
+	if part.FileID != nil {
+		value := *part.FileID
+		cloned.FileID = &value
+	}
+	if part.ToolCallID != nil {
+		value := *part.ToolCallID
+		cloned.ToolCallID = &value
+	}
+	if part.FunctionCall != nil {
+		value := *part.FunctionCall
+		cloned.FunctionCall = &value
+	}
+	if part.ProviderJSON != nil {
+		native := append(json.RawMessage(nil), (*part.ProviderJSON)...)
+		cloned.ProviderJSON = &native
+	}
+	return cloned
 }
 
 // GetToolLoop returns the engine's tool loop manager.

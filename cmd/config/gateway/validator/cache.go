@@ -20,11 +20,17 @@ type MemoryCacheConfig struct {
 
 // RedisCacheConfig configures Redis-based caching
 type RedisCacheConfig struct {
-	Address  string        `mapstructure:"address"`
-	Password string        `mapstructure:"password"`
-	DB       int           `mapstructure:"db"`
-	TTL      time.Duration `mapstructure:"ttl"`
-	PoolSize int           `mapstructure:"pool_size"`
+	Required           bool          `mapstructure:"required"`
+	Address            string        `mapstructure:"address"`
+	Password           string        `mapstructure:"password"`
+	DB                 int           `mapstructure:"db"`
+	TTL                time.Duration `mapstructure:"ttl"`
+	PoolSize           int           `mapstructure:"pool_size"`
+	SentinelMasterName string        `mapstructure:"sentinel_master_name"`
+	SentinelAddresses  []string      `mapstructure:"sentinel_addresses"`
+	TLSEnabled         bool          `mapstructure:"tls_enabled"`
+	TLSCAFile          string        `mapstructure:"tls_ca_file"`
+	TLSServerName      string        `mapstructure:"tls_server_name"`
 
 	// RedisSearch configuration for vector similarity
 	Search RedisSearchConfig `mapstructure:"search"`

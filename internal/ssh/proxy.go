@@ -62,6 +62,10 @@ type rateLimitEntry struct {
 type banEntry struct {
 	failures    []time.Time
 	bannedUntil time.Time
+	// rejected counts connections refused at accept during the CURRENT ban.
+	// Reset each time a ban is armed so the operator gets one line per ban
+	// rather than one per probe.
+	rejected int
 }
 
 // Ban policy. Tunable here (not config) because the right values fall
@@ -71,6 +75,23 @@ const (
 	failureWindow        = 5 * time.Minute
 	maxFailuresPerWindow = 5 // 5 bad keys in 5 min and the IP is hot
 	banDuration          = 30 * time.Minute
+
+	// Slow tier. The fast window only catches a scanner that hurries. A
+	// probe pacing itself below 5-per-5-minutes never accumulates enough
+	// history to trip it, because every failure older than failureWindow is
+	// trimmed away before the threshold is checked. On eu-gra-1-prod one
+	// source sent 1,649 failed handshakes over 14 hours — roughly one every
+	// three minutes, comfortably under the fast threshold — and was never
+	// banned once.
+	//
+	// The slow tier is deliberately more forgiving than a scaled-up fast
+	// tier: one address can be a NAT with many legitimate users behind it,
+	// so the threshold sits well above what a person fumbling their key
+	// would produce, and the ban is short. A successful handshake still
+	// clears all of it.
+	slowFailureWindow        = 2 * time.Hour
+	maxFailuresPerSlowWindow = 20
+	slowBanDuration          = 2 * time.Hour
 )
 
 // NewProxy creates a new SSH proxy.
@@ -106,15 +127,42 @@ func (p *Proxy) isBanned(ip string) bool {
 	return time.Now().Before(entry.bannedUntil)
 }
 
-// recordAuthFailure increments the rolling failure count for an IP and
-// arms a ban once the threshold trips. Called from publicKeyCallback
-// every time a presented key is rejected.
-func (p *Proxy) recordAuthFailure(ip string) {
+// noteBannedRejection reports whether ip is currently banned and, if so, how
+// many connections this ban has now refused at accept.
+//
+// A ban does not stop a scanner knocking; it only stops it getting a banner.
+// Logging every refusal at Warn just moves the noise from the handshake path
+// to the accept path, and a line describing the ban working is even less
+// actionable than the failure that caused it. The caller announces the first
+// refusal per ban and drops the rest to Debug.
+func (p *Proxy) noteBannedRejection(ip string) (bool, int) {
 	if ip == "" {
-		return
+		return false, 0
+	}
+	p.banMu.Lock()
+	defer p.banMu.Unlock()
+	entry, ok := p.bans[ip]
+	if !ok || !time.Now().Before(entry.bannedUntil) {
+		return false, 0
+	}
+	entry.rejected++
+	return true, entry.rejected
+}
+
+// recordAuthFailure records one failed handshake for an IP and arms a ban once
+// either threshold trips. It returns how many failures that IP has produced
+// inside the fast window, so the caller can log the first one loudly and the
+// repeats quietly.
+//
+// History is trimmed to slowFailureWindow rather than failureWindow, and capped
+// so a flood cannot grow the slice without bound. The cap is safe for the fast
+// threshold too: if more than maxFailuresPerSlowWindow failures land inside
+// failureWindow, the fast threshold is already met several times over.
+func (p *Proxy) recordAuthFailure(ip string) int {
+	if ip == "" {
+		return 0
 	}
 	now := time.Now()
-	cutoff := now.Add(-failureWindow)
 
 	p.banMu.Lock()
 	defer p.banMu.Unlock()
@@ -124,24 +172,62 @@ func (p *Proxy) recordAuthFailure(ip string) {
 		entry = &banEntry{}
 		p.bans[ip] = entry
 	}
-	// Trim out failures older than the sliding window.
-	keep := entry.failures[:0]
-	for _, t := range entry.failures {
+	entry.failures = appendFailure(entry.failures, now)
+
+	recent := countFailuresSince(entry.failures, now.Add(-failureWindow))
+	sustained := len(entry.failures)
+
+	switch {
+	case recent >= maxFailuresPerWindow && now.After(entry.bannedUntil):
+		entry.bannedUntil = now.Add(banDuration)
+		entry.rejected = 0
+		logger.WithFields(
+			"ip", ip,
+			"failures", recent,
+			"window_minutes", int(failureWindow.Minutes()),
+			"ban_minutes", int(banDuration.Minutes()),
+		).Warn("ssh proxy: banning IP for repeated auth failures")
+	case sustained >= maxFailuresPerSlowWindow && now.After(entry.bannedUntil):
+		entry.bannedUntil = now.Add(slowBanDuration)
+		entry.rejected = 0
+		logger.WithFields(
+			"ip", ip,
+			"failures", sustained,
+			"window_minutes", int(slowFailureWindow.Minutes()),
+			"ban_minutes", int(slowBanDuration.Minutes()),
+		).Warn("ssh proxy: banning IP for sustained low-rate auth failures")
+	}
+
+	return recent
+}
+
+// appendFailure adds one timestamp, drops anything older than
+// slowFailureWindow, and keeps at most maxFailuresPerSlowWindow entries so a
+// single address cannot grow this slice without bound.
+func appendFailure(failures []time.Time, now time.Time) []time.Time {
+	cutoff := now.Add(-slowFailureWindow)
+	keep := failures[:0]
+	for _, t := range failures {
 		if t.After(cutoff) {
 			keep = append(keep, t)
 		}
 	}
-	entry.failures = append(keep, now)
-
-	if len(entry.failures) >= maxFailuresPerWindow && now.After(entry.bannedUntil) {
-		entry.bannedUntil = now.Add(banDuration)
-		logger.WithFields(
-			"ip", ip,
-			"failures", len(entry.failures),
-			"window_minutes", int(failureWindow.Minutes()),
-			"ban_minutes", int(banDuration.Minutes()),
-		).Warn("ssh proxy: banning IP for repeated auth failures")
+	keep = append(keep, now)
+	if overflow := len(keep) - maxFailuresPerSlowWindow; overflow > 0 {
+		keep = keep[overflow:]
 	}
+	return keep
+}
+
+// countFailuresSince counts entries newer than cutoff.
+func countFailuresSince(failures []time.Time, cutoff time.Time) int {
+	n := 0
+	for _, t := range failures {
+		if t.After(cutoff) {
+			n++
+		}
+	}
+	return n
 }
 
 // recordAuthSuccess clears any soft state for an IP after a successful
@@ -157,10 +243,12 @@ func (p *Proxy) recordAuthSuccess(ip string) {
 }
 
 // cleanupBans drops ban entries whose ban has fully expired AND whose
-// failure history is empty. Bounded by the periodic cleanup loop.
+// failure history is empty. Bounded by the periodic cleanup loop. Trimming
+// uses the slow window so a low-rate scanner's history survives long enough
+// for the sustained threshold to see it.
 func (p *Proxy) cleanupBans() {
 	now := time.Now()
-	cutoff := now.Add(-failureWindow)
+	cutoff := now.Add(-slowFailureWindow)
 	p.banMu.Lock()
 	defer p.banMu.Unlock()
 	for ip, entry := range p.bans {
@@ -246,8 +334,12 @@ func (p *Proxy) handleConnection(ctx context.Context, netConn net.Conn) {
 	// negotiation. Saves cycles and denies the attacker any signal
 	// (no auth-failed banner, no key-exchange detail) about which keys
 	// might be valid in this tenant.
-	if p.isBanned(host) {
-		logger.WithFields("ip", host).Warn("ssh proxy: banned IP rejected at accept")
+	if banned, rejections := p.noteBannedRejection(host); banned {
+		if rejections <= 1 {
+			logger.WithFields("ip", host).Warn("ssh proxy: banned IP rejected at accept")
+		} else {
+			logger.WithFields("ip", host, "rejections", rejections).Debug("ssh proxy: banned IP rejected at accept")
+		}
 		_ = netConn.Close()
 		return
 	}
@@ -271,8 +363,20 @@ func (p *Proxy) handleConnection(ctx context.Context, netConn net.Conn) {
 	if err != nil {
 		// Handshake failure is a strong signal of probing — count it
 		// against the source IP so a sustained scanner trips the ban.
-		p.recordAuthFailure(host)
-		logger.WithFields("remote", remoteAddr, "error", err.Error()).Warn("ssh proxy: handshake failed")
+		// Every unauthenticated probe from the internet reaches here. Logging
+		// all of them at Warn is noise by construction: one source produced
+		// 1,649 Warn lines in 14 hours on eu-gra-1-prod without a single one
+		// being actionable. The first failure in a window still gets an
+		// operator's attention; the repeats stay available at Debug.
+		if failures := p.recordAuthFailure(host); failures <= 1 {
+			logger.WithFields("remote", remoteAddr, "error", err.Error()).Warn("ssh proxy: handshake failed")
+		} else {
+			logger.WithFields(
+				"remote", remoteAddr,
+				"error", err.Error(),
+				"failures_in_window", failures,
+			).Debug("ssh proxy: handshake failed")
+		}
 		_ = netConn.Close()
 		return
 	}

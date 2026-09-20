@@ -19,12 +19,12 @@ var _ datasetspb.EvalServiceServer = (*EvalGrpcServer)(nil)
 
 // Ensure Server implements ConnectServer contract from internal/api/grpc/server
 var _ interface {
-	RegisterConnectServer(...connect.Interceptor) (string, http.Handler)
+	RegisterConnectServer(...connect.HandlerOption) (string, http.Handler)
 	FileDescriptor() protoreflect.FileDescriptor
 } = (*DatasetServer)(nil)
 
 var _ interface {
-	RegisterConnectServer(...connect.Interceptor) (string, http.Handler)
+	RegisterConnectServer(...connect.HandlerOption) (string, http.Handler)
 	FileDescriptor() protoreflect.FileDescriptor
 } = (*EvalServer)(nil)
 
@@ -118,11 +118,13 @@ func (s *EvalServer) WithInterceptors(interceptors ...connect.Interceptor) *Eval
 
 // --- DatasetServer Connect plumbing ---
 
-func (s *DatasetServer) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	all := make([]connect.Interceptor, 0, len(s.serviceInterceptors)+len(interceptors))
-	all = append(all, s.serviceInterceptors...)
-	all = append(all, interceptors...)
-	return datasetsconnect.NewDatasetServiceHandler(s, connect.WithInterceptors(all...))
+func (s *DatasetServer) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	// The service\'s own interceptors run first, then whatever the caller
+	// supplied. connect accumulates interceptors across options, so this
+	// preserves the previous ordering while letting the caller pass other
+	// handler options through untouched.
+	all := append([]connect.HandlerOption{connect.WithInterceptors(s.serviceInterceptors...)}, opts...)
+	return datasetsconnect.NewDatasetServiceHandler(s, all...)
 }
 
 func (s *DatasetServer) FileDescriptor() protoreflect.FileDescriptor {
@@ -143,11 +145,13 @@ func (s *DatasetServer) RegisterGateway(ctx context.Context, mux *runtime.ServeM
 
 // --- EvalServer Connect plumbing ---
 
-func (s *EvalServer) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	all := make([]connect.Interceptor, 0, len(s.serviceInterceptors)+len(interceptors))
-	all = append(all, s.serviceInterceptors...)
-	all = append(all, interceptors...)
-	return datasetsconnect.NewEvalServiceHandler(s, connect.WithInterceptors(all...))
+func (s *EvalServer) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	// The service\'s own interceptors run first, then whatever the caller
+	// supplied. connect accumulates interceptors across options, so this
+	// preserves the previous ordering while letting the caller pass other
+	// handler options through untouched.
+	all := append([]connect.HandlerOption{connect.WithInterceptors(s.serviceInterceptors...)}, opts...)
+	return datasetsconnect.NewEvalServiceHandler(s, all...)
 }
 
 func (s *EvalServer) FileDescriptor() protoreflect.FileDescriptor {
@@ -526,7 +530,7 @@ func (g *EvalGrpcServer) ScoreOutput(ctx context.Context, req *datasetspb.ScoreO
 var _ datasetspb.PlaygroundServiceServer = (*PlaygroundGrpcServer)(nil)
 
 var _ interface {
-	RegisterConnectServer(...connect.Interceptor) (string, http.Handler)
+	RegisterConnectServer(...connect.HandlerOption) (string, http.Handler)
 	FileDescriptor() protoreflect.FileDescriptor
 } = (*PlaygroundServer)(nil)
 
@@ -573,11 +577,13 @@ func (s *PlaygroundServer) WithInterceptors(interceptors ...connect.Interceptor)
 
 // --- PlaygroundServer Connect plumbing ---
 
-func (s *PlaygroundServer) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	all := make([]connect.Interceptor, 0, len(s.serviceInterceptors)+len(interceptors))
-	all = append(all, s.serviceInterceptors...)
-	all = append(all, interceptors...)
-	return datasetsconnect.NewPlaygroundServiceHandler(s, connect.WithInterceptors(all...))
+func (s *PlaygroundServer) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	// The service\'s own interceptors run first, then whatever the caller
+	// supplied. connect accumulates interceptors across options, so this
+	// preserves the previous ordering while letting the caller pass other
+	// handler options through untouched.
+	all := append([]connect.HandlerOption{connect.WithInterceptors(s.serviceInterceptors...)}, opts...)
+	return datasetsconnect.NewPlaygroundServiceHandler(s, all...)
 }
 
 func (s *PlaygroundServer) FileDescriptor() protoreflect.FileDescriptor {

@@ -45,6 +45,9 @@ const (
 	// OperationsServiceListOrganizationsProcedure is the fully-qualified name of the
 	// OperationsService's ListOrganizations RPC.
 	OperationsServiceListOrganizationsProcedure = "/everstack.operations.v1.OperationsService/ListOrganizations"
+	// OperationsServiceGetOrganizationProcedure is the fully-qualified name of the OperationsService's
+	// GetOrganization RPC.
+	OperationsServiceGetOrganizationProcedure = "/everstack.operations.v1.OperationsService/GetOrganization"
 	// OperationsServiceListInstallationsProcedure is the fully-qualified name of the
 	// OperationsService's ListInstallations RPC.
 	OperationsServiceListInstallationsProcedure = "/everstack.operations.v1.OperationsService/ListInstallations"
@@ -57,6 +60,15 @@ const (
 	// OperationsServiceGetInstanceProcedure is the fully-qualified name of the OperationsService's
 	// GetInstance RPC.
 	OperationsServiceGetInstanceProcedure = "/everstack.operations.v1.OperationsService/GetInstance"
+	// OperationsServiceGetInstanceDiagnosticsProcedure is the fully-qualified name of the
+	// OperationsService's GetInstanceDiagnostics RPC.
+	OperationsServiceGetInstanceDiagnosticsProcedure = "/everstack.operations.v1.OperationsService/GetInstanceDiagnostics"
+	// OperationsServiceListInstanceAutomationsProcedure is the fully-qualified name of the
+	// OperationsService's ListInstanceAutomations RPC.
+	OperationsServiceListInstanceAutomationsProcedure = "/everstack.operations.v1.OperationsService/ListInstanceAutomations"
+	// OperationsServiceChangeInstanceAutomationProcedure is the fully-qualified name of the
+	// OperationsService's ChangeInstanceAutomation RPC.
+	OperationsServiceChangeInstanceAutomationProcedure = "/everstack.operations.v1.OperationsService/ChangeInstanceAutomation"
 	// OperationsServiceChangeInstanceLifecycleProcedure is the fully-qualified name of the
 	// OperationsService's ChangeInstanceLifecycle RPC.
 	OperationsServiceChangeInstanceLifecycleProcedure = "/everstack.operations.v1.OperationsService/ChangeInstanceLifecycle"
@@ -69,6 +81,9 @@ const (
 	// OperationsServiceGetEnvironmentProcedure is the fully-qualified name of the OperationsService's
 	// GetEnvironment RPC.
 	OperationsServiceGetEnvironmentProcedure = "/everstack.operations.v1.OperationsService/GetEnvironment"
+	// OperationsServiceGetWorkloadProcedure is the fully-qualified name of the OperationsService's
+	// GetWorkload RPC.
+	OperationsServiceGetWorkloadProcedure = "/everstack.operations.v1.OperationsService/GetWorkload"
 	// OperationsServiceListEventsProcedure is the fully-qualified name of the OperationsService's
 	// ListEvents RPC.
 	OperationsServiceListEventsProcedure = "/everstack.operations.v1.OperationsService/ListEvents"
@@ -81,6 +96,9 @@ const (
 	// OperationsServiceListIdentityUsersProcedure is the fully-qualified name of the
 	// OperationsService's ListIdentityUsers RPC.
 	OperationsServiceListIdentityUsersProcedure = "/everstack.operations.v1.OperationsService/ListIdentityUsers"
+	// OperationsServiceGetCustomerUserProcedure is the fully-qualified name of the OperationsService's
+	// GetCustomerUser RPC.
+	OperationsServiceGetCustomerUserProcedure = "/everstack.operations.v1.OperationsService/GetCustomerUser"
 	// OperationsServiceListIdentitySessionsProcedure is the fully-qualified name of the
 	// OperationsService's ListIdentitySessions RPC.
 	OperationsServiceListIdentitySessionsProcedure = "/everstack.operations.v1.OperationsService/ListIdentitySessions"
@@ -111,6 +129,15 @@ const (
 	// OperationsServiceResolveIncidentProcedure is the fully-qualified name of the OperationsService's
 	// ResolveIncident RPC.
 	OperationsServiceResolveIncidentProcedure = "/everstack.operations.v1.OperationsService/ResolveIncident"
+	// OperationsServiceAssignIncidentProcedure is the fully-qualified name of the OperationsService's
+	// AssignIncident RPC.
+	OperationsServiceAssignIncidentProcedure = "/everstack.operations.v1.OperationsService/AssignIncident"
+	// OperationsServiceAddIncidentNoteProcedure is the fully-qualified name of the OperationsService's
+	// AddIncidentNote RPC.
+	OperationsServiceAddIncidentNoteProcedure = "/everstack.operations.v1.OperationsService/AddIncidentNote"
+	// OperationsServiceListIncidentsForSubjectProcedure is the fully-qualified name of the
+	// OperationsService's ListIncidentsForSubject RPC.
+	OperationsServiceListIncidentsForSubjectProcedure = "/everstack.operations.v1.OperationsService/ListIncidentsForSubject"
 	// OperationsServiceListAlertRulesProcedure is the fully-qualified name of the OperationsService's
 	// ListAlertRules RPC.
 	OperationsServiceListAlertRulesProcedure = "/everstack.operations.v1.OperationsService/ListAlertRules"
@@ -145,18 +172,24 @@ type OperationsServiceClient interface {
 	GetSession(context.Context, *connect.Request[v1.GetSessionRequest]) (*connect.Response[v1.GetSessionResponse], error)
 	GetOverview(context.Context, *connect.Request[v1.GetOverviewRequest]) (*connect.Response[v1.GetOverviewResponse], error)
 	ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error)
+	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
 	ListInstallations(context.Context, *connect.Request[v1.ListInstallationsRequest]) (*connect.Response[v1.ListInstallationsResponse], error)
 	ListLicenses(context.Context, *connect.Request[v1.ListLicensesRequest]) (*connect.Response[v1.ListLicensesResponse], error)
 	ListInstances(context.Context, *connect.Request[v1.ListInstancesRequest]) (*connect.Response[v1.ListInstancesResponse], error)
 	GetInstance(context.Context, *connect.Request[v1.GetInstanceRequest]) (*connect.Response[v1.GetInstanceResponse], error)
+	GetInstanceDiagnostics(context.Context, *connect.Request[v1.GetInstanceDiagnosticsRequest]) (*connect.Response[v1.GetInstanceDiagnosticsResponse], error)
+	ListInstanceAutomations(context.Context, *connect.Request[v1.ListInstanceAutomationsRequest]) (*connect.Response[v1.ListInstanceAutomationsResponse], error)
+	ChangeInstanceAutomation(context.Context, *connect.Request[v1.ChangeInstanceAutomationRequest]) (*connect.Response[v1.ChangeInstanceAutomationResponse], error)
 	ChangeInstanceLifecycle(context.Context, *connect.Request[v1.ChangeInstanceLifecycleRequest]) (*connect.Response[v1.ChangeInstanceLifecycleResponse], error)
 	ListSandboxes(context.Context, *connect.Request[v1.ListSandboxesRequest]) (*connect.Response[v1.ListSandboxesResponse], error)
 	ListEnvironments(context.Context, *connect.Request[v1.ListEnvironmentsRequest]) (*connect.Response[v1.ListEnvironmentsResponse], error)
 	GetEnvironment(context.Context, *connect.Request[v1.GetEnvironmentRequest]) (*connect.Response[v1.GetEnvironmentResponse], error)
+	GetWorkload(context.Context, *connect.Request[v1.GetWorkloadRequest]) (*connect.Response[v1.GetWorkloadResponse], error)
 	ListEvents(context.Context, *connect.Request[v1.ListEventsRequest]) (*connect.Response[v1.ListEventsResponse], error)
 	ListAuditEvents(context.Context, *connect.Request[v1.ListAuditEventsRequest]) (*connect.Response[v1.ListAuditEventsResponse], error)
 	GetIdentityOverview(context.Context, *connect.Request[v1.GetIdentityOverviewRequest]) (*connect.Response[v1.GetIdentityOverviewResponse], error)
 	ListIdentityUsers(context.Context, *connect.Request[v1.ListIdentityUsersRequest]) (*connect.Response[v1.ListIdentityUsersResponse], error)
+	GetCustomerUser(context.Context, *connect.Request[v1.GetCustomerUserRequest]) (*connect.Response[v1.GetCustomerUserResponse], error)
 	ListIdentitySessions(context.Context, *connect.Request[v1.ListIdentitySessionsRequest]) (*connect.Response[v1.ListIdentitySessionsResponse], error)
 	RevokeIdentitySession(context.Context, *connect.Request[v1.RevokeIdentitySessionRequest]) (*connect.Response[v1.RevokeIdentitySessionResponse], error)
 	ListIdentityConnections(context.Context, *connect.Request[v1.ListIdentityConnectionsRequest]) (*connect.Response[v1.ListIdentityConnectionsResponse], error)
@@ -169,6 +202,9 @@ type OperationsServiceClient interface {
 	AcknowledgeIncident(context.Context, *connect.Request[v1.AcknowledgeIncidentRequest]) (*connect.Response[v1.AcknowledgeIncidentResponse], error)
 	SnoozeIncident(context.Context, *connect.Request[v1.SnoozeIncidentRequest]) (*connect.Response[v1.SnoozeIncidentResponse], error)
 	ResolveIncident(context.Context, *connect.Request[v1.ResolveIncidentRequest]) (*connect.Response[v1.ResolveIncidentResponse], error)
+	AssignIncident(context.Context, *connect.Request[v1.AssignIncidentRequest]) (*connect.Response[v1.AssignIncidentResponse], error)
+	AddIncidentNote(context.Context, *connect.Request[v1.AddIncidentNoteRequest]) (*connect.Response[v1.AddIncidentNoteResponse], error)
+	ListIncidentsForSubject(context.Context, *connect.Request[v1.ListIncidentsForSubjectRequest]) (*connect.Response[v1.ListIncidentsForSubjectResponse], error)
 	ListAlertRules(context.Context, *connect.Request[v1.ListAlertRulesRequest]) (*connect.Response[v1.ListAlertRulesResponse], error)
 	ListNotificationTargets(context.Context, *connect.Request[v1.ListNotificationTargetsRequest]) (*connect.Response[v1.ListNotificationTargetsResponse], error)
 	GetHostingOverview(context.Context, *connect.Request[v11.HostingOverviewRequest]) (*connect.Response[v11.HostingOverviewResponse], error)
@@ -208,6 +244,12 @@ func NewOperationsServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			connect.WithSchema(operationsServiceMethods.ByName("ListOrganizations")),
 			connect.WithClientOptions(opts...),
 		),
+		getOrganization: connect.NewClient[v1.GetOrganizationRequest, v1.GetOrganizationResponse](
+			httpClient,
+			baseURL+OperationsServiceGetOrganizationProcedure,
+			connect.WithSchema(operationsServiceMethods.ByName("GetOrganization")),
+			connect.WithClientOptions(opts...),
+		),
 		listInstallations: connect.NewClient[v1.ListInstallationsRequest, v1.ListInstallationsResponse](
 			httpClient,
 			baseURL+OperationsServiceListInstallationsProcedure,
@@ -230,6 +272,24 @@ func NewOperationsServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			httpClient,
 			baseURL+OperationsServiceGetInstanceProcedure,
 			connect.WithSchema(operationsServiceMethods.ByName("GetInstance")),
+			connect.WithClientOptions(opts...),
+		),
+		getInstanceDiagnostics: connect.NewClient[v1.GetInstanceDiagnosticsRequest, v1.GetInstanceDiagnosticsResponse](
+			httpClient,
+			baseURL+OperationsServiceGetInstanceDiagnosticsProcedure,
+			connect.WithSchema(operationsServiceMethods.ByName("GetInstanceDiagnostics")),
+			connect.WithClientOptions(opts...),
+		),
+		listInstanceAutomations: connect.NewClient[v1.ListInstanceAutomationsRequest, v1.ListInstanceAutomationsResponse](
+			httpClient,
+			baseURL+OperationsServiceListInstanceAutomationsProcedure,
+			connect.WithSchema(operationsServiceMethods.ByName("ListInstanceAutomations")),
+			connect.WithClientOptions(opts...),
+		),
+		changeInstanceAutomation: connect.NewClient[v1.ChangeInstanceAutomationRequest, v1.ChangeInstanceAutomationResponse](
+			httpClient,
+			baseURL+OperationsServiceChangeInstanceAutomationProcedure,
+			connect.WithSchema(operationsServiceMethods.ByName("ChangeInstanceAutomation")),
 			connect.WithClientOptions(opts...),
 		),
 		changeInstanceLifecycle: connect.NewClient[v1.ChangeInstanceLifecycleRequest, v1.ChangeInstanceLifecycleResponse](
@@ -256,6 +316,12 @@ func NewOperationsServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			connect.WithSchema(operationsServiceMethods.ByName("GetEnvironment")),
 			connect.WithClientOptions(opts...),
 		),
+		getWorkload: connect.NewClient[v1.GetWorkloadRequest, v1.GetWorkloadResponse](
+			httpClient,
+			baseURL+OperationsServiceGetWorkloadProcedure,
+			connect.WithSchema(operationsServiceMethods.ByName("GetWorkload")),
+			connect.WithClientOptions(opts...),
+		),
 		listEvents: connect.NewClient[v1.ListEventsRequest, v1.ListEventsResponse](
 			httpClient,
 			baseURL+OperationsServiceListEventsProcedure,
@@ -278,6 +344,12 @@ func NewOperationsServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			httpClient,
 			baseURL+OperationsServiceListIdentityUsersProcedure,
 			connect.WithSchema(operationsServiceMethods.ByName("ListIdentityUsers")),
+			connect.WithClientOptions(opts...),
+		),
+		getCustomerUser: connect.NewClient[v1.GetCustomerUserRequest, v1.GetCustomerUserResponse](
+			httpClient,
+			baseURL+OperationsServiceGetCustomerUserProcedure,
+			connect.WithSchema(operationsServiceMethods.ByName("GetCustomerUser")),
 			connect.WithClientOptions(opts...),
 		),
 		listIdentitySessions: connect.NewClient[v1.ListIdentitySessionsRequest, v1.ListIdentitySessionsResponse](
@@ -340,6 +412,24 @@ func NewOperationsServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			connect.WithSchema(operationsServiceMethods.ByName("ResolveIncident")),
 			connect.WithClientOptions(opts...),
 		),
+		assignIncident: connect.NewClient[v1.AssignIncidentRequest, v1.AssignIncidentResponse](
+			httpClient,
+			baseURL+OperationsServiceAssignIncidentProcedure,
+			connect.WithSchema(operationsServiceMethods.ByName("AssignIncident")),
+			connect.WithClientOptions(opts...),
+		),
+		addIncidentNote: connect.NewClient[v1.AddIncidentNoteRequest, v1.AddIncidentNoteResponse](
+			httpClient,
+			baseURL+OperationsServiceAddIncidentNoteProcedure,
+			connect.WithSchema(operationsServiceMethods.ByName("AddIncidentNote")),
+			connect.WithClientOptions(opts...),
+		),
+		listIncidentsForSubject: connect.NewClient[v1.ListIncidentsForSubjectRequest, v1.ListIncidentsForSubjectResponse](
+			httpClient,
+			baseURL+OperationsServiceListIncidentsForSubjectProcedure,
+			connect.WithSchema(operationsServiceMethods.ByName("ListIncidentsForSubject")),
+			connect.WithClientOptions(opts...),
+		),
 		listAlertRules: connect.NewClient[v1.ListAlertRulesRequest, v1.ListAlertRulesResponse](
 			httpClient,
 			baseURL+OperationsServiceListAlertRulesProcedure,
@@ -396,18 +486,24 @@ type operationsServiceClient struct {
 	getSession               *connect.Client[v1.GetSessionRequest, v1.GetSessionResponse]
 	getOverview              *connect.Client[v1.GetOverviewRequest, v1.GetOverviewResponse]
 	listOrganizations        *connect.Client[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse]
+	getOrganization          *connect.Client[v1.GetOrganizationRequest, v1.GetOrganizationResponse]
 	listInstallations        *connect.Client[v1.ListInstallationsRequest, v1.ListInstallationsResponse]
 	listLicenses             *connect.Client[v1.ListLicensesRequest, v1.ListLicensesResponse]
 	listInstances            *connect.Client[v1.ListInstancesRequest, v1.ListInstancesResponse]
 	getInstance              *connect.Client[v1.GetInstanceRequest, v1.GetInstanceResponse]
+	getInstanceDiagnostics   *connect.Client[v1.GetInstanceDiagnosticsRequest, v1.GetInstanceDiagnosticsResponse]
+	listInstanceAutomations  *connect.Client[v1.ListInstanceAutomationsRequest, v1.ListInstanceAutomationsResponse]
+	changeInstanceAutomation *connect.Client[v1.ChangeInstanceAutomationRequest, v1.ChangeInstanceAutomationResponse]
 	changeInstanceLifecycle  *connect.Client[v1.ChangeInstanceLifecycleRequest, v1.ChangeInstanceLifecycleResponse]
 	listSandboxes            *connect.Client[v1.ListSandboxesRequest, v1.ListSandboxesResponse]
 	listEnvironments         *connect.Client[v1.ListEnvironmentsRequest, v1.ListEnvironmentsResponse]
 	getEnvironment           *connect.Client[v1.GetEnvironmentRequest, v1.GetEnvironmentResponse]
+	getWorkload              *connect.Client[v1.GetWorkloadRequest, v1.GetWorkloadResponse]
 	listEvents               *connect.Client[v1.ListEventsRequest, v1.ListEventsResponse]
 	listAuditEvents          *connect.Client[v1.ListAuditEventsRequest, v1.ListAuditEventsResponse]
 	getIdentityOverview      *connect.Client[v1.GetIdentityOverviewRequest, v1.GetIdentityOverviewResponse]
 	listIdentityUsers        *connect.Client[v1.ListIdentityUsersRequest, v1.ListIdentityUsersResponse]
+	getCustomerUser          *connect.Client[v1.GetCustomerUserRequest, v1.GetCustomerUserResponse]
 	listIdentitySessions     *connect.Client[v1.ListIdentitySessionsRequest, v1.ListIdentitySessionsResponse]
 	revokeIdentitySession    *connect.Client[v1.RevokeIdentitySessionRequest, v1.RevokeIdentitySessionResponse]
 	listIdentityConnections  *connect.Client[v1.ListIdentityConnectionsRequest, v1.ListIdentityConnectionsResponse]
@@ -418,6 +514,9 @@ type operationsServiceClient struct {
 	acknowledgeIncident      *connect.Client[v1.AcknowledgeIncidentRequest, v1.AcknowledgeIncidentResponse]
 	snoozeIncident           *connect.Client[v1.SnoozeIncidentRequest, v1.SnoozeIncidentResponse]
 	resolveIncident          *connect.Client[v1.ResolveIncidentRequest, v1.ResolveIncidentResponse]
+	assignIncident           *connect.Client[v1.AssignIncidentRequest, v1.AssignIncidentResponse]
+	addIncidentNote          *connect.Client[v1.AddIncidentNoteRequest, v1.AddIncidentNoteResponse]
+	listIncidentsForSubject  *connect.Client[v1.ListIncidentsForSubjectRequest, v1.ListIncidentsForSubjectResponse]
 	listAlertRules           *connect.Client[v1.ListAlertRulesRequest, v1.ListAlertRulesResponse]
 	listNotificationTargets  *connect.Client[v1.ListNotificationTargetsRequest, v1.ListNotificationTargetsResponse]
 	getHostingOverview       *connect.Client[v11.HostingOverviewRequest, v11.HostingOverviewResponse]
@@ -443,6 +542,11 @@ func (c *operationsServiceClient) ListOrganizations(ctx context.Context, req *co
 	return c.listOrganizations.CallUnary(ctx, req)
 }
 
+// GetOrganization calls everstack.operations.v1.OperationsService.GetOrganization.
+func (c *operationsServiceClient) GetOrganization(ctx context.Context, req *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error) {
+	return c.getOrganization.CallUnary(ctx, req)
+}
+
 // ListInstallations calls everstack.operations.v1.OperationsService.ListInstallations.
 func (c *operationsServiceClient) ListInstallations(ctx context.Context, req *connect.Request[v1.ListInstallationsRequest]) (*connect.Response[v1.ListInstallationsResponse], error) {
 	return c.listInstallations.CallUnary(ctx, req)
@@ -461,6 +565,22 @@ func (c *operationsServiceClient) ListInstances(ctx context.Context, req *connec
 // GetInstance calls everstack.operations.v1.OperationsService.GetInstance.
 func (c *operationsServiceClient) GetInstance(ctx context.Context, req *connect.Request[v1.GetInstanceRequest]) (*connect.Response[v1.GetInstanceResponse], error) {
 	return c.getInstance.CallUnary(ctx, req)
+}
+
+// GetInstanceDiagnostics calls everstack.operations.v1.OperationsService.GetInstanceDiagnostics.
+func (c *operationsServiceClient) GetInstanceDiagnostics(ctx context.Context, req *connect.Request[v1.GetInstanceDiagnosticsRequest]) (*connect.Response[v1.GetInstanceDiagnosticsResponse], error) {
+	return c.getInstanceDiagnostics.CallUnary(ctx, req)
+}
+
+// ListInstanceAutomations calls everstack.operations.v1.OperationsService.ListInstanceAutomations.
+func (c *operationsServiceClient) ListInstanceAutomations(ctx context.Context, req *connect.Request[v1.ListInstanceAutomationsRequest]) (*connect.Response[v1.ListInstanceAutomationsResponse], error) {
+	return c.listInstanceAutomations.CallUnary(ctx, req)
+}
+
+// ChangeInstanceAutomation calls
+// everstack.operations.v1.OperationsService.ChangeInstanceAutomation.
+func (c *operationsServiceClient) ChangeInstanceAutomation(ctx context.Context, req *connect.Request[v1.ChangeInstanceAutomationRequest]) (*connect.Response[v1.ChangeInstanceAutomationResponse], error) {
+	return c.changeInstanceAutomation.CallUnary(ctx, req)
 }
 
 // ChangeInstanceLifecycle calls everstack.operations.v1.OperationsService.ChangeInstanceLifecycle.
@@ -483,6 +603,11 @@ func (c *operationsServiceClient) GetEnvironment(ctx context.Context, req *conne
 	return c.getEnvironment.CallUnary(ctx, req)
 }
 
+// GetWorkload calls everstack.operations.v1.OperationsService.GetWorkload.
+func (c *operationsServiceClient) GetWorkload(ctx context.Context, req *connect.Request[v1.GetWorkloadRequest]) (*connect.Response[v1.GetWorkloadResponse], error) {
+	return c.getWorkload.CallUnary(ctx, req)
+}
+
 // ListEvents calls everstack.operations.v1.OperationsService.ListEvents.
 func (c *operationsServiceClient) ListEvents(ctx context.Context, req *connect.Request[v1.ListEventsRequest]) (*connect.Response[v1.ListEventsResponse], error) {
 	return c.listEvents.CallUnary(ctx, req)
@@ -501,6 +626,11 @@ func (c *operationsServiceClient) GetIdentityOverview(ctx context.Context, req *
 // ListIdentityUsers calls everstack.operations.v1.OperationsService.ListIdentityUsers.
 func (c *operationsServiceClient) ListIdentityUsers(ctx context.Context, req *connect.Request[v1.ListIdentityUsersRequest]) (*connect.Response[v1.ListIdentityUsersResponse], error) {
 	return c.listIdentityUsers.CallUnary(ctx, req)
+}
+
+// GetCustomerUser calls everstack.operations.v1.OperationsService.GetCustomerUser.
+func (c *operationsServiceClient) GetCustomerUser(ctx context.Context, req *connect.Request[v1.GetCustomerUserRequest]) (*connect.Response[v1.GetCustomerUserResponse], error) {
+	return c.getCustomerUser.CallUnary(ctx, req)
 }
 
 // ListIdentitySessions calls everstack.operations.v1.OperationsService.ListIdentitySessions.
@@ -555,6 +685,21 @@ func (c *operationsServiceClient) ResolveIncident(ctx context.Context, req *conn
 	return c.resolveIncident.CallUnary(ctx, req)
 }
 
+// AssignIncident calls everstack.operations.v1.OperationsService.AssignIncident.
+func (c *operationsServiceClient) AssignIncident(ctx context.Context, req *connect.Request[v1.AssignIncidentRequest]) (*connect.Response[v1.AssignIncidentResponse], error) {
+	return c.assignIncident.CallUnary(ctx, req)
+}
+
+// AddIncidentNote calls everstack.operations.v1.OperationsService.AddIncidentNote.
+func (c *operationsServiceClient) AddIncidentNote(ctx context.Context, req *connect.Request[v1.AddIncidentNoteRequest]) (*connect.Response[v1.AddIncidentNoteResponse], error) {
+	return c.addIncidentNote.CallUnary(ctx, req)
+}
+
+// ListIncidentsForSubject calls everstack.operations.v1.OperationsService.ListIncidentsForSubject.
+func (c *operationsServiceClient) ListIncidentsForSubject(ctx context.Context, req *connect.Request[v1.ListIncidentsForSubjectRequest]) (*connect.Response[v1.ListIncidentsForSubjectResponse], error) {
+	return c.listIncidentsForSubject.CallUnary(ctx, req)
+}
+
 // ListAlertRules calls everstack.operations.v1.OperationsService.ListAlertRules.
 func (c *operationsServiceClient) ListAlertRules(ctx context.Context, req *connect.Request[v1.ListAlertRulesRequest]) (*connect.Response[v1.ListAlertRulesResponse], error) {
 	return c.listAlertRules.CallUnary(ctx, req)
@@ -601,18 +746,24 @@ type OperationsServiceHandler interface {
 	GetSession(context.Context, *connect.Request[v1.GetSessionRequest]) (*connect.Response[v1.GetSessionResponse], error)
 	GetOverview(context.Context, *connect.Request[v1.GetOverviewRequest]) (*connect.Response[v1.GetOverviewResponse], error)
 	ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error)
+	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
 	ListInstallations(context.Context, *connect.Request[v1.ListInstallationsRequest]) (*connect.Response[v1.ListInstallationsResponse], error)
 	ListLicenses(context.Context, *connect.Request[v1.ListLicensesRequest]) (*connect.Response[v1.ListLicensesResponse], error)
 	ListInstances(context.Context, *connect.Request[v1.ListInstancesRequest]) (*connect.Response[v1.ListInstancesResponse], error)
 	GetInstance(context.Context, *connect.Request[v1.GetInstanceRequest]) (*connect.Response[v1.GetInstanceResponse], error)
+	GetInstanceDiagnostics(context.Context, *connect.Request[v1.GetInstanceDiagnosticsRequest]) (*connect.Response[v1.GetInstanceDiagnosticsResponse], error)
+	ListInstanceAutomations(context.Context, *connect.Request[v1.ListInstanceAutomationsRequest]) (*connect.Response[v1.ListInstanceAutomationsResponse], error)
+	ChangeInstanceAutomation(context.Context, *connect.Request[v1.ChangeInstanceAutomationRequest]) (*connect.Response[v1.ChangeInstanceAutomationResponse], error)
 	ChangeInstanceLifecycle(context.Context, *connect.Request[v1.ChangeInstanceLifecycleRequest]) (*connect.Response[v1.ChangeInstanceLifecycleResponse], error)
 	ListSandboxes(context.Context, *connect.Request[v1.ListSandboxesRequest]) (*connect.Response[v1.ListSandboxesResponse], error)
 	ListEnvironments(context.Context, *connect.Request[v1.ListEnvironmentsRequest]) (*connect.Response[v1.ListEnvironmentsResponse], error)
 	GetEnvironment(context.Context, *connect.Request[v1.GetEnvironmentRequest]) (*connect.Response[v1.GetEnvironmentResponse], error)
+	GetWorkload(context.Context, *connect.Request[v1.GetWorkloadRequest]) (*connect.Response[v1.GetWorkloadResponse], error)
 	ListEvents(context.Context, *connect.Request[v1.ListEventsRequest]) (*connect.Response[v1.ListEventsResponse], error)
 	ListAuditEvents(context.Context, *connect.Request[v1.ListAuditEventsRequest]) (*connect.Response[v1.ListAuditEventsResponse], error)
 	GetIdentityOverview(context.Context, *connect.Request[v1.GetIdentityOverviewRequest]) (*connect.Response[v1.GetIdentityOverviewResponse], error)
 	ListIdentityUsers(context.Context, *connect.Request[v1.ListIdentityUsersRequest]) (*connect.Response[v1.ListIdentityUsersResponse], error)
+	GetCustomerUser(context.Context, *connect.Request[v1.GetCustomerUserRequest]) (*connect.Response[v1.GetCustomerUserResponse], error)
 	ListIdentitySessions(context.Context, *connect.Request[v1.ListIdentitySessionsRequest]) (*connect.Response[v1.ListIdentitySessionsResponse], error)
 	RevokeIdentitySession(context.Context, *connect.Request[v1.RevokeIdentitySessionRequest]) (*connect.Response[v1.RevokeIdentitySessionResponse], error)
 	ListIdentityConnections(context.Context, *connect.Request[v1.ListIdentityConnectionsRequest]) (*connect.Response[v1.ListIdentityConnectionsResponse], error)
@@ -625,6 +776,9 @@ type OperationsServiceHandler interface {
 	AcknowledgeIncident(context.Context, *connect.Request[v1.AcknowledgeIncidentRequest]) (*connect.Response[v1.AcknowledgeIncidentResponse], error)
 	SnoozeIncident(context.Context, *connect.Request[v1.SnoozeIncidentRequest]) (*connect.Response[v1.SnoozeIncidentResponse], error)
 	ResolveIncident(context.Context, *connect.Request[v1.ResolveIncidentRequest]) (*connect.Response[v1.ResolveIncidentResponse], error)
+	AssignIncident(context.Context, *connect.Request[v1.AssignIncidentRequest]) (*connect.Response[v1.AssignIncidentResponse], error)
+	AddIncidentNote(context.Context, *connect.Request[v1.AddIncidentNoteRequest]) (*connect.Response[v1.AddIncidentNoteResponse], error)
+	ListIncidentsForSubject(context.Context, *connect.Request[v1.ListIncidentsForSubjectRequest]) (*connect.Response[v1.ListIncidentsForSubjectResponse], error)
 	ListAlertRules(context.Context, *connect.Request[v1.ListAlertRulesRequest]) (*connect.Response[v1.ListAlertRulesResponse], error)
 	ListNotificationTargets(context.Context, *connect.Request[v1.ListNotificationTargetsRequest]) (*connect.Response[v1.ListNotificationTargetsResponse], error)
 	GetHostingOverview(context.Context, *connect.Request[v11.HostingOverviewRequest]) (*connect.Response[v11.HostingOverviewResponse], error)
@@ -660,6 +814,12 @@ func NewOperationsServiceHandler(svc OperationsServiceHandler, opts ...connect.H
 		connect.WithSchema(operationsServiceMethods.ByName("ListOrganizations")),
 		connect.WithHandlerOptions(opts...),
 	)
+	operationsServiceGetOrganizationHandler := connect.NewUnaryHandler(
+		OperationsServiceGetOrganizationProcedure,
+		svc.GetOrganization,
+		connect.WithSchema(operationsServiceMethods.ByName("GetOrganization")),
+		connect.WithHandlerOptions(opts...),
+	)
 	operationsServiceListInstallationsHandler := connect.NewUnaryHandler(
 		OperationsServiceListInstallationsProcedure,
 		svc.ListInstallations,
@@ -682,6 +842,24 @@ func NewOperationsServiceHandler(svc OperationsServiceHandler, opts ...connect.H
 		OperationsServiceGetInstanceProcedure,
 		svc.GetInstance,
 		connect.WithSchema(operationsServiceMethods.ByName("GetInstance")),
+		connect.WithHandlerOptions(opts...),
+	)
+	operationsServiceGetInstanceDiagnosticsHandler := connect.NewUnaryHandler(
+		OperationsServiceGetInstanceDiagnosticsProcedure,
+		svc.GetInstanceDiagnostics,
+		connect.WithSchema(operationsServiceMethods.ByName("GetInstanceDiagnostics")),
+		connect.WithHandlerOptions(opts...),
+	)
+	operationsServiceListInstanceAutomationsHandler := connect.NewUnaryHandler(
+		OperationsServiceListInstanceAutomationsProcedure,
+		svc.ListInstanceAutomations,
+		connect.WithSchema(operationsServiceMethods.ByName("ListInstanceAutomations")),
+		connect.WithHandlerOptions(opts...),
+	)
+	operationsServiceChangeInstanceAutomationHandler := connect.NewUnaryHandler(
+		OperationsServiceChangeInstanceAutomationProcedure,
+		svc.ChangeInstanceAutomation,
+		connect.WithSchema(operationsServiceMethods.ByName("ChangeInstanceAutomation")),
 		connect.WithHandlerOptions(opts...),
 	)
 	operationsServiceChangeInstanceLifecycleHandler := connect.NewUnaryHandler(
@@ -708,6 +886,12 @@ func NewOperationsServiceHandler(svc OperationsServiceHandler, opts ...connect.H
 		connect.WithSchema(operationsServiceMethods.ByName("GetEnvironment")),
 		connect.WithHandlerOptions(opts...),
 	)
+	operationsServiceGetWorkloadHandler := connect.NewUnaryHandler(
+		OperationsServiceGetWorkloadProcedure,
+		svc.GetWorkload,
+		connect.WithSchema(operationsServiceMethods.ByName("GetWorkload")),
+		connect.WithHandlerOptions(opts...),
+	)
 	operationsServiceListEventsHandler := connect.NewUnaryHandler(
 		OperationsServiceListEventsProcedure,
 		svc.ListEvents,
@@ -730,6 +914,12 @@ func NewOperationsServiceHandler(svc OperationsServiceHandler, opts ...connect.H
 		OperationsServiceListIdentityUsersProcedure,
 		svc.ListIdentityUsers,
 		connect.WithSchema(operationsServiceMethods.ByName("ListIdentityUsers")),
+		connect.WithHandlerOptions(opts...),
+	)
+	operationsServiceGetCustomerUserHandler := connect.NewUnaryHandler(
+		OperationsServiceGetCustomerUserProcedure,
+		svc.GetCustomerUser,
+		connect.WithSchema(operationsServiceMethods.ByName("GetCustomerUser")),
 		connect.WithHandlerOptions(opts...),
 	)
 	operationsServiceListIdentitySessionsHandler := connect.NewUnaryHandler(
@@ -792,6 +982,24 @@ func NewOperationsServiceHandler(svc OperationsServiceHandler, opts ...connect.H
 		connect.WithSchema(operationsServiceMethods.ByName("ResolveIncident")),
 		connect.WithHandlerOptions(opts...),
 	)
+	operationsServiceAssignIncidentHandler := connect.NewUnaryHandler(
+		OperationsServiceAssignIncidentProcedure,
+		svc.AssignIncident,
+		connect.WithSchema(operationsServiceMethods.ByName("AssignIncident")),
+		connect.WithHandlerOptions(opts...),
+	)
+	operationsServiceAddIncidentNoteHandler := connect.NewUnaryHandler(
+		OperationsServiceAddIncidentNoteProcedure,
+		svc.AddIncidentNote,
+		connect.WithSchema(operationsServiceMethods.ByName("AddIncidentNote")),
+		connect.WithHandlerOptions(opts...),
+	)
+	operationsServiceListIncidentsForSubjectHandler := connect.NewUnaryHandler(
+		OperationsServiceListIncidentsForSubjectProcedure,
+		svc.ListIncidentsForSubject,
+		connect.WithSchema(operationsServiceMethods.ByName("ListIncidentsForSubject")),
+		connect.WithHandlerOptions(opts...),
+	)
 	operationsServiceListAlertRulesHandler := connect.NewUnaryHandler(
 		OperationsServiceListAlertRulesProcedure,
 		svc.ListAlertRules,
@@ -848,6 +1056,8 @@ func NewOperationsServiceHandler(svc OperationsServiceHandler, opts ...connect.H
 			operationsServiceGetOverviewHandler.ServeHTTP(w, r)
 		case OperationsServiceListOrganizationsProcedure:
 			operationsServiceListOrganizationsHandler.ServeHTTP(w, r)
+		case OperationsServiceGetOrganizationProcedure:
+			operationsServiceGetOrganizationHandler.ServeHTTP(w, r)
 		case OperationsServiceListInstallationsProcedure:
 			operationsServiceListInstallationsHandler.ServeHTTP(w, r)
 		case OperationsServiceListLicensesProcedure:
@@ -856,6 +1066,12 @@ func NewOperationsServiceHandler(svc OperationsServiceHandler, opts ...connect.H
 			operationsServiceListInstancesHandler.ServeHTTP(w, r)
 		case OperationsServiceGetInstanceProcedure:
 			operationsServiceGetInstanceHandler.ServeHTTP(w, r)
+		case OperationsServiceGetInstanceDiagnosticsProcedure:
+			operationsServiceGetInstanceDiagnosticsHandler.ServeHTTP(w, r)
+		case OperationsServiceListInstanceAutomationsProcedure:
+			operationsServiceListInstanceAutomationsHandler.ServeHTTP(w, r)
+		case OperationsServiceChangeInstanceAutomationProcedure:
+			operationsServiceChangeInstanceAutomationHandler.ServeHTTP(w, r)
 		case OperationsServiceChangeInstanceLifecycleProcedure:
 			operationsServiceChangeInstanceLifecycleHandler.ServeHTTP(w, r)
 		case OperationsServiceListSandboxesProcedure:
@@ -864,6 +1080,8 @@ func NewOperationsServiceHandler(svc OperationsServiceHandler, opts ...connect.H
 			operationsServiceListEnvironmentsHandler.ServeHTTP(w, r)
 		case OperationsServiceGetEnvironmentProcedure:
 			operationsServiceGetEnvironmentHandler.ServeHTTP(w, r)
+		case OperationsServiceGetWorkloadProcedure:
+			operationsServiceGetWorkloadHandler.ServeHTTP(w, r)
 		case OperationsServiceListEventsProcedure:
 			operationsServiceListEventsHandler.ServeHTTP(w, r)
 		case OperationsServiceListAuditEventsProcedure:
@@ -872,6 +1090,8 @@ func NewOperationsServiceHandler(svc OperationsServiceHandler, opts ...connect.H
 			operationsServiceGetIdentityOverviewHandler.ServeHTTP(w, r)
 		case OperationsServiceListIdentityUsersProcedure:
 			operationsServiceListIdentityUsersHandler.ServeHTTP(w, r)
+		case OperationsServiceGetCustomerUserProcedure:
+			operationsServiceGetCustomerUserHandler.ServeHTTP(w, r)
 		case OperationsServiceListIdentitySessionsProcedure:
 			operationsServiceListIdentitySessionsHandler.ServeHTTP(w, r)
 		case OperationsServiceRevokeIdentitySessionProcedure:
@@ -892,6 +1112,12 @@ func NewOperationsServiceHandler(svc OperationsServiceHandler, opts ...connect.H
 			operationsServiceSnoozeIncidentHandler.ServeHTTP(w, r)
 		case OperationsServiceResolveIncidentProcedure:
 			operationsServiceResolveIncidentHandler.ServeHTTP(w, r)
+		case OperationsServiceAssignIncidentProcedure:
+			operationsServiceAssignIncidentHandler.ServeHTTP(w, r)
+		case OperationsServiceAddIncidentNoteProcedure:
+			operationsServiceAddIncidentNoteHandler.ServeHTTP(w, r)
+		case OperationsServiceListIncidentsForSubjectProcedure:
+			operationsServiceListIncidentsForSubjectHandler.ServeHTTP(w, r)
 		case OperationsServiceListAlertRulesProcedure:
 			operationsServiceListAlertRulesHandler.ServeHTTP(w, r)
 		case OperationsServiceListNotificationTargetsProcedure:
@@ -929,6 +1155,10 @@ func (UnimplementedOperationsServiceHandler) ListOrganizations(context.Context, 
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.operations.v1.OperationsService.ListOrganizations is not implemented"))
 }
 
+func (UnimplementedOperationsServiceHandler) GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.operations.v1.OperationsService.GetOrganization is not implemented"))
+}
+
 func (UnimplementedOperationsServiceHandler) ListInstallations(context.Context, *connect.Request[v1.ListInstallationsRequest]) (*connect.Response[v1.ListInstallationsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.operations.v1.OperationsService.ListInstallations is not implemented"))
 }
@@ -943,6 +1173,18 @@ func (UnimplementedOperationsServiceHandler) ListInstances(context.Context, *con
 
 func (UnimplementedOperationsServiceHandler) GetInstance(context.Context, *connect.Request[v1.GetInstanceRequest]) (*connect.Response[v1.GetInstanceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.operations.v1.OperationsService.GetInstance is not implemented"))
+}
+
+func (UnimplementedOperationsServiceHandler) GetInstanceDiagnostics(context.Context, *connect.Request[v1.GetInstanceDiagnosticsRequest]) (*connect.Response[v1.GetInstanceDiagnosticsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.operations.v1.OperationsService.GetInstanceDiagnostics is not implemented"))
+}
+
+func (UnimplementedOperationsServiceHandler) ListInstanceAutomations(context.Context, *connect.Request[v1.ListInstanceAutomationsRequest]) (*connect.Response[v1.ListInstanceAutomationsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.operations.v1.OperationsService.ListInstanceAutomations is not implemented"))
+}
+
+func (UnimplementedOperationsServiceHandler) ChangeInstanceAutomation(context.Context, *connect.Request[v1.ChangeInstanceAutomationRequest]) (*connect.Response[v1.ChangeInstanceAutomationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.operations.v1.OperationsService.ChangeInstanceAutomation is not implemented"))
 }
 
 func (UnimplementedOperationsServiceHandler) ChangeInstanceLifecycle(context.Context, *connect.Request[v1.ChangeInstanceLifecycleRequest]) (*connect.Response[v1.ChangeInstanceLifecycleResponse], error) {
@@ -961,6 +1203,10 @@ func (UnimplementedOperationsServiceHandler) GetEnvironment(context.Context, *co
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.operations.v1.OperationsService.GetEnvironment is not implemented"))
 }
 
+func (UnimplementedOperationsServiceHandler) GetWorkload(context.Context, *connect.Request[v1.GetWorkloadRequest]) (*connect.Response[v1.GetWorkloadResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.operations.v1.OperationsService.GetWorkload is not implemented"))
+}
+
 func (UnimplementedOperationsServiceHandler) ListEvents(context.Context, *connect.Request[v1.ListEventsRequest]) (*connect.Response[v1.ListEventsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.operations.v1.OperationsService.ListEvents is not implemented"))
 }
@@ -975,6 +1221,10 @@ func (UnimplementedOperationsServiceHandler) GetIdentityOverview(context.Context
 
 func (UnimplementedOperationsServiceHandler) ListIdentityUsers(context.Context, *connect.Request[v1.ListIdentityUsersRequest]) (*connect.Response[v1.ListIdentityUsersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.operations.v1.OperationsService.ListIdentityUsers is not implemented"))
+}
+
+func (UnimplementedOperationsServiceHandler) GetCustomerUser(context.Context, *connect.Request[v1.GetCustomerUserRequest]) (*connect.Response[v1.GetCustomerUserResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.operations.v1.OperationsService.GetCustomerUser is not implemented"))
 }
 
 func (UnimplementedOperationsServiceHandler) ListIdentitySessions(context.Context, *connect.Request[v1.ListIdentitySessionsRequest]) (*connect.Response[v1.ListIdentitySessionsResponse], error) {
@@ -1015,6 +1265,18 @@ func (UnimplementedOperationsServiceHandler) SnoozeIncident(context.Context, *co
 
 func (UnimplementedOperationsServiceHandler) ResolveIncident(context.Context, *connect.Request[v1.ResolveIncidentRequest]) (*connect.Response[v1.ResolveIncidentResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.operations.v1.OperationsService.ResolveIncident is not implemented"))
+}
+
+func (UnimplementedOperationsServiceHandler) AssignIncident(context.Context, *connect.Request[v1.AssignIncidentRequest]) (*connect.Response[v1.AssignIncidentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.operations.v1.OperationsService.AssignIncident is not implemented"))
+}
+
+func (UnimplementedOperationsServiceHandler) AddIncidentNote(context.Context, *connect.Request[v1.AddIncidentNoteRequest]) (*connect.Response[v1.AddIncidentNoteResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.operations.v1.OperationsService.AddIncidentNote is not implemented"))
+}
+
+func (UnimplementedOperationsServiceHandler) ListIncidentsForSubject(context.Context, *connect.Request[v1.ListIncidentsForSubjectRequest]) (*connect.Response[v1.ListIncidentsForSubjectResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.operations.v1.OperationsService.ListIncidentsForSubject is not implemented"))
 }
 
 func (UnimplementedOperationsServiceHandler) ListAlertRules(context.Context, *connect.Request[v1.ListAlertRulesRequest]) (*connect.Response[v1.ListAlertRulesResponse], error) {

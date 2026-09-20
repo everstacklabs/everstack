@@ -118,8 +118,8 @@ func (s *CLIServer) resolveAPIKeyContext(ctx context.Context, header http.Header
 
 // ConnectServer interface methods
 
-func (s *CLIServer) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return cliconnect.NewCLIServiceHandler(s, connect.WithInterceptors(interceptors...))
+func (s *CLIServer) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return cliconnect.NewCLIServiceHandler(s, opts...)
 }
 
 func (s *CLIServer) FileDescriptor() protoreflect.FileDescriptor {

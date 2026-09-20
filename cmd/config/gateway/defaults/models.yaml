@@ -376,7 +376,78 @@ providers:
               status: stable
               structured_output: false
               variants: []
+            - added_in_version: 2.8.0
+              cache_read_cost_per_1k: 0.00025
+              cache_write_1h_cost_per_1k: 0.02
+              cache_write_cost_per_1k: 0.0125
+              canonical_model_id: anthropic/claude-fable-5-1
+              capabilities:
+                - chat
+                - function_calling
+                - vision
+                - extended_thinking
+                - computer_use
+              display_name: Claude Fable 5.1
+              input_cost_per_1k: 0.01
+              input_modalities:
+                - text
+                - image
+                - pdf
+              max_output_tokens: 128000
+              max_tokens: 1000000
+              name: claude-fable-5-1
+              output_cost_per_1k: 0.05
+              output_modalities:
+                - text
+              parameters:
+                - key: max_output_tokens
+                  display_name: Max output tokens
+                  type: integer
+                  min_value: 1
+                  max_value: 128000
+                  has_min_value: true
+                  has_max_value: true
+                - key: reasoning_effort
+                  display_name: Reasoning effort
+                  type: enum
+                  options:
+                    - low
+                    - medium
+                    - high
+                    - xhigh
+                    - max
+              publisher: anthropic
+              release_date: "2026-09-01"
+              status: stable
+              structured_output: false
+              variants:
+                - id: low
+                  display_name: Low reasoning
+                  description: Lower latency and cost for straightforward tasks.
+                  parameters:
+                    reasoning_effort: low
+                - id: medium
+                  display_name: Medium reasoning
+                  description: Balanced reasoning for general-purpose work.
+                  parameters:
+                    reasoning_effort: medium
+                - id: high
+                  display_name: High reasoning
+                  description: Deeper reasoning for complex analysis and coding.
+                  parameters:
+                    reasoning_effort: high
+                - id: xhigh
+                  display_name: Extra-high reasoning
+                  description: Extended reasoning for long-horizon agentic work.
+                  parameters:
+                    reasoning_effort: xhigh
+                - id: max
+                  display_name: Maximum reasoning
+                  description: Maximum available reasoning depth for the model.
+                  parameters:
+                    reasoning_effort: max
             - cache_read_cost_per_1k: 0.001
+              cache_write_1h_cost_per_1k: 0.02
               cache_write_cost_per_1k: 0.0125
               canonical_model_id: anthropic/claude-fable-5
               capabilities:
@@ -415,7 +486,7 @@ providers:
                     - xhigh
                     - max
               publisher: anthropic
-              release_date: "2026-06-07"
+              release_date: "2026-06-09"
               status: stable
               structured_output: false
               variants:
@@ -2231,8 +2302,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00055
+            - cache_read_cost_per_1k: 0.00055
               canonical_model_id: aws-bedrock/xai.grok-4.6
               capabilities:
                 - chat
@@ -4693,8 +4763,7 @@ providers:
               status: deprecated
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 2.8e-06
+            - cache_read_cost_per_1k: 2.8e-06
               canonical_model_id: deepseek/deepseek-v4-flash-vision-exp
               capabilities:
                 - chat
@@ -4981,8 +5050,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 2.8e-05
+            - cache_read_cost_per_1k: 2.8e-05
               canonical_model_id: deepseek/deepseek-v4-flash-0731
               capabilities:
                 - chat
@@ -5042,8 +5110,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 4.4e-05
+            - cache_read_cost_per_1k: 4.4e-05
               canonical_model_id: deepseek/deepseek-v4-pro-0813
               capabilities:
                 - chat
@@ -6069,8 +6136,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.0003
+            - cache_read_cost_per_1k: 0.0003
               canonical_model_id: moonshot/kimi-k3
               capabilities:
                 - chat
@@ -6473,8 +6539,7 @@ providers:
                   description: Deeper reasoning for complex analysis and coding.
                   parameters:
                     reasoning_effort: high
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 4e-05
+            - cache_read_cost_per_1k: 4e-05
               canonical_model_id: fireworks/muse-glimmer-30b
               capabilities:
                 - chat
@@ -6536,8 +6601,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 1e-05
+            - cache_read_cost_per_1k: 1e-05
               canonical_model_id: fireworks/nemotron-lightning-3.5-30b-a3b
               capabilities:
                 - chat
@@ -6776,8 +6840,7 @@ providers:
                   description: Deeper reasoning for complex analysis and coding.
                   parameters:
                     reasoning_effort: high
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00025
+            - cache_read_cost_per_1k: 0.00025
               canonical_model_id: qwen/qwen3.8-max
               capabilities:
                 - chat
@@ -6975,8 +7038,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00045
+            - cache_read_cost_per_1k: 0.00045
               canonical_model_id: moonshot/kimi-k3-fast
               capabilities:
                 - chat
@@ -8093,8 +8155,7 @@ providers:
                   description: Deeper reasoning for complex analysis and coding.
                   parameters:
                     reasoning_effort: high
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 7.5e-05
+            - cache_read_cost_per_1k: 7.5e-05
               canonical_model_id: google/gemini-3.7-flash
               capabilities:
                 - chat
@@ -9488,8 +9549,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              canonical_model_id: qwen/qwen3.8-2.4t-a95b
+            - canonical_model_id: qwen/qwen3.8-2.4t-a95b
               capabilities:
                 - chat
                 - function_calling
@@ -9548,8 +9608,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              canonical_model_id: deepseek/deepseek-v4-flash-0731
+            - canonical_model_id: deepseek/deepseek-v4-flash-0731
               capabilities:
                 - chat
                 - function_calling
@@ -9608,8 +9667,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              canonical_model_id: deepseek/deepseek-v4-pro-0813
+            - canonical_model_id: deepseek/deepseek-v4-pro-0813
               capabilities:
                 - chat
                 - function_calling
@@ -10095,8 +10153,7 @@ providers:
                   description: Deeper reasoning for complex analysis and coding.
                   parameters:
                     reasoning_effort: high
-            - added_in_version: 2.7.0
-              canonical_model_id: thinkingmachines/inkling-small
+            - canonical_model_id: thinkingmachines/inkling-small
               capabilities:
                 - chat
                 - function_calling
@@ -12718,8 +12775,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              canonical_model_id: deepseek/deepseek-v4-flash-0731
+            - canonical_model_id: deepseek/deepseek-v4-flash-0731
               capabilities:
                 - chat
                 - function_calling
@@ -13152,8 +13208,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              canonical_model_id: meta/muse-glimmer-30b
+            - canonical_model_id: meta/muse-glimmer-30b
               capabilities:
                 - chat
                 - function_calling
@@ -13456,8 +13511,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              canonical_model_id: nvidia/nemotron-3.5-lightning-30b-a3b
+            - canonical_model_id: nvidia/nemotron-3.5-lightning-30b-a3b
               capabilities:
                 - chat
                 - function_calling
@@ -15359,7 +15413,8 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - cache_read_cost_per_1k: 0.000125
+            - api_type: responses
+              cache_read_cost_per_1k: 0.000125
               canonical_model_id: openai/gpt-5-codex
               capabilities:
                 - chat
@@ -15822,7 +15877,8 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - cache_read_cost_per_1k: 0.000125
+            - api_type: responses
+              cache_read_cost_per_1k: 0.000125
               canonical_model_id: openai/gpt-5.1-codex-max
               capabilities:
                 - chat
@@ -15860,7 +15916,8 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - cache_read_cost_per_1k: 2.5e-05
+            - api_type: responses
+              cache_read_cost_per_1k: 2.5e-05
               canonical_model_id: openai/gpt-5.1-codex-mini
               capabilities:
                 - chat
@@ -15898,7 +15955,8 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - cache_read_cost_per_1k: 0.000125
+            - api_type: responses
+              cache_read_cost_per_1k: 0.000125
               canonical_model_id: openai/gpt-5.1-codex
               capabilities:
                 - chat
@@ -16085,7 +16143,8 @@ providers:
                   description: Balanced reasoning for general-purpose work.
                   parameters:
                     reasoning_effort: medium
-            - cache_read_cost_per_1k: 0.000175
+            - api_type: responses
+              cache_read_cost_per_1k: 0.000175
               canonical_model_id: openai/gpt-5.2-codex
               capabilities:
                 - chat
@@ -16353,7 +16412,8 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - cache_read_cost_per_1k: 0.000175
+            - api_type: responses
+              cache_read_cost_per_1k: 0.000175
               canonical_model_id: openai/gpt-5.3-codex-spark
               capabilities:
                 - chat
@@ -16426,7 +16486,8 @@ providers:
                   description: Extended reasoning for long-horizon agentic work.
                   parameters:
                     reasoning_effort: xhigh
-            - cache_read_cost_per_1k: 0.000175
+            - api_type: responses
+              cache_read_cost_per_1k: 0.000175
               canonical_model_id: openai/gpt-5.3-codex
               capabilities:
                 - chat
@@ -17266,6 +17327,81 @@ providers:
                   description: Deeper reasoning for complex analysis and coding.
                   parameters:
                     reasoning_effort: high
+            - added_in_version: 2.8.0
+              api_type: responses
+              cache_read_cost_per_1k: 0.001
+              cache_write_cost_per_1k: 0.0125
+              canonical_model_id: openai/gpt-6-astra
+              capabilities:
+                - chat
+                - function_calling
+                - vision
+                - reasoning
+                - computer_use
+                - coding
+              display_name: GPT-6 Astra
+              input_cost_per_1k: 0.01
+              input_modalities:
+                - text
+                - image
+                - pdf
+              long_context_cache_multiplier: 2
+              long_context_input_multiplier: 2
+              long_context_output_multiplier: 1.5
+              long_context_threshold_tokens: 272000
+              max_output_tokens: 128000
+              max_tokens: 1050000
+              name: gpt-6-astra
+              output_cost_per_1k: 0.05
+              output_modalities:
+                - text
+              parameters:
+                - key: max_output_tokens
+                  display_name: Max output tokens
+                  type: integer
+                  min_value: 1
+                  max_value: 128000
+                  has_min_value: true
+                  has_max_value: true
+                - key: reasoning_effort
+                  display_name: Reasoning effort
+                  type: enum
+                  options:
+                    - low
+                    - medium
+                    - high
+                    - xhigh
+                    - max
+              publisher: openai
+              release_date: "2026-09-03"
+              status: stable
+              structured_output: true
+              variants:
+                - id: low
+                  display_name: Low reasoning
+                  description: Lower latency and cost for straightforward tasks.
+                  parameters:
+                    reasoning_effort: low
+                - id: medium
+                  display_name: Medium reasoning
+                  description: Balanced reasoning for general-purpose work.
+                  parameters:
+                    reasoning_effort: medium
+                - id: high
+                  display_name: High reasoning
+                  description: Deeper reasoning for complex analysis and coding.
+                  parameters:
+                    reasoning_effort: high
+                - id: xhigh
+                  display_name: Extra-high reasoning
+                  description: Extended reasoning for long-horizon agentic work.
+                  parameters:
+                    reasoning_effort: xhigh
+                - id: max
+                  display_name: Maximum reasoning
+                  description: Maximum available reasoning depth for the model.
+                  parameters:
+                    reasoning_effort: max
             - canonical_model_id: openai/gpt-audio-2025-08-28
               capabilities:
                 - chat
@@ -19022,8 +19158,7 @@ providers:
                   description: Maximum available reasoning depth for the model.
                   parameters:
                     reasoning_effort: max
-            - added_in_version: 2.7.0
-              canonical_model_id: bytedance-seed/seed-2-1-turbo
+            - canonical_model_id: bytedance-seed/seed-2-1-turbo
               capabilities:
                 - chat
                 - function_calling
@@ -19144,8 +19279,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 8e-06
+            - cache_read_cost_per_1k: 8e-06
               canonical_model_id: deepseek/deepseek-v4-flash-0731
               capabilities:
                 - chat
@@ -19205,8 +19339,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 7e-06
+            - cache_read_cost_per_1k: 7e-06
               canonical_model_id: deepseek/deepseek-v4-flash-vision-exp
               capabilities:
                 - chat
@@ -19268,8 +19401,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 3.74e-05
+            - cache_read_cost_per_1k: 3.74e-05
               canonical_model_id: deepseek/deepseek-v4-pro-0813
               capabilities:
                 - chat
@@ -19816,8 +19948,7 @@ providers:
                   description: Deeper reasoning for complex analysis and coding.
                   parameters:
                     reasoning_effort: high
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 3.75e-05
+            - cache_read_cost_per_1k: 3.75e-05
               cache_write_cost_per_1k: 2.0833e-05
               canonical_model_id: google/gemini-3.7-flash
               capabilities:
@@ -19941,8 +20072,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 4e-05
+            - cache_read_cost_per_1k: 4e-05
               canonical_model_id: meta/muse-glimmer-30b
               capabilities:
                 - chat
@@ -20004,8 +20134,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00015
+            - cache_read_cost_per_1k: 0.00015
               canonical_model_id: meta/muse-spark-1.2
               capabilities:
                 - chat
@@ -20478,8 +20607,7 @@ providers:
                   description: Deeper reasoning for complex analysis and coding.
                   parameters:
                     reasoning_effort: high
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 4e-05
+            - cache_read_cost_per_1k: 4e-05
               canonical_model_id: nvidia/nemotron-3.5-lightning
               capabilities:
                 - chat
@@ -21563,8 +21691,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00025
+            - cache_read_cost_per_1k: 0.00025
               canonical_model_id: qwen/qwen3.8-2.4t-a95b
               capabilities:
                 - chat
@@ -21624,8 +21751,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 5e-05
+            - cache_read_cost_per_1k: 5e-05
               canonical_model_id: qwen/qwen3.8-27b
               capabilities:
                 - chat
@@ -21688,8 +21814,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00025
+            - cache_read_cost_per_1k: 0.00025
               cache_write_cost_per_1k: 0.0025
               canonical_model_id: qwen/qwen3.8-max
               capabilities:
@@ -21753,8 +21878,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00015
+            - cache_read_cost_per_1k: 0.00015
               canonical_model_id: sakana/sakana-namazu
               capabilities:
                 - chat
@@ -21902,8 +22026,7 @@ providers:
                   description: Deeper reasoning for complex analysis and coding.
                   parameters:
                     reasoning_effort: high
-            - added_in_version: 2.7.0
-              canonical_model_id: tencent/hy-mt2-30b-a3b
+            - canonical_model_id: tencent/hy-mt2-30b-a3b
               capabilities:
                 - chat
               display_name: Hy-MT2-30B-A3B (OpenRouter)
@@ -21960,8 +22083,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.0001
+            - cache_read_cost_per_1k: 0.0001
               canonical_model_id: thinkingmachines/inkling-small
               capabilities:
                 - chat
@@ -22127,8 +22249,7 @@ providers:
                   description: Maximum available reasoning depth for the model.
                   parameters:
                     reasoning_effort: max
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 6e-06
+            - cache_read_cost_per_1k: 6e-06
               canonical_model_id: upstage/solar-pro4
               capabilities:
                 - chat
@@ -22330,8 +22451,7 @@ providers:
                   description: Deeper reasoning for complex analysis and coding.
                   parameters:
                     reasoning_effort: high
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.0005
+            - cache_read_cost_per_1k: 0.0005
               canonical_model_id: xai/grok-4.6
               capabilities:
                 - chat
@@ -22528,8 +22648,7 @@ providers:
                   description: Extended reasoning for long-horizon agentic work.
                   parameters:
                     reasoning_effort: xhigh
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00026
+            - cache_read_cost_per_1k: 0.00026
               canonical_model_id: zai/glm-5.3
               capabilities:
                 - chat
@@ -22874,8 +22993,7 @@ providers:
     qwen:
         base_url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
         models:
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 4e-05
+            - cache_read_cost_per_1k: 4e-05
               canonical_model_id: qwen/deepseek-v4-flash-0731
               capabilities:
                 - chat
@@ -24974,8 +25092,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00025
+            - cache_read_cost_per_1k: 0.00025
               cache_write_cost_per_1k: 0.0025
               canonical_model_id: qwen/qwen3.8-max
               capabilities:
@@ -25343,8 +25460,7 @@ providers:
               status: deprecated
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 3e-05
+            - cache_read_cost_per_1k: 3e-05
               canonical_model_id: deepseek/deepseek-v4-flash-0731
               capabilities:
                 - chat
@@ -25404,8 +25520,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00013
+            - cache_read_cost_per_1k: 0.00013
               canonical_model_id: deepseek/deepseek-v4-pro-0813
               capabilities:
                 - chat
@@ -27028,8 +27143,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 7.5e-05
+            - cache_read_cost_per_1k: 7.5e-05
               canonical_model_id: google/gemini-3.7-flash
               capabilities:
                 - chat
@@ -27209,8 +27323,7 @@ providers:
     voyage:
         base_url: https://api.voyageai.com/v1
         models:
-            - added_in_version: 2.7.0
-              canonical_model_id: voyage/voyage-4-large
+            - canonical_model_id: voyage/voyage-4-large
               capabilities:
                 - embeddings
               display_name: Voyage 4 Large
@@ -27228,8 +27341,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              canonical_model_id: voyage/voyage-4-lite
+            - canonical_model_id: voyage/voyage-4-lite
               capabilities:
                 - embeddings
               display_name: Voyage 4 Lite
@@ -27247,8 +27359,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              canonical_model_id: voyage/voyage-4
+            - canonical_model_id: voyage/voyage-4
               capabilities:
                 - embeddings
               display_name: Voyage 4
@@ -27266,8 +27377,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              canonical_model_id: voyage/voyage-code-4
+            - canonical_model_id: voyage/voyage-code-4
               capabilities:
                 - embeddings
               display_name: Voyage Code 4
@@ -27285,8 +27395,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              canonical_model_id: voyage/voyage-finance-2
+            - canonical_model_id: voyage/voyage-finance-2
               capabilities:
                 - embeddings
               display_name: Voyage Finance 2
@@ -27304,8 +27413,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              canonical_model_id: voyage/voyage-law-2
+            - canonical_model_id: voyage/voyage-law-2
               capabilities:
                 - embeddings
               display_name: Voyage Law 2
@@ -28012,8 +28120,7 @@ providers:
                   description: Deeper reasoning for complex analysis and coding.
                   parameters:
                     reasoning_effort: high
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.0005
+            - cache_read_cost_per_1k: 0.0005
               canonical_model_id: xai/grok-4.6
               capabilities:
                 - chat
@@ -28260,8 +28367,7 @@ providers:
     zai:
         base_url: https://api.z.ai/api/paas/v4
         models:
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 3e-05
+            - cache_read_cost_per_1k: 3e-05
               canonical_model_id: zai/glm-4.5-air
               capabilities:
                 - chat
@@ -28321,8 +28427,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              canonical_model_id: zai/glm-4.5-flash
+            - canonical_model_id: zai/glm-4.5-flash
               capabilities:
                 - chat
                 - function_calling
@@ -28381,8 +28486,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00011
+            - cache_read_cost_per_1k: 0.00011
               canonical_model_id: zai/glm-4.5
               capabilities:
                 - chat
@@ -28442,8 +28546,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              canonical_model_id: zai/glm-4.5v
+            - canonical_model_id: zai/glm-4.5v
               capabilities:
                 - chat
                 - function_calling
@@ -28505,8 +28608,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00011
+            - cache_read_cost_per_1k: 0.00011
               canonical_model_id: zai/glm-4.6
               capabilities:
                 - chat
@@ -28566,8 +28668,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              canonical_model_id: zai/glm-4.6v
+            - canonical_model_id: zai/glm-4.6v
               capabilities:
                 - chat
                 - function_calling
@@ -28629,8 +28730,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              canonical_model_id: zai/glm-4.7-flash
+            - canonical_model_id: zai/glm-4.7-flash
               capabilities:
                 - chat
                 - function_calling
@@ -28689,8 +28789,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 1e-05
+            - cache_read_cost_per_1k: 1e-05
               canonical_model_id: zai/glm-4.7-flashx
               capabilities:
                 - chat
@@ -28750,8 +28849,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00011
+            - cache_read_cost_per_1k: 0.00011
               canonical_model_id: zai/glm-4.7
               capabilities:
                 - chat
@@ -28811,8 +28909,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00024
+            - cache_read_cost_per_1k: 0.00024
               canonical_model_id: zai/glm-5-turbo
               capabilities:
                 - chat
@@ -28872,8 +28969,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00026
+            - cache_read_cost_per_1k: 0.00026
               canonical_model_id: zai/glm-5.1
               capabilities:
                 - chat
@@ -28933,8 +29029,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00026
+            - cache_read_cost_per_1k: 0.00026
               canonical_model_id: zai/glm-5.2
               capabilities:
                 - chat
@@ -28994,8 +29089,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00026
+            - cache_read_cost_per_1k: 0.00026
               canonical_model_id: zai/glm-5.3
               capabilities:
                 - chat
@@ -29055,8 +29149,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.0002
+            - cache_read_cost_per_1k: 0.0002
               canonical_model_id: zai/glm-5
               capabilities:
                 - chat
@@ -29116,8 +29209,7 @@ providers:
               status: stable
               structured_output: false
               variants: []
-            - added_in_version: 2.7.0
-              cache_read_cost_per_1k: 0.00024
+            - cache_read_cost_per_1k: 0.00024
               canonical_model_id: zai/glm-5v-turbo
               capabilities:
                 - chat

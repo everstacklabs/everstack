@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/everstacklabs/everstack/internal/telemetry/otelstatus"
 	"hash/fnv"
 	"math"
 	"net/http"
@@ -88,8 +89,8 @@ func (s *Server) SetOverlayRecorder(recorder *traceoverlays.Recorder) {
 }
 
 // RegisterConnectServer registers the Connect RPC handler
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return tracesconnect.NewTracesServiceHandler(s, connect.WithInterceptors(interceptors...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return tracesconnect.NewTracesServiceHandler(s, opts...)
 }
 
 // FileDescriptor returns the file descriptor for this service
@@ -613,10 +614,26 @@ func (s *Server) GetTraceLogs(
 // Helper functions to convert query models to proto messages
 
 func toProtoTrace(trace *query.TraceReadModel) *tracespb.Trace {
-	// Determine status based on root span's status (not error count)
-	// This ensures non-critical errors (like cache misses) don't mark the trace as failed
+	// A trace is a failure if its root span says so, OR if any span in it
+	// errored.
+	//
+	// Root-status-alone was the previous rule, justified in a comment as
+	// keeping "non-critical errors (like cache misses)" from failing a trace.
+	// Measured against a week of real spans on 2026-09-08, no cache span has
+	// ever carried an error status; the spans that do are tool executions,
+	// LLM requests, provider calls and model resolution, all of which are
+	// genuine failures. Meanwhile 54 of 57 traces containing a failed child
+	// had an Unset root, so the old rule reported roughly 90% of failed
+	// traces as "success" -- including a verified live request that returned
+	// HTTP 500 while its trace read status "success", errorCount 1.
+	//
+	// The spelling matters as much as the rule: EqualFold(status, "error")
+	// matched only "Error" and missed "STATUS_CODE_ERROR", which is what the
+	// OTLP HTTP ingest path writes and what 79 of 90 error spans carry. Route
+	// the comparison through otelstatus so it cannot re-break one query at a
+	// time.
 	status := "success"
-	if strings.EqualFold(trace.RootStatus, "error") {
+	if otelstatus.IsErrorValue(trace.RootStatus) || trace.ErrorCount > 0 {
 		status = "error"
 	}
 

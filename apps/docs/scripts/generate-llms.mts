@@ -107,6 +107,43 @@ async function sectionTitle(section: string): Promise<string> {
   return meta?.title ?? section;
 }
 
+// docs.everstack.ai is a static asset deploy, and Workers Assets serves a page
+// written to `<slug>/index.html` at `/<slug>/`, redirecting the slashless form
+// with a 307. The canonical URL is therefore the trailing-slash form for every
+// page except the root. canonicalUrl() in src/lib/docs-head.ts builds the same
+// string for `rel=canonical`; the two have to agree byte for byte or the
+// sitemap advertises URLs the pages themselves disown.
+function canonicalUrl(url: string): string {
+  if (url === "/") return `${SITE_URL}/`;
+  return `${SITE_URL}${url}/`;
+}
+
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+// Built from the content tree rather than from the prerender output, because
+// the prerender crawls links and picks up duplicate-segment paths that resolve
+// to a "Page not found" body. Only real pages belong in a sitemap.
+function renderSitemap(pages: Page[]): string {
+  const urls = pages
+    .map(
+      (p) =>
+        `  <url>\n    <loc>${escapeXml(canonicalUrl(p.url))}</loc>\n  </url>`,
+    )
+    .join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls}
+</urlset>
+`;
+}
+
 async function generate() {
   const pages = await loadPages();
   const rootMeta = await readMeta(CONTENT_DIR);
@@ -174,8 +211,15 @@ async function generate() {
     "utf8",
   );
 
+  const sorted = [...pages].sort((a, b) => a.url.localeCompare(b.url));
+  await writeFile(
+    join(PUBLIC_DIR, "sitemap.xml"),
+    renderSitemap(sorted),
+    "utf8",
+  );
+
   console.log(
-    `Wrote llms.txt (${llms.length} bytes) and llms-full.txt (${fullLines.join("\n").length} bytes) to ${PUBLIC_DIR}`,
+    `Wrote llms.txt (${llms.length} bytes), llms-full.txt (${fullLines.join("\n").length} bytes), and sitemap.xml (${pages.length} urls) to ${PUBLIC_DIR}`,
   );
 }
 

@@ -1,0 +1,71 @@
+name: SDK - Go release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Go SDK version to publish (for example v0.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdk-go-release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Test and tag nested Go module
+    if: github.repository == 'everstacklabs/everstack'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout projected public master
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: packages/sdks/everstack-go/go.sum
+
+      - name: Validate projected source and release version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          test "$(cat .github/PUBLIC_PROJECTION)" = "everstack-public-projection-v1"
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::invalid Go SDK version $VERSION; expected vX.Y.Z"
+            exit 1
+          fi
+          test "$(sed -n 's/^module //p' packages/sdks/everstack-go/go.mod)" = \
+            "github.com/everstacklabs/everstack/packages/sdks/everstack-go"
+          tag="packages/sdks/everstack-go/$VERSION"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "::error::Go SDK tag already exists and is immutable: $tag"
+            exit 1
+          fi
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+
+      - name: Test nested Go module
+        working-directory: packages/sdks/everstack-go
+        run: |
+          go vet ./...
+          go test -race -count=1 ./...
+
+      - name: Create immutable module tag
+        run: |
+          set -euo pipefail
+          git config user.name "everstack-bot"
+          git config user.email "bot@everstack.ai"
+          git tag -a "$TAG" -m "Go SDK ${TAG##*/}"
+          git push origin "$TAG"
+          printf "Published \`%s\` from public commit \`%s\`.\n" "$TAG" "$(git rev-parse HEAD)" \
+            >> "$GITHUB_STEP_SUMMARY"

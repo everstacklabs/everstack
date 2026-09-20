@@ -12,7 +12,7 @@ import (
 	"os"
 	"strings"
 
-	everstack "github.com/everstacklabs/everstack-go"
+	everstack "github.com/everstacklabs/everstack/packages/sdks/everstack-go"
 )
 
 var (
@@ -107,8 +107,8 @@ func main() {
 	// ── Chat Completions ────────────────────────────────────
 	run("Chat.Completions.Create (non-streaming)", func() error {
 		res, err := client.Chat.Completions.Create(ctx, &everstack.ChatCompletionParams{
-			Model:    chatModel.ID,
-			Messages: []everstack.Message{{Role: "user", Content: "What is 2+2? One word."}},
+			Model:     chatModel.ID,
+			Messages:  []everstack.Message{{Role: "user", Content: "What is 2+2? One word."}},
 			MaxTokens: intPtr(10),
 		})
 		if err != nil {
@@ -123,8 +123,8 @@ func main() {
 
 	run("Chat.Completions.CreateStream", func() error {
 		stream, err := client.Chat.Completions.CreateStream(ctx, &everstack.ChatCompletionParams{
-			Model:    chatModel.ID,
-			Messages: []everstack.Message{{Role: "user", Content: "Say hello in 3 words"}},
+			Model:     chatModel.ID,
+			Messages:  []everstack.Message{{Role: "user", Content: "Say hello in 3 words"}},
 			MaxTokens: intPtr(20),
 		})
 		if err != nil {

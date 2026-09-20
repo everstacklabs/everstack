@@ -5,10 +5,10 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/jmoiron/sqlx"
 	annotationspb "github.com/everstacklabs/everstack/pkg/grpc/everstack/annotations/v1"
 	"github.com/everstacklabs/everstack/pkg/grpc/everstack/annotations/v1/annotationsconnect"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/jmoiron/sqlx"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -17,7 +17,7 @@ var _ annotationspb.AnnotationServiceServer = (*GrpcServer)(nil)
 
 // Ensure Server implements ConnectServer contract from internal/api/grpc/server
 var _ interface {
-	RegisterConnectServer(...connect.Interceptor) (string, http.Handler)
+	RegisterConnectServer(...connect.HandlerOption) (string, http.Handler)
 	FileDescriptor() protoreflect.FileDescriptor
 } = (*Server)(nil)
 
@@ -58,11 +58,13 @@ func (s *Server) WithInterceptors(interceptors ...connect.Interceptor) *Server {
 }
 
 // Connect server plumbing
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	all := make([]connect.Interceptor, 0, len(s.serviceInterceptors)+len(interceptors))
-	all = append(all, s.serviceInterceptors...)
-	all = append(all, interceptors...)
-	return annotationsconnect.NewAnnotationServiceHandler(s, connect.WithInterceptors(all...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	// The service\'s own interceptors run first, then whatever the caller
+	// supplied. connect accumulates interceptors across options, so this
+	// preserves the previous ordering while letting the caller pass other
+	// handler options through untouched.
+	all := append([]connect.HandlerOption{connect.WithInterceptors(s.serviceInterceptors...)}, opts...)
+	return annotationsconnect.NewAnnotationServiceHandler(s, all...)
 }
 
 func (s *Server) FileDescriptor() protoreflect.FileDescriptor {

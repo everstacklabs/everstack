@@ -2,6 +2,7 @@ package tracing
 
 import (
 	"context"
+	"math"
 	"strings"
 	"testing"
 
@@ -96,6 +97,16 @@ func TestChatPropagatesCacheTokenBreakdown(t *testing.T) {
 		if got != want {
 			t.Errorf("%s = %d, want %d", attr, got, want)
 		}
+	}
+
+	inputCost, inputOK := attributes["llm.cost.input"].(float64)
+	outputCost, outputOK := attributes["llm.cost.output"].(float64)
+	totalCost, totalOK := attributes["llm.cost.total"].(float64)
+	if !inputOK || !outputOK || !totalOK {
+		t.Fatalf("cost breakdown missing from span; attributes: %v", attributes)
+	}
+	if math.Abs(inputCost+outputCost-totalCost) > 1e-12 {
+		t.Fatalf("input cost %.12f + output cost %.12f != total %.12f", inputCost, outputCost, totalCost)
 	}
 
 	// The completion details JSON is produced by the shared tokenBreakdowns

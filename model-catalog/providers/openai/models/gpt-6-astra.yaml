@@ -1,0 +1,76 @@
+name: "gpt-6-astra"
+display_name: "GPT-6 Astra"
+family: "gpt-6"
+status: "stable"
+release_date: "2026-09-03"
+
+api_type: "responses"
+
+cost:
+  input_per_1k: 0.01
+  output_per_1k: 0.05
+  cache_read_per_1k: 0.001
+  cache_write_per_1k: 0.0125
+  long_context:
+    threshold_tokens: 272000
+    input_multiplier: 2
+    cache_multiplier: 2
+    output_multiplier: 1.5
+
+limits:
+  max_tokens: 1050000
+  max_completion_tokens: 128000
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+  - computer_use
+  - coding
+
+modalities:
+  input: ["text","image","pdf"]
+  output: ["text"]
+
+knowledge_cutoff: "2026-04-30"
+notes: "OpenAI's most capable model for complex reasoning, coding, computer use, research, and document creation; tool calling requires the Responses API"
+structured_output: true
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 128000
+    has_max_value: true
+  - key: "reasoning_effort"
+    display_name: "Reasoning effort"
+    type: "enum"
+    options: ["low","medium","high","xhigh","max"]
+variants:
+  - id: "low"
+    display_name: "Low reasoning"
+    description: "Lower latency and cost for straightforward tasks."
+    parameters:
+      reasoning_effort: "low"
+  - id: "medium"
+    display_name: "Medium reasoning"
+    description: "Balanced reasoning for general-purpose work."
+    parameters:
+      reasoning_effort: "medium"
+  - id: "high"
+    display_name: "High reasoning"
+    description: "Deeper reasoning for complex analysis and coding."
+    parameters:
+      reasoning_effort: "high"
+  - id: "xhigh"
+    display_name: "Extra-high reasoning"
+    description: "Extended reasoning for long-horizon agentic work."
+    parameters:
+      reasoning_effort: "xhigh"
+  - id: "max"
+    display_name: "Maximum reasoning"
+    description: "Maximum available reasoning depth for the model."
+    parameters:
+      reasoning_effort: "max"

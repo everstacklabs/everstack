@@ -1,0 +1,137 @@
+syntax = "proto3";
+
+package everstack.openai_agents.v1;
+
+import "everstack/openai_agents/v1/openai_agents.proto";
+import "google/api/annotations.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/openai_agents/v1;openaiagents";
+
+service OpenAIAgentsService {
+  rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/GetCapabilities"
+      body: "*"
+    };
+  }
+  rpc CreateConnection(CreateConnectionRequest) returns (CreateConnectionResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/CreateConnection"
+      body: "*"
+    };
+  }
+  rpc ListConnections(ListConnectionsRequest) returns (ListConnectionsResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/ListConnections"
+      body: "*"
+    };
+  }
+  rpc GetConnection(GetConnectionRequest) returns (GetConnectionResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/GetConnection"
+      body: "*"
+    };
+  }
+  rpc UpdateConnection(UpdateConnectionRequest) returns (UpdateConnectionResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/UpdateConnection"
+      body: "*"
+    };
+  }
+  rpc DeleteConnection(DeleteConnectionRequest) returns (DeleteConnectionResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/DeleteConnection"
+      body: "*"
+    };
+  }
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/CreateSession"
+      body: "*"
+    };
+  }
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/ListSessions"
+      body: "*"
+    };
+  }
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/GetSession"
+      body: "*"
+    };
+  }
+  rpc DeleteSession(DeleteSessionRequest) returns (DeleteSessionResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/DeleteSession"
+      body: "*"
+    };
+  }
+  rpc SendInput(SendInputRequest) returns (SendInputResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/SendInput"
+      body: "*"
+    };
+  }
+  rpc CancelSession(CancelSessionRequest) returns (CancelSessionResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/CancelSession"
+      body: "*"
+    };
+  }
+  rpc ListSessionEvents(ListSessionEventsRequest) returns (ListSessionEventsResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/ListSessionEvents"
+      body: "*"
+    };
+  }
+  rpc GetSessionUsage(GetSessionUsageRequest) returns (GetSessionUsageResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/GetSessionUsage"
+      body: "*"
+    };
+  }
+  rpc ListApprovals(ListApprovalsRequest) returns (ListApprovalsResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/ListApprovals"
+      body: "*"
+    };
+  }
+  rpc ResolveApproval(ResolveApprovalRequest) returns (ResolveApprovalResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/ResolveApproval"
+      body: "*"
+    };
+  }
+  rpc UploadSessionInput(UploadSessionInputRequest) returns (UploadSessionInputResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/UploadSessionInput"
+      body: "*"
+    };
+  }
+  rpc ListSessionArtifacts(ListSessionArtifactsRequest) returns (ListSessionArtifactsResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/ListSessionArtifacts"
+      body: "*"
+    };
+  }
+  rpc ExportSessionArtifact(ExportSessionArtifactRequest) returns (ExportSessionArtifactResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/ExportSessionArtifact"
+      body: "*"
+    };
+  }
+  rpc GetArtifactDownload(GetArtifactDownloadRequest) returns (GetArtifactDownloadResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/GetArtifactDownload"
+      body: "*"
+    };
+  }
+  rpc DeleteSessionArtifact(DeleteSessionArtifactRequest) returns (DeleteSessionArtifactResponse) {
+    option (google.api.http) = {
+      post: "/everstack.openai_agents.v1.OpenAIAgentsService/DeleteSessionArtifact"
+      body: "*"
+    };
+  }
+}

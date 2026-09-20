@@ -87,7 +87,7 @@ func (f *fakeAgentServer) Restore(stream grpc.ClientStreamingServer[fcpb.Restore
 // startFakeAgent boots fakeAgentServer on a bufconn and returns a
 // FCAgentBackend wired to dial it through Discovery.staticTargets.
 // Cleanup is registered via t.Cleanup.
-func startFakeAgent(t *testing.T, fake *fakeAgentServer) *FCAgentBackend {
+func startFakeAgent(t *testing.T, fake fcpb.FirecrackerAgentServer) *FCAgentBackend {
 	t.Helper()
 	const target = "buf-fakeagent:9090"
 
@@ -255,4 +255,3 @@ type snapshotterCheck interface {
 	Snapshot(ctx context.Context, id, src, dest string) error
 	Restore(ctx context.Context, id, src, dest string) error
 }
-

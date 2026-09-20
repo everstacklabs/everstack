@@ -25,6 +25,12 @@ import (
 type Provider struct {
 	cfg    Config
 	client *http.Client
+
+	// unaryClient serves non-streaming calls. It omits the shared transport's
+	// ResponseHeaderTimeout, which would otherwise cap total generation time,
+	// since a unary upstream withholds response headers until the completion
+	// is finished.
+	unaryClient *http.Client
 }
 
 type azureChatMessage struct {
@@ -132,7 +138,13 @@ func NewProvider(cfg Config) *Provider {
 		cli.Transport = http.DefaultTransport
 	}
 	cli.Transport = attrs.NewInstrumentedTransport(cli.Transport, "azure-openai")
-	return &Provider{cfg: cfg, client: cli}
+
+	unary := cfg.HTTPClient
+	if unary == nil {
+		unary = clientx.Unary()
+		unary.Transport = attrs.NewInstrumentedTransport(unary.Transport, "azure-openai")
+	}
+	return &Provider{cfg: cfg, client: cli, unaryClient: unary}
 }
 
 func (p *Provider) Name() string { return "azure-openai" }
@@ -161,7 +173,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	payload := toAzureChatRequest(req)
 	buf, _ := json.Marshal(payload)
 
-	ctx, cancel := context.WithTimeout(ctx, providerutil.ChatRequestTimeout(req.Sampling, 12*time.Second))
+	ctx, cancel := context.WithTimeout(ctx, providerutil.ChatRequestTimeout(req.Sampling))
 	defer cancel()
 
 	endpoint, err := p.chatEndpoint(req.Model)
@@ -184,7 +196,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 		"correlation_id", cid,
 	).Info("provider request issued")
 
-	resp, err := p.client.Do(httpReq)
+	resp, err := p.unaryClient.Do(httpReq)
 	if err != nil {
 		return gw.ChatCompletionResponse{}, err
 	}

@@ -1,0 +1,30 @@
+---
+title: OpenAI Agents REST
+description: OpenAI Agents REST API endpoints
+---
+
+# OpenAI Agents REST API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | [`/v1/openai-agents/capabilities`](./openai-agents-rest/get-capabilities) | Get Capabilities |
+| `GET` | [`/v1/openai-agents/connections`](./openai-agents-rest/list-connections) | List Connections |
+| `POST` | [`/v1/openai-agents/connections`](./openai-agents-rest/create-connection) | Create Connection |
+| `GET` | [`/v1/openai-agents/connections/{connection-id}`](./openai-agents-rest/get-connection) | Get Connection |
+| `PATCH` | [`/v1/openai-agents/connections/{connection-id}`](./openai-agents-rest/update-connection) | Update Connection |
+| `DELETE` | [`/v1/openai-agents/connections/{connection-id}`](./openai-agents-rest/delete-connection) | Delete Connection |
+| `GET` | [`/v1/openai-agents/sessions`](./openai-agents-rest/list-sessions) | List Sessions |
+| `POST` | [`/v1/openai-agents/sessions`](./openai-agents-rest/create-session) | Create Session |
+| `GET` | [`/v1/openai-agents/sessions/{session-id}`](./openai-agents-rest/get-session) | Get Session |
+| `DELETE` | [`/v1/openai-agents/sessions/{session-id}`](./openai-agents-rest/delete-session) | Delete Session |
+| `POST` | [`/v1/openai-agents/sessions/{session-id}/input`](./openai-agents-rest/send-input) | Send Input |
+| `POST` | [`/v1/openai-agents/sessions/{session-id}/cancel`](./openai-agents-rest/cancel-session) | Cancel Session |
+| `GET` | [`/v1/openai-agents/sessions/{session-id}/events`](./openai-agents-rest/list-session-events) | List Session Events |
+| `GET` | [`/v1/openai-agents/sessions/{session-id}/usage`](./openai-agents-rest/get-session-usage) | Get Session Usage |
+| `POST` | [`/v1/openai-agents/sessions/{session-id}/inputs`](./openai-agents-rest/upload-session-input) | Upload Session Input |
+| `GET` | [`/v1/openai-agents/sessions/{session-id}/artifacts`](./openai-agents-rest/list-session-artifacts) | List Session Artifacts |
+| `POST` | [`/v1/openai-agents/sessions/{session-id}/artifacts/export`](./openai-agents-rest/export-session-artifact) | Export Session Artifact |
+| `GET` | [`/v1/openai-agents/sessions/{session-id}/artifacts/{artifact-id}/download`](./openai-agents-rest/get-artifact-download) | Get Artifact Download |
+| `DELETE` | [`/v1/openai-agents/sessions/{session-id}/artifacts/{artifact-id}`](./openai-agents-rest/delete-session-artifact) | Delete Session Artifact |
+| `GET` | [`/v1/openai-agents/approvals`](./openai-agents-rest/list-approvals) | List Approvals |
+| `POST` | [`/v1/openai-agents/approvals/{approval-id}/resolve`](./openai-agents-rest/resolve-approval) | Resolve Approval |

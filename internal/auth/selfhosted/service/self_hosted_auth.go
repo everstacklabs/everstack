@@ -9,6 +9,7 @@ import (
 
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/domain"
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/repository"
+	"github.com/everstacklabs/everstack/internal/lib/emailaddr"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/google/uuid"
 )
@@ -43,6 +44,16 @@ var (
 	ErrCannotRemoveSelf    = errors.New("cannot remove yourself")
 )
 
+// EmailSender is the narrow outbound-email surface self-hosted auth needs.
+// It is an interface, and injected, because this package sits under internal/
+// and must not import services/email: outbound email is a cloud overlay, and
+// routing it through a slot is what keeps that import edge from forming.
+// services/email's Sender satisfies this structurally.
+type EmailSender interface {
+	SendMagicLink(ctx context.Context, to, magicLink, expiresIn string) error
+	SendInvitation(ctx context.Context, to, orgName, inviterName, inviterEmail, inviteLink string) error
+}
+
 // SelfHostedAuthService handles self-hosted authentication
 type SelfHostedAuthService struct {
 	*AuthService
@@ -51,6 +62,26 @@ type SelfHostedAuthService struct {
 	magicLinkRepo   *repository.MagicLinkRepository
 	orgRepo         *repository.OrganizationRepository
 	authConfigRepo  *repository.AuthConfigRepository
+
+	// email and externalURL are set together by WithEmail. When email is nil
+	// there is no configured provider, and the magic-link and invitation flows
+	// fall back to logging the token so a self-hosted operator can still
+	// deliver it by hand.
+	email       EmailSender
+	externalURL string
+}
+
+// WithEmail attaches an outbound email sender and the instance's external URL,
+// which is needed to build the links that go in the mail. Both are required:
+// a sender without a base URL cannot produce a working link, so passing an
+// empty externalURL leaves the service in its log-the-token fallback.
+func (s *SelfHostedAuthService) WithEmail(sender EmailSender, externalURL string) *SelfHostedAuthService {
+	if sender == nil || strings.TrimSpace(externalURL) == "" {
+		return s
+	}
+	s.email = sender
+	s.externalURL = strings.TrimRight(strings.TrimSpace(externalURL), "/")
+	return s
 }
 
 // NewSelfHostedAuthService creates a new self-hosted auth service
@@ -123,6 +154,12 @@ func (s *SelfHostedAuthService) Register(ctx context.Context, email, password st
 	// Only allow registration if no users exist
 	if hasUsers {
 		return nil, nil, ErrInstanceHasOwner
+	}
+
+	// Validate the address before anything is created. A user row keyed to an
+	// address that cannot receive mail can never verify or reset itself.
+	if err := emailaddr.Validate(email); err != nil {
+		return nil, nil, err
 	}
 
 	// Validate password
@@ -407,6 +444,14 @@ func (s *SelfHostedAuthService) EnsureUserHasConfiguredCloudOrganization(ctx con
 
 // RequestMagicLink creates and "sends" a magic link for passwordless login
 func (s *SelfHostedAuthService) RequestMagicLink(ctx context.Context, email string) (string, error) {
+	// Reject a malformed address up front rather than reporting the usual
+	// "if an account exists" reassurance for something that could never be an
+	// account. Anti-enumeration only needs to hide whether a valid address is
+	// registered; it has no reason to cover for a typo.
+	if err := emailaddr.Validate(email); err != nil {
+		return "", err
+	}
+
 	// Check if user exists
 	user, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
@@ -429,9 +474,20 @@ func (s *SelfHostedAuthService) RequestMagicLink(ctx context.Context, email stri
 		return "", fmt.Errorf("failed to create magic link: %w", err)
 	}
 
-	// TODO: Send email with magic link
-	// For now, log the token (in production, this would send an email)
-	logger.Infof("auth: magic link created for %s: %s", email, magicLink.Token)
+	if s.email == nil {
+		// No email provider configured. Log the token so a self-hosted operator
+		// can deliver it out of band; this is the documented degradation for
+		// builds that ship without one.
+		logger.Warnf("auth: magic link created for %s but no email sender configured; token=%s", email, magicLink.Token)
+	} else {
+		magicLinkURL := s.externalURL + "/auth/verify-magic-link?token=" + magicLink.Token
+		if sendErr := s.email.SendMagicLink(ctx, email, magicLinkURL, "24 hours"); sendErr != nil {
+			// Logged, not returned. The response below is identical whether or
+			// not the account exists, and failing here would leak that
+			// distinction to anyone who could trigger a mail outage.
+			logger.WithError(sendErr).Errorf("auth: failed to send magic link email to %s", email)
+		}
+	}
 
 	return "If an account exists with this email, a magic link has been sent.", nil
 }
@@ -485,6 +541,10 @@ type InviteResult struct {
 
 // InviteTeamMember creates an invitation for a new team member
 func (s *SelfHostedAuthService) InviteTeamMember(ctx context.Context, inviterID uuid.UUID, email, role string, seatLimit int) (*InviteResult, error) {
+	if err := emailaddr.Validate(email); err != nil {
+		return nil, err
+	}
+
 	// Check if email is already a user
 	existing, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
@@ -526,8 +586,32 @@ func (s *SelfHostedAuthService) InviteTeamMember(ctx context.Context, inviterID 
 		return nil, fmt.Errorf("failed to create invitation: %w", err)
 	}
 
-	// TODO: Send invitation email
-	logger.Infof("auth: invitation created for %s (token: %s)", email, invitation.Token)
+	if s.email == nil {
+		// No email provider configured; log the token so the operator can pass
+		// the invite on by hand.
+		logger.Warnf("auth: invitation created for %s but no email sender configured; token=%s", email, invitation.Token)
+	} else {
+		inviteLink := s.externalURL + "/auth/invite?token=" + invitation.Token
+		// Look up the inviter so the mail carries a real name and reply-to
+		// rather than arriving from nobody. A miss here is not worth failing
+		// the invite over, so the fields just stay empty.
+		inviterName, inviterEmail := "", ""
+		if inviter, lookupErr := s.userRepo.GetByID(ctx, inviterID); lookupErr == nil && inviter != nil {
+			inviterEmail = inviter.Email
+			if inviter.Name != nil {
+				inviterName = *inviter.Name
+			}
+		}
+		orgName := ""
+		if invitation.OrganizationID != nil {
+			if org, orgErr := s.orgRepo.GetByID(ctx, *invitation.OrganizationID); orgErr == nil && org != nil {
+				orgName = org.Name
+			}
+		}
+		if sendErr := s.email.SendInvitation(ctx, email, orgName, inviterName, inviterEmail, inviteLink); sendErr != nil {
+			logger.WithError(sendErr).Errorf("auth: failed to send invitation email to %s", email)
+		}
+	}
 
 	return &InviteResult{Invitation: invitation}, nil
 }

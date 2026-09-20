@@ -67,12 +67,34 @@ from .evals import (
     evaluate,
     assert_test,
 )
+from .resources.openai_agents import (
+    AsyncOpenAIAgents,
+    OpenAIAgentApproval,
+    OpenAIAgentArtifact,
+    OpenAIAgentCapabilities,
+    OpenAIAgentConnection,
+    OpenAIAgentEvent,
+    OpenAIAgentEventPage,
+    OpenAIAgentSession,
+    OpenAIAgentUsage,
+    OpenAIAgents,
+)
 
 __all__ = [
     "__version__",
     # Clients
     "Everstack",
     "AsyncEverstack",
+    "AsyncOpenAIAgents",
+    "OpenAIAgentApproval",
+    "OpenAIAgentArtifact",
+    "OpenAIAgentCapabilities",
+    "OpenAIAgentConnection",
+    "OpenAIAgentEvent",
+    "OpenAIAgentEventPage",
+    "OpenAIAgentSession",
+    "OpenAIAgentUsage",
+    "OpenAIAgents",
     # Pytest-native evals
     "TestCase",
     "Metric",

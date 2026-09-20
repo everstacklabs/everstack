@@ -7,6 +7,8 @@
     "gateway",
     "---Platform---",
     "agents",
+    "openai-agents",
+    "openai-agents-rest",
     "sandbox",
     "workflows",
     "memory",

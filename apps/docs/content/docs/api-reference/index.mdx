@@ -6,10 +6,12 @@ icon: FileCode
 
 Everstack exposes an OpenAI-compatible gateway API for LLM operations, plus platform APIs for agents, memory, workflows, functions, and more.
 
-All endpoints are served on the same port (default `8089`) and require an API key in the `Authorization` header.
+All endpoints are served on the same port (default `8089`).
+
+OpenAI-compatible endpoints live under `/openai/v1` and take a standard `Authorization: Bearer <key>` header. The native REST surface under `/v1` takes `x-evs-api-key` instead and will reject a Bearer token.
 
 ```bash
-curl https://{instance}.{region}.everstack.ai/v1/chat/completions \
+curl https://{instance}.{region}.everstack.ai/openai/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "Hello"}]}'

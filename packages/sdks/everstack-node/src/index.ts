@@ -23,6 +23,7 @@
 // Main client
 export { Everstack, type EverstackOptions } from "./client.js";
 export { Everstack as default } from "./client.js";
+export * from "./resources/openai-agents.js";
 
 // OpenAI SDK compatibility
 export {
@@ -167,6 +168,8 @@ export type {
 
 // Agent / dataset / evaluation / observability / scores / channels proto types (raw)
 export type * from "@everstack/proto/everstack/agents/v1/agents_pb.js";
+export * as OpenAIAgentsProto from "@everstack/proto/everstack/openai_agents/v1/openai_agents_pb.js";
+export { OpenAIAgentsService } from "@everstack/proto/everstack/openai_agents/v1/openai_agents_service_pb.js";
 export type * from "@everstack/proto/everstack/channels/v1/channels_pb.js";
 export type * from "@everstack/proto/everstack/datasets/v1/datasets_pb.js";
 export type * from "@everstack/proto/everstack/scores/v1/service_pb.js";
@@ -182,6 +185,19 @@ export {
   parseModelId,
   providers,
 } from "./types/index.js";
+
+// Transport (for runtimes where detection needs overriding, or where a custom
+// fetch has to be supplied)
+export {
+  createTransport,
+  createFetchTransport,
+  createWebTransport,
+  createNodeTransport,
+  createCompatibleFetch,
+  detectRuntime,
+  Headers as TransportHeaders,
+} from "./transport.js";
+export type { RuntimeKind, TransportOptions } from "./transport.js";
 
 // Resources (for advanced usage)
 export { Chat, Completions } from "./resources/chat.js";

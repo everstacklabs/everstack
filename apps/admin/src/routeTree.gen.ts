@@ -98,6 +98,7 @@ import { Route as DeploymentsAgentsAgentIdRouteImport } from './routes/deploymen
 import { Route as DeploymentsAgentsAgentIdIndexRouteImport } from './routes/deployments/agents/$agentId/index'
 import { Route as EvaluationsAnnotationQueuesQueueIdAnnotateRouteImport } from './routes/evaluations/annotation-queues_.$queueId_.annotate'
 import { Route as DeploymentsAgentsSessionsSessionIdRouteImport } from './routes/deployments/agents/sessions.$sessionId'
+import { Route as DeploymentsAgentsOpenaiSessionsSessionIdRouteImport } from './routes/deployments/agents/openai-sessions.$sessionId'
 import { Route as DeploymentsAgentsAgentIdTriggersRouteImport } from './routes/deployments/agents/$agentId/triggers'
 import { Route as DeploymentsAgentsAgentIdSettingsRouteImport } from './routes/deployments/agents/$agentId/settings'
 import { Route as DeploymentsAgentsAgentIdSessionsRouteImport } from './routes/deployments/agents/$agentId/sessions'
@@ -579,6 +580,12 @@ const DeploymentsAgentsSessionsSessionIdRoute =
     path: '/sessions/$sessionId',
     getParentRoute: () => DeploymentsAgentsRoute,
   } as any)
+const DeploymentsAgentsOpenaiSessionsSessionIdRoute =
+  DeploymentsAgentsOpenaiSessionsSessionIdRouteImport.update({
+    id: '/openai-sessions/$sessionId',
+    path: '/openai-sessions/$sessionId',
+    getParentRoute: () => DeploymentsAgentsRoute,
+  } as any)
 const DeploymentsAgentsAgentIdTriggersRoute =
   DeploymentsAgentsAgentIdTriggersRouteImport.update({
     id: '/triggers',
@@ -730,6 +737,7 @@ export interface FileRoutesByFullPath {
   '/deployments/agents/$agentId/sessions': typeof DeploymentsAgentsAgentIdSessionsRoute
   '/deployments/agents/$agentId/settings': typeof DeploymentsAgentsAgentIdSettingsRoute
   '/deployments/agents/$agentId/triggers': typeof DeploymentsAgentsAgentIdTriggersRoute
+  '/deployments/agents/openai-sessions/$sessionId': typeof DeploymentsAgentsOpenaiSessionsSessionIdRoute
   '/deployments/agents/sessions/$sessionId': typeof DeploymentsAgentsSessionsSessionIdRoute
   '/evaluations/annotation-queues/$queueId/annotate': typeof EvaluationsAnnotationQueuesQueueIdAnnotateRoute
   '/deployments/agents/$agentId/': typeof DeploymentsAgentsAgentIdIndexRoute
@@ -825,6 +833,7 @@ export interface FileRoutesByTo {
   '/deployments/agents/$agentId/sessions': typeof DeploymentsAgentsAgentIdSessionsRoute
   '/deployments/agents/$agentId/settings': typeof DeploymentsAgentsAgentIdSettingsRoute
   '/deployments/agents/$agentId/triggers': typeof DeploymentsAgentsAgentIdTriggersRoute
+  '/deployments/agents/openai-sessions/$sessionId': typeof DeploymentsAgentsOpenaiSessionsSessionIdRoute
   '/deployments/agents/sessions/$sessionId': typeof DeploymentsAgentsSessionsSessionIdRoute
   '/evaluations/annotation-queues/$queueId/annotate': typeof EvaluationsAnnotationQueuesQueueIdAnnotateRoute
   '/deployments/agents/$agentId': typeof DeploymentsAgentsAgentIdIndexRoute
@@ -926,6 +935,7 @@ export interface FileRoutesById {
   '/deployments/agents/$agentId/sessions': typeof DeploymentsAgentsAgentIdSessionsRoute
   '/deployments/agents/$agentId/settings': typeof DeploymentsAgentsAgentIdSettingsRoute
   '/deployments/agents/$agentId/triggers': typeof DeploymentsAgentsAgentIdTriggersRoute
+  '/deployments/agents/openai-sessions/$sessionId': typeof DeploymentsAgentsOpenaiSessionsSessionIdRoute
   '/deployments/agents/sessions/$sessionId': typeof DeploymentsAgentsSessionsSessionIdRoute
   '/evaluations/annotation-queues_/$queueId_/annotate': typeof EvaluationsAnnotationQueuesQueueIdAnnotateRoute
   '/deployments/agents/$agentId/': typeof DeploymentsAgentsAgentIdIndexRoute
@@ -1028,6 +1038,7 @@ export interface FileRouteTypes {
     | '/deployments/agents/$agentId/sessions'
     | '/deployments/agents/$agentId/settings'
     | '/deployments/agents/$agentId/triggers'
+    | '/deployments/agents/openai-sessions/$sessionId'
     | '/deployments/agents/sessions/$sessionId'
     | '/evaluations/annotation-queues/$queueId/annotate'
     | '/deployments/agents/$agentId/'
@@ -1123,6 +1134,7 @@ export interface FileRouteTypes {
     | '/deployments/agents/$agentId/sessions'
     | '/deployments/agents/$agentId/settings'
     | '/deployments/agents/$agentId/triggers'
+    | '/deployments/agents/openai-sessions/$sessionId'
     | '/deployments/agents/sessions/$sessionId'
     | '/evaluations/annotation-queues/$queueId/annotate'
     | '/deployments/agents/$agentId'
@@ -1223,6 +1235,7 @@ export interface FileRouteTypes {
     | '/deployments/agents/$agentId/sessions'
     | '/deployments/agents/$agentId/settings'
     | '/deployments/agents/$agentId/triggers'
+    | '/deployments/agents/openai-sessions/$sessionId'
     | '/deployments/agents/sessions/$sessionId'
     | '/evaluations/annotation-queues_/$queueId_/annotate'
     | '/deployments/agents/$agentId/'
@@ -1931,6 +1944,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeploymentsAgentsSessionsSessionIdRouteImport
       parentRoute: typeof DeploymentsAgentsRoute
     }
+    '/deployments/agents/openai-sessions/$sessionId': {
+      id: '/deployments/agents/openai-sessions/$sessionId'
+      path: '/openai-sessions/$sessionId'
+      fullPath: '/deployments/agents/openai-sessions/$sessionId'
+      preLoaderRoute: typeof DeploymentsAgentsOpenaiSessionsSessionIdRouteImport
+      parentRoute: typeof DeploymentsAgentsRoute
+    }
     '/deployments/agents/$agentId/triggers': {
       id: '/deployments/agents/$agentId/triggers'
       path: '/triggers'
@@ -2038,6 +2058,7 @@ interface DeploymentsAgentsRouteChildren {
   DeploymentsAgentsAgentIdRoute: typeof DeploymentsAgentsAgentIdRouteWithChildren
   DeploymentsAgentsDashboardRoute: typeof DeploymentsAgentsDashboardRoute
   DeploymentsAgentsIndexRoute: typeof DeploymentsAgentsIndexRoute
+  DeploymentsAgentsOpenaiSessionsSessionIdRoute: typeof DeploymentsAgentsOpenaiSessionsSessionIdRoute
   DeploymentsAgentsSessionsSessionIdRoute: typeof DeploymentsAgentsSessionsSessionIdRoute
 }
 
@@ -2045,6 +2066,8 @@ const DeploymentsAgentsRouteChildren: DeploymentsAgentsRouteChildren = {
   DeploymentsAgentsAgentIdRoute: DeploymentsAgentsAgentIdRouteWithChildren,
   DeploymentsAgentsDashboardRoute: DeploymentsAgentsDashboardRoute,
   DeploymentsAgentsIndexRoute: DeploymentsAgentsIndexRoute,
+  DeploymentsAgentsOpenaiSessionsSessionIdRoute:
+    DeploymentsAgentsOpenaiSessionsSessionIdRoute,
   DeploymentsAgentsSessionsSessionIdRoute:
     DeploymentsAgentsSessionsSessionIdRoute,
 }

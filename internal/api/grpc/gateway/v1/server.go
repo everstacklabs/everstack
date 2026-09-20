@@ -482,8 +482,8 @@ func hasUsableProviderConfig(configs []*provider_config.Configuration) bool {
 	return false
 }
 
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return gatewayconnect.NewGatewayServiceHandler(s, connect.WithInterceptors(interceptors...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return gatewayconnect.NewGatewayServiceHandler(s, opts...)
 }
 
 func (s *Server) FileDescriptor() protoreflect.FileDescriptor {

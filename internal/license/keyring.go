@@ -20,6 +20,20 @@ import (
 // authenticated activation channel).
 var vendorPublicKeysB64 string
 
+// VendorKeyCount reports how many vendor public keys were compiled into this
+// binary. Zero means offline license files cannot be verified by this build.
+// Image builds print it from `everstack version -v` to prove the keys were
+// injected; it never exposes key material.
+func VendorKeyCount() int {
+	count := 0
+	for _, part := range strings.Split(vendorPublicKeysB64, ",") {
+		if strings.TrimSpace(part) != "" {
+			count++
+		}
+	}
+	return count
+}
+
 // vendorKeyring builds verifiers for every pinned vendor key.
 func vendorKeyring() ([]*Verifier, error) {
 	raw := strings.TrimSpace(vendorPublicKeysB64)

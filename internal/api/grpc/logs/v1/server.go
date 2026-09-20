@@ -38,8 +38,8 @@ func (s *Server) SetLogColumnStore(store *logcolumns.Store) {
 }
 
 // RegisterConnectServer registers the Connect RPC handler
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return logsconnect.NewLogsServiceHandler(s, connect.WithInterceptors(interceptors...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return logsconnect.NewLogsServiceHandler(s, opts...)
 }
 
 // FileDescriptor returns the file descriptor for this service

@@ -1022,6 +1022,8 @@ func (h *SpawnAgentHandler) execute(ctx context.Context, args map[string]interfa
 				PromptTokens:     finalState.CumulativeUsage.PromptTokens,
 				CompletionTokens: finalState.CumulativeUsage.CompletionTokens,
 				TotalTokens:      finalState.CumulativeUsage.TotalTokens,
+				CacheReadTokens:  finalState.CumulativeUsage.CacheReadTokens,
+				CacheWriteTokens: finalState.CumulativeUsage.CacheWriteTokens,
 			},
 			Data: map[string]interface{}{
 				"spawn_depth":   h.Tracker.CurrentDepth + 1,

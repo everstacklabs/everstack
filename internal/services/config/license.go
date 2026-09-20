@@ -58,6 +58,10 @@ type RateLimitConfig struct {
 
 // RedisConfig holds Redis connection settings
 type RedisConfig struct {
+	// Required disables the single-instance in-memory fallback. Use it for
+	// horizontally scaled deployments where divergent state is unsafe.
+	Required bool `mapstructure:"required" yaml:"required"`
+
 	// DSN is the Redis connection string (e.g., redis://:password@host:port/db)
 	// When DSN is provided, it takes precedence over individual settings.
 	// Format: redis://[:password@]host[:port][/db]
@@ -74,6 +78,14 @@ type RedisConfig struct {
 	// DB is the Redis database number (0-15)
 	// Used when DSN is not provided
 	DB int `mapstructure:"db" yaml:"db"`
+
+	// Sentinel settings are configured together and take precedence over DSN
+	// and Address. The Redis password is also used to authenticate to Sentinel.
+	SentinelMasterName string   `mapstructure:"sentinel_master_name" yaml:"sentinel_master_name"`
+	SentinelAddresses  []string `mapstructure:"sentinel_addresses" yaml:"sentinel_addresses"`
+	TLSEnabled         bool     `mapstructure:"tls_enabled" yaml:"tls_enabled"`
+	TLSCAFile          string   `mapstructure:"tls_ca_file" yaml:"tls_ca_file"`
+	TLSServerName      string   `mapstructure:"tls_server_name" yaml:"tls_server_name"`
 
 	// PoolSize is the maximum number of socket connections
 	// Default: 10

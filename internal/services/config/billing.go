@@ -20,17 +20,7 @@ type BillingConfig struct {
 	} `mapstructure:"database" yaml:"database"`
 	// Redis configuration for upgrade session store (optional)
 	// If not configured, falls back to in-memory storage (single-pod mode)
-	Redis struct {
-		// DSN is the Redis connection string (e.g., redis://localhost:6379/0)
-		// Takes precedence over Address if both are provided
-		DSN string `mapstructure:"dsn" yaml:"dsn"`
-		// Address is the Redis server address (e.g., localhost:6379)
-		Address string `mapstructure:"address" yaml:"address"`
-		// Password for Redis authentication (optional)
-		Password string `mapstructure:"password" yaml:"password"`
-		// DB is the Redis database number (default: 0)
-		DB int `mapstructure:"db" yaml:"db"`
-	} `mapstructure:"redis" yaml:"redis"`
+	Redis  BillingRedisConfig `mapstructure:"redis" yaml:"redis"`
 	Stripe struct {
 		SecretKey     string `mapstructure:"secret_key" yaml:"secret_key"`
 		WebhookSecret string `mapstructure:"webhook_secret" yaml:"webhook_secret"`
@@ -59,4 +49,19 @@ type BillingConfig struct {
 	// This key is shared between billing and license services.
 	// The corresponding public key (EVS_CLOUD_PUBLIC_KEY) must be configured on the gateway.
 	CloudCallbackPrivateKey string `mapstructure:"cloud_callback_private_key" yaml:"cloud_callback_private_key"`
+}
+
+// BillingRedisConfig controls the shared upgrade-session store. Sentinel takes
+// precedence over DSN and Address when both Sentinel fields are configured.
+type BillingRedisConfig struct {
+	Required           bool     `mapstructure:"required" yaml:"required"`
+	DSN                string   `mapstructure:"dsn" yaml:"dsn"`
+	Address            string   `mapstructure:"address" yaml:"address"`
+	Password           string   `mapstructure:"password" yaml:"password"`
+	DB                 int      `mapstructure:"db" yaml:"db"`
+	SentinelMasterName string   `mapstructure:"sentinel_master_name" yaml:"sentinel_master_name"`
+	SentinelAddresses  []string `mapstructure:"sentinel_addresses" yaml:"sentinel_addresses"`
+	TLSEnabled         bool     `mapstructure:"tls_enabled" yaml:"tls_enabled"`
+	TLSCAFile          string   `mapstructure:"tls_ca_file" yaml:"tls_ca_file"`
+	TLSServerName      string   `mapstructure:"tls_server_name" yaml:"tls_server_name"`
 }

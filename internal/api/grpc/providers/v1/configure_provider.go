@@ -36,10 +36,18 @@ func (s *Server) ConfigureProvider(ctx context.Context, req *connect.Request[pro
 		customBaseURL = &req.Msg.CustomBaseUrl
 	}
 
+	// Trim before storing and before checking. A pasted credential routinely
+	// carries a trailing newline, which upstream rejects while the UI shows the
+	// provider as Active.
+	apiKey := NormalizeAPIKey(req.Msg.ApiKey)
+	if err := ValidateAPIKeyShape(req.Msg.ProviderName, apiKey, customBaseURL != nil); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
 	cmd := providerCmd.ConfigureProviderCommand{
 		TenantID:       tenantID,
 		ProviderName:   req.Msg.ProviderName,
-		APIKey:         req.Msg.ApiKey,
+		APIKey:         apiKey,
 		APIKeyName:     req.Msg.ApiKeyName,
 		APIKeyWeight:   int(req.Msg.ApiKeyWeight),
 		EnabledModels:  req.Msg.EnabledModels,

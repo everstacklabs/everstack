@@ -1,0 +1,248 @@
+---
+title: "POST Upload Session Input"
+description: "Upload Session Input"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Upload Session Input</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400">POST</span>
+    <code className="text-sm text-fd-muted-foreground">{"/v1/openai-agents/sessions/{session-id}/inputs"}</code>
+  </div>
+  <p className="mt-3 text-fd-muted-foreground">JSON request body is capped at 2 MiB. content_base64 contains the file bytes.</p>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="post"
+  path="/v1/openai-agents/sessions/{session-id}/inputs"
+  parameters={[{"name":"session-id","in":"path","required":true,"schema":{"type":"string"}}]}
+  defaultBody={`{
+  "filename": "string",
+  "content_type": "string",
+  "content_base64": "string",
+  "destination": "string"
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X POST "http://localhost:8089/v1/openai-agents/sessions/{session-id}/inputs" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"filename":"string","content_type":"string","content_base64":"string","destination":"string"}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/openai-agents/sessions/{session-id}/inputs", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "filename": "string",
+  "content_type": "string",
+  "content_base64": "string",
+  "destination": "string"
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8089/v1/openai-agents/sessions/{session-id}/inputs",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "filename": "string",
+  "content_type": "string",
+  "content_base64": "string",
+  "destination": "string"
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["201", "400", "403", "404", "500", "503"]}>
+<Tab value="201">
+
+```json
+{
+  "object_id": "string",
+  "filename": "string",
+  "content_type": "string",
+  "size_bytes": 0,
+  "sha256": "string",
+  "kind": "string",
+  "created_at": "string"
+}
+```
+
+</Tab>
+<Tab value="400">
+
+```json
+{
+  "error": {
+    "code": "string",
+    "message": "string"
+  }
+}
+```
+
+</Tab>
+<Tab value="403">
+
+```json
+{
+  "error": {
+    "code": "string",
+    "message": "string"
+  }
+}
+```
+
+</Tab>
+<Tab value="404">
+
+```json
+{
+  "error": {
+    "code": "string",
+    "message": "string"
+  }
+}
+```
+
+</Tab>
+<Tab value="500">
+
+```json
+{
+  "error": {
+    "code": "string",
+    "message": "string"
+  }
+}
+```
+
+</Tab>
+<Tab value="503">
+
+```json
+{
+  "error": {
+    "code": "string",
+    "message": "string"
+  }
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+### Parameters
+
+| Name | In | Type | Required | Description |
+|------|-----|------|----------|-------------|
+| `session-id` | path | `string` | **Yes** |  |
+
+
+### Request Body
+
+JSON request bodies are capped at 2 MiB.
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `filename` | `string` | **Yes** |  |
+| `content_type` | `string` | No |  |
+| `content_base64` | `string` | **Yes** |  |
+| `destination` | `string` | No |  |
+
+
+### Responses
+
+#### 201 Success
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `object_id` | `string` |  |
+| `filename` | `string` |  |
+| `content_type` | `string` |  |
+| `size_bytes` | `integer` |  |
+| `sha256` | `string` |  |
+| `kind` | `string` |  |
+| `created_at` | `string` |  |
+
+#### 400 Invalid request
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `error` | `object` |  |
+
+#### 403 Permission denied
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `error` | `object` |  |
+
+#### 404 Not found
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `error` | `object` |  |
+
+#### 500 Internal error
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `error` | `object` |  |
+
+#### 503 Unavailable
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `error` | `object` |  |
+
+
+</APIContent>
+</APILayout>

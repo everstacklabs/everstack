@@ -22,6 +22,17 @@ enum SnapshotFreshness {
   SNAPSHOT_FRESHNESS_UNKNOWN = 4;
 }
 
+enum SourceState {
+  SOURCE_STATE_UNSPECIFIED = 0;
+  SOURCE_STATE_OK = 1;
+  SOURCE_STATE_STALE = 2;
+  // UNAVAILABLE means the probe failed. Do not collapse it into
+  // NOT_CONFIGURED: a configured source that cannot be reached needs action.
+  SOURCE_STATE_UNAVAILABLE = 3;
+  // NOT_CONFIGURED means this deployment does not have the source.
+  SOURCE_STATE_NOT_CONFIGURED = 4;
+}
+
 enum EventSeverity {
   EVENT_SEVERITY_UNSPECIFIED = 0;
   EVENT_SEVERITY_INFO = 1;
@@ -46,11 +57,107 @@ enum InstallationConnectivity {
   INSTALLATION_CONNECTIVITY_UNREPORTED = 4;
 }
 
+enum IdentityLinkage {
+  // No linkage classification was supplied.
+  IDENTITY_LINKAGE_UNSPECIFIED = 0;
+  // An identity record joined to a platform user.
+  IDENTITY_LINKAGE_LINKED = 1;
+  // Signed up but never became a platform user.
+  IDENTITY_LINKAGE_IDENTITY_ONLY = 2;
+  // A platform user with no current native identity link, for example a
+  // WorkOS-era account.
+  IDENTITY_LINKAGE_PLATFORM_ONLY = 3;
+}
+
 enum InstanceLifecycleAction {
   INSTANCE_LIFECYCLE_ACTION_UNSPECIFIED = 0;
   INSTANCE_LIFECYCLE_ACTION_START = 1;
   INSTANCE_LIFECYCLE_ACTION_STOP = 2;
   INSTANCE_LIFECYCLE_ACTION_RESTART = 3;
+}
+
+enum AutomationKind {
+  AUTOMATION_KIND_UNSPECIFIED = 0;
+  AUTOMATION_KIND_AGENT_TRIGGER = 1;
+  AUTOMATION_KIND_SANDBOX_CRON = 2;
+  AUTOMATION_KIND_SANDBOX_WEBHOOK = 3;
+  AUTOMATION_KIND_EVAL_SCHEDULE = 4;
+}
+enum AutomationCoverageState {
+  AUTOMATION_COVERAGE_STATE_UNSPECIFIED = 0;
+  AUTOMATION_COVERAGE_STATE_AVAILABLE = 1;
+  AUTOMATION_COVERAGE_STATE_PARTIAL = 2;
+  AUTOMATION_COVERAGE_STATE_UNAVAILABLE = 3;
+}
+message InstanceAutomationRun {
+  string id = 1;
+  string status = 2;
+  int32 attempt = 3;
+  // Absent when the source ledger records only completion, as sandbox ledgers do.
+  google.protobuf.Timestamp started_at = 4;
+  google.protobuf.Timestamp completed_at = 5;
+  int64 duration_ms = 6;
+}
+message InstanceAutomation {
+  string id = 1;
+  AutomationKind kind = 2;
+  string name = 3;
+  string target_kind = 4;
+  string target_id = 5;
+  string target_name = 6;
+  string trigger_type = 7;
+  bool enabled = 8;
+  string cron_expression = 9;
+  string timezone = 10;
+  string circuit_state = 11;
+  int32 consecutive_failures = 12;
+  google.protobuf.Timestamp last_started_at = 13;
+  google.protobuf.Timestamp last_completed_at = 14;
+  string last_status = 15;
+  google.protobuf.Timestamp last_success_at = 16;
+  google.protobuf.Timestamp next_run_at = 17;
+  google.protobuf.Timestamp created_at = 18;
+  google.protobuf.Timestamp updated_at = 19;
+  repeated InstanceAutomationRun recent_runs = 20;
+  bool runs_truncated = 21;
+  // True only when execution history can be attributed to this automation.
+  // False on legacy schemas or when older runs lack exact schedule provenance.
+  bool runs_available = 22;
+  string health_state = 23;
+  string health_detail = 24;
+  google.protobuf.Timestamp expected_run_at = 25;
+}
+message AutomationCoverage {
+  AutomationKind kind = 1;
+  AutomationCoverageState state = 2;
+  google.protobuf.Timestamp as_of = 3;
+  string warning = 4;
+}
+message ListInstanceAutomationsRequest {
+  string instance_id = 1;
+  AutomationKind kind = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+message ListInstanceAutomationsResponse {
+  repeated InstanceAutomation automations = 1;
+  string next_page_token = 2;
+  AutomationCoverage coverage = 3;
+}
+message ChangeInstanceAutomationRequest {
+  string instance_id = 1;
+  AutomationKind kind = 2;
+  string automation_id = 3;
+  bool enabled = 4;
+  // Compare-and-set precondition. The change is rejected if current state differs.
+  bool expected_enabled = 5;
+  // Operator-provided audit reason. It must not contain credentials or payloads.
+  string reason = 6;
+}
+message ChangeInstanceAutomationResponse {
+  string automation_id = 1;
+  AutomationKind kind = 2;
+  bool enabled = 3;
 }
 
 message SessionPrincipal {
@@ -85,12 +192,33 @@ message OperationsOverview {
   int64 connected_self_hosted = 13;
   int64 visible_unlicensed = 14;
   int64 issued_licenses = 15;
+  // Healthy and degraded counts are meaningful only for instances whose
+  // health has actually been measured.
+  int64 instances_with_measured_health = 16;
+  // Until EVS-57 lands, this equals the live instance count because no health
+  // measurements are written.
+  int64 instances_never_health_checked = 17;
 }
 
 message GetOverviewRequest {}
 
 message GetOverviewResponse {
   OperationsOverview overview = 1;
+  repeated OperationsSourceStatus sources = 2;
+}
+
+message OperationsSourceStatus {
+  string id = 1;
+  string label = 2;
+  SourceState state = 3;
+  bool configured = 4;
+  bool reachable = 5;
+  google.protobuf.Timestamp checked_at = 6;
+  google.protobuf.Timestamp latest_data_at = 7;
+  int64 lag_seconds = 8;
+  // Sanitized explanation. This must never include a DSN, credential, or raw
+  // driver error that could contain either.
+  string detail = 9;
 }
 
 message OrganizationSummary {
@@ -119,6 +247,73 @@ message ListOrganizationsRequest {
 message ListOrganizationsResponse {
   repeated OrganizationSummary organizations = 1;
   string next_page_token = 2;
+}
+
+message OrganizationMemberRow {
+  string everstack_user_id = 1;
+  string identity_user_id = 2;
+  string email = 3;
+  string name = 4;
+  string role = 5;
+  google.protobuf.Timestamp joined_at = 6;
+}
+
+message OrganizationWorkspaceRow {
+  string workspace_id = 1;
+  string name = 2;
+  string slug = 3;
+  string environment = 4;
+  google.protobuf.Timestamp created_at = 5;
+  int32 explicit_member_count = 6;
+  int32 instance_count = 7;
+}
+
+message OrganizationInstanceRow {
+  string instance_id = 1;
+  string slug = 2;
+  string workspace_id = 3;
+  string status = 4;
+  string region = 5;
+  // Per EVS-57, healthy is only meaningful when last_health_check is set.
+  bool healthy = 6;
+  google.protobuf.Timestamp last_health_check = 7;
+  google.protobuf.Timestamp deleted_at = 8;
+}
+
+// SECURITY: The secret invite token is deliberately absent. NEVER add it here.
+message OrganizationInvitationRow {
+  string email = 1;
+  string role = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  bool accepted = 5;
+}
+
+message OrganizationDetail {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  string plan_tier = 4;
+  google.protobuf.Timestamp created_at = 5;
+  repeated OrganizationMemberRow members = 6;
+  repeated OrganizationWorkspaceRow workspaces = 7;
+  repeated OrganizationInstanceRow instances = 8;
+  repeated OrganizationInvitationRow invitations = 9;
+}
+
+message GetOrganizationRequest {
+  string organization_id = 1;
+  // Historical instances are opt-in; the default returns only live instances.
+  bool include_deleted_instances = 2;
+}
+
+message GetOrganizationResponse {
+  OrganizationDetail organization = 1;
+  // Sections fail independently. Unavailable must never be displayed as none.
+  bool members_unavailable = 2;
+  bool workspaces_unavailable = 3;
+  bool instances_unavailable = 4;
+  bool invitations_unavailable = 5;
 }
 
 message InstallationSummary {
@@ -285,6 +480,123 @@ message NodeSnapshot {
   int64 cpu_capacity_milli = 7;
   int64 memory_capacity_bytes = 8;
   map<string, string> labels = 9;
+  string operating_system = 10;
+  string os_image = 11;
+  string kernel_version = 12;
+  string container_runtime_version = 13;
+  string provider_id = 14;
+  repeated NodeAddress addresses = 15;
+  string pod_cidr = 16;
+  int64 cpu_allocatable_milli = 17;
+  int64 memory_allocatable_bytes = 18;
+  repeated NodeConditionSnapshot conditions = 19;
+  string region = 20;
+  string uid = 21;
+  int64 ephemeral_storage_capacity_bytes = 22;
+  int64 ephemeral_storage_allocatable_bytes = 23;
+  ResourceUsageSnapshot usage = 24;
+  FilesystemUsageSnapshot disk_usage = 25;
+}
+
+message ResourceUsageSnapshot {
+  google.protobuf.Timestamp collected_at = 1;
+  int64 cpu_milli = 2;
+  int64 memory_bytes = 3;
+}
+message FilesystemUsageSnapshot {
+  google.protobuf.Timestamp collected_at = 1;
+  int64 capacity_bytes = 2;
+  int64 available_bytes = 3;
+  string mountpoint = 4;
+}
+message ResourceRequirementsSnapshot {
+  int64 cpu_milli = 1;
+  int64 memory_bytes = 2;
+  int64 ephemeral_storage_bytes = 3;
+}
+message ContainerSnapshot {
+  string name = 1;
+  string image = 2;
+  bool ready = 3;
+  int32 restart_count = 4;
+  string state = 5;
+  string reason = 6;
+  ResourceRequirementsSnapshot requests = 7;
+  ResourceRequirementsSnapshot limits = 8;
+  ResourceUsageSnapshot usage = 9;
+  bool is_init = 10;
+}
+message PodSnapshot {
+  string uid = 1;
+  string namespace = 2;
+  string name = 3;
+  string node_name = 4;
+  string phase = 5;
+  bool ready = 6;
+  int32 restart_count = 7;
+  string reason = 8;
+  google.protobuf.Timestamp started_at = 9;
+  string workload_kind = 10;
+  string workload_name = 11;
+  ResourceUsageSnapshot usage = 12;
+  repeated ContainerSnapshot containers = 13;
+}
+
+message NodeAddress {
+  string type = 1;
+  string address = 2;
+}
+message NodeConditionSnapshot {
+  string type = 1;
+  string status = 2;
+  string reason = 3;
+  google.protobuf.Timestamp last_transition_at = 4;
+}
+message NetworkPortSnapshot {
+  string name = 1;
+  string protocol = 2;
+  int32 port = 3;
+  string target_port = 4;
+  int32 node_port = 5;
+}
+message NetworkServiceSnapshot {
+  string namespace = 1;
+  string name = 2;
+  string type = 3;
+  string cluster_ip = 4;
+  repeated string external_ips = 5;
+  repeated NetworkPortSnapshot ports = 6;
+  int32 ready_endpoints = 7;
+  int32 total_endpoints = 8;
+  map<string, string> labels = 9;
+}
+message IngressRouteSnapshot {
+  string host = 1;
+  string path = 2;
+  string path_type = 3;
+  string service_name = 4;
+  string service_port = 5;
+}
+message IngressSnapshot {
+  string namespace = 1;
+  string name = 2;
+  string class_name = 3;
+  repeated string hosts = 4;
+  repeated string addresses = 5;
+  repeated int32 ports = 6;
+  map<string, string> labels = 7;
+  repeated IngressRouteSnapshot routes = 8;
+}
+enum CollectionState {
+  COLLECTION_STATE_UNSPECIFIED = 0;
+  COLLECTION_STATE_AVAILABLE = 1;
+  COLLECTION_STATE_PARTIAL = 2;
+  COLLECTION_STATE_UNAVAILABLE = 3;
+}
+message CollectionAvailability {
+  string collection = 1;
+  CollectionState state = 2;
+  string warning = 3;
 }
 
 message WorkloadSnapshot {
@@ -315,6 +627,10 @@ message EnvironmentSnapshot {
   repeated WorkloadSnapshot workloads = 6;
   repeated FirecrackerAgentSnapshot firecracker_agents = 7;
   repeated string warnings = 8;
+  repeated NetworkServiceSnapshot network_services = 9;
+  repeated IngressSnapshot ingresses = 10;
+  repeated CollectionAvailability collections = 11;
+  repeated PodSnapshot pods = 12;
 }
 
 message EnvironmentSummary {
@@ -346,6 +662,67 @@ message GetEnvironmentRequest {
 message GetEnvironmentResponse {
   EnvironmentSummary environment = 1;
   EnvironmentSnapshot snapshot = 2;
+}
+
+enum ImpactCertainty {
+  IMPACT_CERTAINTY_UNSPECIFIED = 0;
+  // Authoritative placement ties this instance to the component.
+  IMPACT_CERTAINTY_DIRECT = 1;
+  // A shared service every instance in the environment depends on. This is
+  // not proof that any one customer is affected.
+  IMPACT_CERTAINTY_POTENTIAL = 2;
+  // No relationship can be established from stored metadata. Never display
+  // this as "unaffected".
+  IMPACT_CERTAINTY_UNMAPPED = 3;
+}
+
+message AffectedInstance {
+  string instance_id = 1;
+  string slug = 2;
+  string organization_id = 3;
+  string organization_name = 4;
+  ImpactCertainty certainty = 5;
+  string basis = 6;
+}
+
+message WorkloadImpact {
+  ImpactCertainty certainty = 1;
+  // Counts describe the exact returned instance set. If the complete set
+  // exceeds the response bound, impact_unavailable is true instead.
+  int32 direct_count = 2;
+  int32 potential_count = 3;
+  // Collection time of the snapshot used to identify the component.
+  google.protobuf.Timestamp mapping_as_of = 4;
+  string explanation = 5;
+  repeated AffectedInstance instances = 6;
+}
+
+message GetWorkloadRequest {
+  string environment_id = 1;
+  string namespace = 2;
+  string kind = 3;
+  string name = 4;
+}
+
+message GetWorkloadResponse {
+  // Identity only when workload_missing or snapshot_unavailable is true.
+  WorkloadSnapshot workload = 1;
+  google.protobuf.Timestamp collected_at = 2;
+  bool snapshot_stale = 3;
+  WorkloadImpact impact = 4;
+  repeated OperationsEvent related_events = 5;
+  repeated Incident related_incidents = 6;
+  // Missing from a successfully collected current snapshot, not a 404.
+  bool workload_missing = 7;
+  EnvironmentSummary environment = 8;
+  bool snapshot_unavailable = 9;
+  bool impact_unavailable = 10;
+  bool related_events_unavailable = 11;
+  bool related_incidents_unavailable = 12;
+  // Inclusive bounds used for related_events, preserved even for empty results.
+  google.protobuf.Timestamp events_since = 13;
+  google.protobuf.Timestamp events_until = 14;
+  string data_source_id = 15;
 }
 
 message OperationsEvent {
@@ -382,6 +759,7 @@ message AuditEvent {
   string outcome = 9;
   google.protobuf.Struct metadata = 10;
   google.protobuf.Timestamp occurred_at = 11;
+  string data_source_id = 12;
 }
 
 message ListAuditEventsRequest {
@@ -416,7 +794,9 @@ message GetIdentityOverviewResponse {
 }
 
 message IdentityUserSummary {
+  // Empty for PLATFORM_ONLY rows.
   string identity_user_id = 1;
+  // Empty for IDENTITY_ONLY rows.
   string everstack_user_id = 2;
   string email = 3;
   bool email_verified = 4;
@@ -427,6 +807,8 @@ message IdentityUserSummary {
   google.protobuf.Timestamp last_active_at = 9;
   int32 active_session_count = 10;
   repeated string authentication_methods = 11;
+  IdentityLinkage linkage = 12;
+  int32 organization_count = 13;
 }
 
 message ListIdentityUsersRequest {
@@ -439,6 +821,47 @@ message ListIdentityUsersResponse {
   repeated IdentityUserSummary users = 1;
   int64 total = 2;
   string next_page_token = 3;
+  // True when the identity schema could not be read.
+  bool identity_unavailable = 4;
+}
+
+message WorkspaceAccess {
+  string workspace_id = 1;
+  string workspace_name = 2;
+  string workspace_slug = 3;
+  string role = 4;
+  string environment = 5;
+  // explicit is a workspace_members row; implicit is owner/admin access, as
+  // defined by services/auth/internal/service/organization_service.go.
+  string access_source = 6;
+}
+
+message OrganizationMembership {
+  string organization_id = 1;
+  string organization_name = 2;
+  string organization_slug = 3;
+  string plan_tier = 4;
+  string role = 5;
+  google.protobuf.Timestamp joined_at = 6;
+  int32 instance_count = 7;
+  repeated WorkspaceAccess workspaces = 8;
+  // True when the organization has workspaces the user is not a member of.
+  bool workspace_access_restricted = 9;
+}
+
+message GetCustomerUserRequest {
+  // At least one identifier must be set.
+  string identity_user_id = 1;
+  string everstack_user_id = 2;
+}
+
+message GetCustomerUserResponse {
+  IdentityUserSummary user = 1;
+  repeated OrganizationMembership memberships = 2;
+  // True when the platform database could not be read.
+  bool memberships_unavailable = 3;
+  // True when the identity schema could not be read.
+  bool identity_unavailable = 4;
 }
 
 message IdentitySessionSummary {
@@ -587,6 +1010,17 @@ message Incident {
   string acknowledged_by = 21;
   google.protobuf.Timestamp acknowledged_at = 22;
   google.protobuf.Timestamp snoozed_until = 23;
+  // Names the data source whose control plane owns this incident.
+  string data_source_id = 24;
+  // Human workflow, deliberately separate from `status`, which is the observed
+  // condition. A recurrence re-fires the condition; it must not erase that
+  // somebody had taken ownership.
+  string assigned_to = 25;
+  google.protobuf.Timestamp assigned_at = 26;
+  string resolution_note = 27;
+  // Optimistic-concurrency token. A mutation sends back the value it last saw
+  // so a second operator cannot silently overwrite the first.
+  google.protobuf.Timestamp updated_at = 28;
 }
 
 message IncidentEvent {
@@ -652,6 +1086,39 @@ message SnoozeIncidentResponse {
   Incident incident = 1;
 }
 
+message AssignIncidentRequest {
+  string incident_id = 1;
+  // Empty clears the assignment.
+  string assignee = 2;
+  // The `updated_at` the operator last saw. Omit only for machine callers.
+  google.protobuf.Timestamp expected_updated_at = 3;
+}
+
+message AssignIncidentResponse {
+  Incident incident = 1;
+}
+
+message AddIncidentNoteRequest {
+  string incident_id = 1;
+  string note = 2;
+  google.protobuf.Timestamp expected_updated_at = 3;
+}
+
+message AddIncidentNoteResponse {
+  Incident incident = 1;
+}
+
+message ListIncidentsForSubjectRequest {
+  string subject_kind = 1;
+  string subject_id = 2;
+  bool include_resolved = 3;
+}
+
+message ListIncidentsForSubjectResponse {
+  repeated Incident active = 1;
+  repeated Incident historical = 2;
+}
+
 message ResolveIncidentRequest {
   string id = 1;
   string note = 2;
@@ -705,4 +1172,44 @@ message ListNotificationTargetsRequest {}
 
 message ListNotificationTargetsResponse {
   repeated NotificationTarget targets = 1;
+}
+
+// InstanceErrorGroup is one failure message and how often it occurred.
+//
+// Deliberately not classified into categories: the telemetry carries no
+// normalized error type, so grouping by message reports what happened, while
+// deriving categories from the free-text message would mislabel every message
+// whose wording changes.
+message InstanceErrorGroup {
+  string message = 1;
+  string status_code = 2;
+  int64 count = 3;
+}
+
+// DiagnosticsCoverage is how much of this instance's activity we can actually
+// see. Without it, "few requests" and "we cannot see this customer's requests"
+// look identical on the page.
+message DiagnosticsCoverage {
+  int64 spans_in_window = 1;
+  int64 spans_with_tenant = 2;
+  google.protobuf.Timestamp newest_span = 3;
+  bool telemetry_readable = 4;
+  // Plain-language statement of what the numbers below do and do not cover.
+  string note = 5;
+}
+
+message GetInstanceDiagnosticsRequest {
+  string instance_id = 1;
+}
+
+message GetInstanceDiagnosticsResponse {
+  google.protobuf.Timestamp window_start = 1;
+  google.protobuf.Timestamp window_end = 2;
+  int64 requests = 3;
+  int64 failed = 4;
+  double p50_millis = 5;
+  double p95_millis = 6;
+  google.protobuf.Timestamp last_active = 7;
+  repeated InstanceErrorGroup errors = 8;
+  DiagnosticsCoverage coverage = 9;
 }

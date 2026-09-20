@@ -9,7 +9,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/everstacklabs/everstack/internal/lib/correlation"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
@@ -22,13 +21,20 @@ import (
 type Provider struct {
 	cfg    Config
 	client *http.Client
+
+	// unaryClient serves non-streaming calls. It omits the shared transport's
+	// ResponseHeaderTimeout, which would otherwise cap total generation time,
+	// since a unary upstream withholds response headers until the completion
+	// is finished.
+	unaryClient *http.Client
 }
 
 func NewProvider(cfg Config) *Provider {
 	cli := clientx.Default()
 	return &Provider{
-		cfg:    cfg,
-		client: cli,
+		cfg:         cfg,
+		client:      cli,
+		unaryClient: clientx.Unary(),
 	}
 }
 
@@ -197,7 +203,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	}
 
 	body, _ := json.Marshal(qwenReq)
-	ctx, cancel := context.WithTimeout(ctx, providerutil.ChatRequestTimeout(req.Sampling, 30*time.Second))
+	ctx, cancel := context.WithTimeout(ctx, providerutil.ChatRequestTimeout(req.Sampling))
 	defer cancel()
 
 	httpReq, _ := http.NewRequestWithContext(ctx, "POST", p.cfg.BaseURL+"/chat/completions", bytes.NewReader(body))
@@ -214,7 +220,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 		"correlation_id", cid,
 	).Info("provider request issued")
 
-	resp, err := p.client.Do(httpReq)
+	resp, err := p.unaryClient.Do(httpReq)
 	if err != nil {
 		return gw.ChatCompletionResponse{}, err
 	}

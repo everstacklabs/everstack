@@ -1,6 +1,6 @@
 {
   "name": "@everstack/node",
-  "version": "0.2.5",
+  "version": "0.2.7",
   "description": "Everstack Node.js SDK - OpenAI-style API for the Everstack AI Gateway",
   "type": "module",
   "license": "MIT",

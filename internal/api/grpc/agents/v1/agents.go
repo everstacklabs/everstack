@@ -1882,7 +1882,14 @@ func (s *Server) RunTurn(ctx context.Context, req *connect.Request[agentspb.RunT
 	// Record usage metrics to license monitor (best-effort, don't fail the turn)
 	if result.TotalTokens > 0 {
 		provider := s.getProviderForModel(ctx, agent.Model)
-		costDetails := metrics.CalculateCost(provider, agent.Model, int(result.PromptTokens), int(result.CompletionTokens), 0)
+		costDetails := metrics.CalculateCostWithCacheTokens(
+			provider,
+			agent.Model,
+			int(result.PromptTokens),
+			int(result.CompletionTokens),
+			int(result.CacheReadTokens),
+			int(result.CacheWriteTokens),
+		)
 		if err := s.recordUsageMetrics(int64(result.PromptTokens), int64(result.CompletionTokens), costDetails.EstimatedUSD, 0, false); err != nil {
 			logger.Warnf("agents: RunTurn: spend limit exceeded after turn completion: %v", err)
 		}
@@ -3316,7 +3323,14 @@ func (s *Server) runTurnStreamInternal(ctx context.Context, req *connect.Request
 				// Record cumulative usage to license monitor before returning
 				if event.Usage != nil && event.Usage.TotalTokens > 0 {
 					provider := s.getProviderForModel(ctx, agent.Model)
-					costDetails := metrics.CalculateCost(provider, agent.Model, event.Usage.PromptTokens, event.Usage.CompletionTokens, 0)
+					costDetails := metrics.CalculateCostWithCacheTokens(
+						provider,
+						agent.Model,
+						event.Usage.PromptTokens,
+						event.Usage.CompletionTokens,
+						event.Usage.CacheReadTokens,
+						event.Usage.CacheWriteTokens,
+					)
 					if err := s.recordUsageMetrics(int64(event.Usage.PromptTokens), int64(event.Usage.CompletionTokens), costDetails.EstimatedUSD, 0, false); err != nil {
 						logger.Warnf("agents: streaming: spend limit exceeded after session end: %v", err)
 					}
@@ -3356,7 +3370,14 @@ func (s *Server) runTurnStreamInternal(ctx context.Context, req *connect.Request
 					if (event.Type == agentrt.EventSessionEnd || event.Type == agentrt.EventSessionError) &&
 						event.Usage != nil && event.Usage.TotalTokens > 0 {
 						provider := s.getProviderForModel(ctx, agent.Model)
-						costDetails := metrics.CalculateCost(provider, agent.Model, event.Usage.PromptTokens, event.Usage.CompletionTokens, 0)
+						costDetails := metrics.CalculateCostWithCacheTokens(
+							provider,
+							agent.Model,
+							event.Usage.PromptTokens,
+							event.Usage.CompletionTokens,
+							event.Usage.CacheReadTokens,
+							event.Usage.CacheWriteTokens,
+						)
 						if err := s.recordUsageMetrics(int64(event.Usage.PromptTokens), int64(event.Usage.CompletionTokens), costDetails.EstimatedUSD, 0, false); err != nil {
 							logger.Warnf("agents: streaming drain: spend limit exceeded: %v", err)
 						}

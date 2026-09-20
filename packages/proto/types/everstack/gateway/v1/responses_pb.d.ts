@@ -1646,6 +1646,13 @@ export declare type ResponseUsageDetails = Message<"everstack.gateway.v1.Respons
    * @generated from field: int32 reasoning_tokens = 5;
    */
   reasoningTokens: number;
+
+  /**
+   * Tokens written to the provider prompt cache
+   *
+   * @generated from field: int32 cache_write_tokens = 6;
+   */
+  cacheWriteTokens: number;
 };
 
 /**
@@ -1686,6 +1693,13 @@ export declare type ResponseUsageDetailsJson = {
    * @generated from field: int32 reasoning_tokens = 5;
    */
   reasoningTokens?: number;
+
+  /**
+   * Tokens written to the provider prompt cache
+   *
+   * @generated from field: int32 cache_write_tokens = 6;
+   */
+  cacheWriteTokens?: number;
 };
 
 /**

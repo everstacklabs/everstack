@@ -28,6 +28,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/query"
 	apikeyq "github.com/everstacklabs/everstack/internal/query/handlers/api_key"
 	"github.com/everstacklabs/everstack/pkg/grpc/everstack/functions/v1/functionsconnect"
+	"github.com/everstacklabs/everstack/pkg/grpc/everstack/openai_agents/v1/openaiagentsconnect"
 	"github.com/everstacklabs/everstack/pkg/tenant"
 )
 
@@ -301,7 +302,7 @@ func (i *APIKeyConnectInterceptor) validateAPIKey(ctx context.Context, hdr http.
 	if key == "" {
 		return ctx, i.errorWithCorrelation(
 			connect.CodeUnauthenticated,
-			mferrors.CreateEverstackError(nil, "API key is required. Create one from the dashboard (Settings > Vault > API Keys). Docs: https://docs.everstack.dev/docs/documentation/vault/api-keys", ""),
+			mferrors.CreateEverstackError(nil, "API key is required. Create one from the dashboard (Settings > Vault > API Keys). Docs: https://docs.everstack.ai/getting-started/vault/api-keys", ""),
 			correlationID,
 		)
 	}
@@ -340,6 +341,7 @@ func (i *APIKeyConnectInterceptor) validateAPIKey(ctx context.Context, hdr http.
 func isCLIBearerProcedure(procedure string) bool {
 	return strings.HasPrefix(procedure, "/everstack.cli.v1.CLIService/") ||
 		strings.HasPrefix(procedure, "/everstack.agents.v1.AgentsService/") ||
+		strings.HasPrefix(procedure, "/"+openaiagentsconnect.OpenAIAgentsServiceName+"/") ||
 		// Pulling a legacy agent probes each tool name to distinguish built-in
 		// tools from tenant functions. Keep the bearer surface read-only: agent
 		// deploys use immutable revisions and do not need Functions CRUD access.

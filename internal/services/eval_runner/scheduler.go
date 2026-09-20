@@ -125,6 +125,17 @@ func (s *Scheduler) releaseLeaderLock(ctx context.Context, conn *sqlx.Conn) {
 }
 
 func (s *Scheduler) executeSchedule(ctx context.Context, sched scheduleRow, now time.Time) error {
+	// Validate the schedule before creating a run. An invalid expression or
+	// timezone must not leave behind an uncorrelated pending run.
+	nextRun, err := s.computeNextRun(sched.CronExpression, sched.Timezone, now)
+	if err != nil {
+		logger.WithError(err).Warn("scheduler: bad cron for schedule ", sched.ID)
+		if _, updateErr := s.db.ExecContext(ctx, `UPDATE eval_schedules SET enabled = FALSE, updated_at = NOW() WHERE id = $1`, sched.ID); updateErr != nil {
+			return fmt.Errorf("disable invalid eval schedule: %w", updateErr)
+		}
+		return nil
+	}
+
 	// Create an eval run
 	runID := uuid.New().String()
 	runName := fmt.Sprintf("%s — %s", sched.Name, now.Format("2006-01-02 15:04"))
@@ -135,24 +146,15 @@ func (s *Scheduler) executeSchedule(ctx context.Context, sched scheduleRow, now 
 	}
 	datasetVersionID := datasetVersionIDFromEvalConfig(evalConfig)
 
-	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO eval_runs (id, tenant_id, dataset_id, name, status,
+	_, err = s.db.ExecContext(ctx, `
+		INSERT INTO eval_runs (id, tenant_id, dataset_id, schedule_id, name, status,
 			eval_target_type, eval_target_id, eval_config, scorer_config_ids, dataset_version_id,
 			created_at, updated_at)
-		VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, NULLIF($9, ''), NOW(), NOW())
-	`, runID, sched.TenantID, sched.DatasetID, runName,
+		VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, NULLIF($10, ''), NOW(), NOW())
+	`, runID, sched.TenantID, sched.DatasetID, sched.ID, runName,
 		sched.EvalTargetType, sched.EvalTargetID, evalConfig, sched.ScorerConfigIDs, datasetVersionID)
 	if err != nil {
 		return fmt.Errorf("create eval run: %w", err)
-	}
-
-	// Compute next run time
-	nextRun, err := s.computeNextRun(sched.CronExpression, sched.Timezone, now)
-	if err != nil {
-		logger.WithError(err).Warn("scheduler: bad cron for schedule ", sched.ID)
-		// Disable the schedule if cron is invalid
-		s.db.ExecContext(ctx, `UPDATE eval_schedules SET enabled = FALSE, updated_at = NOW() WHERE id = $1`, sched.ID)
-		return nil
 	}
 
 	_, err = s.db.ExecContext(ctx, `
@@ -184,10 +186,14 @@ func (s *Scheduler) computeNextRun(cronExpr, tz string, from time.Time) (time.Ti
 
 	loc, err := time.LoadLocation(tz)
 	if err != nil {
-		loc = time.UTC
+		return time.Time{}, fmt.Errorf("load timezone %q: %w", tz, err)
 	}
 
-	return schedule.Next(from.In(loc)).UTC(), nil
+	next := schedule.Next(from.In(loc)).UTC()
+	if next.IsZero() {
+		return time.Time{}, fmt.Errorf("cron %q has no future run time", cronExpr)
+	}
+	return next, nil
 }
 
 // --- Schedule CRUD ---
@@ -226,11 +232,14 @@ func CreateSchedule(ctx context.Context, db *sqlx.DB, rec *EvalScheduleRecord) e
 		return fmt.Errorf("invalid cron expression %q: %w", rec.CronExpression, err)
 	}
 
-	loc, _ := time.LoadLocation(rec.Timezone)
-	if loc == nil {
-		loc = time.UTC
+	loc, err := time.LoadLocation(rec.Timezone)
+	if err != nil {
+		return fmt.Errorf("invalid timezone %q: %w", rec.Timezone, err)
 	}
 	nextRun := schedule.Next(time.Now().In(loc)).UTC()
+	if nextRun.IsZero() {
+		return fmt.Errorf("cron expression %q has no future run time", rec.CronExpression)
+	}
 
 	var evalConfig json.RawMessage = []byte("{}")
 	if len(rec.EvalConfig) > 0 {

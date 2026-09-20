@@ -25,6 +25,12 @@ import (
 type Provider struct {
 	cfg    Config
 	client *http.Client
+
+	// unaryClient serves non-streaming calls. It omits the shared transport's
+	// ResponseHeaderTimeout, which would otherwise cap total generation time,
+	// since a unary upstream withholds response headers until the completion
+	// is finished.
+	unaryClient *http.Client
 }
 
 func NewProvider(cfg Config) *Provider {
@@ -39,8 +45,14 @@ func NewProvider(cfg Config) *Provider {
 	}
 	cli.Transport = attrs.NewInstrumentedTransport(cli.Transport, "openai")
 
+	unary := cfg.HTTPClient
+	if unary == nil {
+		unary = clientx.Unary()
+		unary.Transport = attrs.NewInstrumentedTransport(unary.Transport, "openai")
+	}
+
 	// BaseURL should be provided by bootstrap via provider catalog; do not hardcode here.
-	return &Provider{cfg: cfg, client: cli}
+	return &Provider{cfg: cfg, client: cli, unaryClient: unary}
 }
 
 func (p *Provider) Name() string { return "openai" }
@@ -204,16 +216,29 @@ type oaChatResponse struct {
 
 // Responses API types (for /v1/responses endpoint used by codex models)
 
-// oaResponsesInputItem represents a message in the Responses API input array.
-// Supports type="message", type="function_call", and type="function_call_output".
+// oaResponsesInputItem represents an item in the Responses API input array.
+// Native carries an output item returned by OpenAI so reasoning state can be
+// replayed byte-for-byte alongside tool outputs on the next request.
 type oaResponsesInputItem struct {
-	Role      string      `json:"role,omitempty"`
-	Content   interface{} `json:"content,omitempty"` // string or []oaResponsesContentPart
-	Type      string      `json:"type,omitempty"`
-	CallID    string      `json:"call_id,omitempty"`
-	Name      string      `json:"name,omitempty"`      // function_call: tool name
-	Arguments string      `json:"arguments,omitempty"` // function_call: JSON arguments
-	Output    string      `json:"output,omitempty"`
+	Role      string          `json:"role,omitempty"`
+	Content   interface{}     `json:"content,omitempty"` // string or []oaResponsesContentPart
+	Type      string          `json:"type,omitempty"`
+	CallID    string          `json:"call_id,omitempty"`
+	Name      string          `json:"name,omitempty"`      // function_call: tool name
+	Arguments string          `json:"arguments,omitempty"` // function_call: JSON arguments
+	Output    string          `json:"output,omitempty"`
+	Native    json.RawMessage `json:"-"`
+}
+
+func (item oaResponsesInputItem) MarshalJSON() ([]byte, error) {
+	if len(item.Native) > 0 {
+		if !json.Valid(item.Native) {
+			return nil, fmt.Errorf("invalid native Responses input item")
+		}
+		return append([]byte(nil), item.Native...), nil
+	}
+	type wireItem oaResponsesInputItem
+	return json.Marshal(wireItem(item))
 }
 
 // oaResponsesContentPart represents a content part in the Responses API.
@@ -233,6 +258,7 @@ type oaResponsesTool struct {
 type oaResponsesRequest struct {
 	Model           string                 `json:"model"`
 	Input           interface{}            `json:"input"`                  // string or []oaResponsesInputItem
+	Include         []string               `json:"include,omitempty"`      // Additional response state needed for stateless continuation
 	Instructions    string                 `json:"instructions,omitempty"` // system prompt
 	MaxOutputTokens int                    `json:"max_output_tokens,omitempty"`
 	Temperature     *float64               `json:"temperature,omitempty"`
@@ -270,19 +296,77 @@ type oaResponsesOutputContent struct {
 // oaResponsesOutputItem represents an item in the Responses API output array.
 type oaResponsesOutputItem struct {
 	ID      string                     `json:"id"`
-	Type    string                     `json:"type"` // "message", "function_call"
+	Type    string                     `json:"type"` // "message", "reasoning", "function_call", ...
 	Role    string                     `json:"role,omitempty"`
 	Content []oaResponsesOutputContent `json:"content,omitempty"`
 	// Function call fields
-	Name      string `json:"name,omitempty"`
-	CallID    string `json:"call_id,omitempty"`
-	Arguments string `json:"arguments,omitempty"`
+	Name      string          `json:"name,omitempty"`
+	CallID    string          `json:"call_id,omitempty"`
+	Arguments string          `json:"arguments,omitempty"`
+	Native    json.RawMessage `json:"-"`
+}
+
+func (item *oaResponsesOutputItem) UnmarshalJSON(data []byte) error {
+	type wireItem oaResponsesOutputItem
+	var decoded wireItem
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*item = oaResponsesOutputItem(decoded)
+	item.Native = append(json.RawMessage(nil), data...)
+	return nil
+}
+
+func (item oaResponsesOutputItem) MarshalJSON() ([]byte, error) {
+	if len(item.Native) > 0 {
+		if !json.Valid(item.Native) {
+			return nil, fmt.Errorf("invalid native Responses output item")
+		}
+		return append([]byte(nil), item.Native...), nil
+	}
+	type wireItem oaResponsesOutputItem
+	return json.Marshal(wireItem(item))
+}
+
+const openAIResponsesOutputSequence = "openai_responses_output"
+
+func responsesOutputSequencePart(items []oaResponsesOutputItem) (gw.ContentPart, bool) {
+	if len(items) == 0 {
+		return gw.ContentPart{}, false
+	}
+	raw, err := json.Marshal(items)
+	if err != nil {
+		logger.WithFields("error", err).Warn("responses output: could not preserve native output sequence")
+		return gw.ContentPart{}, false
+	}
+	native := json.RawMessage(raw)
+	return gw.ContentPart{Type: openAIResponsesOutputSequence, ProviderJSON: &native}, true
+}
+
+func responsesOutputSequenceFromContent(parts []gw.ContentPart) ([]json.RawMessage, bool) {
+	for _, part := range parts {
+		if part.Type != openAIResponsesOutputSequence || part.ProviderJSON == nil || !json.Valid(*part.ProviderJSON) {
+			continue
+		}
+		var items []json.RawMessage
+		if err := json.Unmarshal(*part.ProviderJSON, &items); err != nil || len(items) == 0 {
+			continue
+		}
+		return items, true
+	}
+	return nil, false
+}
+
+type oaResponsesInputTokensDetails struct {
+	CachedTokens     int `json:"cached_tokens,omitempty"`
+	CacheWriteTokens int `json:"cache_write_tokens,omitempty"`
 }
 
 type oaResponsesUsage struct {
-	InputTokens         int `json:"input_tokens"`
-	OutputTokens        int `json:"output_tokens"`
-	TotalTokens         int `json:"total_tokens"`
+	InputTokens         int                            `json:"input_tokens"`
+	OutputTokens        int                            `json:"output_tokens"`
+	TotalTokens         int                            `json:"total_tokens"`
+	InputTokensDetails  *oaResponsesInputTokensDetails `json:"input_tokens_details,omitempty"`
 	OutputTokensDetails *struct {
 		ReasoningTokens int `json:"reasoning_tokens,omitempty"`
 	} `json:"output_tokens_details,omitempty"`
@@ -305,6 +389,9 @@ type oaResponsesResponse struct {
 // isResponsesModel returns true if the model should use /v1/responses.
 func (p *Provider) isResponsesModel(model string) bool {
 	m := strings.ToLower(model)
+	if p.cfg.APITypeForModel != nil && strings.EqualFold(strings.TrimSpace(p.cfg.APITypeForModel(model)), "responses") {
+		return true
+	}
 	// Check explicit config list first
 	for _, cm := range p.cfg.ResponsesModels {
 		if strings.ToLower(cm) == m {
@@ -396,6 +483,32 @@ func messagesToResponsesInput(messages []gw.Message) (instructions string, input
 				})
 			}
 			continue
+		}
+
+		// Reasoning models return a sequence of typed output items. OpenAI
+		// requires that complete sequence, including reasoning items, be sent
+		// back with function_call_output on the next request. Prefer the native
+		// sequence over rebuilding a lossy message/function-call approximation.
+		if msg.Role == gw.RoleAssistant {
+			if nativeItems, ok := responsesOutputSequenceFromContent(msg.Content); ok {
+				for _, native := range nativeItems {
+					if !json.Valid(native) {
+						continue
+					}
+					var header struct {
+						Type   string `json:"type"`
+						CallID string `json:"call_id"`
+					}
+					if err := json.Unmarshal(native, &header); err != nil || header.Type == "" {
+						continue
+					}
+					input = append(input, oaResponsesInputItem{Native: append(json.RawMessage(nil), native...)})
+					if header.Type == "function_call" && strings.TrimSpace(header.CallID) != "" {
+						validFunctionCalls[strings.TrimSpace(header.CallID)] = struct{}{}
+					}
+				}
+				continue
+			}
 		}
 
 		item := oaResponsesInputItem{
@@ -584,7 +697,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	buf, _ := json.Marshal(payload)
 
 	// Apply a per-request timeout for the unary call to avoid long hangs
-	ctx, cancel := context.WithTimeout(ctx, providerutil.ChatRequestTimeout(req.Sampling, 12*time.Second))
+	ctx, cancel := context.WithTimeout(ctx, providerutil.ChatRequestTimeout(req.Sampling))
 	defer cancel()
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, p.cfg.BaseURL+"/chat/completions", bytes.NewReader(buf))
 	if err != nil {
@@ -602,7 +715,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 		"correlation_id", cid,
 	).Info("provider request issued")
 
-	resp, err := p.client.Do(httpReq)
+	resp, err := p.unaryClient.Do(httpReq)
 	if err != nil {
 		return gw.ChatCompletionResponse{}, err
 	}
@@ -630,6 +743,7 @@ func (p *Provider) chatViaResponses(ctx context.Context, req gw.ChatCompletionRe
 	payload := oaResponsesRequest{
 		Model:        req.Model,
 		Input:        input,
+		Include:      []string{"reasoning.encrypted_content"},
 		Instructions: instructions,
 		Temperature:  optionalTemperature(req.Sampling),
 		TopP:         optionalTopP(req.Sampling),
@@ -657,7 +771,7 @@ func (p *Provider) chatViaResponses(ctx context.Context, req gw.ChatCompletionRe
 
 	buf, _ := json.Marshal(payload)
 
-	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, providerutil.ChatRequestTimeout(req.Sampling))
 	defer cancel()
 
 	endpoint := p.cfg.BaseURL + "/responses"
@@ -676,7 +790,7 @@ func (p *Provider) chatViaResponses(ctx context.Context, req gw.ChatCompletionRe
 		"correlation_id", cid,
 	).Info("provider request issued (responses)")
 
-	resp, err := p.client.Do(httpReq)
+	resp, err := p.unaryClient.Do(httpReq)
 	if err != nil {
 		return gw.ChatCompletionResponse{}, err
 	}
@@ -702,6 +816,10 @@ func (p *Provider) responsesToGatewayResponse(oa oaResponsesResponse) gw.ChatCom
 	// Extract text content from output items
 	var parts []gw.ContentPart
 	var toolCalls []gw.ToolCall
+	hasVisibleText := false
+	if nativeSequence, ok := responsesOutputSequencePart(oa.Output); ok {
+		parts = append(parts, nativeSequence)
+	}
 
 	for _, item := range oa.Output {
 		switch item.Type {
@@ -709,6 +827,7 @@ func (p *Provider) responsesToGatewayResponse(oa oaResponsesResponse) gw.ChatCom
 			for _, content := range item.Content {
 				if content.Type == "output_text" && content.Text != "" {
 					parts = append(parts, gw.Text(content.Text))
+					hasVisibleText = true
 				}
 			}
 		case "function_call":
@@ -724,7 +843,7 @@ func (p *Provider) responsesToGatewayResponse(oa oaResponsesResponse) gw.ChatCom
 	}
 
 	// If no parts from output items, fall back to output_text
-	if len(parts) == 0 && oa.OutputText != "" {
+	if !hasVisibleText && oa.OutputText != "" {
 		parts = append(parts, gw.Text(oa.OutputText))
 	}
 
@@ -752,6 +871,16 @@ func (p *Provider) responsesToGatewayResponse(oa oaResponsesResponse) gw.ChatCom
 		PromptTokens:     oa.Usage.InputTokens,
 		CompletionTokens: oa.Usage.OutputTokens,
 		TotalTokens:      oa.Usage.TotalTokens,
+	}
+	if details := oa.Usage.InputTokensDetails; details != nil {
+		cachedTokens := details.CachedTokens + details.CacheWriteTokens
+		if cachedTokens > 0 {
+			usage.PromptDetails = &gw.TokenDetails{
+				CachedTokens:     cachedTokens,
+				CacheReadTokens:  details.CachedTokens,
+				CacheWriteTokens: details.CacheWriteTokens,
+			}
+		}
 	}
 	if reasoningTokens > 0 {
 		usage.CompletionDetails = &gw.TokenDetails{
@@ -944,6 +1073,7 @@ func (p *Provider) chatStreamViaResponses(ctx context.Context, req gw.ChatComple
 	payload := oaResponsesRequest{
 		Model:        req.Model,
 		Input:        input,
+		Include:      []string{"reasoning.encrypted_content"},
 		Instructions: instructions,
 		Temperature:  optionalTemperature(req.Sampling),
 		TopP:         optionalTopP(req.Sampling),
@@ -1098,6 +1228,20 @@ func (p *Provider) chatStreamViaResponses(ctx context.Context, req gw.ChatComple
 		return onChunk(chunk)
 	}
 
+	emitNativeOutputChunk := func(parts []gw.ContentPart) error {
+		if len(parts) == 0 {
+			return nil
+		}
+		return onChunk(gw.ChatResponseChunk{
+			ID:    responseID,
+			Model: responseModel,
+			Choices: []gw.ChoiceDelta{{
+				Index: 0,
+				Delta: gw.Message{Role: gw.RoleAssistant, Content: parts},
+			}},
+		})
+	}
+
 	emitToolCallsChunk := func(calls []gw.ToolCall) error {
 		if len(calls) == 0 {
 			return nil
@@ -1226,6 +1370,7 @@ func (p *Provider) chatStreamViaResponses(ctx context.Context, req gw.ChatComple
 
 	finalizeFromCompleted := func(completed *oaResponsesResponse) error {
 		finalText := ""
+		finalNativeParts := []gw.ContentPart{}
 		finalToolCalls := []gw.ToolCall{}
 		finishReason := "stop"
 		var usage *gw.Usage
@@ -1239,8 +1384,14 @@ func (p *Provider) chatStreamViaResponses(ctx context.Context, req gw.ChatComple
 				responseModel = resp.Model
 			}
 			if len(resp.Choices) > 0 {
-				finalText = messageText(resp.Choices[0].Message)
-				finalToolCalls = resp.Choices[0].Message.ToolCalls
+				message := resp.Choices[0].Message
+				finalText = messageText(message)
+				for _, part := range message.Content {
+					if part.Type == openAIResponsesOutputSequence && part.ProviderJSON != nil {
+						finalNativeParts = append(finalNativeParts, part)
+					}
+				}
+				finalToolCalls = message.ToolCalls
 				if resp.Choices[0].FinishReason != "" {
 					finishReason = resp.Choices[0].FinishReason
 				}
@@ -1252,6 +1403,10 @@ func (p *Provider) chatStreamViaResponses(ctx context.Context, req gw.ChatComple
 		mergedToolCalls := mergeToolCalls(finalToolCalls)
 		if len(mergedToolCalls) > 0 && finishReason == "stop" {
 			finishReason = "tool_calls"
+		}
+
+		if err := emitNativeOutputChunk(finalNativeParts); err != nil {
+			return err
 		}
 
 		if !emittedTextDelta && finalText != "" {

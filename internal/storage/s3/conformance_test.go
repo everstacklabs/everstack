@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"strconv"
 	"strings"
@@ -126,8 +127,10 @@ func TestBlobPlaneV2ProviderConformance(t *testing.T) {
 		},
 		AuthProbe: func(ctx context.Context) error {
 			invalidConfig := conformanceConfig(t, nil, false, 1)
-			invalidConfig.AccessKeyID = "everstack-invalid-access-key"
-			invalidConfig.SecretAccessKey = "everstack-invalid-secret-key"
+			// Preserve the provider's credential shape and known access-key ID so
+			// the request reaches signature authentication. R2 rejects malformed
+			// placeholder credentials as a generic request error instead.
+			invalidConfig.SecretAccessKey = invalidCredential(invalidConfig.SecretAccessKey)
 			unauthorized, err := New(ctx, invalidConfig)
 			if err != nil {
 				return err
@@ -164,6 +167,63 @@ func TestBlobPlaneV2ProviderConformance(t *testing.T) {
 			return errors.New("corrupted provider response passed checksum verification")
 		},
 	})
+}
+
+func invalidCredential(value string) string {
+	if value == "" {
+		return "x"
+	}
+	replacement := byte('A')
+	if value[0] == replacement {
+		replacement = 'B'
+	}
+	return string(replacement) + value[1:]
+}
+
+func TestInvalidCredentialPreservesShape(t *testing.T) {
+	for _, original := range []string{"secret", "AnotherSecret", "0123456789abcdef"} {
+		invalid := invalidCredential(original)
+		if invalid == original {
+			t.Fatalf("invalidCredential(%q) did not change the credential", original)
+		}
+		if len(invalid) != len(original) {
+			t.Fatalf("invalidCredential(%q) length = %d, want %d", original, len(invalid), len(original))
+		}
+	}
+}
+
+func TestAuthenticationProbeUsesKnownAccessKeyAndClassifiesInvalidSignature(t *testing.T) {
+	const accessKey = "known-access-key"
+	var attempts atomic.Int32
+	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		attempts.Add(1)
+		if authorization := request.Header.Get("Authorization"); !strings.Contains(authorization, "Credential="+accessKey+"/") {
+			t.Fatalf("Authorization did not preserve the known access key")
+		}
+		return &http.Response{
+			StatusCode: http.StatusForbidden,
+			Header:     http.Header{"Content-Type": []string{"application/xml"}},
+			Body: io.NopCloser(strings.NewReader(
+				`<Error><Code>SignatureDoesNotMatch</Code><Message>signature mismatch</Message></Error>`,
+			)),
+			Request: request,
+		}, nil
+	})
+	store, err := New(context.Background(), Config{
+		Endpoint: "https://s3.invalid", Region: "auto", Bucket: "bucket",
+		AccessKeyID: accessKey, SecretAccessKey: invalidCredential("valid-shaped-secret"), ForcePathStyle: true,
+		HTTPClient: &http.Client{Transport: transport}, RetryMaxAttempts: 1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = store.Verify(context.Background(), "bucket")
+	if !storage.IsCode(err, storage.ErrorUnauthorized) || storage.IsRetryable(err) {
+		t.Fatalf("Verify() error = %v, want non-retryable unauthorized", err)
+	}
+	if got := attempts.Load(); got != 1 {
+		t.Fatalf("authentication attempts = %d, want 1", got)
+	}
 }
 
 func safeOperationErrorDetails(err error) string {
@@ -232,12 +292,14 @@ type throttleTransport struct {
 }
 
 type writeAttempt struct {
-	body           string
-	ifNoneMatch    string
-	metadataSHA256 string
-	checksumSHA256 string
-	contentMD5     string
-	contentLength  int64
+	body            string
+	wireBody        string
+	contentEncoding string
+	ifNoneMatch     string
+	metadataSHA256  string
+	checksumSHA256  string
+	contentMD5      string
+	contentLength   int64
 }
 
 type replayWriteTransport struct {
@@ -255,13 +317,19 @@ func (t *replayWriteTransport) RoundTrip(request *http.Request) (*http.Response,
 	if err != nil {
 		return nil, err
 	}
+	logicalBody, err := logicalRequestBody(request, body)
+	if err != nil {
+		return nil, err
+	}
 	record := writeAttempt{
-		body:           string(body),
-		ifNoneMatch:    request.Header.Get("If-None-Match"),
-		metadataSHA256: request.Header.Get("X-Amz-Meta-" + checksumMetadataKey),
-		checksumSHA256: request.Header.Get("X-Amz-Checksum-Sha256"),
-		contentMD5:     request.Header.Get("Content-MD5"),
-		contentLength:  request.ContentLength,
+		body:            string(logicalBody),
+		wireBody:        string(body),
+		contentEncoding: request.Header.Get("Content-Encoding"),
+		ifNoneMatch:     request.Header.Get("If-None-Match"),
+		metadataSHA256:  request.Header.Get("X-Amz-Meta-" + checksumMetadataKey),
+		checksumSHA256:  request.Header.Get("X-Amz-Checksum-Sha256"),
+		contentMD5:      request.Header.Get("Content-MD5"),
+		contentLength:   request.ContentLength,
 	}
 	t.mu.Lock()
 	t.records = append(t.records, record)
@@ -273,6 +341,62 @@ func (t *replayWriteTransport) RoundTrip(request *http.Request) (*http.Response,
 	request.Body = io.NopCloser(bytes.NewReader(body))
 	request.ContentLength = int64(len(body))
 	return t.wrapped.RoundTrip(request)
+}
+
+func logicalRequestBody(request *http.Request, wireBody []byte) ([]byte, error) {
+	if !strings.Contains(strings.ToLower(request.Header.Get("Content-Encoding")), "aws-chunked") {
+		return wireBody, nil
+	}
+	decoded, err := io.ReadAll(httputil.NewChunkedReader(bytes.NewReader(wireBody)))
+	if err != nil {
+		return nil, fmt.Errorf("decode aws-chunked retry body: %w", err)
+	}
+	return decoded, nil
+}
+
+func TestReplayWriteTransportRecordsCompleteLogicalBody(t *testing.T) {
+	upstream := roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		_, _ = io.Copy(io.Discard, request.Body)
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"ETag": []string{`"etag"`}},
+			Body:       io.NopCloser(strings.NewReader("")),
+			Request:    request,
+		}, nil
+	})
+
+	transport := &replayWriteTransport{wrapped: upstream}
+	store, err := New(context.Background(), Config{
+		Endpoint: "https://s3.invalid", Region: "auto", Bucket: "bucket",
+		AccessKeyID: "access", SecretAccessKey: "secret", ForcePathStyle: true,
+		HTTPClient: &http.Client{Transport: transport}, RetryMaxAttempts: 2,
+		RetryMaxBackoff: time.Millisecond, WireChecksum: WireChecksumContentMD5,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := []byte("replayable conditional write")
+	size := int64(len(body))
+	if _, err = store.PutIfAbsent(context.Background(), "", "key", bytes.NewReader(body), storage.PutOptions{
+		ExpectedSize: &size, Checksum: storage.NewSHA256Checksum(body),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	attempts := transport.snapshot()
+	if len(attempts) != 2 {
+		t.Fatalf("attempts = %d, want 2", len(attempts))
+	}
+	for i, attempt := range attempts {
+		if attempt.body != string(body) {
+			t.Fatalf("attempt %d body = %q, want %q", i+1, attempt.body, body)
+		}
+		if !strings.Contains(strings.ToLower(attempt.contentEncoding), "aws-chunked") {
+			t.Fatalf("attempt %d Content-Encoding = %q, want aws-chunked", i+1, attempt.contentEncoding)
+		}
+		if attempt.wireBody == attempt.body {
+			t.Fatalf("attempt %d did not exercise encoded wire body", i+1)
+		}
+	}
 }
 
 func (t *replayWriteTransport) snapshot() []writeAttempt {

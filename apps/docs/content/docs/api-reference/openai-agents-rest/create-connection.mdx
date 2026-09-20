@@ -1,0 +1,269 @@
+---
+title: "POST Create Connection"
+description: "Create Connection"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Create Connection</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400">POST</span>
+    <code className="text-sm text-fd-muted-foreground">/v1/openai-agents/connections</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="post"
+  path="/v1/openai-agents/connections"
+  parameters={[]}
+  defaultBody={`{
+  "name": "string",
+  "api_key": "string",
+  "executor_key": "string",
+  "project_id": "string",
+  "organization_id": "string",
+  "principal_id": "string",
+  "allowed_models": [
+    "string"
+  ]
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X POST "http://localhost:8089/v1/openai-agents/connections" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"string","api_key":"string","executor_key":"string","project_id":"string","organization_id":"string","principal_id":"string","allowed_models":["string"]}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/openai-agents/connections", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "name": "string",
+  "api_key": "string",
+  "executor_key": "string",
+  "project_id": "string",
+  "organization_id": "string",
+  "principal_id": "string",
+  "allowed_models": [
+    "string"
+  ]
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8089/v1/openai-agents/connections",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "name": "string",
+  "api_key": "string",
+  "executor_key": "string",
+  "project_id": "string",
+  "organization_id": "string",
+  "principal_id": "string",
+  "allowed_models": [
+    "string"
+  ]
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["201", "400", "403", "404", "500", "503"]}>
+<Tab value="201">
+
+```json
+{
+  "id": "string",
+  "name": "string",
+  "provider": "string",
+  "project_id": "string",
+  "organization_id": "string",
+  "principal_id": "string",
+  "allowed_models": [
+    "string"
+  ],
+  "status": "string",
+  "last_error": "string",
+  "created_at": "string",
+  "updated_at": "string"
+}
+```
+
+</Tab>
+<Tab value="400">
+
+```json
+{
+  "error": {
+    "code": "string",
+    "message": "string"
+  }
+}
+```
+
+</Tab>
+<Tab value="403">
+
+```json
+{
+  "error": {
+    "code": "string",
+    "message": "string"
+  }
+}
+```
+
+</Tab>
+<Tab value="404">
+
+```json
+{
+  "error": {
+    "code": "string",
+    "message": "string"
+  }
+}
+```
+
+</Tab>
+<Tab value="500">
+
+```json
+{
+  "error": {
+    "code": "string",
+    "message": "string"
+  }
+}
+```
+
+</Tab>
+<Tab value="503">
+
+```json
+{
+  "error": {
+    "code": "string",
+    "message": "string"
+  }
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+
+### Request Body
+
+JSON request bodies are capped at 2 MiB.
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `name` | `string` | **Yes** |  |
+| `api_key` | `string` | **Yes** |  |
+| `executor_key` | `string` | No |  |
+| `project_id` | `string` | No |  |
+| `organization_id` | `string` | No |  |
+| `principal_id` | `string` | No |  |
+| `allowed_models` | `string[]` | No |  |
+
+
+### Responses
+
+#### 201 Success
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `string` |  |
+| `name` | `string` |  |
+| `provider` | `string` |  |
+| `project_id` | `string` |  |
+| `organization_id` | `string` |  |
+| `principal_id` | `string` |  |
+| `allowed_models` | `string[]` |  |
+| `status` | `string` |  |
+| `last_error` | `string` |  |
+| `created_at` | `string` |  |
+| `updated_at` | `string` |  |
+
+#### 400 Invalid request
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `error` | `object` |  |
+
+#### 403 Permission denied
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `error` | `object` |  |
+
+#### 404 Not found
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `error` | `object` |  |
+
+#### 500 Internal error
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `error` | `object` |  |
+
+#### 503 Unavailable
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `error` | `object` |  |
+
+
+</APIContent>
+</APILayout>

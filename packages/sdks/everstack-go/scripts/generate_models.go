@@ -1,11 +1,10 @@
-//go:build ignore
-
 // Generates catalog/models.go from model-catalog/providers.
 //
 // Usage: go run scripts/generate_models.go
 package main
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -58,6 +57,14 @@ type manifest struct {
 
 var nonAlpha = regexp.MustCompile(`[^a-zA-Z0-9]+`)
 
+// preservedConstantBindings keeps already-published constant names attached to
+// the same model when a newly cataloged ID normalizes to the same Go
+// identifier. Add an entry deliberately when a new collision is introduced;
+// silently choosing a winner would be a source-compatible SDK break.
+var preservedConstantBindings = map[string]string{
+	"Qwen_Qwen2572bInstruct": "@qwen/qwen2.5-72b-instruct",
+}
+
 func toConstName(providerID, modelName string) string {
 	// e.g. "openai", "gpt-4o" -> "OpenAI_GPT4o"
 	p := toTitle(providerID)
@@ -82,6 +89,56 @@ func toTitle(s string) string {
 		}
 	}
 	return strings.Join(out, "")
+}
+
+type modelRef struct {
+	providerID string
+	modelName  string
+}
+
+func allocateConstantNames(cat catalog, providerIDs []string) (map[modelRef]string, error) {
+	groups := make(map[string][]modelRef)
+	for _, providerID := range providerIDs {
+		for _, model := range sdkModels(cat.Providers[providerID].Models) {
+			base := toConstName(providerID, model.Name)
+			groups[base] = append(groups[base], modelRef{
+				providerID: providerID,
+				modelName:  model.Name,
+			})
+		}
+	}
+
+	allocated := make(map[modelRef]string)
+	for base, refs := range groups {
+		if len(refs) == 1 {
+			ref := refs[0]
+			allocated[ref] = base
+			continue
+		}
+
+		preservedModelID, ok := preservedConstantBindings[base]
+		if !ok {
+			return nil, fmt.Errorf("model IDs collide on Go constant %s; add its published binding to preservedConstantBindings", base)
+		}
+
+		foundPreserved := false
+		for _, ref := range refs {
+			modelID := "@" + ref.providerID + "/" + ref.modelName
+			constantName := base
+			if modelID == preservedModelID {
+				foundPreserved = true
+			} else {
+				digest := sha256.Sum256([]byte(modelID))
+				constantName = fmt.Sprintf("%s_%X", base, digest[:4])
+			}
+			allocated[ref] = constantName
+		}
+		if !foundPreserved {
+			return nil, fmt.Errorf("preserved binding %s=%s does not match any colliding model", base, preservedModelID)
+		}
+	}
+
+	return allocated, nil
 }
 
 func main() {
@@ -120,20 +177,25 @@ func main() {
 		providerIDs = append(providerIDs, id)
 	}
 	sort.Strings(providerIDs)
+	constantNames, err := allocateConstantNames(cat, providerIDs)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Allocate model constants: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Model constants
 	b.WriteString("// Model ID constants.\nconst (\n")
 	total := 0
 	for _, pid := range providerIDs {
 		p := cat.Providers[pid]
-		active := filterActive(p.Models)
-		if len(active) == 0 {
+		models := sdkModels(p.Models)
+		if len(models) == 0 {
 			continue
 		}
-		sort.Slice(active, func(i, j int) bool { return active[i].Name < active[j].Name })
+		sort.Slice(models, func(i, j int) bool { return models[i].Name < models[j].Name })
 		b.WriteString(fmt.Sprintf("\t// %s\n", providerDisplayName(p)))
-		for _, m := range active {
-			constName := toConstName(pid, m.Name)
+		for _, m := range models {
+			constName := constantNames[modelRef{providerID: pid, modelName: m.Name}]
 			b.WriteString(fmt.Sprintf("\t%s = \"@%s/%s\"\n", constName, pid, m.Name))
 			total++
 		}
@@ -156,13 +218,13 @@ type ModelMetadata struct {
 `)
 
 	// AllModels slice
-	b.WriteString("// AllModels contains metadata for all available models.\n")
+	b.WriteString("// AllModels contains every catalog model, including deprecated models retained for compatibility.\n")
 	b.WriteString("var AllModels = []ModelMetadata{\n")
 	for _, pid := range providerIDs {
 		p := cat.Providers[pid]
-		active := filterActive(p.Models)
-		sort.Slice(active, func(i, j int) bool { return active[i].Name < active[j].Name })
-		for _, m := range active {
+		models := sdkModels(p.Models)
+		sort.Slice(models, func(i, j int) bool { return models[i].Name < models[j].Name })
+		for _, m := range models {
 			caps := make([]string, len(m.Capabilities))
 			for i, c := range m.Capabilities {
 				caps[i] = fmt.Sprintf("%q", c)
@@ -332,12 +394,8 @@ func providerDisplayName(p provider) string {
 	return p.ID
 }
 
-func filterActive(models []model) []model {
-	var out []model
-	for _, m := range models {
-		if m.Status != "deprecated" {
-			out = append(out, m)
-		}
-	}
+func sdkModels(models []model) []model {
+	out := make([]model, len(models))
+	copy(out, models)
 	return out
 }

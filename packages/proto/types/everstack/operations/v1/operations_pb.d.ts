@@ -12,6 +12,646 @@ import type { StructJson, Timestamp, TimestampJson } from "@bufbuild/protobuf/wk
 export declare const file_everstack_operations_v1_operations: GenFile;
 
 /**
+ * @generated from message everstack.operations.v1.InstanceAutomationRun
+ */
+export declare type InstanceAutomationRun = Message<"everstack.operations.v1.InstanceAutomationRun"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string status = 2;
+   */
+  status: string;
+
+  /**
+   * @generated from field: int32 attempt = 3;
+   */
+  attempt: number;
+
+  /**
+   * Absent when the source ledger records only completion, as sandbox ledgers do.
+   *
+   * @generated from field: google.protobuf.Timestamp started_at = 4;
+   */
+  startedAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp completed_at = 5;
+   */
+  completedAt?: Timestamp;
+
+  /**
+   * @generated from field: int64 duration_ms = 6;
+   */
+  durationMs: bigint;
+};
+
+/**
+ * @generated from message everstack.operations.v1.InstanceAutomationRun
+ */
+export declare type InstanceAutomationRunJson = {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * @generated from field: string status = 2;
+   */
+  status?: string;
+
+  /**
+   * @generated from field: int32 attempt = 3;
+   */
+  attempt?: number;
+
+  /**
+   * Absent when the source ledger records only completion, as sandbox ledgers do.
+   *
+   * @generated from field: google.protobuf.Timestamp started_at = 4;
+   */
+  startedAt?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp completed_at = 5;
+   */
+  completedAt?: TimestampJson;
+
+  /**
+   * @generated from field: int64 duration_ms = 6;
+   */
+  durationMs?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.InstanceAutomationRun.
+ * Use `create(InstanceAutomationRunSchema)` to create a new message.
+ */
+export declare const InstanceAutomationRunSchema: GenMessage<InstanceAutomationRun, InstanceAutomationRunJson>;
+
+/**
+ * @generated from message everstack.operations.v1.InstanceAutomation
+ */
+export declare type InstanceAutomation = Message<"everstack.operations.v1.InstanceAutomation"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.AutomationKind kind = 2;
+   */
+  kind: AutomationKind;
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string target_kind = 4;
+   */
+  targetKind: string;
+
+  /**
+   * @generated from field: string target_id = 5;
+   */
+  targetId: string;
+
+  /**
+   * @generated from field: string target_name = 6;
+   */
+  targetName: string;
+
+  /**
+   * @generated from field: string trigger_type = 7;
+   */
+  triggerType: string;
+
+  /**
+   * @generated from field: bool enabled = 8;
+   */
+  enabled: boolean;
+
+  /**
+   * @generated from field: string cron_expression = 9;
+   */
+  cronExpression: string;
+
+  /**
+   * @generated from field: string timezone = 10;
+   */
+  timezone: string;
+
+  /**
+   * @generated from field: string circuit_state = 11;
+   */
+  circuitState: string;
+
+  /**
+   * @generated from field: int32 consecutive_failures = 12;
+   */
+  consecutiveFailures: number;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_started_at = 13;
+   */
+  lastStartedAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_completed_at = 14;
+   */
+  lastCompletedAt?: Timestamp;
+
+  /**
+   * @generated from field: string last_status = 15;
+   */
+  lastStatus: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_success_at = 16;
+   */
+  lastSuccessAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp next_run_at = 17;
+   */
+  nextRunAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 18;
+   */
+  createdAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 19;
+   */
+  updatedAt?: Timestamp;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.InstanceAutomationRun recent_runs = 20;
+   */
+  recentRuns: InstanceAutomationRun[];
+
+  /**
+   * @generated from field: bool runs_truncated = 21;
+   */
+  runsTruncated: boolean;
+
+  /**
+   * True only when execution history can be attributed to this automation.
+   * False on legacy schemas or when older runs lack exact schedule provenance.
+   *
+   * @generated from field: bool runs_available = 22;
+   */
+  runsAvailable: boolean;
+
+  /**
+   * @generated from field: string health_state = 23;
+   */
+  healthState: string;
+
+  /**
+   * @generated from field: string health_detail = 24;
+   */
+  healthDetail: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp expected_run_at = 25;
+   */
+  expectedRunAt?: Timestamp;
+};
+
+/**
+ * @generated from message everstack.operations.v1.InstanceAutomation
+ */
+export declare type InstanceAutomationJson = {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.AutomationKind kind = 2;
+   */
+  kind?: AutomationKindJson;
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name?: string;
+
+  /**
+   * @generated from field: string target_kind = 4;
+   */
+  targetKind?: string;
+
+  /**
+   * @generated from field: string target_id = 5;
+   */
+  targetId?: string;
+
+  /**
+   * @generated from field: string target_name = 6;
+   */
+  targetName?: string;
+
+  /**
+   * @generated from field: string trigger_type = 7;
+   */
+  triggerType?: string;
+
+  /**
+   * @generated from field: bool enabled = 8;
+   */
+  enabled?: boolean;
+
+  /**
+   * @generated from field: string cron_expression = 9;
+   */
+  cronExpression?: string;
+
+  /**
+   * @generated from field: string timezone = 10;
+   */
+  timezone?: string;
+
+  /**
+   * @generated from field: string circuit_state = 11;
+   */
+  circuitState?: string;
+
+  /**
+   * @generated from field: int32 consecutive_failures = 12;
+   */
+  consecutiveFailures?: number;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_started_at = 13;
+   */
+  lastStartedAt?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_completed_at = 14;
+   */
+  lastCompletedAt?: TimestampJson;
+
+  /**
+   * @generated from field: string last_status = 15;
+   */
+  lastStatus?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_success_at = 16;
+   */
+  lastSuccessAt?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp next_run_at = 17;
+   */
+  nextRunAt?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 18;
+   */
+  createdAt?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 19;
+   */
+  updatedAt?: TimestampJson;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.InstanceAutomationRun recent_runs = 20;
+   */
+  recentRuns?: InstanceAutomationRunJson[];
+
+  /**
+   * @generated from field: bool runs_truncated = 21;
+   */
+  runsTruncated?: boolean;
+
+  /**
+   * True only when execution history can be attributed to this automation.
+   * False on legacy schemas or when older runs lack exact schedule provenance.
+   *
+   * @generated from field: bool runs_available = 22;
+   */
+  runsAvailable?: boolean;
+
+  /**
+   * @generated from field: string health_state = 23;
+   */
+  healthState?: string;
+
+  /**
+   * @generated from field: string health_detail = 24;
+   */
+  healthDetail?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp expected_run_at = 25;
+   */
+  expectedRunAt?: TimestampJson;
+};
+
+/**
+ * Describes the message everstack.operations.v1.InstanceAutomation.
+ * Use `create(InstanceAutomationSchema)` to create a new message.
+ */
+export declare const InstanceAutomationSchema: GenMessage<InstanceAutomation, InstanceAutomationJson>;
+
+/**
+ * @generated from message everstack.operations.v1.AutomationCoverage
+ */
+export declare type AutomationCoverage = Message<"everstack.operations.v1.AutomationCoverage"> & {
+  /**
+   * @generated from field: everstack.operations.v1.AutomationKind kind = 1;
+   */
+  kind: AutomationKind;
+
+  /**
+   * @generated from field: everstack.operations.v1.AutomationCoverageState state = 2;
+   */
+  state: AutomationCoverageState;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp as_of = 3;
+   */
+  asOf?: Timestamp;
+
+  /**
+   * @generated from field: string warning = 4;
+   */
+  warning: string;
+};
+
+/**
+ * @generated from message everstack.operations.v1.AutomationCoverage
+ */
+export declare type AutomationCoverageJson = {
+  /**
+   * @generated from field: everstack.operations.v1.AutomationKind kind = 1;
+   */
+  kind?: AutomationKindJson;
+
+  /**
+   * @generated from field: everstack.operations.v1.AutomationCoverageState state = 2;
+   */
+  state?: AutomationCoverageStateJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp as_of = 3;
+   */
+  asOf?: TimestampJson;
+
+  /**
+   * @generated from field: string warning = 4;
+   */
+  warning?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.AutomationCoverage.
+ * Use `create(AutomationCoverageSchema)` to create a new message.
+ */
+export declare const AutomationCoverageSchema: GenMessage<AutomationCoverage, AutomationCoverageJson>;
+
+/**
+ * @generated from message everstack.operations.v1.ListInstanceAutomationsRequest
+ */
+export declare type ListInstanceAutomationsRequest = Message<"everstack.operations.v1.ListInstanceAutomationsRequest"> & {
+  /**
+   * @generated from field: string instance_id = 1;
+   */
+  instanceId: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.AutomationKind kind = 2;
+   */
+  kind: AutomationKind;
+
+  /**
+   * @generated from field: int32 page_size = 3;
+   */
+  pageSize: number;
+
+  /**
+   * @generated from field: string page_token = 4;
+   */
+  pageToken: string;
+};
+
+/**
+ * @generated from message everstack.operations.v1.ListInstanceAutomationsRequest
+ */
+export declare type ListInstanceAutomationsRequestJson = {
+  /**
+   * @generated from field: string instance_id = 1;
+   */
+  instanceId?: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.AutomationKind kind = 2;
+   */
+  kind?: AutomationKindJson;
+
+  /**
+   * @generated from field: int32 page_size = 3;
+   */
+  pageSize?: number;
+
+  /**
+   * @generated from field: string page_token = 4;
+   */
+  pageToken?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.ListInstanceAutomationsRequest.
+ * Use `create(ListInstanceAutomationsRequestSchema)` to create a new message.
+ */
+export declare const ListInstanceAutomationsRequestSchema: GenMessage<ListInstanceAutomationsRequest, ListInstanceAutomationsRequestJson>;
+
+/**
+ * @generated from message everstack.operations.v1.ListInstanceAutomationsResponse
+ */
+export declare type ListInstanceAutomationsResponse = Message<"everstack.operations.v1.ListInstanceAutomationsResponse"> & {
+  /**
+   * @generated from field: repeated everstack.operations.v1.InstanceAutomation automations = 1;
+   */
+  automations: InstanceAutomation[];
+
+  /**
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.AutomationCoverage coverage = 3;
+   */
+  coverage?: AutomationCoverage;
+};
+
+/**
+ * @generated from message everstack.operations.v1.ListInstanceAutomationsResponse
+ */
+export declare type ListInstanceAutomationsResponseJson = {
+  /**
+   * @generated from field: repeated everstack.operations.v1.InstanceAutomation automations = 1;
+   */
+  automations?: InstanceAutomationJson[];
+
+  /**
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken?: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.AutomationCoverage coverage = 3;
+   */
+  coverage?: AutomationCoverageJson;
+};
+
+/**
+ * Describes the message everstack.operations.v1.ListInstanceAutomationsResponse.
+ * Use `create(ListInstanceAutomationsResponseSchema)` to create a new message.
+ */
+export declare const ListInstanceAutomationsResponseSchema: GenMessage<ListInstanceAutomationsResponse, ListInstanceAutomationsResponseJson>;
+
+/**
+ * @generated from message everstack.operations.v1.ChangeInstanceAutomationRequest
+ */
+export declare type ChangeInstanceAutomationRequest = Message<"everstack.operations.v1.ChangeInstanceAutomationRequest"> & {
+  /**
+   * @generated from field: string instance_id = 1;
+   */
+  instanceId: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.AutomationKind kind = 2;
+   */
+  kind: AutomationKind;
+
+  /**
+   * @generated from field: string automation_id = 3;
+   */
+  automationId: string;
+
+  /**
+   * @generated from field: bool enabled = 4;
+   */
+  enabled: boolean;
+
+  /**
+   * Compare-and-set precondition. The change is rejected if current state differs.
+   *
+   * @generated from field: bool expected_enabled = 5;
+   */
+  expectedEnabled: boolean;
+
+  /**
+   * Operator-provided audit reason. It must not contain credentials or payloads.
+   *
+   * @generated from field: string reason = 6;
+   */
+  reason: string;
+};
+
+/**
+ * @generated from message everstack.operations.v1.ChangeInstanceAutomationRequest
+ */
+export declare type ChangeInstanceAutomationRequestJson = {
+  /**
+   * @generated from field: string instance_id = 1;
+   */
+  instanceId?: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.AutomationKind kind = 2;
+   */
+  kind?: AutomationKindJson;
+
+  /**
+   * @generated from field: string automation_id = 3;
+   */
+  automationId?: string;
+
+  /**
+   * @generated from field: bool enabled = 4;
+   */
+  enabled?: boolean;
+
+  /**
+   * Compare-and-set precondition. The change is rejected if current state differs.
+   *
+   * @generated from field: bool expected_enabled = 5;
+   */
+  expectedEnabled?: boolean;
+
+  /**
+   * Operator-provided audit reason. It must not contain credentials or payloads.
+   *
+   * @generated from field: string reason = 6;
+   */
+  reason?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.ChangeInstanceAutomationRequest.
+ * Use `create(ChangeInstanceAutomationRequestSchema)` to create a new message.
+ */
+export declare const ChangeInstanceAutomationRequestSchema: GenMessage<ChangeInstanceAutomationRequest, ChangeInstanceAutomationRequestJson>;
+
+/**
+ * @generated from message everstack.operations.v1.ChangeInstanceAutomationResponse
+ */
+export declare type ChangeInstanceAutomationResponse = Message<"everstack.operations.v1.ChangeInstanceAutomationResponse"> & {
+  /**
+   * @generated from field: string automation_id = 1;
+   */
+  automationId: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.AutomationKind kind = 2;
+   */
+  kind: AutomationKind;
+
+  /**
+   * @generated from field: bool enabled = 3;
+   */
+  enabled: boolean;
+};
+
+/**
+ * @generated from message everstack.operations.v1.ChangeInstanceAutomationResponse
+ */
+export declare type ChangeInstanceAutomationResponseJson = {
+  /**
+   * @generated from field: string automation_id = 1;
+   */
+  automationId?: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.AutomationKind kind = 2;
+   */
+  kind?: AutomationKindJson;
+
+  /**
+   * @generated from field: bool enabled = 3;
+   */
+  enabled?: boolean;
+};
+
+/**
+ * Describes the message everstack.operations.v1.ChangeInstanceAutomationResponse.
+ * Use `create(ChangeInstanceAutomationResponseSchema)` to create a new message.
+ */
+export declare const ChangeInstanceAutomationResponseSchema: GenMessage<ChangeInstanceAutomationResponse, ChangeInstanceAutomationResponseJson>;
+
+/**
  * @generated from message everstack.operations.v1.SessionPrincipal
  */
 export declare type SessionPrincipal = Message<"everstack.operations.v1.SessionPrincipal"> & {
@@ -219,6 +859,22 @@ export declare type OperationsOverview = Message<"everstack.operations.v1.Operat
    * @generated from field: int64 issued_licenses = 15;
    */
   issuedLicenses: bigint;
+
+  /**
+   * Healthy and degraded counts are meaningful only for instances whose
+   * health has actually been measured.
+   *
+   * @generated from field: int64 instances_with_measured_health = 16;
+   */
+  instancesWithMeasuredHealth: bigint;
+
+  /**
+   * Until EVS-57 lands, this equals the live instance count because no health
+   * measurements are written.
+   *
+   * @generated from field: int64 instances_never_health_checked = 17;
+   */
+  instancesNeverHealthChecked: bigint;
 };
 
 /**
@@ -299,6 +955,22 @@ export declare type OperationsOverviewJson = {
    * @generated from field: int64 issued_licenses = 15;
    */
   issuedLicenses?: string;
+
+  /**
+   * Healthy and degraded counts are meaningful only for instances whose
+   * health has actually been measured.
+   *
+   * @generated from field: int64 instances_with_measured_health = 16;
+   */
+  instancesWithMeasuredHealth?: string;
+
+  /**
+   * Until EVS-57 lands, this equals the live instance count because no health
+   * measurements are written.
+   *
+   * @generated from field: int64 instances_never_health_checked = 17;
+   */
+  instancesNeverHealthChecked?: string;
 };
 
 /**
@@ -333,6 +1005,11 @@ export declare type GetOverviewResponse = Message<"everstack.operations.v1.GetOv
    * @generated from field: everstack.operations.v1.OperationsOverview overview = 1;
    */
   overview?: OperationsOverview;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.OperationsSourceStatus sources = 2;
+   */
+  sources: OperationsSourceStatus[];
 };
 
 /**
@@ -343,6 +1020,11 @@ export declare type GetOverviewResponseJson = {
    * @generated from field: everstack.operations.v1.OperationsOverview overview = 1;
    */
   overview?: OperationsOverviewJson;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.OperationsSourceStatus sources = 2;
+   */
+  sources?: OperationsSourceStatusJson[];
 };
 
 /**
@@ -350,6 +1032,118 @@ export declare type GetOverviewResponseJson = {
  * Use `create(GetOverviewResponseSchema)` to create a new message.
  */
 export declare const GetOverviewResponseSchema: GenMessage<GetOverviewResponse, GetOverviewResponseJson>;
+
+/**
+ * @generated from message everstack.operations.v1.OperationsSourceStatus
+ */
+export declare type OperationsSourceStatus = Message<"everstack.operations.v1.OperationsSourceStatus"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string label = 2;
+   */
+  label: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.SourceState state = 3;
+   */
+  state: SourceState;
+
+  /**
+   * @generated from field: bool configured = 4;
+   */
+  configured: boolean;
+
+  /**
+   * @generated from field: bool reachable = 5;
+   */
+  reachable: boolean;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp checked_at = 6;
+   */
+  checkedAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp latest_data_at = 7;
+   */
+  latestDataAt?: Timestamp;
+
+  /**
+   * @generated from field: int64 lag_seconds = 8;
+   */
+  lagSeconds: bigint;
+
+  /**
+   * Sanitized explanation. This must never include a DSN, credential, or raw
+   * driver error that could contain either.
+   *
+   * @generated from field: string detail = 9;
+   */
+  detail: string;
+};
+
+/**
+ * @generated from message everstack.operations.v1.OperationsSourceStatus
+ */
+export declare type OperationsSourceStatusJson = {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * @generated from field: string label = 2;
+   */
+  label?: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.SourceState state = 3;
+   */
+  state?: SourceStateJson;
+
+  /**
+   * @generated from field: bool configured = 4;
+   */
+  configured?: boolean;
+
+  /**
+   * @generated from field: bool reachable = 5;
+   */
+  reachable?: boolean;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp checked_at = 6;
+   */
+  checkedAt?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp latest_data_at = 7;
+   */
+  latestDataAt?: TimestampJson;
+
+  /**
+   * @generated from field: int64 lag_seconds = 8;
+   */
+  lagSeconds?: string;
+
+  /**
+   * Sanitized explanation. This must never include a DSN, credential, or raw
+   * driver error that could contain either.
+   *
+   * @generated from field: string detail = 9;
+   */
+  detail?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.OperationsSourceStatus.
+ * Use `create(OperationsSourceStatusSchema)` to create a new message.
+ */
+export declare const OperationsSourceStatusSchema: GenMessage<OperationsSourceStatus, OperationsSourceStatusJson>;
 
 /**
  * @generated from message everstack.operations.v1.OrganizationSummary
@@ -574,6 +1368,554 @@ export declare type ListOrganizationsResponseJson = {
  * Use `create(ListOrganizationsResponseSchema)` to create a new message.
  */
 export declare const ListOrganizationsResponseSchema: GenMessage<ListOrganizationsResponse, ListOrganizationsResponseJson>;
+
+/**
+ * @generated from message everstack.operations.v1.OrganizationMemberRow
+ */
+export declare type OrganizationMemberRow = Message<"everstack.operations.v1.OrganizationMemberRow"> & {
+  /**
+   * @generated from field: string everstack_user_id = 1;
+   */
+  everstackUserId: string;
+
+  /**
+   * @generated from field: string identity_user_id = 2;
+   */
+  identityUserId: string;
+
+  /**
+   * @generated from field: string email = 3;
+   */
+  email: string;
+
+  /**
+   * @generated from field: string name = 4;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string role = 5;
+   */
+  role: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp joined_at = 6;
+   */
+  joinedAt?: Timestamp;
+};
+
+/**
+ * @generated from message everstack.operations.v1.OrganizationMemberRow
+ */
+export declare type OrganizationMemberRowJson = {
+  /**
+   * @generated from field: string everstack_user_id = 1;
+   */
+  everstackUserId?: string;
+
+  /**
+   * @generated from field: string identity_user_id = 2;
+   */
+  identityUserId?: string;
+
+  /**
+   * @generated from field: string email = 3;
+   */
+  email?: string;
+
+  /**
+   * @generated from field: string name = 4;
+   */
+  name?: string;
+
+  /**
+   * @generated from field: string role = 5;
+   */
+  role?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp joined_at = 6;
+   */
+  joinedAt?: TimestampJson;
+};
+
+/**
+ * Describes the message everstack.operations.v1.OrganizationMemberRow.
+ * Use `create(OrganizationMemberRowSchema)` to create a new message.
+ */
+export declare const OrganizationMemberRowSchema: GenMessage<OrganizationMemberRow, OrganizationMemberRowJson>;
+
+/**
+ * @generated from message everstack.operations.v1.OrganizationWorkspaceRow
+ */
+export declare type OrganizationWorkspaceRow = Message<"everstack.operations.v1.OrganizationWorkspaceRow"> & {
+  /**
+   * @generated from field: string workspace_id = 1;
+   */
+  workspaceId: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string slug = 3;
+   */
+  slug: string;
+
+  /**
+   * @generated from field: string environment = 4;
+   */
+  environment: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 5;
+   */
+  createdAt?: Timestamp;
+
+  /**
+   * @generated from field: int32 explicit_member_count = 6;
+   */
+  explicitMemberCount: number;
+
+  /**
+   * @generated from field: int32 instance_count = 7;
+   */
+  instanceCount: number;
+};
+
+/**
+ * @generated from message everstack.operations.v1.OrganizationWorkspaceRow
+ */
+export declare type OrganizationWorkspaceRowJson = {
+  /**
+   * @generated from field: string workspace_id = 1;
+   */
+  workspaceId?: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name?: string;
+
+  /**
+   * @generated from field: string slug = 3;
+   */
+  slug?: string;
+
+  /**
+   * @generated from field: string environment = 4;
+   */
+  environment?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 5;
+   */
+  createdAt?: TimestampJson;
+
+  /**
+   * @generated from field: int32 explicit_member_count = 6;
+   */
+  explicitMemberCount?: number;
+
+  /**
+   * @generated from field: int32 instance_count = 7;
+   */
+  instanceCount?: number;
+};
+
+/**
+ * Describes the message everstack.operations.v1.OrganizationWorkspaceRow.
+ * Use `create(OrganizationWorkspaceRowSchema)` to create a new message.
+ */
+export declare const OrganizationWorkspaceRowSchema: GenMessage<OrganizationWorkspaceRow, OrganizationWorkspaceRowJson>;
+
+/**
+ * @generated from message everstack.operations.v1.OrganizationInstanceRow
+ */
+export declare type OrganizationInstanceRow = Message<"everstack.operations.v1.OrganizationInstanceRow"> & {
+  /**
+   * @generated from field: string instance_id = 1;
+   */
+  instanceId: string;
+
+  /**
+   * @generated from field: string slug = 2;
+   */
+  slug: string;
+
+  /**
+   * @generated from field: string workspace_id = 3;
+   */
+  workspaceId: string;
+
+  /**
+   * @generated from field: string status = 4;
+   */
+  status: string;
+
+  /**
+   * @generated from field: string region = 5;
+   */
+  region: string;
+
+  /**
+   * Per EVS-57, healthy is only meaningful when last_health_check is set.
+   *
+   * @generated from field: bool healthy = 6;
+   */
+  healthy: boolean;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_health_check = 7;
+   */
+  lastHealthCheck?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp deleted_at = 8;
+   */
+  deletedAt?: Timestamp;
+};
+
+/**
+ * @generated from message everstack.operations.v1.OrganizationInstanceRow
+ */
+export declare type OrganizationInstanceRowJson = {
+  /**
+   * @generated from field: string instance_id = 1;
+   */
+  instanceId?: string;
+
+  /**
+   * @generated from field: string slug = 2;
+   */
+  slug?: string;
+
+  /**
+   * @generated from field: string workspace_id = 3;
+   */
+  workspaceId?: string;
+
+  /**
+   * @generated from field: string status = 4;
+   */
+  status?: string;
+
+  /**
+   * @generated from field: string region = 5;
+   */
+  region?: string;
+
+  /**
+   * Per EVS-57, healthy is only meaningful when last_health_check is set.
+   *
+   * @generated from field: bool healthy = 6;
+   */
+  healthy?: boolean;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_health_check = 7;
+   */
+  lastHealthCheck?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp deleted_at = 8;
+   */
+  deletedAt?: TimestampJson;
+};
+
+/**
+ * Describes the message everstack.operations.v1.OrganizationInstanceRow.
+ * Use `create(OrganizationInstanceRowSchema)` to create a new message.
+ */
+export declare const OrganizationInstanceRowSchema: GenMessage<OrganizationInstanceRow, OrganizationInstanceRowJson>;
+
+/**
+ * SECURITY: The secret invite token is deliberately absent. NEVER add it here.
+ *
+ * @generated from message everstack.operations.v1.OrganizationInvitationRow
+ */
+export declare type OrganizationInvitationRow = Message<"everstack.operations.v1.OrganizationInvitationRow"> & {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email: string;
+
+  /**
+   * @generated from field: string role = 2;
+   */
+  role: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 3;
+   */
+  createdAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp expires_at = 4;
+   */
+  expiresAt?: Timestamp;
+
+  /**
+   * @generated from field: bool accepted = 5;
+   */
+  accepted: boolean;
+};
+
+/**
+ * SECURITY: The secret invite token is deliberately absent. NEVER add it here.
+ *
+ * @generated from message everstack.operations.v1.OrganizationInvitationRow
+ */
+export declare type OrganizationInvitationRowJson = {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email?: string;
+
+  /**
+   * @generated from field: string role = 2;
+   */
+  role?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 3;
+   */
+  createdAt?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp expires_at = 4;
+   */
+  expiresAt?: TimestampJson;
+
+  /**
+   * @generated from field: bool accepted = 5;
+   */
+  accepted?: boolean;
+};
+
+/**
+ * Describes the message everstack.operations.v1.OrganizationInvitationRow.
+ * Use `create(OrganizationInvitationRowSchema)` to create a new message.
+ */
+export declare const OrganizationInvitationRowSchema: GenMessage<OrganizationInvitationRow, OrganizationInvitationRowJson>;
+
+/**
+ * @generated from message everstack.operations.v1.OrganizationDetail
+ */
+export declare type OrganizationDetail = Message<"everstack.operations.v1.OrganizationDetail"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string slug = 3;
+   */
+  slug: string;
+
+  /**
+   * @generated from field: string plan_tier = 4;
+   */
+  planTier: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 5;
+   */
+  createdAt?: Timestamp;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.OrganizationMemberRow members = 6;
+   */
+  members: OrganizationMemberRow[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.OrganizationWorkspaceRow workspaces = 7;
+   */
+  workspaces: OrganizationWorkspaceRow[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.OrganizationInstanceRow instances = 8;
+   */
+  instances: OrganizationInstanceRow[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.OrganizationInvitationRow invitations = 9;
+   */
+  invitations: OrganizationInvitationRow[];
+};
+
+/**
+ * @generated from message everstack.operations.v1.OrganizationDetail
+ */
+export declare type OrganizationDetailJson = {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name?: string;
+
+  /**
+   * @generated from field: string slug = 3;
+   */
+  slug?: string;
+
+  /**
+   * @generated from field: string plan_tier = 4;
+   */
+  planTier?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 5;
+   */
+  createdAt?: TimestampJson;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.OrganizationMemberRow members = 6;
+   */
+  members?: OrganizationMemberRowJson[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.OrganizationWorkspaceRow workspaces = 7;
+   */
+  workspaces?: OrganizationWorkspaceRowJson[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.OrganizationInstanceRow instances = 8;
+   */
+  instances?: OrganizationInstanceRowJson[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.OrganizationInvitationRow invitations = 9;
+   */
+  invitations?: OrganizationInvitationRowJson[];
+};
+
+/**
+ * Describes the message everstack.operations.v1.OrganizationDetail.
+ * Use `create(OrganizationDetailSchema)` to create a new message.
+ */
+export declare const OrganizationDetailSchema: GenMessage<OrganizationDetail, OrganizationDetailJson>;
+
+/**
+ * @generated from message everstack.operations.v1.GetOrganizationRequest
+ */
+export declare type GetOrganizationRequest = Message<"everstack.operations.v1.GetOrganizationRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * Historical instances are opt-in; the default returns only live instances.
+   *
+   * @generated from field: bool include_deleted_instances = 2;
+   */
+  includeDeletedInstances: boolean;
+};
+
+/**
+ * @generated from message everstack.operations.v1.GetOrganizationRequest
+ */
+export declare type GetOrganizationRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+
+  /**
+   * Historical instances are opt-in; the default returns only live instances.
+   *
+   * @generated from field: bool include_deleted_instances = 2;
+   */
+  includeDeletedInstances?: boolean;
+};
+
+/**
+ * Describes the message everstack.operations.v1.GetOrganizationRequest.
+ * Use `create(GetOrganizationRequestSchema)` to create a new message.
+ */
+export declare const GetOrganizationRequestSchema: GenMessage<GetOrganizationRequest, GetOrganizationRequestJson>;
+
+/**
+ * @generated from message everstack.operations.v1.GetOrganizationResponse
+ */
+export declare type GetOrganizationResponse = Message<"everstack.operations.v1.GetOrganizationResponse"> & {
+  /**
+   * @generated from field: everstack.operations.v1.OrganizationDetail organization = 1;
+   */
+  organization?: OrganizationDetail;
+
+  /**
+   * Sections fail independently. Unavailable must never be displayed as none.
+   *
+   * @generated from field: bool members_unavailable = 2;
+   */
+  membersUnavailable: boolean;
+
+  /**
+   * @generated from field: bool workspaces_unavailable = 3;
+   */
+  workspacesUnavailable: boolean;
+
+  /**
+   * @generated from field: bool instances_unavailable = 4;
+   */
+  instancesUnavailable: boolean;
+
+  /**
+   * @generated from field: bool invitations_unavailable = 5;
+   */
+  invitationsUnavailable: boolean;
+};
+
+/**
+ * @generated from message everstack.operations.v1.GetOrganizationResponse
+ */
+export declare type GetOrganizationResponseJson = {
+  /**
+   * @generated from field: everstack.operations.v1.OrganizationDetail organization = 1;
+   */
+  organization?: OrganizationDetailJson;
+
+  /**
+   * Sections fail independently. Unavailable must never be displayed as none.
+   *
+   * @generated from field: bool members_unavailable = 2;
+   */
+  membersUnavailable?: boolean;
+
+  /**
+   * @generated from field: bool workspaces_unavailable = 3;
+   */
+  workspacesUnavailable?: boolean;
+
+  /**
+   * @generated from field: bool instances_unavailable = 4;
+   */
+  instancesUnavailable?: boolean;
+
+  /**
+   * @generated from field: bool invitations_unavailable = 5;
+   */
+  invitationsUnavailable?: boolean;
+};
+
+/**
+ * Describes the message everstack.operations.v1.GetOrganizationResponse.
+ * Use `create(GetOrganizationResponseSchema)` to create a new message.
+ */
+export declare const GetOrganizationResponseSchema: GenMessage<GetOrganizationResponse, GetOrganizationResponseJson>;
 
 /**
  * @generated from message everstack.operations.v1.InstallationSummary
@@ -1925,6 +3267,86 @@ export declare type NodeSnapshot = Message<"everstack.operations.v1.NodeSnapshot
    * @generated from field: map<string, string> labels = 9;
    */
   labels: { [key: string]: string };
+
+  /**
+   * @generated from field: string operating_system = 10;
+   */
+  operatingSystem: string;
+
+  /**
+   * @generated from field: string os_image = 11;
+   */
+  osImage: string;
+
+  /**
+   * @generated from field: string kernel_version = 12;
+   */
+  kernelVersion: string;
+
+  /**
+   * @generated from field: string container_runtime_version = 13;
+   */
+  containerRuntimeVersion: string;
+
+  /**
+   * @generated from field: string provider_id = 14;
+   */
+  providerId: string;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.NodeAddress addresses = 15;
+   */
+  addresses: NodeAddress[];
+
+  /**
+   * @generated from field: string pod_cidr = 16;
+   */
+  podCidr: string;
+
+  /**
+   * @generated from field: int64 cpu_allocatable_milli = 17;
+   */
+  cpuAllocatableMilli: bigint;
+
+  /**
+   * @generated from field: int64 memory_allocatable_bytes = 18;
+   */
+  memoryAllocatableBytes: bigint;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.NodeConditionSnapshot conditions = 19;
+   */
+  conditions: NodeConditionSnapshot[];
+
+  /**
+   * @generated from field: string region = 20;
+   */
+  region: string;
+
+  /**
+   * @generated from field: string uid = 21;
+   */
+  uid: string;
+
+  /**
+   * @generated from field: int64 ephemeral_storage_capacity_bytes = 22;
+   */
+  ephemeralStorageCapacityBytes: bigint;
+
+  /**
+   * @generated from field: int64 ephemeral_storage_allocatable_bytes = 23;
+   */
+  ephemeralStorageAllocatableBytes: bigint;
+
+  /**
+   * @generated from field: everstack.operations.v1.ResourceUsageSnapshot usage = 24;
+   */
+  usage?: ResourceUsageSnapshot;
+
+  /**
+   * @generated from field: everstack.operations.v1.FilesystemUsageSnapshot disk_usage = 25;
+   */
+  diskUsage?: FilesystemUsageSnapshot;
 };
 
 /**
@@ -1975,6 +3397,86 @@ export declare type NodeSnapshotJson = {
    * @generated from field: map<string, string> labels = 9;
    */
   labels?: { [key: string]: string };
+
+  /**
+   * @generated from field: string operating_system = 10;
+   */
+  operatingSystem?: string;
+
+  /**
+   * @generated from field: string os_image = 11;
+   */
+  osImage?: string;
+
+  /**
+   * @generated from field: string kernel_version = 12;
+   */
+  kernelVersion?: string;
+
+  /**
+   * @generated from field: string container_runtime_version = 13;
+   */
+  containerRuntimeVersion?: string;
+
+  /**
+   * @generated from field: string provider_id = 14;
+   */
+  providerId?: string;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.NodeAddress addresses = 15;
+   */
+  addresses?: NodeAddressJson[];
+
+  /**
+   * @generated from field: string pod_cidr = 16;
+   */
+  podCidr?: string;
+
+  /**
+   * @generated from field: int64 cpu_allocatable_milli = 17;
+   */
+  cpuAllocatableMilli?: string;
+
+  /**
+   * @generated from field: int64 memory_allocatable_bytes = 18;
+   */
+  memoryAllocatableBytes?: string;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.NodeConditionSnapshot conditions = 19;
+   */
+  conditions?: NodeConditionSnapshotJson[];
+
+  /**
+   * @generated from field: string region = 20;
+   */
+  region?: string;
+
+  /**
+   * @generated from field: string uid = 21;
+   */
+  uid?: string;
+
+  /**
+   * @generated from field: int64 ephemeral_storage_capacity_bytes = 22;
+   */
+  ephemeralStorageCapacityBytes?: string;
+
+  /**
+   * @generated from field: int64 ephemeral_storage_allocatable_bytes = 23;
+   */
+  ephemeralStorageAllocatableBytes?: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.ResourceUsageSnapshot usage = 24;
+   */
+  usage?: ResourceUsageSnapshotJson;
+
+  /**
+   * @generated from field: everstack.operations.v1.FilesystemUsageSnapshot disk_usage = 25;
+   */
+  diskUsage?: FilesystemUsageSnapshotJson;
 };
 
 /**
@@ -1982,6 +3484,888 @@ export declare type NodeSnapshotJson = {
  * Use `create(NodeSnapshotSchema)` to create a new message.
  */
 export declare const NodeSnapshotSchema: GenMessage<NodeSnapshot, NodeSnapshotJson>;
+
+/**
+ * @generated from message everstack.operations.v1.ResourceUsageSnapshot
+ */
+export declare type ResourceUsageSnapshot = Message<"everstack.operations.v1.ResourceUsageSnapshot"> & {
+  /**
+   * @generated from field: google.protobuf.Timestamp collected_at = 1;
+   */
+  collectedAt?: Timestamp;
+
+  /**
+   * @generated from field: int64 cpu_milli = 2;
+   */
+  cpuMilli: bigint;
+
+  /**
+   * @generated from field: int64 memory_bytes = 3;
+   */
+  memoryBytes: bigint;
+};
+
+/**
+ * @generated from message everstack.operations.v1.ResourceUsageSnapshot
+ */
+export declare type ResourceUsageSnapshotJson = {
+  /**
+   * @generated from field: google.protobuf.Timestamp collected_at = 1;
+   */
+  collectedAt?: TimestampJson;
+
+  /**
+   * @generated from field: int64 cpu_milli = 2;
+   */
+  cpuMilli?: string;
+
+  /**
+   * @generated from field: int64 memory_bytes = 3;
+   */
+  memoryBytes?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.ResourceUsageSnapshot.
+ * Use `create(ResourceUsageSnapshotSchema)` to create a new message.
+ */
+export declare const ResourceUsageSnapshotSchema: GenMessage<ResourceUsageSnapshot, ResourceUsageSnapshotJson>;
+
+/**
+ * @generated from message everstack.operations.v1.FilesystemUsageSnapshot
+ */
+export declare type FilesystemUsageSnapshot = Message<"everstack.operations.v1.FilesystemUsageSnapshot"> & {
+  /**
+   * @generated from field: google.protobuf.Timestamp collected_at = 1;
+   */
+  collectedAt?: Timestamp;
+
+  /**
+   * @generated from field: int64 capacity_bytes = 2;
+   */
+  capacityBytes: bigint;
+
+  /**
+   * @generated from field: int64 available_bytes = 3;
+   */
+  availableBytes: bigint;
+
+  /**
+   * @generated from field: string mountpoint = 4;
+   */
+  mountpoint: string;
+};
+
+/**
+ * @generated from message everstack.operations.v1.FilesystemUsageSnapshot
+ */
+export declare type FilesystemUsageSnapshotJson = {
+  /**
+   * @generated from field: google.protobuf.Timestamp collected_at = 1;
+   */
+  collectedAt?: TimestampJson;
+
+  /**
+   * @generated from field: int64 capacity_bytes = 2;
+   */
+  capacityBytes?: string;
+
+  /**
+   * @generated from field: int64 available_bytes = 3;
+   */
+  availableBytes?: string;
+
+  /**
+   * @generated from field: string mountpoint = 4;
+   */
+  mountpoint?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.FilesystemUsageSnapshot.
+ * Use `create(FilesystemUsageSnapshotSchema)` to create a new message.
+ */
+export declare const FilesystemUsageSnapshotSchema: GenMessage<FilesystemUsageSnapshot, FilesystemUsageSnapshotJson>;
+
+/**
+ * @generated from message everstack.operations.v1.ResourceRequirementsSnapshot
+ */
+export declare type ResourceRequirementsSnapshot = Message<"everstack.operations.v1.ResourceRequirementsSnapshot"> & {
+  /**
+   * @generated from field: int64 cpu_milli = 1;
+   */
+  cpuMilli: bigint;
+
+  /**
+   * @generated from field: int64 memory_bytes = 2;
+   */
+  memoryBytes: bigint;
+
+  /**
+   * @generated from field: int64 ephemeral_storage_bytes = 3;
+   */
+  ephemeralStorageBytes: bigint;
+};
+
+/**
+ * @generated from message everstack.operations.v1.ResourceRequirementsSnapshot
+ */
+export declare type ResourceRequirementsSnapshotJson = {
+  /**
+   * @generated from field: int64 cpu_milli = 1;
+   */
+  cpuMilli?: string;
+
+  /**
+   * @generated from field: int64 memory_bytes = 2;
+   */
+  memoryBytes?: string;
+
+  /**
+   * @generated from field: int64 ephemeral_storage_bytes = 3;
+   */
+  ephemeralStorageBytes?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.ResourceRequirementsSnapshot.
+ * Use `create(ResourceRequirementsSnapshotSchema)` to create a new message.
+ */
+export declare const ResourceRequirementsSnapshotSchema: GenMessage<ResourceRequirementsSnapshot, ResourceRequirementsSnapshotJson>;
+
+/**
+ * @generated from message everstack.operations.v1.ContainerSnapshot
+ */
+export declare type ContainerSnapshot = Message<"everstack.operations.v1.ContainerSnapshot"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string image = 2;
+   */
+  image: string;
+
+  /**
+   * @generated from field: bool ready = 3;
+   */
+  ready: boolean;
+
+  /**
+   * @generated from field: int32 restart_count = 4;
+   */
+  restartCount: number;
+
+  /**
+   * @generated from field: string state = 5;
+   */
+  state: string;
+
+  /**
+   * @generated from field: string reason = 6;
+   */
+  reason: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.ResourceRequirementsSnapshot requests = 7;
+   */
+  requests?: ResourceRequirementsSnapshot;
+
+  /**
+   * @generated from field: everstack.operations.v1.ResourceRequirementsSnapshot limits = 8;
+   */
+  limits?: ResourceRequirementsSnapshot;
+
+  /**
+   * @generated from field: everstack.operations.v1.ResourceUsageSnapshot usage = 9;
+   */
+  usage?: ResourceUsageSnapshot;
+
+  /**
+   * @generated from field: bool is_init = 10;
+   */
+  isInit: boolean;
+};
+
+/**
+ * @generated from message everstack.operations.v1.ContainerSnapshot
+ */
+export declare type ContainerSnapshotJson = {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name?: string;
+
+  /**
+   * @generated from field: string image = 2;
+   */
+  image?: string;
+
+  /**
+   * @generated from field: bool ready = 3;
+   */
+  ready?: boolean;
+
+  /**
+   * @generated from field: int32 restart_count = 4;
+   */
+  restartCount?: number;
+
+  /**
+   * @generated from field: string state = 5;
+   */
+  state?: string;
+
+  /**
+   * @generated from field: string reason = 6;
+   */
+  reason?: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.ResourceRequirementsSnapshot requests = 7;
+   */
+  requests?: ResourceRequirementsSnapshotJson;
+
+  /**
+   * @generated from field: everstack.operations.v1.ResourceRequirementsSnapshot limits = 8;
+   */
+  limits?: ResourceRequirementsSnapshotJson;
+
+  /**
+   * @generated from field: everstack.operations.v1.ResourceUsageSnapshot usage = 9;
+   */
+  usage?: ResourceUsageSnapshotJson;
+
+  /**
+   * @generated from field: bool is_init = 10;
+   */
+  isInit?: boolean;
+};
+
+/**
+ * Describes the message everstack.operations.v1.ContainerSnapshot.
+ * Use `create(ContainerSnapshotSchema)` to create a new message.
+ */
+export declare const ContainerSnapshotSchema: GenMessage<ContainerSnapshot, ContainerSnapshotJson>;
+
+/**
+ * @generated from message everstack.operations.v1.PodSnapshot
+ */
+export declare type PodSnapshot = Message<"everstack.operations.v1.PodSnapshot"> & {
+  /**
+   * @generated from field: string uid = 1;
+   */
+  uid: string;
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace: string;
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string node_name = 4;
+   */
+  nodeName: string;
+
+  /**
+   * @generated from field: string phase = 5;
+   */
+  phase: string;
+
+  /**
+   * @generated from field: bool ready = 6;
+   */
+  ready: boolean;
+
+  /**
+   * @generated from field: int32 restart_count = 7;
+   */
+  restartCount: number;
+
+  /**
+   * @generated from field: string reason = 8;
+   */
+  reason: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp started_at = 9;
+   */
+  startedAt?: Timestamp;
+
+  /**
+   * @generated from field: string workload_kind = 10;
+   */
+  workloadKind: string;
+
+  /**
+   * @generated from field: string workload_name = 11;
+   */
+  workloadName: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.ResourceUsageSnapshot usage = 12;
+   */
+  usage?: ResourceUsageSnapshot;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.ContainerSnapshot containers = 13;
+   */
+  containers: ContainerSnapshot[];
+};
+
+/**
+ * @generated from message everstack.operations.v1.PodSnapshot
+ */
+export declare type PodSnapshotJson = {
+  /**
+   * @generated from field: string uid = 1;
+   */
+  uid?: string;
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace?: string;
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name?: string;
+
+  /**
+   * @generated from field: string node_name = 4;
+   */
+  nodeName?: string;
+
+  /**
+   * @generated from field: string phase = 5;
+   */
+  phase?: string;
+
+  /**
+   * @generated from field: bool ready = 6;
+   */
+  ready?: boolean;
+
+  /**
+   * @generated from field: int32 restart_count = 7;
+   */
+  restartCount?: number;
+
+  /**
+   * @generated from field: string reason = 8;
+   */
+  reason?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp started_at = 9;
+   */
+  startedAt?: TimestampJson;
+
+  /**
+   * @generated from field: string workload_kind = 10;
+   */
+  workloadKind?: string;
+
+  /**
+   * @generated from field: string workload_name = 11;
+   */
+  workloadName?: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.ResourceUsageSnapshot usage = 12;
+   */
+  usage?: ResourceUsageSnapshotJson;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.ContainerSnapshot containers = 13;
+   */
+  containers?: ContainerSnapshotJson[];
+};
+
+/**
+ * Describes the message everstack.operations.v1.PodSnapshot.
+ * Use `create(PodSnapshotSchema)` to create a new message.
+ */
+export declare const PodSnapshotSchema: GenMessage<PodSnapshot, PodSnapshotJson>;
+
+/**
+ * @generated from message everstack.operations.v1.NodeAddress
+ */
+export declare type NodeAddress = Message<"everstack.operations.v1.NodeAddress"> & {
+  /**
+   * @generated from field: string type = 1;
+   */
+  type: string;
+
+  /**
+   * @generated from field: string address = 2;
+   */
+  address: string;
+};
+
+/**
+ * @generated from message everstack.operations.v1.NodeAddress
+ */
+export declare type NodeAddressJson = {
+  /**
+   * @generated from field: string type = 1;
+   */
+  type?: string;
+
+  /**
+   * @generated from field: string address = 2;
+   */
+  address?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.NodeAddress.
+ * Use `create(NodeAddressSchema)` to create a new message.
+ */
+export declare const NodeAddressSchema: GenMessage<NodeAddress, NodeAddressJson>;
+
+/**
+ * @generated from message everstack.operations.v1.NodeConditionSnapshot
+ */
+export declare type NodeConditionSnapshot = Message<"everstack.operations.v1.NodeConditionSnapshot"> & {
+  /**
+   * @generated from field: string type = 1;
+   */
+  type: string;
+
+  /**
+   * @generated from field: string status = 2;
+   */
+  status: string;
+
+  /**
+   * @generated from field: string reason = 3;
+   */
+  reason: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_transition_at = 4;
+   */
+  lastTransitionAt?: Timestamp;
+};
+
+/**
+ * @generated from message everstack.operations.v1.NodeConditionSnapshot
+ */
+export declare type NodeConditionSnapshotJson = {
+  /**
+   * @generated from field: string type = 1;
+   */
+  type?: string;
+
+  /**
+   * @generated from field: string status = 2;
+   */
+  status?: string;
+
+  /**
+   * @generated from field: string reason = 3;
+   */
+  reason?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_transition_at = 4;
+   */
+  lastTransitionAt?: TimestampJson;
+};
+
+/**
+ * Describes the message everstack.operations.v1.NodeConditionSnapshot.
+ * Use `create(NodeConditionSnapshotSchema)` to create a new message.
+ */
+export declare const NodeConditionSnapshotSchema: GenMessage<NodeConditionSnapshot, NodeConditionSnapshotJson>;
+
+/**
+ * @generated from message everstack.operations.v1.NetworkPortSnapshot
+ */
+export declare type NetworkPortSnapshot = Message<"everstack.operations.v1.NetworkPortSnapshot"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string protocol = 2;
+   */
+  protocol: string;
+
+  /**
+   * @generated from field: int32 port = 3;
+   */
+  port: number;
+
+  /**
+   * @generated from field: string target_port = 4;
+   */
+  targetPort: string;
+
+  /**
+   * @generated from field: int32 node_port = 5;
+   */
+  nodePort: number;
+};
+
+/**
+ * @generated from message everstack.operations.v1.NetworkPortSnapshot
+ */
+export declare type NetworkPortSnapshotJson = {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name?: string;
+
+  /**
+   * @generated from field: string protocol = 2;
+   */
+  protocol?: string;
+
+  /**
+   * @generated from field: int32 port = 3;
+   */
+  port?: number;
+
+  /**
+   * @generated from field: string target_port = 4;
+   */
+  targetPort?: string;
+
+  /**
+   * @generated from field: int32 node_port = 5;
+   */
+  nodePort?: number;
+};
+
+/**
+ * Describes the message everstack.operations.v1.NetworkPortSnapshot.
+ * Use `create(NetworkPortSnapshotSchema)` to create a new message.
+ */
+export declare const NetworkPortSnapshotSchema: GenMessage<NetworkPortSnapshot, NetworkPortSnapshotJson>;
+
+/**
+ * @generated from message everstack.operations.v1.NetworkServiceSnapshot
+ */
+export declare type NetworkServiceSnapshot = Message<"everstack.operations.v1.NetworkServiceSnapshot"> & {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string type = 3;
+   */
+  type: string;
+
+  /**
+   * @generated from field: string cluster_ip = 4;
+   */
+  clusterIp: string;
+
+  /**
+   * @generated from field: repeated string external_ips = 5;
+   */
+  externalIps: string[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.NetworkPortSnapshot ports = 6;
+   */
+  ports: NetworkPortSnapshot[];
+
+  /**
+   * @generated from field: int32 ready_endpoints = 7;
+   */
+  readyEndpoints: number;
+
+  /**
+   * @generated from field: int32 total_endpoints = 8;
+   */
+  totalEndpoints: number;
+
+  /**
+   * @generated from field: map<string, string> labels = 9;
+   */
+  labels: { [key: string]: string };
+};
+
+/**
+ * @generated from message everstack.operations.v1.NetworkServiceSnapshot
+ */
+export declare type NetworkServiceSnapshotJson = {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace?: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name?: string;
+
+  /**
+   * @generated from field: string type = 3;
+   */
+  type?: string;
+
+  /**
+   * @generated from field: string cluster_ip = 4;
+   */
+  clusterIp?: string;
+
+  /**
+   * @generated from field: repeated string external_ips = 5;
+   */
+  externalIps?: string[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.NetworkPortSnapshot ports = 6;
+   */
+  ports?: NetworkPortSnapshotJson[];
+
+  /**
+   * @generated from field: int32 ready_endpoints = 7;
+   */
+  readyEndpoints?: number;
+
+  /**
+   * @generated from field: int32 total_endpoints = 8;
+   */
+  totalEndpoints?: number;
+
+  /**
+   * @generated from field: map<string, string> labels = 9;
+   */
+  labels?: { [key: string]: string };
+};
+
+/**
+ * Describes the message everstack.operations.v1.NetworkServiceSnapshot.
+ * Use `create(NetworkServiceSnapshotSchema)` to create a new message.
+ */
+export declare const NetworkServiceSnapshotSchema: GenMessage<NetworkServiceSnapshot, NetworkServiceSnapshotJson>;
+
+/**
+ * @generated from message everstack.operations.v1.IngressRouteSnapshot
+ */
+export declare type IngressRouteSnapshot = Message<"everstack.operations.v1.IngressRouteSnapshot"> & {
+  /**
+   * @generated from field: string host = 1;
+   */
+  host: string;
+
+  /**
+   * @generated from field: string path = 2;
+   */
+  path: string;
+
+  /**
+   * @generated from field: string path_type = 3;
+   */
+  pathType: string;
+
+  /**
+   * @generated from field: string service_name = 4;
+   */
+  serviceName: string;
+
+  /**
+   * @generated from field: string service_port = 5;
+   */
+  servicePort: string;
+};
+
+/**
+ * @generated from message everstack.operations.v1.IngressRouteSnapshot
+ */
+export declare type IngressRouteSnapshotJson = {
+  /**
+   * @generated from field: string host = 1;
+   */
+  host?: string;
+
+  /**
+   * @generated from field: string path = 2;
+   */
+  path?: string;
+
+  /**
+   * @generated from field: string path_type = 3;
+   */
+  pathType?: string;
+
+  /**
+   * @generated from field: string service_name = 4;
+   */
+  serviceName?: string;
+
+  /**
+   * @generated from field: string service_port = 5;
+   */
+  servicePort?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.IngressRouteSnapshot.
+ * Use `create(IngressRouteSnapshotSchema)` to create a new message.
+ */
+export declare const IngressRouteSnapshotSchema: GenMessage<IngressRouteSnapshot, IngressRouteSnapshotJson>;
+
+/**
+ * @generated from message everstack.operations.v1.IngressSnapshot
+ */
+export declare type IngressSnapshot = Message<"everstack.operations.v1.IngressSnapshot"> & {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string class_name = 3;
+   */
+  className: string;
+
+  /**
+   * @generated from field: repeated string hosts = 4;
+   */
+  hosts: string[];
+
+  /**
+   * @generated from field: repeated string addresses = 5;
+   */
+  addresses: string[];
+
+  /**
+   * @generated from field: repeated int32 ports = 6;
+   */
+  ports: number[];
+
+  /**
+   * @generated from field: map<string, string> labels = 7;
+   */
+  labels: { [key: string]: string };
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.IngressRouteSnapshot routes = 8;
+   */
+  routes: IngressRouteSnapshot[];
+};
+
+/**
+ * @generated from message everstack.operations.v1.IngressSnapshot
+ */
+export declare type IngressSnapshotJson = {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace?: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name?: string;
+
+  /**
+   * @generated from field: string class_name = 3;
+   */
+  className?: string;
+
+  /**
+   * @generated from field: repeated string hosts = 4;
+   */
+  hosts?: string[];
+
+  /**
+   * @generated from field: repeated string addresses = 5;
+   */
+  addresses?: string[];
+
+  /**
+   * @generated from field: repeated int32 ports = 6;
+   */
+  ports?: number[];
+
+  /**
+   * @generated from field: map<string, string> labels = 7;
+   */
+  labels?: { [key: string]: string };
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.IngressRouteSnapshot routes = 8;
+   */
+  routes?: IngressRouteSnapshotJson[];
+};
+
+/**
+ * Describes the message everstack.operations.v1.IngressSnapshot.
+ * Use `create(IngressSnapshotSchema)` to create a new message.
+ */
+export declare const IngressSnapshotSchema: GenMessage<IngressSnapshot, IngressSnapshotJson>;
+
+/**
+ * @generated from message everstack.operations.v1.CollectionAvailability
+ */
+export declare type CollectionAvailability = Message<"everstack.operations.v1.CollectionAvailability"> & {
+  /**
+   * @generated from field: string collection = 1;
+   */
+  collection: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.CollectionState state = 2;
+   */
+  state: CollectionState;
+
+  /**
+   * @generated from field: string warning = 3;
+   */
+  warning: string;
+};
+
+/**
+ * @generated from message everstack.operations.v1.CollectionAvailability
+ */
+export declare type CollectionAvailabilityJson = {
+  /**
+   * @generated from field: string collection = 1;
+   */
+  collection?: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.CollectionState state = 2;
+   */
+  state?: CollectionStateJson;
+
+  /**
+   * @generated from field: string warning = 3;
+   */
+  warning?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.CollectionAvailability.
+ * Use `create(CollectionAvailabilitySchema)` to create a new message.
+ */
+export declare const CollectionAvailabilitySchema: GenMessage<CollectionAvailability, CollectionAvailabilityJson>;
 
 /**
  * @generated from message everstack.operations.v1.WorkloadSnapshot
@@ -2188,6 +4572,26 @@ export declare type EnvironmentSnapshot = Message<"everstack.operations.v1.Envir
    * @generated from field: repeated string warnings = 8;
    */
   warnings: string[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.NetworkServiceSnapshot network_services = 9;
+   */
+  networkServices: NetworkServiceSnapshot[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.IngressSnapshot ingresses = 10;
+   */
+  ingresses: IngressSnapshot[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.CollectionAvailability collections = 11;
+   */
+  collections: CollectionAvailability[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.PodSnapshot pods = 12;
+   */
+  pods: PodSnapshot[];
 };
 
 /**
@@ -2233,6 +4637,26 @@ export declare type EnvironmentSnapshotJson = {
    * @generated from field: repeated string warnings = 8;
    */
   warnings?: string[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.NetworkServiceSnapshot network_services = 9;
+   */
+  networkServices?: NetworkServiceSnapshotJson[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.IngressSnapshot ingresses = 10;
+   */
+  ingresses?: IngressSnapshotJson[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.CollectionAvailability collections = 11;
+   */
+  collections?: CollectionAvailabilityJson[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.PodSnapshot pods = 12;
+   */
+  pods?: PodSnapshotJson[];
 };
 
 /**
@@ -2494,6 +4918,402 @@ export declare type GetEnvironmentResponseJson = {
 export declare const GetEnvironmentResponseSchema: GenMessage<GetEnvironmentResponse, GetEnvironmentResponseJson>;
 
 /**
+ * @generated from message everstack.operations.v1.AffectedInstance
+ */
+export declare type AffectedInstance = Message<"everstack.operations.v1.AffectedInstance"> & {
+  /**
+   * @generated from field: string instance_id = 1;
+   */
+  instanceId: string;
+
+  /**
+   * @generated from field: string slug = 2;
+   */
+  slug: string;
+
+  /**
+   * @generated from field: string organization_id = 3;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string organization_name = 4;
+   */
+  organizationName: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.ImpactCertainty certainty = 5;
+   */
+  certainty: ImpactCertainty;
+
+  /**
+   * @generated from field: string basis = 6;
+   */
+  basis: string;
+};
+
+/**
+ * @generated from message everstack.operations.v1.AffectedInstance
+ */
+export declare type AffectedInstanceJson = {
+  /**
+   * @generated from field: string instance_id = 1;
+   */
+  instanceId?: string;
+
+  /**
+   * @generated from field: string slug = 2;
+   */
+  slug?: string;
+
+  /**
+   * @generated from field: string organization_id = 3;
+   */
+  organizationId?: string;
+
+  /**
+   * @generated from field: string organization_name = 4;
+   */
+  organizationName?: string;
+
+  /**
+   * @generated from field: everstack.operations.v1.ImpactCertainty certainty = 5;
+   */
+  certainty?: ImpactCertaintyJson;
+
+  /**
+   * @generated from field: string basis = 6;
+   */
+  basis?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.AffectedInstance.
+ * Use `create(AffectedInstanceSchema)` to create a new message.
+ */
+export declare const AffectedInstanceSchema: GenMessage<AffectedInstance, AffectedInstanceJson>;
+
+/**
+ * @generated from message everstack.operations.v1.WorkloadImpact
+ */
+export declare type WorkloadImpact = Message<"everstack.operations.v1.WorkloadImpact"> & {
+  /**
+   * @generated from field: everstack.operations.v1.ImpactCertainty certainty = 1;
+   */
+  certainty: ImpactCertainty;
+
+  /**
+   * Counts describe the exact returned instance set. If the complete set
+   * exceeds the response bound, impact_unavailable is true instead.
+   *
+   * @generated from field: int32 direct_count = 2;
+   */
+  directCount: number;
+
+  /**
+   * @generated from field: int32 potential_count = 3;
+   */
+  potentialCount: number;
+
+  /**
+   * Collection time of the snapshot used to identify the component.
+   *
+   * @generated from field: google.protobuf.Timestamp mapping_as_of = 4;
+   */
+  mappingAsOf?: Timestamp;
+
+  /**
+   * @generated from field: string explanation = 5;
+   */
+  explanation: string;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.AffectedInstance instances = 6;
+   */
+  instances: AffectedInstance[];
+};
+
+/**
+ * @generated from message everstack.operations.v1.WorkloadImpact
+ */
+export declare type WorkloadImpactJson = {
+  /**
+   * @generated from field: everstack.operations.v1.ImpactCertainty certainty = 1;
+   */
+  certainty?: ImpactCertaintyJson;
+
+  /**
+   * Counts describe the exact returned instance set. If the complete set
+   * exceeds the response bound, impact_unavailable is true instead.
+   *
+   * @generated from field: int32 direct_count = 2;
+   */
+  directCount?: number;
+
+  /**
+   * @generated from field: int32 potential_count = 3;
+   */
+  potentialCount?: number;
+
+  /**
+   * Collection time of the snapshot used to identify the component.
+   *
+   * @generated from field: google.protobuf.Timestamp mapping_as_of = 4;
+   */
+  mappingAsOf?: TimestampJson;
+
+  /**
+   * @generated from field: string explanation = 5;
+   */
+  explanation?: string;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.AffectedInstance instances = 6;
+   */
+  instances?: AffectedInstanceJson[];
+};
+
+/**
+ * Describes the message everstack.operations.v1.WorkloadImpact.
+ * Use `create(WorkloadImpactSchema)` to create a new message.
+ */
+export declare const WorkloadImpactSchema: GenMessage<WorkloadImpact, WorkloadImpactJson>;
+
+/**
+ * @generated from message everstack.operations.v1.GetWorkloadRequest
+ */
+export declare type GetWorkloadRequest = Message<"everstack.operations.v1.GetWorkloadRequest"> & {
+  /**
+   * @generated from field: string environment_id = 1;
+   */
+  environmentId: string;
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace: string;
+
+  /**
+   * @generated from field: string kind = 3;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: string name = 4;
+   */
+  name: string;
+};
+
+/**
+ * @generated from message everstack.operations.v1.GetWorkloadRequest
+ */
+export declare type GetWorkloadRequestJson = {
+  /**
+   * @generated from field: string environment_id = 1;
+   */
+  environmentId?: string;
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace?: string;
+
+  /**
+   * @generated from field: string kind = 3;
+   */
+  kind?: string;
+
+  /**
+   * @generated from field: string name = 4;
+   */
+  name?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.GetWorkloadRequest.
+ * Use `create(GetWorkloadRequestSchema)` to create a new message.
+ */
+export declare const GetWorkloadRequestSchema: GenMessage<GetWorkloadRequest, GetWorkloadRequestJson>;
+
+/**
+ * @generated from message everstack.operations.v1.GetWorkloadResponse
+ */
+export declare type GetWorkloadResponse = Message<"everstack.operations.v1.GetWorkloadResponse"> & {
+  /**
+   * Identity only when workload_missing or snapshot_unavailable is true.
+   *
+   * @generated from field: everstack.operations.v1.WorkloadSnapshot workload = 1;
+   */
+  workload?: WorkloadSnapshot;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp collected_at = 2;
+   */
+  collectedAt?: Timestamp;
+
+  /**
+   * @generated from field: bool snapshot_stale = 3;
+   */
+  snapshotStale: boolean;
+
+  /**
+   * @generated from field: everstack.operations.v1.WorkloadImpact impact = 4;
+   */
+  impact?: WorkloadImpact;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.OperationsEvent related_events = 5;
+   */
+  relatedEvents: OperationsEvent[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.Incident related_incidents = 6;
+   */
+  relatedIncidents: Incident[];
+
+  /**
+   * Missing from a successfully collected current snapshot, not a 404.
+   *
+   * @generated from field: bool workload_missing = 7;
+   */
+  workloadMissing: boolean;
+
+  /**
+   * @generated from field: everstack.operations.v1.EnvironmentSummary environment = 8;
+   */
+  environment?: EnvironmentSummary;
+
+  /**
+   * @generated from field: bool snapshot_unavailable = 9;
+   */
+  snapshotUnavailable: boolean;
+
+  /**
+   * @generated from field: bool impact_unavailable = 10;
+   */
+  impactUnavailable: boolean;
+
+  /**
+   * @generated from field: bool related_events_unavailable = 11;
+   */
+  relatedEventsUnavailable: boolean;
+
+  /**
+   * @generated from field: bool related_incidents_unavailable = 12;
+   */
+  relatedIncidentsUnavailable: boolean;
+
+  /**
+   * Inclusive bounds used for related_events, preserved even for empty results.
+   *
+   * @generated from field: google.protobuf.Timestamp events_since = 13;
+   */
+  eventsSince?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp events_until = 14;
+   */
+  eventsUntil?: Timestamp;
+
+  /**
+   * @generated from field: string data_source_id = 15;
+   */
+  dataSourceId: string;
+};
+
+/**
+ * @generated from message everstack.operations.v1.GetWorkloadResponse
+ */
+export declare type GetWorkloadResponseJson = {
+  /**
+   * Identity only when workload_missing or snapshot_unavailable is true.
+   *
+   * @generated from field: everstack.operations.v1.WorkloadSnapshot workload = 1;
+   */
+  workload?: WorkloadSnapshotJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp collected_at = 2;
+   */
+  collectedAt?: TimestampJson;
+
+  /**
+   * @generated from field: bool snapshot_stale = 3;
+   */
+  snapshotStale?: boolean;
+
+  /**
+   * @generated from field: everstack.operations.v1.WorkloadImpact impact = 4;
+   */
+  impact?: WorkloadImpactJson;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.OperationsEvent related_events = 5;
+   */
+  relatedEvents?: OperationsEventJson[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.Incident related_incidents = 6;
+   */
+  relatedIncidents?: IncidentJson[];
+
+  /**
+   * Missing from a successfully collected current snapshot, not a 404.
+   *
+   * @generated from field: bool workload_missing = 7;
+   */
+  workloadMissing?: boolean;
+
+  /**
+   * @generated from field: everstack.operations.v1.EnvironmentSummary environment = 8;
+   */
+  environment?: EnvironmentSummaryJson;
+
+  /**
+   * @generated from field: bool snapshot_unavailable = 9;
+   */
+  snapshotUnavailable?: boolean;
+
+  /**
+   * @generated from field: bool impact_unavailable = 10;
+   */
+  impactUnavailable?: boolean;
+
+  /**
+   * @generated from field: bool related_events_unavailable = 11;
+   */
+  relatedEventsUnavailable?: boolean;
+
+  /**
+   * @generated from field: bool related_incidents_unavailable = 12;
+   */
+  relatedIncidentsUnavailable?: boolean;
+
+  /**
+   * Inclusive bounds used for related_events, preserved even for empty results.
+   *
+   * @generated from field: google.protobuf.Timestamp events_since = 13;
+   */
+  eventsSince?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp events_until = 14;
+   */
+  eventsUntil?: TimestampJson;
+
+  /**
+   * @generated from field: string data_source_id = 15;
+   */
+  dataSourceId?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.GetWorkloadResponse.
+ * Use `create(GetWorkloadResponseSchema)` to create a new message.
+ */
+export declare const GetWorkloadResponseSchema: GenMessage<GetWorkloadResponse, GetWorkloadResponseJson>;
+
+/**
  * @generated from message everstack.operations.v1.OperationsEvent
  */
 export declare type OperationsEvent = Message<"everstack.operations.v1.OperationsEvent"> & {
@@ -2729,6 +5549,11 @@ export declare type AuditEvent = Message<"everstack.operations.v1.AuditEvent"> &
    * @generated from field: google.protobuf.Timestamp occurred_at = 11;
    */
   occurredAt?: Timestamp;
+
+  /**
+   * @generated from field: string data_source_id = 12;
+   */
+  dataSourceId: string;
 };
 
 /**
@@ -2789,6 +5614,11 @@ export declare type AuditEventJson = {
    * @generated from field: google.protobuf.Timestamp occurred_at = 11;
    */
   occurredAt?: TimestampJson;
+
+  /**
+   * @generated from field: string data_source_id = 12;
+   */
+  dataSourceId?: string;
 };
 
 /**
@@ -3032,11 +5862,15 @@ export declare const GetIdentityOverviewResponseSchema: GenMessage<GetIdentityOv
  */
 export declare type IdentityUserSummary = Message<"everstack.operations.v1.IdentityUserSummary"> & {
   /**
+   * Empty for PLATFORM_ONLY rows.
+   *
    * @generated from field: string identity_user_id = 1;
    */
   identityUserId: string;
 
   /**
+   * Empty for IDENTITY_ONLY rows.
+   *
    * @generated from field: string everstack_user_id = 2;
    */
   everstackUserId: string;
@@ -3085,6 +5919,16 @@ export declare type IdentityUserSummary = Message<"everstack.operations.v1.Ident
    * @generated from field: repeated string authentication_methods = 11;
    */
   authenticationMethods: string[];
+
+  /**
+   * @generated from field: everstack.operations.v1.IdentityLinkage linkage = 12;
+   */
+  linkage: IdentityLinkage;
+
+  /**
+   * @generated from field: int32 organization_count = 13;
+   */
+  organizationCount: number;
 };
 
 /**
@@ -3092,11 +5936,15 @@ export declare type IdentityUserSummary = Message<"everstack.operations.v1.Ident
  */
 export declare type IdentityUserSummaryJson = {
   /**
+   * Empty for PLATFORM_ONLY rows.
+   *
    * @generated from field: string identity_user_id = 1;
    */
   identityUserId?: string;
 
   /**
+   * Empty for IDENTITY_ONLY rows.
+   *
    * @generated from field: string everstack_user_id = 2;
    */
   everstackUserId?: string;
@@ -3145,6 +5993,16 @@ export declare type IdentityUserSummaryJson = {
    * @generated from field: repeated string authentication_methods = 11;
    */
   authenticationMethods?: string[];
+
+  /**
+   * @generated from field: everstack.operations.v1.IdentityLinkage linkage = 12;
+   */
+  linkage?: IdentityLinkageJson;
+
+  /**
+   * @generated from field: int32 organization_count = 13;
+   */
+  organizationCount?: number;
 };
 
 /**
@@ -3217,6 +6075,13 @@ export declare type ListIdentityUsersResponse = Message<"everstack.operations.v1
    * @generated from field: string next_page_token = 3;
    */
   nextPageToken: string;
+
+  /**
+   * True when the identity schema could not be read.
+   *
+   * @generated from field: bool identity_unavailable = 4;
+   */
+  identityUnavailable: boolean;
 };
 
 /**
@@ -3237,6 +6102,13 @@ export declare type ListIdentityUsersResponseJson = {
    * @generated from field: string next_page_token = 3;
    */
   nextPageToken?: string;
+
+  /**
+   * True when the identity schema could not be read.
+   *
+   * @generated from field: bool identity_unavailable = 4;
+   */
+  identityUnavailable?: boolean;
 };
 
 /**
@@ -3244,6 +6116,302 @@ export declare type ListIdentityUsersResponseJson = {
  * Use `create(ListIdentityUsersResponseSchema)` to create a new message.
  */
 export declare const ListIdentityUsersResponseSchema: GenMessage<ListIdentityUsersResponse, ListIdentityUsersResponseJson>;
+
+/**
+ * @generated from message everstack.operations.v1.WorkspaceAccess
+ */
+export declare type WorkspaceAccess = Message<"everstack.operations.v1.WorkspaceAccess"> & {
+  /**
+   * @generated from field: string workspace_id = 1;
+   */
+  workspaceId: string;
+
+  /**
+   * @generated from field: string workspace_name = 2;
+   */
+  workspaceName: string;
+
+  /**
+   * @generated from field: string workspace_slug = 3;
+   */
+  workspaceSlug: string;
+
+  /**
+   * @generated from field: string role = 4;
+   */
+  role: string;
+
+  /**
+   * @generated from field: string environment = 5;
+   */
+  environment: string;
+
+  /**
+   * explicit is a workspace_members row; implicit is owner/admin access, as
+   * defined by services/auth/internal/service/organization_service.go.
+   *
+   * @generated from field: string access_source = 6;
+   */
+  accessSource: string;
+};
+
+/**
+ * @generated from message everstack.operations.v1.WorkspaceAccess
+ */
+export declare type WorkspaceAccessJson = {
+  /**
+   * @generated from field: string workspace_id = 1;
+   */
+  workspaceId?: string;
+
+  /**
+   * @generated from field: string workspace_name = 2;
+   */
+  workspaceName?: string;
+
+  /**
+   * @generated from field: string workspace_slug = 3;
+   */
+  workspaceSlug?: string;
+
+  /**
+   * @generated from field: string role = 4;
+   */
+  role?: string;
+
+  /**
+   * @generated from field: string environment = 5;
+   */
+  environment?: string;
+
+  /**
+   * explicit is a workspace_members row; implicit is owner/admin access, as
+   * defined by services/auth/internal/service/organization_service.go.
+   *
+   * @generated from field: string access_source = 6;
+   */
+  accessSource?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.WorkspaceAccess.
+ * Use `create(WorkspaceAccessSchema)` to create a new message.
+ */
+export declare const WorkspaceAccessSchema: GenMessage<WorkspaceAccess, WorkspaceAccessJson>;
+
+/**
+ * @generated from message everstack.operations.v1.OrganizationMembership
+ */
+export declare type OrganizationMembership = Message<"everstack.operations.v1.OrganizationMembership"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string organization_name = 2;
+   */
+  organizationName: string;
+
+  /**
+   * @generated from field: string organization_slug = 3;
+   */
+  organizationSlug: string;
+
+  /**
+   * @generated from field: string plan_tier = 4;
+   */
+  planTier: string;
+
+  /**
+   * @generated from field: string role = 5;
+   */
+  role: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp joined_at = 6;
+   */
+  joinedAt?: Timestamp;
+
+  /**
+   * @generated from field: int32 instance_count = 7;
+   */
+  instanceCount: number;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.WorkspaceAccess workspaces = 8;
+   */
+  workspaces: WorkspaceAccess[];
+
+  /**
+   * True when the organization has workspaces the user is not a member of.
+   *
+   * @generated from field: bool workspace_access_restricted = 9;
+   */
+  workspaceAccessRestricted: boolean;
+};
+
+/**
+ * @generated from message everstack.operations.v1.OrganizationMembership
+ */
+export declare type OrganizationMembershipJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+
+  /**
+   * @generated from field: string organization_name = 2;
+   */
+  organizationName?: string;
+
+  /**
+   * @generated from field: string organization_slug = 3;
+   */
+  organizationSlug?: string;
+
+  /**
+   * @generated from field: string plan_tier = 4;
+   */
+  planTier?: string;
+
+  /**
+   * @generated from field: string role = 5;
+   */
+  role?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp joined_at = 6;
+   */
+  joinedAt?: TimestampJson;
+
+  /**
+   * @generated from field: int32 instance_count = 7;
+   */
+  instanceCount?: number;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.WorkspaceAccess workspaces = 8;
+   */
+  workspaces?: WorkspaceAccessJson[];
+
+  /**
+   * True when the organization has workspaces the user is not a member of.
+   *
+   * @generated from field: bool workspace_access_restricted = 9;
+   */
+  workspaceAccessRestricted?: boolean;
+};
+
+/**
+ * Describes the message everstack.operations.v1.OrganizationMembership.
+ * Use `create(OrganizationMembershipSchema)` to create a new message.
+ */
+export declare const OrganizationMembershipSchema: GenMessage<OrganizationMembership, OrganizationMembershipJson>;
+
+/**
+ * @generated from message everstack.operations.v1.GetCustomerUserRequest
+ */
+export declare type GetCustomerUserRequest = Message<"everstack.operations.v1.GetCustomerUserRequest"> & {
+  /**
+   * At least one identifier must be set.
+   *
+   * @generated from field: string identity_user_id = 1;
+   */
+  identityUserId: string;
+
+  /**
+   * @generated from field: string everstack_user_id = 2;
+   */
+  everstackUserId: string;
+};
+
+/**
+ * @generated from message everstack.operations.v1.GetCustomerUserRequest
+ */
+export declare type GetCustomerUserRequestJson = {
+  /**
+   * At least one identifier must be set.
+   *
+   * @generated from field: string identity_user_id = 1;
+   */
+  identityUserId?: string;
+
+  /**
+   * @generated from field: string everstack_user_id = 2;
+   */
+  everstackUserId?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.GetCustomerUserRequest.
+ * Use `create(GetCustomerUserRequestSchema)` to create a new message.
+ */
+export declare const GetCustomerUserRequestSchema: GenMessage<GetCustomerUserRequest, GetCustomerUserRequestJson>;
+
+/**
+ * @generated from message everstack.operations.v1.GetCustomerUserResponse
+ */
+export declare type GetCustomerUserResponse = Message<"everstack.operations.v1.GetCustomerUserResponse"> & {
+  /**
+   * @generated from field: everstack.operations.v1.IdentityUserSummary user = 1;
+   */
+  user?: IdentityUserSummary;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.OrganizationMembership memberships = 2;
+   */
+  memberships: OrganizationMembership[];
+
+  /**
+   * True when the platform database could not be read.
+   *
+   * @generated from field: bool memberships_unavailable = 3;
+   */
+  membershipsUnavailable: boolean;
+
+  /**
+   * True when the identity schema could not be read.
+   *
+   * @generated from field: bool identity_unavailable = 4;
+   */
+  identityUnavailable: boolean;
+};
+
+/**
+ * @generated from message everstack.operations.v1.GetCustomerUserResponse
+ */
+export declare type GetCustomerUserResponseJson = {
+  /**
+   * @generated from field: everstack.operations.v1.IdentityUserSummary user = 1;
+   */
+  user?: IdentityUserSummaryJson;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.OrganizationMembership memberships = 2;
+   */
+  memberships?: OrganizationMembershipJson[];
+
+  /**
+   * True when the platform database could not be read.
+   *
+   * @generated from field: bool memberships_unavailable = 3;
+   */
+  membershipsUnavailable?: boolean;
+
+  /**
+   * True when the identity schema could not be read.
+   *
+   * @generated from field: bool identity_unavailable = 4;
+   */
+  identityUnavailable?: boolean;
+};
+
+/**
+ * Describes the message everstack.operations.v1.GetCustomerUserResponse.
+ * Use `create(GetCustomerUserResponseSchema)` to create a new message.
+ */
+export declare const GetCustomerUserResponseSchema: GenMessage<GetCustomerUserResponse, GetCustomerUserResponseJson>;
 
 /**
  * @generated from message everstack.operations.v1.IdentitySessionSummary
@@ -4077,6 +7245,40 @@ export declare type Incident = Message<"everstack.operations.v1.Incident"> & {
    * @generated from field: google.protobuf.Timestamp snoozed_until = 23;
    */
   snoozedUntil?: Timestamp;
+
+  /**
+   * Names the data source whose control plane owns this incident.
+   *
+   * @generated from field: string data_source_id = 24;
+   */
+  dataSourceId: string;
+
+  /**
+   * Human workflow, deliberately separate from `status`, which is the observed
+   * condition. A recurrence re-fires the condition; it must not erase that
+   * somebody had taken ownership.
+   *
+   * @generated from field: string assigned_to = 25;
+   */
+  assignedTo: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp assigned_at = 26;
+   */
+  assignedAt?: Timestamp;
+
+  /**
+   * @generated from field: string resolution_note = 27;
+   */
+  resolutionNote: string;
+
+  /**
+   * Optimistic-concurrency token. A mutation sends back the value it last saw
+   * so a second operator cannot silently overwrite the first.
+   *
+   * @generated from field: google.protobuf.Timestamp updated_at = 28;
+   */
+  updatedAt?: Timestamp;
 };
 
 /**
@@ -4207,6 +7409,40 @@ export declare type IncidentJson = {
    * @generated from field: google.protobuf.Timestamp snoozed_until = 23;
    */
   snoozedUntil?: TimestampJson;
+
+  /**
+   * Names the data source whose control plane owns this incident.
+   *
+   * @generated from field: string data_source_id = 24;
+   */
+  dataSourceId?: string;
+
+  /**
+   * Human workflow, deliberately separate from `status`, which is the observed
+   * condition. A recurrence re-fires the condition; it must not erase that
+   * somebody had taken ownership.
+   *
+   * @generated from field: string assigned_to = 25;
+   */
+  assignedTo?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp assigned_at = 26;
+   */
+  assignedAt?: TimestampJson;
+
+  /**
+   * @generated from field: string resolution_note = 27;
+   */
+  resolutionNote?: string;
+
+  /**
+   * Optimistic-concurrency token. A mutation sends back the value it last saw
+   * so a second operator cannot silently overwrite the first.
+   *
+   * @generated from field: google.protobuf.Timestamp updated_at = 28;
+   */
+  updatedAt?: TimestampJson;
 };
 
 /**
@@ -4672,6 +7908,240 @@ export declare type SnoozeIncidentResponseJson = {
 export declare const SnoozeIncidentResponseSchema: GenMessage<SnoozeIncidentResponse, SnoozeIncidentResponseJson>;
 
 /**
+ * @generated from message everstack.operations.v1.AssignIncidentRequest
+ */
+export declare type AssignIncidentRequest = Message<"everstack.operations.v1.AssignIncidentRequest"> & {
+  /**
+   * @generated from field: string incident_id = 1;
+   */
+  incidentId: string;
+
+  /**
+   * Empty clears the assignment.
+   *
+   * @generated from field: string assignee = 2;
+   */
+  assignee: string;
+
+  /**
+   * The `updated_at` the operator last saw. Omit only for machine callers.
+   *
+   * @generated from field: google.protobuf.Timestamp expected_updated_at = 3;
+   */
+  expectedUpdatedAt?: Timestamp;
+};
+
+/**
+ * @generated from message everstack.operations.v1.AssignIncidentRequest
+ */
+export declare type AssignIncidentRequestJson = {
+  /**
+   * @generated from field: string incident_id = 1;
+   */
+  incidentId?: string;
+
+  /**
+   * Empty clears the assignment.
+   *
+   * @generated from field: string assignee = 2;
+   */
+  assignee?: string;
+
+  /**
+   * The `updated_at` the operator last saw. Omit only for machine callers.
+   *
+   * @generated from field: google.protobuf.Timestamp expected_updated_at = 3;
+   */
+  expectedUpdatedAt?: TimestampJson;
+};
+
+/**
+ * Describes the message everstack.operations.v1.AssignIncidentRequest.
+ * Use `create(AssignIncidentRequestSchema)` to create a new message.
+ */
+export declare const AssignIncidentRequestSchema: GenMessage<AssignIncidentRequest, AssignIncidentRequestJson>;
+
+/**
+ * @generated from message everstack.operations.v1.AssignIncidentResponse
+ */
+export declare type AssignIncidentResponse = Message<"everstack.operations.v1.AssignIncidentResponse"> & {
+  /**
+   * @generated from field: everstack.operations.v1.Incident incident = 1;
+   */
+  incident?: Incident;
+};
+
+/**
+ * @generated from message everstack.operations.v1.AssignIncidentResponse
+ */
+export declare type AssignIncidentResponseJson = {
+  /**
+   * @generated from field: everstack.operations.v1.Incident incident = 1;
+   */
+  incident?: IncidentJson;
+};
+
+/**
+ * Describes the message everstack.operations.v1.AssignIncidentResponse.
+ * Use `create(AssignIncidentResponseSchema)` to create a new message.
+ */
+export declare const AssignIncidentResponseSchema: GenMessage<AssignIncidentResponse, AssignIncidentResponseJson>;
+
+/**
+ * @generated from message everstack.operations.v1.AddIncidentNoteRequest
+ */
+export declare type AddIncidentNoteRequest = Message<"everstack.operations.v1.AddIncidentNoteRequest"> & {
+  /**
+   * @generated from field: string incident_id = 1;
+   */
+  incidentId: string;
+
+  /**
+   * @generated from field: string note = 2;
+   */
+  note: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp expected_updated_at = 3;
+   */
+  expectedUpdatedAt?: Timestamp;
+};
+
+/**
+ * @generated from message everstack.operations.v1.AddIncidentNoteRequest
+ */
+export declare type AddIncidentNoteRequestJson = {
+  /**
+   * @generated from field: string incident_id = 1;
+   */
+  incidentId?: string;
+
+  /**
+   * @generated from field: string note = 2;
+   */
+  note?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp expected_updated_at = 3;
+   */
+  expectedUpdatedAt?: TimestampJson;
+};
+
+/**
+ * Describes the message everstack.operations.v1.AddIncidentNoteRequest.
+ * Use `create(AddIncidentNoteRequestSchema)` to create a new message.
+ */
+export declare const AddIncidentNoteRequestSchema: GenMessage<AddIncidentNoteRequest, AddIncidentNoteRequestJson>;
+
+/**
+ * @generated from message everstack.operations.v1.AddIncidentNoteResponse
+ */
+export declare type AddIncidentNoteResponse = Message<"everstack.operations.v1.AddIncidentNoteResponse"> & {
+  /**
+   * @generated from field: everstack.operations.v1.Incident incident = 1;
+   */
+  incident?: Incident;
+};
+
+/**
+ * @generated from message everstack.operations.v1.AddIncidentNoteResponse
+ */
+export declare type AddIncidentNoteResponseJson = {
+  /**
+   * @generated from field: everstack.operations.v1.Incident incident = 1;
+   */
+  incident?: IncidentJson;
+};
+
+/**
+ * Describes the message everstack.operations.v1.AddIncidentNoteResponse.
+ * Use `create(AddIncidentNoteResponseSchema)` to create a new message.
+ */
+export declare const AddIncidentNoteResponseSchema: GenMessage<AddIncidentNoteResponse, AddIncidentNoteResponseJson>;
+
+/**
+ * @generated from message everstack.operations.v1.ListIncidentsForSubjectRequest
+ */
+export declare type ListIncidentsForSubjectRequest = Message<"everstack.operations.v1.ListIncidentsForSubjectRequest"> & {
+  /**
+   * @generated from field: string subject_kind = 1;
+   */
+  subjectKind: string;
+
+  /**
+   * @generated from field: string subject_id = 2;
+   */
+  subjectId: string;
+
+  /**
+   * @generated from field: bool include_resolved = 3;
+   */
+  includeResolved: boolean;
+};
+
+/**
+ * @generated from message everstack.operations.v1.ListIncidentsForSubjectRequest
+ */
+export declare type ListIncidentsForSubjectRequestJson = {
+  /**
+   * @generated from field: string subject_kind = 1;
+   */
+  subjectKind?: string;
+
+  /**
+   * @generated from field: string subject_id = 2;
+   */
+  subjectId?: string;
+
+  /**
+   * @generated from field: bool include_resolved = 3;
+   */
+  includeResolved?: boolean;
+};
+
+/**
+ * Describes the message everstack.operations.v1.ListIncidentsForSubjectRequest.
+ * Use `create(ListIncidentsForSubjectRequestSchema)` to create a new message.
+ */
+export declare const ListIncidentsForSubjectRequestSchema: GenMessage<ListIncidentsForSubjectRequest, ListIncidentsForSubjectRequestJson>;
+
+/**
+ * @generated from message everstack.operations.v1.ListIncidentsForSubjectResponse
+ */
+export declare type ListIncidentsForSubjectResponse = Message<"everstack.operations.v1.ListIncidentsForSubjectResponse"> & {
+  /**
+   * @generated from field: repeated everstack.operations.v1.Incident active = 1;
+   */
+  active: Incident[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.Incident historical = 2;
+   */
+  historical: Incident[];
+};
+
+/**
+ * @generated from message everstack.operations.v1.ListIncidentsForSubjectResponse
+ */
+export declare type ListIncidentsForSubjectResponseJson = {
+  /**
+   * @generated from field: repeated everstack.operations.v1.Incident active = 1;
+   */
+  active?: IncidentJson[];
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.Incident historical = 2;
+   */
+  historical?: IncidentJson[];
+};
+
+/**
+ * Describes the message everstack.operations.v1.ListIncidentsForSubjectResponse.
+ * Use `create(ListIncidentsForSubjectResponseSchema)` to create a new message.
+ */
+export declare const ListIncidentsForSubjectResponseSchema: GenMessage<ListIncidentsForSubjectResponse, ListIncidentsForSubjectResponseJson>;
+
+/**
  * @generated from message everstack.operations.v1.ResolveIncidentRequest
  */
 export declare type ResolveIncidentRequest = Message<"everstack.operations.v1.ResolveIncidentRequest"> & {
@@ -5102,6 +8572,276 @@ export declare type ListNotificationTargetsResponseJson = {
 export declare const ListNotificationTargetsResponseSchema: GenMessage<ListNotificationTargetsResponse, ListNotificationTargetsResponseJson>;
 
 /**
+ * InstanceErrorGroup is one failure message and how often it occurred.
+ *
+ * Deliberately not classified into categories: the telemetry carries no
+ * normalized error type, so grouping by message reports what happened, while
+ * deriving categories from the free-text message would mislabel every message
+ * whose wording changes.
+ *
+ * @generated from message everstack.operations.v1.InstanceErrorGroup
+ */
+export declare type InstanceErrorGroup = Message<"everstack.operations.v1.InstanceErrorGroup"> & {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message: string;
+
+  /**
+   * @generated from field: string status_code = 2;
+   */
+  statusCode: string;
+
+  /**
+   * @generated from field: int64 count = 3;
+   */
+  count: bigint;
+};
+
+/**
+ * InstanceErrorGroup is one failure message and how often it occurred.
+ *
+ * Deliberately not classified into categories: the telemetry carries no
+ * normalized error type, so grouping by message reports what happened, while
+ * deriving categories from the free-text message would mislabel every message
+ * whose wording changes.
+ *
+ * @generated from message everstack.operations.v1.InstanceErrorGroup
+ */
+export declare type InstanceErrorGroupJson = {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message?: string;
+
+  /**
+   * @generated from field: string status_code = 2;
+   */
+  statusCode?: string;
+
+  /**
+   * @generated from field: int64 count = 3;
+   */
+  count?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.InstanceErrorGroup.
+ * Use `create(InstanceErrorGroupSchema)` to create a new message.
+ */
+export declare const InstanceErrorGroupSchema: GenMessage<InstanceErrorGroup, InstanceErrorGroupJson>;
+
+/**
+ * DiagnosticsCoverage is how much of this instance's activity we can actually
+ * see. Without it, "few requests" and "we cannot see this customer's requests"
+ * look identical on the page.
+ *
+ * @generated from message everstack.operations.v1.DiagnosticsCoverage
+ */
+export declare type DiagnosticsCoverage = Message<"everstack.operations.v1.DiagnosticsCoverage"> & {
+  /**
+   * @generated from field: int64 spans_in_window = 1;
+   */
+  spansInWindow: bigint;
+
+  /**
+   * @generated from field: int64 spans_with_tenant = 2;
+   */
+  spansWithTenant: bigint;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp newest_span = 3;
+   */
+  newestSpan?: Timestamp;
+
+  /**
+   * @generated from field: bool telemetry_readable = 4;
+   */
+  telemetryReadable: boolean;
+
+  /**
+   * Plain-language statement of what the numbers below do and do not cover.
+   *
+   * @generated from field: string note = 5;
+   */
+  note: string;
+};
+
+/**
+ * DiagnosticsCoverage is how much of this instance's activity we can actually
+ * see. Without it, "few requests" and "we cannot see this customer's requests"
+ * look identical on the page.
+ *
+ * @generated from message everstack.operations.v1.DiagnosticsCoverage
+ */
+export declare type DiagnosticsCoverageJson = {
+  /**
+   * @generated from field: int64 spans_in_window = 1;
+   */
+  spansInWindow?: string;
+
+  /**
+   * @generated from field: int64 spans_with_tenant = 2;
+   */
+  spansWithTenant?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp newest_span = 3;
+   */
+  newestSpan?: TimestampJson;
+
+  /**
+   * @generated from field: bool telemetry_readable = 4;
+   */
+  telemetryReadable?: boolean;
+
+  /**
+   * Plain-language statement of what the numbers below do and do not cover.
+   *
+   * @generated from field: string note = 5;
+   */
+  note?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.DiagnosticsCoverage.
+ * Use `create(DiagnosticsCoverageSchema)` to create a new message.
+ */
+export declare const DiagnosticsCoverageSchema: GenMessage<DiagnosticsCoverage, DiagnosticsCoverageJson>;
+
+/**
+ * @generated from message everstack.operations.v1.GetInstanceDiagnosticsRequest
+ */
+export declare type GetInstanceDiagnosticsRequest = Message<"everstack.operations.v1.GetInstanceDiagnosticsRequest"> & {
+  /**
+   * @generated from field: string instance_id = 1;
+   */
+  instanceId: string;
+};
+
+/**
+ * @generated from message everstack.operations.v1.GetInstanceDiagnosticsRequest
+ */
+export declare type GetInstanceDiagnosticsRequestJson = {
+  /**
+   * @generated from field: string instance_id = 1;
+   */
+  instanceId?: string;
+};
+
+/**
+ * Describes the message everstack.operations.v1.GetInstanceDiagnosticsRequest.
+ * Use `create(GetInstanceDiagnosticsRequestSchema)` to create a new message.
+ */
+export declare const GetInstanceDiagnosticsRequestSchema: GenMessage<GetInstanceDiagnosticsRequest, GetInstanceDiagnosticsRequestJson>;
+
+/**
+ * @generated from message everstack.operations.v1.GetInstanceDiagnosticsResponse
+ */
+export declare type GetInstanceDiagnosticsResponse = Message<"everstack.operations.v1.GetInstanceDiagnosticsResponse"> & {
+  /**
+   * @generated from field: google.protobuf.Timestamp window_start = 1;
+   */
+  windowStart?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp window_end = 2;
+   */
+  windowEnd?: Timestamp;
+
+  /**
+   * @generated from field: int64 requests = 3;
+   */
+  requests: bigint;
+
+  /**
+   * @generated from field: int64 failed = 4;
+   */
+  failed: bigint;
+
+  /**
+   * @generated from field: double p50_millis = 5;
+   */
+  p50Millis: number;
+
+  /**
+   * @generated from field: double p95_millis = 6;
+   */
+  p95Millis: number;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_active = 7;
+   */
+  lastActive?: Timestamp;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.InstanceErrorGroup errors = 8;
+   */
+  errors: InstanceErrorGroup[];
+
+  /**
+   * @generated from field: everstack.operations.v1.DiagnosticsCoverage coverage = 9;
+   */
+  coverage?: DiagnosticsCoverage;
+};
+
+/**
+ * @generated from message everstack.operations.v1.GetInstanceDiagnosticsResponse
+ */
+export declare type GetInstanceDiagnosticsResponseJson = {
+  /**
+   * @generated from field: google.protobuf.Timestamp window_start = 1;
+   */
+  windowStart?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp window_end = 2;
+   */
+  windowEnd?: TimestampJson;
+
+  /**
+   * @generated from field: int64 requests = 3;
+   */
+  requests?: string;
+
+  /**
+   * @generated from field: int64 failed = 4;
+   */
+  failed?: string;
+
+  /**
+   * @generated from field: double p50_millis = 5;
+   */
+  p50Millis?: number | "NaN" | "Infinity" | "-Infinity";
+
+  /**
+   * @generated from field: double p95_millis = 6;
+   */
+  p95Millis?: number | "NaN" | "Infinity" | "-Infinity";
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_active = 7;
+   */
+  lastActive?: TimestampJson;
+
+  /**
+   * @generated from field: repeated everstack.operations.v1.InstanceErrorGroup errors = 8;
+   */
+  errors?: InstanceErrorGroupJson[];
+
+  /**
+   * @generated from field: everstack.operations.v1.DiagnosticsCoverage coverage = 9;
+   */
+  coverage?: DiagnosticsCoverageJson;
+};
+
+/**
+ * Describes the message everstack.operations.v1.GetInstanceDiagnosticsResponse.
+ * Use `create(GetInstanceDiagnosticsResponseSchema)` to create a new message.
+ */
+export declare const GetInstanceDiagnosticsResponseSchema: GenMessage<GetInstanceDiagnosticsResponse, GetInstanceDiagnosticsResponseJson>;
+
+/**
  * @generated from enum everstack.operations.v1.StaffRole
  */
 export enum StaffRole {
@@ -5175,6 +8915,51 @@ export declare type SnapshotFreshnessJson = "SNAPSHOT_FRESHNESS_UNSPECIFIED" | "
  * Describes the enum everstack.operations.v1.SnapshotFreshness.
  */
 export declare const SnapshotFreshnessSchema: GenEnum<SnapshotFreshness, SnapshotFreshnessJson>;
+
+/**
+ * @generated from enum everstack.operations.v1.SourceState
+ */
+export enum SourceState {
+  /**
+   * @generated from enum value: SOURCE_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: SOURCE_STATE_OK = 1;
+   */
+  OK = 1,
+
+  /**
+   * @generated from enum value: SOURCE_STATE_STALE = 2;
+   */
+  STALE = 2,
+
+  /**
+   * UNAVAILABLE means the probe failed. Do not collapse it into
+   * NOT_CONFIGURED: a configured source that cannot be reached needs action.
+   *
+   * @generated from enum value: SOURCE_STATE_UNAVAILABLE = 3;
+   */
+  UNAVAILABLE = 3,
+
+  /**
+   * NOT_CONFIGURED means this deployment does not have the source.
+   *
+   * @generated from enum value: SOURCE_STATE_NOT_CONFIGURED = 4;
+   */
+  NOT_CONFIGURED = 4,
+}
+
+/**
+ * @generated from enum everstack.operations.v1.SourceState
+ */
+export declare type SourceStateJson = "SOURCE_STATE_UNSPECIFIED" | "SOURCE_STATE_OK" | "SOURCE_STATE_STALE" | "SOURCE_STATE_UNAVAILABLE" | "SOURCE_STATE_NOT_CONFIGURED";
+
+/**
+ * Describes the enum everstack.operations.v1.SourceState.
+ */
+export declare const SourceStateSchema: GenEnum<SourceState, SourceStateJson>;
 
 /**
  * @generated from enum everstack.operations.v1.EventSeverity
@@ -5297,6 +9082,50 @@ export declare type InstallationConnectivityJson = "INSTALLATION_CONNECTIVITY_UN
 export declare const InstallationConnectivitySchema: GenEnum<InstallationConnectivity, InstallationConnectivityJson>;
 
 /**
+ * @generated from enum everstack.operations.v1.IdentityLinkage
+ */
+export enum IdentityLinkage {
+  /**
+   * No linkage classification was supplied.
+   *
+   * @generated from enum value: IDENTITY_LINKAGE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * An identity record joined to a platform user.
+   *
+   * @generated from enum value: IDENTITY_LINKAGE_LINKED = 1;
+   */
+  LINKED = 1,
+
+  /**
+   * Signed up but never became a platform user.
+   *
+   * @generated from enum value: IDENTITY_LINKAGE_IDENTITY_ONLY = 2;
+   */
+  IDENTITY_ONLY = 2,
+
+  /**
+   * A platform user with no current native identity link, for example a
+   * WorkOS-era account.
+   *
+   * @generated from enum value: IDENTITY_LINKAGE_PLATFORM_ONLY = 3;
+   */
+  PLATFORM_ONLY = 3,
+}
+
+/**
+ * @generated from enum everstack.operations.v1.IdentityLinkage
+ */
+export declare type IdentityLinkageJson = "IDENTITY_LINKAGE_UNSPECIFIED" | "IDENTITY_LINKAGE_LINKED" | "IDENTITY_LINKAGE_IDENTITY_ONLY" | "IDENTITY_LINKAGE_PLATFORM_ONLY";
+
+/**
+ * Describes the enum everstack.operations.v1.IdentityLinkage.
+ */
+export declare const IdentityLinkageSchema: GenEnum<IdentityLinkage, IdentityLinkageJson>;
+
+/**
  * @generated from enum everstack.operations.v1.InstanceLifecycleAction
  */
 export enum InstanceLifecycleAction {
@@ -5330,6 +9159,159 @@ export declare type InstanceLifecycleActionJson = "INSTANCE_LIFECYCLE_ACTION_UNS
  * Describes the enum everstack.operations.v1.InstanceLifecycleAction.
  */
 export declare const InstanceLifecycleActionSchema: GenEnum<InstanceLifecycleAction, InstanceLifecycleActionJson>;
+
+/**
+ * @generated from enum everstack.operations.v1.AutomationKind
+ */
+export enum AutomationKind {
+  /**
+   * @generated from enum value: AUTOMATION_KIND_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: AUTOMATION_KIND_AGENT_TRIGGER = 1;
+   */
+  AGENT_TRIGGER = 1,
+
+  /**
+   * @generated from enum value: AUTOMATION_KIND_SANDBOX_CRON = 2;
+   */
+  SANDBOX_CRON = 2,
+
+  /**
+   * @generated from enum value: AUTOMATION_KIND_SANDBOX_WEBHOOK = 3;
+   */
+  SANDBOX_WEBHOOK = 3,
+
+  /**
+   * @generated from enum value: AUTOMATION_KIND_EVAL_SCHEDULE = 4;
+   */
+  EVAL_SCHEDULE = 4,
+}
+
+/**
+ * @generated from enum everstack.operations.v1.AutomationKind
+ */
+export declare type AutomationKindJson = "AUTOMATION_KIND_UNSPECIFIED" | "AUTOMATION_KIND_AGENT_TRIGGER" | "AUTOMATION_KIND_SANDBOX_CRON" | "AUTOMATION_KIND_SANDBOX_WEBHOOK" | "AUTOMATION_KIND_EVAL_SCHEDULE";
+
+/**
+ * Describes the enum everstack.operations.v1.AutomationKind.
+ */
+export declare const AutomationKindSchema: GenEnum<AutomationKind, AutomationKindJson>;
+
+/**
+ * @generated from enum everstack.operations.v1.AutomationCoverageState
+ */
+export enum AutomationCoverageState {
+  /**
+   * @generated from enum value: AUTOMATION_COVERAGE_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: AUTOMATION_COVERAGE_STATE_AVAILABLE = 1;
+   */
+  AVAILABLE = 1,
+
+  /**
+   * @generated from enum value: AUTOMATION_COVERAGE_STATE_PARTIAL = 2;
+   */
+  PARTIAL = 2,
+
+  /**
+   * @generated from enum value: AUTOMATION_COVERAGE_STATE_UNAVAILABLE = 3;
+   */
+  UNAVAILABLE = 3,
+}
+
+/**
+ * @generated from enum everstack.operations.v1.AutomationCoverageState
+ */
+export declare type AutomationCoverageStateJson = "AUTOMATION_COVERAGE_STATE_UNSPECIFIED" | "AUTOMATION_COVERAGE_STATE_AVAILABLE" | "AUTOMATION_COVERAGE_STATE_PARTIAL" | "AUTOMATION_COVERAGE_STATE_UNAVAILABLE";
+
+/**
+ * Describes the enum everstack.operations.v1.AutomationCoverageState.
+ */
+export declare const AutomationCoverageStateSchema: GenEnum<AutomationCoverageState, AutomationCoverageStateJson>;
+
+/**
+ * @generated from enum everstack.operations.v1.CollectionState
+ */
+export enum CollectionState {
+  /**
+   * @generated from enum value: COLLECTION_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: COLLECTION_STATE_AVAILABLE = 1;
+   */
+  AVAILABLE = 1,
+
+  /**
+   * @generated from enum value: COLLECTION_STATE_PARTIAL = 2;
+   */
+  PARTIAL = 2,
+
+  /**
+   * @generated from enum value: COLLECTION_STATE_UNAVAILABLE = 3;
+   */
+  UNAVAILABLE = 3,
+}
+
+/**
+ * @generated from enum everstack.operations.v1.CollectionState
+ */
+export declare type CollectionStateJson = "COLLECTION_STATE_UNSPECIFIED" | "COLLECTION_STATE_AVAILABLE" | "COLLECTION_STATE_PARTIAL" | "COLLECTION_STATE_UNAVAILABLE";
+
+/**
+ * Describes the enum everstack.operations.v1.CollectionState.
+ */
+export declare const CollectionStateSchema: GenEnum<CollectionState, CollectionStateJson>;
+
+/**
+ * @generated from enum everstack.operations.v1.ImpactCertainty
+ */
+export enum ImpactCertainty {
+  /**
+   * @generated from enum value: IMPACT_CERTAINTY_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Authoritative placement ties this instance to the component.
+   *
+   * @generated from enum value: IMPACT_CERTAINTY_DIRECT = 1;
+   */
+  DIRECT = 1,
+
+  /**
+   * A shared service every instance in the environment depends on. This is
+   * not proof that any one customer is affected.
+   *
+   * @generated from enum value: IMPACT_CERTAINTY_POTENTIAL = 2;
+   */
+  POTENTIAL = 2,
+
+  /**
+   * No relationship can be established from stored metadata. Never display
+   * this as "unaffected".
+   *
+   * @generated from enum value: IMPACT_CERTAINTY_UNMAPPED = 3;
+   */
+  UNMAPPED = 3,
+}
+
+/**
+ * @generated from enum everstack.operations.v1.ImpactCertainty
+ */
+export declare type ImpactCertaintyJson = "IMPACT_CERTAINTY_UNSPECIFIED" | "IMPACT_CERTAINTY_DIRECT" | "IMPACT_CERTAINTY_POTENTIAL" | "IMPACT_CERTAINTY_UNMAPPED";
+
+/**
+ * Describes the enum everstack.operations.v1.ImpactCertainty.
+ */
+export declare const ImpactCertaintySchema: GenEnum<ImpactCertainty, ImpactCertaintyJson>;
 
 /**
  * @generated from enum everstack.operations.v1.IncidentSeverity

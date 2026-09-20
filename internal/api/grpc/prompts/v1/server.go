@@ -15,7 +15,7 @@ import (
 
 // Ensure Server implements ConnectServer contract from internal/api/grpc/server
 var _ interface {
-	RegisterConnectServer(...connect.Interceptor) (string, http.Handler)
+	RegisterConnectServer(...connect.HandlerOption) (string, http.Handler)
 	FileDescriptor() protoreflect.FileDescriptor
 } = (*PromptServer)(nil)
 
@@ -47,11 +47,13 @@ func (s *PromptServer) WithInterceptors(interceptors ...connect.Interceptor) *Pr
 
 // --- Connect plumbing ---
 
-func (s *PromptServer) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	all := make([]connect.Interceptor, 0, len(s.serviceInterceptors)+len(interceptors))
-	all = append(all, s.serviceInterceptors...)
-	all = append(all, interceptors...)
-	return promptsconnect.NewPromptServiceHandler(s, connect.WithInterceptors(all...))
+func (s *PromptServer) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	// The service\'s own interceptors run first, then whatever the caller
+	// supplied. connect accumulates interceptors across options, so this
+	// preserves the previous ordering while letting the caller pass other
+	// handler options through untouched.
+	all := append([]connect.HandlerOption{connect.WithInterceptors(s.serviceInterceptors...)}, opts...)
+	return promptsconnect.NewPromptServiceHandler(s, all...)
 }
 
 func (s *PromptServer) FileDescriptor() protoreflect.FileDescriptor {

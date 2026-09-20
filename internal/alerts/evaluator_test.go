@@ -1,6 +1,7 @@
 package alerts
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -183,5 +184,40 @@ func TestAllBuiltinRules(t *testing.T) {
 	}
 	if scoreCount != len(builtinOutcomeAlerts) {
 		t.Errorf("expected %d score-based rules, got %d", len(builtinOutcomeAlerts), scoreCount)
+	}
+}
+
+// TestNanoTimestampRangeBindsDateTime64 pins the bound form used against
+// DateTime64(9) columns. A plain "Timestamp >= ?" makes clickhouse-go
+// substitute a second-precision toDateTime(...), which the server must widen
+// to the column type — a conversion it raises, catches, and counts as
+// TYPE_MISMATCH on every single evaluation. Measured on eu-gra-1-prod: four
+// counted errors per score-rule query, ~34k/day, all of it invisible because
+// the query itself still succeeds.
+func TestNanoTimestampRangeBindsDateTime64(t *testing.T) {
+	got := nanoTimestampRange("Timestamp")
+	want := []string{
+		"Timestamp >= toDateTime64(?, 9)",
+		"Timestamp <= toDateTime64(?, 9)",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("nanoTimestampRange() returned %d conditions, want %d: %v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("nanoTimestampRange()[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+// TestNanoTimestampRangeIsIndexFriendly guards the other way the mismatch
+// could be "fixed": casting the column instead of the bound. toDateTime(Timestamp)
+// on the left-hand side matches types but discards the primary-key index, so
+// every alert evaluation would turn into a full scan.
+func TestNanoTimestampRangeIsIndexFriendly(t *testing.T) {
+	for _, cond := range nanoTimestampRange("Timestamp") {
+		if !strings.HasPrefix(cond, "Timestamp ") {
+			t.Errorf("condition %q wraps the column; the bare column must stay on the left so the index applies", cond)
+		}
 	}
 }

@@ -95,7 +95,7 @@ type SamplingParams struct {
 type TokenDetails struct {
 	CachedTokens     int `json:"cached_tokens,omitempty"`      // CacheReadTokens + CacheWriteTokens (legacy aggregate; kept for back-compat)
 	CacheReadTokens  int `json:"cache_read_tokens,omitempty"`  // Cache hits — re-using a prior request's cached prefix
-	CacheWriteTokens int `json:"cache_write_tokens,omitempty"` // Cache writes — tokens written into the cache this call (Anthropic only)
+	CacheWriteTokens int `json:"cache_write_tokens,omitempty"` // Cache writes — tokens written into the provider cache this call
 	ReasoningTokens  int `json:"reasoning_tokens,omitempty"`   // o1/o3 reasoning models
 	AudioTokens      int `json:"audio_tokens,omitempty"`       // Multimodal audio input/output
 	TextTokens       int `json:"text_tokens,omitempty"`        // Text tokens (when separated from audio); not used for cache split
@@ -123,12 +123,24 @@ func (u *Usage) CacheReadCount() int {
 	if u == nil || u.PromptDetails == nil {
 		return 0
 	}
-	// Prefer the explicit read count; fall back to the legacy aggregate for
-	// providers still reporting only CachedTokens.
-	if u.PromptDetails.CacheReadTokens > 0 {
+	// Prefer explicit buckets whenever either one is present. Falling back to
+	// the aggregate for a write-only request would incorrectly price every
+	// cache write as a cache read.
+	if u.PromptDetails.CacheReadTokens > 0 || u.PromptDetails.CacheWriteTokens > 0 {
 		return u.PromptDetails.CacheReadTokens
 	}
 	return u.PromptDetails.CachedTokens
+}
+
+// CacheWriteCount reports how many prompt tokens were written into the
+// provider's prompt cache, or zero when that bucket is not reported. The
+// legacy CachedTokens aggregate cannot identify writes, so it is never used as
+// a fallback here.
+func (u *Usage) CacheWriteCount() int {
+	if u == nil || u.PromptDetails == nil {
+		return 0
+	}
+	return u.PromptDetails.CacheWriteTokens
 }
 
 // Choice represents a single non-streaming choice from the model.
@@ -711,11 +723,28 @@ type ResponseUsage struct {
 
 // ResponseUsageDetails represents detailed token breakdown.
 type ResponseUsageDetails struct {
-	CachedTokens    int `json:"cached_tokens,omitempty"`
-	TextTokens      int `json:"text_tokens,omitempty"`
-	AudioTokens     int `json:"audio_tokens,omitempty"`
-	ImageTokens     int `json:"image_tokens,omitempty"`
-	ReasoningTokens int `json:"reasoning_tokens,omitempty"`
+	CachedTokens     int `json:"cached_tokens,omitempty"`
+	CacheWriteTokens int `json:"cache_write_tokens,omitempty"`
+	TextTokens       int `json:"text_tokens,omitempty"`
+	AudioTokens      int `json:"audio_tokens,omitempty"`
+	ImageTokens      int `json:"image_tokens,omitempty"`
+	ReasoningTokens  int `json:"reasoning_tokens,omitempty"`
+}
+
+// CacheReadCount reports the Responses API cached-input bucket.
+func (u *ResponseUsage) CacheReadCount() int {
+	if u == nil || u.InputTokensDetails == nil {
+		return 0
+	}
+	return u.InputTokensDetails.CachedTokens
+}
+
+// CacheWriteCount reports the Responses API cache-write bucket.
+func (u *ResponseUsage) CacheWriteCount() int {
+	if u == nil || u.InputTokensDetails == nil {
+		return 0
+	}
+	return u.InputTokensDetails.CacheWriteTokens
 }
 
 // IncompleteDetails represents why a response is incomplete.

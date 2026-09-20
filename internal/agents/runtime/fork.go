@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
+	"github.com/google/uuid"
 )
 
 // ForkConfig controls fork (context branch) behavior.
@@ -194,11 +194,11 @@ func (fm *ForkManager) runFork(
 
 	// Fork uses a simpler config: no tools, just thinking
 	forkConfig := LoopConfig{
-		MaxIterations:      10,
+		MaxIterations:       10,
 		MaxToolCallsPerTurn: 0,
-		MaxHistoryMessages: 100,
-		EnableStreaming:    false,
-		TurnTimeout:        fm.config.Timeout,
+		MaxHistoryMessages:  100,
+		EnableStreaming:     false,
+		TurnTimeout:         fm.config.Timeout,
 	}
 
 	forkLoop := NewLoop(fm.engine, nil, forkEmitter, forkConfig)
@@ -276,6 +276,8 @@ func (fm *ForkManager) runFork(
 				PromptTokens:     finalState.CumulativeUsage.PromptTokens,
 				CompletionTokens: finalState.CumulativeUsage.CompletionTokens,
 				TotalTokens:      finalState.CumulativeUsage.TotalTokens,
+				CacheReadTokens:  finalState.CumulativeUsage.CacheReadTokens,
+				CacheWriteTokens: finalState.CumulativeUsage.CacheWriteTokens,
 			},
 		}
 		fm.emitter.Emit(Event{
@@ -286,6 +288,8 @@ func (fm *ForkManager) runFork(
 				PromptTokens:     finalState.CumulativeUsage.PromptTokens,
 				CompletionTokens: finalState.CumulativeUsage.CompletionTokens,
 				TotalTokens:      finalState.CumulativeUsage.TotalTokens,
+				CacheReadTokens:  finalState.CumulativeUsage.CacheReadTokens,
+				CacheWriteTokens: finalState.CumulativeUsage.CacheWriteTokens,
 			},
 			Data: map[string]interface{}{
 				"fork_id":     forkID,

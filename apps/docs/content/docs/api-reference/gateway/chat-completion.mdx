@@ -75,7 +75,7 @@ full: true
 <Tab value="cURL">
 
 ```bash
-curl -X POST "http://localhost:8089/v1/chat/completions" \
+curl -X POST "http://localhost:8089/openai/v1/chat/completions" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"string","messages":[{"role":"ROLE_UNSPECIFIED","content":[],"toolCalls":[],"toolCallId":"string","name":"string"}],"sampling":{"temperature":0,"topP":0,"maxTokens":0,"stop":["string"],"maxCompletionTokens":0},"stream":true,"tools":[{"type":"string","function":{"name":"string","description":"string"}}],"toolChoice":{"mode":"string","specificTool":{"type":"string","function":{"name":"string","description":"string"}}},"parallelToolCalls":true}'
@@ -85,7 +85,7 @@ curl -X POST "http://localhost:8089/v1/chat/completions" \
 <Tab value="JavaScript">
 
 ```js
-const response = await fetch("http://localhost:8089/v1/chat/completions", {
+const response = await fetch("http://localhost:8089/openai/v1/chat/completions", {
   method: "POST",
   headers: {
     "Authorization": "Bearer YOUR_API_KEY",
@@ -144,7 +144,7 @@ const data = await response.json();
 import requests
 
 response = requests.post(
-    "http://localhost:8089/v1/chat/completions",
+    "http://localhost:8089/openai/v1/chat/completions",
     headers={
         "Authorization": "Bearer YOUR_API_KEY",
         "Content-Type": "application/json",

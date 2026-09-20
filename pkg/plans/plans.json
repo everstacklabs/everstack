@@ -2,6 +2,7 @@
   "plans": {
     "free": {
       "tier": "free",
+      "trial": null,
       "credit_grant_usd": 0,
       "inference_cap_usd": 5,
       "credit_rollover": false,
@@ -141,6 +142,7 @@
     },
     "basic": {
       "tier": "basic",
+      "trial": null,
       "credit_grant_usd": 20,
       "inference_cap_usd": 10,
       "credit_rollover": false,
@@ -287,6 +289,7 @@
     },
     "pro": {
       "tier": "pro",
+      "trial": null,
       "credit_grant_usd": 50,
       "inference_cap_usd": 25,
       "credit_rollover": false,
@@ -449,6 +452,7 @@
     },
     "enterprise": {
       "tier": "enterprise",
+      "trial": null,
       "credit_grant_usd": 0,
       "inference_cap_usd": 0,
       "credit_rollover": false,

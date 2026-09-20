@@ -9,7 +9,7 @@ COPY proto/ ./proto/
 COPY model-catalog/ ./model-catalog/
 COPY packages/ ./packages/
 COPY apps/admin/ ./apps/admin/
-COPY pkg/plans/plans.json ./pkg/plans/plans.json
+COPY services/license/config/plans.json ./services/license/config/plans.json
 
 RUN corepack enable && corepack prepare pnpm@10.5.2 --activate
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
@@ -51,7 +51,7 @@ COPY --from=go-builder /out/everstack /app/everstack
 COPY --from=go-builder --chown=everstack:everstack /src/cmd /app/cmd
 COPY --from=go-builder --chown=everstack:everstack /src/internal/database/migrations /app/internal/database/migrations
 COPY --from=go-builder --chown=everstack:everstack /src/model-catalog /app/model-catalog
-COPY --from=go-builder --chown=everstack:everstack /src/pkg/plans/plans.json /app/pkg/plans/plans.json
+COPY --from=go-builder --chown=everstack:everstack /src/services/license/config/plans.json /app/services/license/config/plans.json
 COPY --from=go-builder --chown=everstack:everstack /src/cmd/config/gateway/defaults/gateway-default.yaml /app/config/default.yaml
 RUN mkdir -p /app/data /app/logs && chown -R everstack:everstack /app
 

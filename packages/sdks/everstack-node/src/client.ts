@@ -35,6 +35,7 @@ import { ObservabilityService } from "@everstack/proto/everstack/traces/v1/obser
 import { TracesService } from "@everstack/proto/everstack/traces/v1/traces_service_pb.js";
 
 import { Agents } from "./resources/agents.js";
+import { OpenAIAgents } from "./resources/openai-agents.js";
 import { Audio } from "./resources/audio.js";
 import { Channels } from "./resources/channels.js";
 import { Chat } from "./resources/chat.js";
@@ -50,7 +51,7 @@ import { Rerank } from "./resources/rerank.js";
 import { Responses } from "./resources/responses.js";
 import { Scores } from "./resources/scores.js";
 import { Traces, type CaptureOptions } from "./resources/traces.js";
-import { createTransport, type TransportOptions } from "./transport.js";
+import { createTransport, type RuntimeKind, type TransportOptions } from "./transport.js";
 import type { AllModels } from "./generated/models.js";
 import { EVERSTACK_GATEWAY_URL } from "./compat.js";
 
@@ -58,8 +59,11 @@ import { EVERSTACK_GATEWAY_URL } from "./compat.js";
  * Options for creating a Everstack client
  */
 export interface EverstackOptions {
-  /** Everstack API key (required) */
-  apiKey: string;
+  /** Everstack API key. OpenAI Agents may instead use accessToken. */
+  apiKey?: string;
+
+  /** User bearer token for OpenAI Agents mutations; may refresh before each request. */
+  accessToken?: string | (() => Promise<string>);
 
   /** Base URL of the Everstack gateway */
   baseUrl?: string;
@@ -76,11 +80,28 @@ export interface EverstackOptions {
   /** Additional default headers */
   headers?: Record<string, string>;
 
-  /** Request timeout in milliseconds */
+  /** Request timeout in milliseconds, applied to every call. */
   timeout?: number;
 
-  /** Maximum number of retries */
+  /**
+   * Maximum number of retries.
+   *
+   * Not implemented yet: the SDK performs no automatic retries, so setting this
+   * has no effect. Retry around the call for now.
+   */
   maxRetries?: number;
+
+  /**
+   * Override the fetch implementation used on runtimes that transport over
+   * fetch. Has no effect on Node, which speaks HTTP/2 directly.
+   */
+  fetch?: typeof globalThis.fetch;
+
+  /**
+   * Force a particular runtime instead of detecting one. Set this only if
+   * detection picks the wrong transport for your host.
+   */
+  runtime?: RuntimeKind;
 }
 
 /**
@@ -132,6 +153,7 @@ export class Everstack<TModels extends string = AllModels> {
    * Agents resource
    */
   readonly agents: Agents;
+  readonly openaiAgents: OpenAIAgents;
 
   /** Authenticated user and organization resolution. */
   readonly identity: Identity;
@@ -235,6 +257,7 @@ export class Everstack<TModels extends string = AllModels> {
   constructor(options: EverstackOptions) {
     this._options = {
       ...options,
+      apiKey: options.apiKey ?? "",
       baseUrl: options.baseUrl ?? EVERSTACK_GATEWAY_URL,
     };
 
@@ -245,6 +268,9 @@ export class Everstack<TModels extends string = AllModels> {
       orgId: this._options.orgId,
       userId: this._options.userId,
       headers: this._options.headers,
+      timeoutMs: this._options.timeout,
+      fetch: this._options.fetch,
+      runtime: this._options.runtime,
     };
 
     const transport = createTransport(transportOptions);
@@ -270,6 +296,7 @@ export class Everstack<TModels extends string = AllModels> {
       headers: this._options.headers,
     });
     this.identity = new Identity(identityClient);
+    this.openaiAgents = new OpenAIAgents(this._options);
     this.channels = new Channels(channelsClient);
     this.datasets = new Datasets(datasetsClient);
     this.evaluations = new Evaluations(evaluationsClient);

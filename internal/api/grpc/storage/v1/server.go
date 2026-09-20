@@ -26,7 +26,7 @@ import (
 var _ storagepb.ObjectStorageServiceServer = (*GrpcServer)(nil)
 
 var _ interface {
-	RegisterConnectServer(...connect.Interceptor) (string, http.Handler)
+	RegisterConnectServer(...connect.HandlerOption) (string, http.Handler)
 	FileDescriptor() protoreflect.FileDescriptor
 } = (*Server)(nil)
 
@@ -112,8 +112,8 @@ func CreateClassicServerWithContext(ctx context.Context) storagepb.ObjectStorage
 	return &GrpcServer{base: CreateServerWithContext(ctx)}
 }
 
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return storageconnect.NewObjectStorageServiceHandler(s, connect.WithInterceptors(interceptors...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return storageconnect.NewObjectStorageServiceHandler(s, opts...)
 }
 
 func (s *Server) FileDescriptor() protoreflect.FileDescriptor {

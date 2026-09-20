@@ -113,6 +113,37 @@
         }
       }
     },
+    "v1AddIncidentNoteResponse": {
+      "type": "object",
+      "properties": {
+        "incident": {
+          "$ref": "#/definitions/v1Incident"
+        }
+      }
+    },
+    "v1AffectedInstance": {
+      "type": "object",
+      "properties": {
+        "instanceId": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
+        },
+        "organizationName": {
+          "type": "string"
+        },
+        "certainty": {
+          "$ref": "#/definitions/v1ImpactCertainty"
+        },
+        "basis": {
+          "type": "string"
+        }
+      }
+    },
     "v1AlertRule": {
       "type": "object",
       "properties": {
@@ -164,6 +195,14 @@
         }
       }
     },
+    "v1AssignIncidentResponse": {
+      "type": "object",
+      "properties": {
+        "incident": {
+          "$ref": "#/definitions/v1Incident"
+        }
+      }
+    },
     "v1AuditEvent": {
       "type": "object",
       "properties": {
@@ -200,6 +239,62 @@
         "occurredAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "dataSourceId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1AutomationCoverage": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/v1AutomationKind"
+        },
+        "state": {
+          "$ref": "#/definitions/v1AutomationCoverageState"
+        },
+        "asOf": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "warning": {
+          "type": "string"
+        }
+      }
+    },
+    "v1AutomationCoverageState": {
+      "type": "string",
+      "enum": [
+        "AUTOMATION_COVERAGE_STATE_UNSPECIFIED",
+        "AUTOMATION_COVERAGE_STATE_AVAILABLE",
+        "AUTOMATION_COVERAGE_STATE_PARTIAL",
+        "AUTOMATION_COVERAGE_STATE_UNAVAILABLE"
+      ],
+      "default": "AUTOMATION_COVERAGE_STATE_UNSPECIFIED"
+    },
+    "v1AutomationKind": {
+      "type": "string",
+      "enum": [
+        "AUTOMATION_KIND_UNSPECIFIED",
+        "AUTOMATION_KIND_AGENT_TRIGGER",
+        "AUTOMATION_KIND_SANDBOX_CRON",
+        "AUTOMATION_KIND_SANDBOX_WEBHOOK",
+        "AUTOMATION_KIND_EVAL_SCHEDULE"
+      ],
+      "default": "AUTOMATION_KIND_UNSPECIFIED"
+    },
+    "v1ChangeInstanceAutomationResponse": {
+      "type": "object",
+      "properties": {
+        "automationId": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/v1AutomationKind"
+        },
+        "enabled": {
+          "type": "boolean"
         }
       }
     },
@@ -214,6 +309,66 @@
         }
       }
     },
+    "v1CollectionAvailability": {
+      "type": "object",
+      "properties": {
+        "collection": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/definitions/v1CollectionState"
+        },
+        "warning": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CollectionState": {
+      "type": "string",
+      "enum": [
+        "COLLECTION_STATE_UNSPECIFIED",
+        "COLLECTION_STATE_AVAILABLE",
+        "COLLECTION_STATE_PARTIAL",
+        "COLLECTION_STATE_UNAVAILABLE"
+      ],
+      "default": "COLLECTION_STATE_UNSPECIFIED"
+    },
+    "v1ContainerSnapshot": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "restartCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "state": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "requests": {
+          "$ref": "#/definitions/v1ResourceRequirementsSnapshot"
+        },
+        "limits": {
+          "$ref": "#/definitions/v1ResourceRequirementsSnapshot"
+        },
+        "usage": {
+          "$ref": "#/definitions/v1ResourceUsageSnapshot"
+        },
+        "isInit": {
+          "type": "boolean"
+        }
+      }
+    },
     "v1DeleteIdentityConnectionResponse": {
       "type": "object",
       "properties": {
@@ -221,6 +376,31 @@
           "type": "boolean"
         }
       }
+    },
+    "v1DiagnosticsCoverage": {
+      "type": "object",
+      "properties": {
+        "spansInWindow": {
+          "type": "string",
+          "format": "int64"
+        },
+        "spansWithTenant": {
+          "type": "string",
+          "format": "int64"
+        },
+        "newestSpan": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "telemetryReadable": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string",
+          "description": "Plain-language statement of what the numbers below do and do not cover."
+        }
+      },
+      "description": "DiagnosticsCoverage is how much of this instance's activity we can actually\nsee. Without it, \"few requests\" and \"we cannot see this customer's requests\"\nlook identical on the page."
     },
     "v1EnvironmentSnapshot": {
       "type": "object",
@@ -263,6 +443,34 @@
           "type": "array",
           "items": {
             "type": "string"
+          }
+        },
+        "networkServices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1NetworkServiceSnapshot"
+          }
+        },
+        "ingresses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1IngressSnapshot"
+          }
+        },
+        "collections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CollectionAvailability"
+          }
+        },
+        "pods": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PodSnapshot"
           }
         }
       }
@@ -329,6 +537,26 @@
       ],
       "default": "EVENT_SEVERITY_UNSPECIFIED"
     },
+    "v1FilesystemUsageSnapshot": {
+      "type": "object",
+      "properties": {
+        "collectedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "capacityBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "availableBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "mountpoint": {
+          "type": "string"
+        }
+      }
+    },
     "v1FirecrackerAgentSnapshot": {
       "type": "object",
       "properties": {
@@ -355,6 +583,29 @@
       "properties": {
         "snapshot": {
           "$ref": "#/definitions/v1EnvironmentSnapshot"
+        }
+      }
+    },
+    "v1GetCustomerUserResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1IdentityUserSummary"
+        },
+        "memberships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrganizationMembership"
+          }
+        },
+        "membershipsUnavailable": {
+          "type": "boolean",
+          "description": "True when the platform database could not be read."
+        },
+        "identityUnavailable": {
+          "type": "boolean",
+          "description": "True when the identity schema could not be read."
         }
       }
     },
@@ -392,6 +643,49 @@
         }
       }
     },
+    "v1GetInstanceDiagnosticsResponse": {
+      "type": "object",
+      "properties": {
+        "windowStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "windowEnd": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "requests": {
+          "type": "string",
+          "format": "int64"
+        },
+        "failed": {
+          "type": "string",
+          "format": "int64"
+        },
+        "p50Millis": {
+          "type": "number",
+          "format": "double"
+        },
+        "p95Millis": {
+          "type": "number",
+          "format": "double"
+        },
+        "lastActive": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1InstanceErrorGroup"
+          }
+        },
+        "coverage": {
+          "$ref": "#/definitions/v1DiagnosticsCoverage"
+        }
+      }
+    },
     "v1GetInstanceResponse": {
       "type": "object",
       "properties": {
@@ -400,11 +694,39 @@
         }
       }
     },
+    "v1GetOrganizationResponse": {
+      "type": "object",
+      "properties": {
+        "organization": {
+          "$ref": "#/definitions/v1OrganizationDetail"
+        },
+        "membersUnavailable": {
+          "type": "boolean",
+          "description": "Sections fail independently. Unavailable must never be displayed as none."
+        },
+        "workspacesUnavailable": {
+          "type": "boolean"
+        },
+        "instancesUnavailable": {
+          "type": "boolean"
+        },
+        "invitationsUnavailable": {
+          "type": "boolean"
+        }
+      }
+    },
     "v1GetOverviewResponse": {
       "type": "object",
       "properties": {
         "overview": {
           "$ref": "#/definitions/v1OperationsOverview"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OperationsSourceStatus"
+          }
         }
       }
     },
@@ -422,6 +744,70 @@
           }
         },
         "currentDataSourceId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1GetWorkloadResponse": {
+      "type": "object",
+      "properties": {
+        "workload": {
+          "$ref": "#/definitions/v1WorkloadSnapshot",
+          "description": "Identity only when workload_missing or snapshot_unavailable is true."
+        },
+        "collectedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "snapshotStale": {
+          "type": "boolean"
+        },
+        "impact": {
+          "$ref": "#/definitions/v1WorkloadImpact"
+        },
+        "relatedEvents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OperationsEvent"
+          }
+        },
+        "relatedIncidents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Incident"
+          }
+        },
+        "workloadMissing": {
+          "type": "boolean",
+          "description": "Missing from a successfully collected current snapshot, not a 404."
+        },
+        "environment": {
+          "$ref": "#/definitions/v1EnvironmentSummary"
+        },
+        "snapshotUnavailable": {
+          "type": "boolean"
+        },
+        "impactUnavailable": {
+          "type": "boolean"
+        },
+        "relatedEventsUnavailable": {
+          "type": "boolean"
+        },
+        "relatedIncidentsUnavailable": {
+          "type": "boolean"
+        },
+        "eventsSince": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Inclusive bounds used for related_events, preserved even for empty results."
+        },
+        "eventsUntil": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "dataSourceId": {
           "type": "string"
         }
       }
@@ -517,6 +903,17 @@
       },
       "description": "Identity connections are upstream workforce OIDC providers used by the\nEverstack-native Cloud login UI. Secrets are write-only and never appear in\nthis control-plane representation."
     },
+    "v1IdentityLinkage": {
+      "type": "string",
+      "enum": [
+        "IDENTITY_LINKAGE_UNSPECIFIED",
+        "IDENTITY_LINKAGE_LINKED",
+        "IDENTITY_LINKAGE_IDENTITY_ONLY",
+        "IDENTITY_LINKAGE_PLATFORM_ONLY"
+      ],
+      "default": "IDENTITY_LINKAGE_UNSPECIFIED",
+      "description": " - IDENTITY_LINKAGE_UNSPECIFIED: No linkage classification was supplied.\n - IDENTITY_LINKAGE_LINKED: An identity record joined to a platform user.\n - IDENTITY_LINKAGE_IDENTITY_ONLY: Signed up but never became a platform user.\n - IDENTITY_LINKAGE_PLATFORM_ONLY: A platform user with no current native identity link, for example a\nWorkOS-era account."
+    },
     "v1IdentityOverview": {
       "type": "object",
       "properties": {
@@ -584,10 +981,12 @@
       "type": "object",
       "properties": {
         "identityUserId": {
-          "type": "string"
+          "type": "string",
+          "description": "Empty for PLATFORM_ONLY rows."
         },
         "everstackUserId": {
-          "type": "string"
+          "type": "string",
+          "description": "Empty for IDENTITY_ONLY rows."
         },
         "email": {
           "type": "string"
@@ -622,8 +1021,26 @@
           "items": {
             "type": "string"
           }
+        },
+        "linkage": {
+          "$ref": "#/definitions/v1IdentityLinkage"
+        },
+        "organizationCount": {
+          "type": "integer",
+          "format": "int32"
         }
       }
+    },
+    "v1ImpactCertainty": {
+      "type": "string",
+      "enum": [
+        "IMPACT_CERTAINTY_UNSPECIFIED",
+        "IMPACT_CERTAINTY_DIRECT",
+        "IMPACT_CERTAINTY_POTENTIAL",
+        "IMPACT_CERTAINTY_UNMAPPED"
+      ],
+      "default": "IMPACT_CERTAINTY_UNSPECIFIED",
+      "description": " - IMPACT_CERTAINTY_DIRECT: Authoritative placement ties this instance to the component.\n - IMPACT_CERTAINTY_POTENTIAL: A shared service every instance in the environment depends on. This is\nnot proof that any one customer is affected.\n - IMPACT_CERTAINTY_UNMAPPED: No relationship can be established from stored metadata. Never display\nthis as \"unaffected\"."
     },
     "v1Incident": {
       "type": "object",
@@ -714,6 +1131,26 @@
         "snoozedUntil": {
           "type": "string",
           "format": "date-time"
+        },
+        "dataSourceId": {
+          "type": "string",
+          "description": "Names the data source whose control plane owns this incident."
+        },
+        "assignedTo": {
+          "type": "string",
+          "description": "Human workflow, deliberately separate from `status`, which is the observed\ncondition. A recurrence re-fires the condition; it must not erase that\nsomebody had taken ownership."
+        },
+        "assignedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "resolutionNote": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Optimistic-concurrency token. A mutation sends back the value it last saw\nso a second operator cannot silently overwrite the first."
         }
       }
     },
@@ -764,6 +1201,72 @@
         "INCIDENT_STATUS_RESOLVED"
       ],
       "default": "INCIDENT_STATUS_UNSPECIFIED"
+    },
+    "v1IngressRouteSnapshot": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "pathType": {
+          "type": "string"
+        },
+        "serviceName": {
+          "type": "string"
+        },
+        "servicePort": {
+          "type": "string"
+        }
+      }
+    },
+    "v1IngressSnapshot": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "className": {
+          "type": "string"
+        },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "addresses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ports": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1IngressRouteSnapshot"
+          }
+        }
+      }
     },
     "v1InstallationConnectivity": {
       "type": "string",
@@ -852,6 +1355,143 @@
           "format": "date-time"
         }
       }
+    },
+    "v1InstanceAutomation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/v1AutomationKind"
+        },
+        "name": {
+          "type": "string"
+        },
+        "targetKind": {
+          "type": "string"
+        },
+        "targetId": {
+          "type": "string"
+        },
+        "targetName": {
+          "type": "string"
+        },
+        "triggerType": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "cronExpression": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "circuitState": {
+          "type": "string"
+        },
+        "consecutiveFailures": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "lastStartedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastCompletedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastStatus": {
+          "type": "string"
+        },
+        "lastSuccessAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "nextRunAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "recentRuns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1InstanceAutomationRun"
+          }
+        },
+        "runsTruncated": {
+          "type": "boolean"
+        },
+        "runsAvailable": {
+          "type": "boolean",
+          "description": "True only when execution history can be attributed to this automation.\nFalse on legacy schemas or when older runs lack exact schedule provenance."
+        },
+        "healthState": {
+          "type": "string"
+        },
+        "healthDetail": {
+          "type": "string"
+        },
+        "expectedRunAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1InstanceAutomationRun": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "attempt": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Absent when the source ledger records only completion, as sandbox ledgers do."
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "durationMs": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1InstanceErrorGroup": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        },
+        "statusCode": {
+          "type": "string"
+        },
+        "count": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "InstanceErrorGroup is one failure message and how often it occurred.\n\nDeliberately not classified into categories: the telemetry carries no\nnormalized error type, so grouping by message reports what happened, while\nderiving categories from the free-text message would mislabel every message\nwhose wording changes."
     },
     "v1InstanceLifecycleAction": {
       "type": "string",
@@ -1105,6 +1745,29 @@
         },
         "nextPageToken": {
           "type": "string"
+        },
+        "identityUnavailable": {
+          "type": "boolean",
+          "description": "True when the identity schema could not be read."
+        }
+      }
+    },
+    "v1ListIncidentsForSubjectResponse": {
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Incident"
+          }
+        },
+        "historical": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Incident"
+          }
         }
       }
     },
@@ -1148,6 +1811,24 @@
         },
         "nextPageToken": {
           "type": "string"
+        }
+      }
+    },
+    "v1ListInstanceAutomationsResponse": {
+      "type": "object",
+      "properties": {
+        "automations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1InstanceAutomation"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        },
+        "coverage": {
+          "$ref": "#/definitions/v1AutomationCoverage"
         }
       }
     },
@@ -1299,6 +1980,101 @@
       "default": "MODERATION_ACTION_STATUS_UNSPECIFIED",
       "description": " - MODERATION_ACTION_STATUS_APPLIED: The serving provider accepted the write. This does not claim that an\neventually-consistent KV update is already visible at every edge.\n - MODERATION_ACTION_STATUS_SUPERSEDED: A newer decision for the same site replaced this action before it could\nbe projected. Superseded actions are retained for audit but never retried."
     },
+    "v1NetworkPortSnapshot": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "protocol": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "targetPort": {
+          "type": "string"
+        },
+        "nodePort": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1NetworkServiceSnapshot": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "clusterIp": {
+          "type": "string"
+        },
+        "externalIps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1NetworkPortSnapshot"
+          }
+        },
+        "readyEndpoints": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalEndpoints": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1NodeAddress": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        }
+      }
+    },
+    "v1NodeConditionSnapshot": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "lastTransitionAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "v1NodeSnapshot": {
       "type": "object",
       "properties": {
@@ -1333,6 +2109,66 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "operatingSystem": {
+          "type": "string"
+        },
+        "osImage": {
+          "type": "string"
+        },
+        "kernelVersion": {
+          "type": "string"
+        },
+        "containerRuntimeVersion": {
+          "type": "string"
+        },
+        "providerId": {
+          "type": "string"
+        },
+        "addresses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1NodeAddress"
+          }
+        },
+        "podCidr": {
+          "type": "string"
+        },
+        "cpuAllocatableMilli": {
+          "type": "string",
+          "format": "int64"
+        },
+        "memoryAllocatableBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1NodeConditionSnapshot"
+          }
+        },
+        "region": {
+          "type": "string"
+        },
+        "uid": {
+          "type": "string"
+        },
+        "ephemeralStorageCapacityBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "ephemeralStorageAllocatableBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "usage": {
+          "$ref": "#/definitions/v1ResourceUsageSnapshot"
+        },
+        "diskUsage": {
+          "$ref": "#/definitions/v1FilesystemUsageSnapshot"
         }
       }
     },
@@ -1478,6 +2314,52 @@
         "issuedLicenses": {
           "type": "string",
           "format": "int64"
+        },
+        "instancesWithMeasuredHealth": {
+          "type": "string",
+          "format": "int64",
+          "description": "Healthy and degraded counts are meaningful only for instances whose\nhealth has actually been measured."
+        },
+        "instancesNeverHealthChecked": {
+          "type": "string",
+          "format": "int64",
+          "description": "Until EVS-57 lands, this equals the live instance count because no health\nmeasurements are written."
+        }
+      }
+    },
+    "v1OperationsSourceStatus": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/definitions/v1SourceState"
+        },
+        "configured": {
+          "type": "boolean"
+        },
+        "reachable": {
+          "type": "boolean"
+        },
+        "checkedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "latestDataAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lagSeconds": {
+          "type": "string",
+          "format": "int64"
+        },
+        "detail": {
+          "type": "string",
+          "description": "Sanitized explanation. This must never include a DSN, credential, or raw\ndriver error that could contain either."
         }
       }
     },
@@ -1508,6 +2390,173 @@
         },
         "enforcementStatus": {
           "$ref": "#/definitions/v1ModerationActionStatus"
+        }
+      }
+    },
+    "v1OrganizationDetail": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "planTier": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrganizationMemberRow"
+          }
+        },
+        "workspaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrganizationWorkspaceRow"
+          }
+        },
+        "instances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrganizationInstanceRow"
+          }
+        },
+        "invitations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrganizationInvitationRow"
+          }
+        }
+      }
+    },
+    "v1OrganizationInstanceRow": {
+      "type": "object",
+      "properties": {
+        "instanceId": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "workspaceId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "healthy": {
+          "type": "boolean",
+          "description": "Per EVS-57, healthy is only meaningful when last_health_check is set."
+        },
+        "lastHealthCheck": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "deletedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1OrganizationInvitationRow": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "accepted": {
+          "type": "boolean"
+        }
+      },
+      "description": "SECURITY: The secret invite token is deliberately absent. NEVER add it here."
+    },
+    "v1OrganizationMemberRow": {
+      "type": "object",
+      "properties": {
+        "everstackUserId": {
+          "type": "string"
+        },
+        "identityUserId": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1OrganizationMembership": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string"
+        },
+        "organizationName": {
+          "type": "string"
+        },
+        "organizationSlug": {
+          "type": "string"
+        },
+        "planTier": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "instanceCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "workspaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorkspaceAccess"
+          }
+        },
+        "workspaceAccessRestricted": {
+          "type": "boolean",
+          "description": "True when the organization has workspaces the user is not a member of."
         }
       }
     },
@@ -1556,11 +2605,124 @@
         }
       }
     },
+    "v1OrganizationWorkspaceRow": {
+      "type": "object",
+      "properties": {
+        "workspaceId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "explicitMemberCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "instanceCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1PodSnapshot": {
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "nodeName": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "restartCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "workloadKind": {
+          "type": "string"
+        },
+        "workloadName": {
+          "type": "string"
+        },
+        "usage": {
+          "$ref": "#/definitions/v1ResourceUsageSnapshot"
+        },
+        "containers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ContainerSnapshot"
+          }
+        }
+      }
+    },
     "v1ResolveIncidentResponse": {
       "type": "object",
       "properties": {
         "incident": {
           "$ref": "#/definitions/v1Incident"
+        }
+      }
+    },
+    "v1ResourceRequirementsSnapshot": {
+      "type": "object",
+      "properties": {
+        "cpuMilli": {
+          "type": "string",
+          "format": "int64"
+        },
+        "memoryBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "ephemeralStorageBytes": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ResourceUsageSnapshot": {
+      "type": "object",
+      "properties": {
+        "collectedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "cpuMilli": {
+          "type": "string",
+          "format": "int64"
+        },
+        "memoryBytes": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -1752,6 +2914,18 @@
         }
       }
     },
+    "v1SourceState": {
+      "type": "string",
+      "enum": [
+        "SOURCE_STATE_UNSPECIFIED",
+        "SOURCE_STATE_OK",
+        "SOURCE_STATE_STALE",
+        "SOURCE_STATE_UNAVAILABLE",
+        "SOURCE_STATE_NOT_CONFIGURED"
+      ],
+      "default": "SOURCE_STATE_UNSPECIFIED",
+      "description": " - SOURCE_STATE_UNAVAILABLE: UNAVAILABLE means the probe failed. Do not collapse it into\nNOT_CONFIGURED: a configured source that cannot be reached needs action.\n - SOURCE_STATE_NOT_CONFIGURED: NOT_CONFIGURED means this deployment does not have the source."
+    },
     "v1StaffRole": {
       "type": "string",
       "enum": [
@@ -1775,6 +2949,38 @@
       "properties": {
         "connection": {
           "$ref": "#/definitions/v1IdentityConnectionSummary"
+        }
+      }
+    },
+    "v1WorkloadImpact": {
+      "type": "object",
+      "properties": {
+        "certainty": {
+          "$ref": "#/definitions/v1ImpactCertainty"
+        },
+        "directCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Counts describe the exact returned instance set. If the complete set\nexceeds the response bound, impact_unavailable is true instead."
+        },
+        "potentialCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "mappingAsOf": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Collection time of the snapshot used to identify the component."
+        },
+        "explanation": {
+          "type": "string"
+        },
+        "instances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AffectedInstance"
+          }
         }
       }
     },
@@ -1810,6 +3016,30 @@
           "additionalProperties": {
             "type": "string"
           }
+        }
+      }
+    },
+    "v1WorkspaceAccess": {
+      "type": "object",
+      "properties": {
+        "workspaceId": {
+          "type": "string"
+        },
+        "workspaceName": {
+          "type": "string"
+        },
+        "workspaceSlug": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "accessSource": {
+          "type": "string",
+          "description": "explicit is a workspace_members row; implicit is owner/admin access, as\ndefined by services/auth/internal/service/organization_service.go."
         }
       }
     }

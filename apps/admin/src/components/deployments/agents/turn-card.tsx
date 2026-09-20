@@ -21,6 +21,7 @@ import { AgentMarkdown } from './agent-markdown'
 import { MentionText } from './mention-text'
 import type { ToolResultCacheEntry } from './session-timeline'
 import { ui } from '@everstack/ui'
+import { ChatAssistantMessage, ChatUserMessage } from './chat-presentation'
 
 const IMAGE_EXTENSIONS = /\.(png|jpe?g|gif|webp|svg|bmp|ico)(\?|$)/i
 
@@ -524,16 +525,14 @@ export function TurnCard({
     <div className="space-y-2">
       {/* User message */}
       {turn.userInput && (
-        <div className="flex justify-end">
-          <div className="max-w-[80%] rounded-md text-brand-secondary-500 bg-brand-secondary-600/20 px-4 pt-1.5 pb-2">
-            {userMessage && (
-              <MentionText className="text-sm text-brand-secondary-200 whitespace-pre-wrap">
-                {userMessage}
-              </MentionText>
-            )}
-            <AttachedFilesPreview attachments={userAttachments} />
-          </div>
-        </div>
+        <ChatUserMessage>
+          {userMessage && (
+            <MentionText className="text-sm text-brand-secondary-200 whitespace-pre-wrap">
+              {userMessage}
+            </MentionText>
+          )}
+          <AttachedFilesPreview attachments={userAttachments} />
+        </ChatUserMessage>
       )}
 
       {/* Turn body: contiguous tool-call runs and HITL exchanges, interleaved
@@ -634,7 +633,7 @@ export function TurnCard({
 
       {/* Assistant message */}
       {turn.assistantOutput && (
-        <div className="min-w-0">
+        <ChatAssistantMessage>
           <div className="group/turn relative w-full py-3 pr-20 text-sm text-white/90 light:text-black/90">
             <AgentMarkdown variant="chat">{turn.assistantOutput}</AgentMarkdown>
             {(onCopy || onRetry || onShare || onFeedback) && (
@@ -853,7 +852,7 @@ export function TurnCard({
               </div>
             </div>
           )}
-        </div>
+        </ChatAssistantMessage>
       )}
 
       {/* Error */}

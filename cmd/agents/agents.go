@@ -38,6 +38,7 @@ skills/. Deploy it with ` + "`evs deploy`" + `; it becomes a regular platform ag
 
 	cmd.AddCommand(newRunCmd(options))
 	cmd.AddCommand(newPullCmd(options))
+	cmd.AddCommand(newOpenAICmd(options))
 
 	for _, sub := range cmd.Commands() {
 		sub.SilenceUsage = true

@@ -185,11 +185,15 @@ func handleConnection(conn net.Conn) {
 }
 
 func handleRequest(req rpcRequest) rpcResponse {
+	return handleRequestContext(context.Background(), req)
+}
+
+func handleRequestContext(ctx context.Context, req rpcRequest) rpcResponse {
 	switch req.Method {
 	case toolbox.MethodPing:
 		return rpcResponse{Result: "pong"}
 	case toolbox.MethodExec:
-		return handleExec(req.Params)
+		return handleExecContext(ctx, req.Params)
 	case toolbox.MethodWriteFile:
 		return handleWriteFile(req.Params)
 	case toolbox.MethodReadFile:
@@ -244,6 +248,10 @@ func handleSetAgentToken(params json.RawMessage) rpcResponse {
 }
 
 func handleExec(params json.RawMessage) rpcResponse {
+	return handleExecContext(context.Background(), params)
+}
+
+func handleExecContext(parent context.Context, params json.RawMessage) rpcResponse {
 	var cmd execCommand
 	if err := json.Unmarshal(params, &cmd); err != nil {
 		return rpcResponse{Error: "invalid exec params: " + err.Error()}
@@ -258,12 +266,23 @@ func handleExec(params json.RawMessage) rpcResponse {
 		timeout = time.Duration(cmd.TimeoutMS) * time.Millisecond
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(parent, timeout)
 	defer cancel()
 
 	start := time.Now()
 
 	c := exec.CommandContext(ctx, cmd.Command[0], cmd.Command[1:]...)
+	// Executors can launch child processes. Cancel the entire command group so
+	// a disconnected HTTP caller does not leave an executor running in the VM.
+	c.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	c.Cancel = func() error {
+		err := syscall.Kill(-c.Process.Pid, syscall.SIGKILL)
+		if err == syscall.ESRCH {
+			return os.ErrProcessDone
+		}
+		return err
+	}
+	c.WaitDelay = time.Second
 	if cmd.WorkDir != "" {
 		c.Dir = cmd.WorkDir
 	}

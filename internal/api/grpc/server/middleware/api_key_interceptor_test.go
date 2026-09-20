@@ -14,6 +14,7 @@ import (
 	apikeylib "github.com/everstacklabs/everstack/internal/lib/apikey"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/pkg/grpc/everstack/functions/v1/functionsconnect"
+	"github.com/everstacklabs/everstack/pkg/grpc/everstack/openai_agents/v1/openaiagentsconnect"
 	"github.com/everstacklabs/everstack/pkg/tenant"
 	"github.com/jmoiron/sqlx"
 )
@@ -107,6 +108,64 @@ func TestValidateAPIKeyAcceptsVerifiedCLIBearerForEnabledService(t *testing.T) {
 	}
 	if !contextkeys.IsTenantAuthenticated(ctx) {
 		t.Fatal("CLI bearer context is not marked authenticated")
+	}
+	if got := contextkeys.GetUserID(ctx); got != "user-1" {
+		t.Fatalf("user ID = %q, want user-1", got)
+	}
+	if got := contextkeys.GetTenantID(ctx); got != "instance-1" {
+		t.Fatalf("tenant ID = %q, want signed instance-1", got)
+	}
+	if got := database.TenantSchemaFromContext(ctx); got != "instance-1" {
+		t.Fatalf("database tenant = %q, want signed instance-1", got)
+	}
+	if got := contextkeys.GetUserRole(ctx); got != "admin" {
+		t.Fatalf("role = %q, want admin", got)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestValidateAPIKeyAcceptsSignedDeviceBearerForOpenAIAgentsService(t *testing.T) {
+	rawDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rawDB.Close()
+
+	manager, err := deviceauth.NewTokenManager([]byte("0123456789abcdef0123456789abcdef"), time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, err := manager.Issue(deviceauth.Identity{
+		UserID: "user-1", OrganizationID: "org-1", InstanceID: "instance-1", ClientID: "evs-cli",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mock.ExpectQuery(`SELECT COALESCE\(om\.role, ''\)[\s\S]*om\.user_id::text[\s\S]*FROM everstack\.organization_members om[\s\S]*JOIN everstack\.tenant_config tc`).
+		WithArgs("user-1", "org-1", "instance-1").
+		WillReturnRows(sqlmock.NewRows([]string{"role", "user_id"}).AddRow("admin", "user-1"))
+
+	interceptor := NewAPIKeyInterceptorWithSessionDB(false, nil, sqlx.NewDb(rawDB, "sqlmock"))
+	interceptor.SetCLIAuthorizationDB(sqlx.NewDb(rawDB, "sqlmock"))
+	interceptor.SetCLIDeviceTokenManager(manager)
+	header := http.Header{}
+	header.Set(common.Authorization, "Bearer "+token)
+	header.Set(common.EverstackOrgId, "org-1")
+	header.Set("x-mf-tenant-id", "org-1")
+
+	ctx, err := interceptor.validateAPIKey(
+		context.Background(),
+		header,
+		openaiagentsconnect.OpenAIAgentsServiceListSessionsProcedure,
+		"corr-test",
+	)
+	if err != nil {
+		t.Fatalf("validateAPIKey() error = %v", err)
+	}
+	if !contextkeys.IsTenantAuthenticated(ctx) {
+		t.Fatal("device bearer context is not marked authenticated")
 	}
 	if got := contextkeys.GetUserID(ctx); got != "user-1" {
 		t.Fatalf("user ID = %q, want user-1", got)

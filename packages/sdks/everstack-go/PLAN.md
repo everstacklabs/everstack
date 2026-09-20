@@ -4,7 +4,7 @@
 
 `everstack-go` — An idiomatic Go SDK using Connect-RPC (same protocol as the Node SDK) with full type safety from generated proto stubs.
 
-**Module:** `github.com/everstacklabs/everstack-go`
+**Module:** `github.com/everstacklabs/everstack/packages/sdks/everstack-go`
 **Min Go:** 1.22+
 
 ---
@@ -96,7 +96,7 @@ Generated stubs go into `internal/gen/` (unexported). The public SDK types are h
 ### Client Construction (Functional Options)
 
 ```go
-import "github.com/everstacklabs/everstack-go"
+import "github.com/everstacklabs/everstack/packages/sdks/everstack-go"
 
 // Simple
 client := everstack.NewClient("pk_...")
@@ -352,7 +352,7 @@ func IsValid(modelID string) bool
 ## OpenAI Compatibility
 
 ```go
-import "github.com/everstacklabs/everstack-go/compat"
+import "github.com/everstacklabs/everstack/packages/sdks/everstack-go/compat"
 
 // Returns config for use with sashabaranov/go-openai
 config := compat.OpenAIConfig("pk_...", "@openai")

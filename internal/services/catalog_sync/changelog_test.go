@@ -68,6 +68,16 @@ versions:
 		"name":         "anthropic.claude-opus-5",
 		"display_name": "Claude Opus 5 (Bedrock)",
 		"status":       "stable",
+		"api_type":     "responses",
+		"cost": map[string]interface{}{
+			"cache_write_1h_per_1k": 0.02,
+			"long_context": map[string]interface{}{
+				"threshold_tokens":  272000,
+				"input_multiplier":  2.0,
+				"cache_multiplier":  2.0,
+				"output_multiplier": 1.5,
+			},
+		},
 	}, additions["aws-bedrock/anthropic.claude-opus-5"])
 
 	if got := model["added_in_version"]; got != "2.4.0" {
@@ -78,5 +88,17 @@ versions:
 	}
 	if got := model["canonical_model_id"]; got != "anthropic/claude-opus-5" {
 		t.Fatalf("canonical_model_id = %#v, want anthropic/claude-opus-5", got)
+	}
+	if got := model["api_type"]; got != "responses" {
+		t.Fatalf("api_type = %#v, want responses", got)
+	}
+	if got := model["cache_write_1h_cost_per_1k"]; got != 0.02 {
+		t.Fatalf("cache_write_1h_cost_per_1k = %#v, want .02", got)
+	}
+	if got := model["long_context_threshold_tokens"]; got != 272000 {
+		t.Fatalf("long_context_threshold_tokens = %#v, want 272000", got)
+	}
+	if got := model["long_context_output_multiplier"]; got != 1.5 {
+		t.Fatalf("long_context_output_multiplier = %#v, want 1.5", got)
 	}
 }

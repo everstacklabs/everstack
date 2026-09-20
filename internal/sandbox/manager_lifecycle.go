@@ -1031,9 +1031,11 @@ func (m *SandboxManager) findInstanceBySandboxIDWithDBFallback(ctx context.Conte
 		Name           string         `db:"name"`
 		AgentID        sql.NullString `db:"agent_id"`
 		Persistent     sql.NullBool   `db:"persistent"`
+		InstanceID     sql.NullString `db:"instance_id"`
+		DestroyedAt    sql.NullTime   `db:"destroyed_at"`
 	}
 	const q = `
-		SELECT container_id, backend, status, lifecycle_state, created_at, billing_started_at, billing_ended_at, name, agent_id, persistent
+		SELECT container_id, backend, status, lifecycle_state, created_at, billing_started_at, billing_ended_at, name, agent_id, persistent, instance_id, destroyed_at
 		FROM sandbox_instances WHERE id = $1`
 	if err := m.db.GetContext(ctx, &row, q, sandboxID); err != nil {
 		return nil, fmt.Errorf("sandbox %s row lookup failed: %w", sandboxID, err)
@@ -1052,6 +1054,8 @@ func (m *SandboxManager) findInstanceBySandboxIDWithDBFallback(ctx context.Conte
 		Name:             row.Name,
 		AgentID:          row.AgentID.String,
 		Persistent:       row.Persistent.Bool,
+		InstanceID:       row.InstanceID.String,
+		DestroyedAt:      nullTimeValue(row.DestroyedAt),
 	}
 	if inst.Name == "" {
 		inst.Name = cfg.Name

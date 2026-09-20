@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/everstacklabs/everstack/cmd/build"
+	"github.com/everstacklabs/everstack/internal/license"
 	"github.com/spf13/cobra"
 )
 
@@ -22,6 +23,7 @@ func New() *cobra.Command {
 				fmt.Fprintf(w, "Version\t: %s\n", build.Version())
 				fmt.Fprintf(w, "Commit\t: %s\n", build.Commit())
 				fmt.Fprintf(w, "Date\t: %s\n", date.UTC().Format(time.RFC3339))
+				fmt.Fprintf(w, "Vendor keys\t: %d\n", license.VendorKeyCount())
 				return nil
 			}
 			fmt.Fprintln(w, build.Version())

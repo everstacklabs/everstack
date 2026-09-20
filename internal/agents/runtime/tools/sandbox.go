@@ -351,7 +351,7 @@ func ensureSandbox(ctx context.Context, sctx *SandboxSessionContext) (*sandbox.I
 		// If the trooper already exists (was provisioned earlier), allow usage
 		// even if the license state is temporarily unavailable.
 		if !sctx.Manager.TrooperExists(sctx.AgentID) && !sctx.Manager.IsTrooperFeatureEnabled(sctx.TenantID) {
-			return nil, fmt.Errorf("persistent troopers are a cloud-only feature; upgrade at https://everstack.dev/pricing")
+			return nil, fmt.Errorf("persistent troopers are a cloud-only feature; upgrade at https://everstack.ai/pricing/")
 		}
 		inst, err = sctx.Manager.GetOrCreateTrooper(ctx, sctx.AgentID, sctx.SessionID, sctx.TenantID, sctx.Config)
 	} else {

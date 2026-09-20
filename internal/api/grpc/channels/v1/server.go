@@ -53,8 +53,8 @@ func CreateServer(ctx context.Context, store channels.ChannelStore, manager *cha
 	return &Server{ctx: ctx, store: store, manager: manager, db: db}
 }
 
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return channelsconnect.NewChannelsServiceHandler(s, connect.WithInterceptors(interceptors...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return channelsconnect.NewChannelsServiceHandler(s, opts...)
 }
 
 func (s *Server) FileDescriptor() protoreflect.FileDescriptor {

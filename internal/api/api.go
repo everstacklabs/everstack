@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"sort"
@@ -42,6 +43,7 @@ type API struct {
 	port            uint16
 	externalDomain  string
 	health          healthCheck
+	dependencies    []DependencyCheck
 	router          *mux.Router
 	hostHeaders     []string
 	connectServices map[string][]string
@@ -78,6 +80,15 @@ func (a *API) ListGrpcMethods() []string {
 
 type healthCheck interface {
 	Health(ctx context.Context) error
+}
+
+// DependencyCheck describes an external service exposed through dependency
+// health. Required dependencies participate in readiness. Optional dependency
+// failures report a degraded state without removing the pod from service.
+type DependencyCheck struct {
+	Name     string
+	Required bool
+	Check    func(context.Context) error
 }
 
 func NewAPI(
@@ -162,6 +173,10 @@ func NewAPI(
 						writeSpendLimitError(w, reason)
 						return
 					}
+				} else if policy.ShouldShadowMeterRequest(r.URL.Path) {
+					// G0 shadow: observe billable AI paths outside the
+					// metered allowlist. Log-only; no gating change.
+					logger.Warnf("api: shadow observation - billable AI path outside metered prefixes: %s", r.URL.Path)
 				}
 				base.ServeHTTP(w, r)
 			})
@@ -317,7 +332,26 @@ func (a *API) registerConnectServer(service grpcserver.ConnectServer) {
 			middleware.ValidationHandler(),
 		)
 	}
-	prefix, handler := service.RegisterConnectServer(interceptors...)
+	// Skip compression for payloads below this size. ChatCompletion is a
+	// server-streaming RPC that emits one envelope per token, and those
+	// envelopes are 159-228 bytes. gzip's header alone is around 20 bytes, so
+	// compressing them cannot pay for itself, and connect builds a fresh
+	// compressor per envelope: a 64-token completion did 67 of them.
+	//
+	// Under load this was the single largest CPU consumer in the process --
+	// compress/flate.(*compressor).reset at 16% flat, with the window-zeroing
+	// memclr beneath it at another 5%. connect defaults this threshold to 0,
+	// meaning everything compresses however small.
+	//
+	// Large payloads still compress, so an external client sending a big
+	// request body or receiving a big unary response is unaffected.
+	const compressMinBytes = 1024
+
+	handlerOpts := []connect.HandlerOption{
+		connect.WithInterceptors(interceptors...),
+		connect.WithCompressMinBytes(compressMinBytes),
+	}
+	prefix, handler := service.RegisterConnectServer(handlerOpts...)
 	methods := service.FileDescriptor().Services().Get(0).Methods()
 	methodNames := make([]string, methods.Len())
 	for i := 0; i < methods.Len(); i++ {
@@ -414,17 +448,33 @@ func (a *API) MountGRPCGatewayPrefixes(prefixes ...string) {
 // SetHealth sets the health checker used by /debug/ready and /debug/validate.
 func (a *API) SetHealth(h healthCheck) { a.health = h }
 
-func (a *API) healthHandler() http.Handler {
-	checks := []ValidationFunction{}
+// SetDependencies sets the required and optional external dependency checks.
+func (a *API) SetDependencies(checks []DependencyCheck) { a.dependencies = checks }
 
-	// Only add health check if health interface is implemented
-	if a.health != nil {
-		checks = append(checks, func(ctx context.Context) error {
+func (a *API) healthHandler() http.Handler {
+	// Resolve health dynamically because StartAPI wires checks after NewAPI has
+	// registered this handler.
+	checks := []ValidationFunction{
+		func(ctx context.Context) error {
+			if a.health == nil {
+				return nil
+			}
 			if err := a.health.Health(ctx); err != nil {
 				return mferrors.ThrowInternal(err, "API-DBConn-5003", "DB CONNECTION ERROR")
 			}
 			return nil
-		})
+		},
+		func(ctx context.Context) error {
+			for _, dependency := range a.dependencies {
+				if !dependency.Required || dependency.Check == nil {
+					continue
+				}
+				if err := dependency.Check(ctx); err != nil {
+					return mferrors.ThrowInternal(err, "API-Dependency-5004", "REQUIRED DEPENDENCY UNAVAILABLE")
+				}
+			}
+			return nil
+		},
 	}
 
 	handler := http.NewServeMux()
@@ -432,6 +482,7 @@ func (a *API) healthHandler() http.Handler {
 	handler.HandleFunc("/version", handleVersion)
 	handler.HandleFunc("/ready", handleReadiness(checks))
 	handler.HandleFunc("/validate", handleValidate(checks))
+	handler.HandleFunc("/health/dependencies", a.handleDependencyHealth)
 	// handler.Handle("/metrics", metricsExporter())
 
 	// Add rate limit monitoring endpoints
@@ -443,6 +494,51 @@ func (a *API) healthHandler() http.Handler {
 	handler.HandleFunc("/health/providers/", handlers.ProviderHealthByNameHandler)
 
 	return handler
+}
+
+type dependencyStatus struct {
+	Name     string `json:"name"`
+	Required bool   `json:"required"`
+	Status   string `json:"status"`
+}
+
+func (a *API) handleDependencyHealth(w http.ResponseWriter, r *http.Request) {
+	status := "ok"
+	httpStatus := http.StatusOK
+	dependencies := make([]dependencyStatus, 0, len(a.dependencies))
+	for _, dependency := range a.dependencies {
+		dependencyState := "ok"
+		var err error
+		if dependency.Check == nil {
+			err = errors.New("dependency check is not configured")
+		} else {
+			err = dependency.Check(r.Context())
+		}
+		if err != nil {
+			dependencyState = "unavailable"
+			logger.WithFields("dependency", dependency.Name, "required", dependency.Required).WithError(err).Warn("dependency health check failed")
+			if dependency.Required {
+				status = "unavailable"
+				httpStatus = http.StatusServiceUnavailable
+			} else if status == "ok" {
+				status = "degraded"
+			}
+		}
+		dependencies = append(dependencies, dependencyStatus{
+			Name:     dependency.Name,
+			Required: dependency.Required,
+			Status:   dependencyState,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(httpStatus)
+	if err := json.NewEncoder(w).Encode(map[string]any{
+		"status":       status,
+		"dependencies": dependencies,
+	}); err != nil {
+		logger.WithError(err).Error("failed to write dependency health response")
+	}
 }
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {

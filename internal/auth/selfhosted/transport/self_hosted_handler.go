@@ -11,6 +11,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/auth/oauthserver"
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/domain"
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/service"
+	"github.com/everstacklabs/everstack/internal/lib/authratelimit"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/everstacklabs/everstack/pkg/authz/authzhttp"
@@ -34,6 +35,11 @@ type SelfHostedAuthHandler struct {
 	deviceTokens    *deviceauth.TokenManager
 	externalAuthURL string
 	oauthHandler    http.Handler
+
+	// limiter guards the endpoints that accept or mint credentials. The
+	// gateway serves these routes on instance hosts, where nothing else
+	// rate-limits them, so without it credential stuffing is unbounded.
+	limiter *authratelimit.AuthRateLimiter
 }
 
 type DeviceAuthorizationDependencies struct {
@@ -57,6 +63,10 @@ func NewSelfHostedAuthHandler(
 		cfg:           cfg,
 		seatLimit:     seatLimit,
 		batchCheck:    batchCheck,
+		// Matches the cloud auth service: enough headroom for a real user
+		// retrying on a bad connection, low enough that guessing passwords
+		// from one source is impractical.
+		limiter: authratelimit.NewAuthRateLimiter(20, 10),
 	}
 	if len(deviceDeps) > 0 {
 		handler.deviceAuth = deviceDeps[0].Store
@@ -716,17 +726,34 @@ func NewSelfHostedConnectHandler(cfg *domain.InternalConfig, svc *service.SelfHo
 	return authconnect.NewAuthServiceHandler(h)
 }
 
+// Limiter exposes the handler's rate limiter so the Connect surface can share
+// the same buckets. Two limiters would mean two independent budgets, and a
+// caller could simply spend both.
+func (h *SelfHostedAuthHandler) Limiter() *authratelimit.AuthRateLimiter {
+	return h.limiter
+}
+
+// limited wraps a handler in the per-caller rate limiter. Applied only to
+// routes that accept or mint a credential; the read-heavy session routes are
+// left alone so limiting them cannot slow the dashboard down.
+func (h *SelfHostedAuthHandler) limited(next http.HandlerFunc) http.Handler {
+	if h.limiter == nil {
+		return next
+	}
+	return h.limiter.Wrap(next)
+}
+
 // RegisterHTTPRoutes registers the HTTP endpoints for login/register on the given router
 // This is used to integrate with the main gateway router
 func (h *SelfHostedAuthHandler) RegisterHTTPRoutes(router *mux.Router) {
 	if h.oauthHandler != nil {
 		router.Handle("/oauth/authorize", h.oauthHandler).Methods(http.MethodGet)
-		router.Handle("/oauth/token", h.oauthHandler).Methods(http.MethodPost)
-		router.Handle("/oauth/revoke", h.oauthHandler).Methods(http.MethodPost)
+		router.Handle("/oauth/token", h.limiter.Wrap(h.oauthHandler)).Methods(http.MethodPost)
+		router.Handle("/oauth/revoke", h.limiter.Wrap(h.oauthHandler)).Methods(http.MethodPost)
 		router.Handle("/.well-known/oauth-authorization-server", h.oauthHandler).Methods(http.MethodGet)
 	}
 	router.HandleFunc("/api/auth/signin", h.handleCloudSignIn).Methods("GET")
-	router.HandleFunc("/api/auth/exchange", h.handleTokenExchange).Methods("GET")
+	router.Handle("/api/auth/exchange", h.limited(h.handleTokenExchange)).Methods("GET")
 	// Cloud relay → tenant landing. Cloud mints a single-use launch code
 	// and 302s here; we exchange the code back-channel for the user identity
 	// and mint our own builtin session. Replaces the older legacy
@@ -751,7 +778,7 @@ func (h *SelfHostedAuthHandler) RegisterHTTPRoutes(router *mux.Router) {
 	}
 
 	// HTTP Login endpoint - properly sets session cookie (ConnectRPC can't set cookies)
-	router.HandleFunc("/auth/login", func(w http.ResponseWriter, r *http.Request) {
+	router.Handle("/auth/login", h.limited(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("auth: HTTP /auth/login endpoint called")
 
 		// Parse JSON body
@@ -797,7 +824,9 @@ func (h *SelfHostedAuthHandler) RegisterHTTPRoutes(router *mux.Router) {
 		// Set session cookie using the session returned from the service
 		h.selfHostedSvc.SetSessionCookieForRequest(w, r, session)
 
-		logger.Infof("auth: HTTP /auth/login - user %s logged in, session token: %s", userWithOrgs.User.Email, session.Token)
+		// Never log session.Token: it is a bearer credential, and anyone with log
+		// access could replay it to impersonate the user.
+		logger.Infof("auth: HTTP /auth/login - user %s logged in", userWithOrgs.User.Email)
 
 		// Return success response with user info
 		w.Header().Set("Content-Type", "application/json")
@@ -809,10 +838,10 @@ func (h *SelfHostedAuthHandler) RegisterHTTPRoutes(router *mux.Router) {
 				"name":  userWithOrgs.User.Name,
 			},
 		})
-	}).Methods("POST")
+	})).Methods("POST")
 
 	// HTTP Register endpoint - properly sets session cookie (ConnectRPC can't set cookies)
-	router.HandleFunc("/auth/register", func(w http.ResponseWriter, r *http.Request) {
+	router.Handle("/auth/register", h.limited(func(w http.ResponseWriter, r *http.Request) {
 		// Parse JSON body
 		var req struct {
 			Email    string  `json:"email"`
@@ -872,7 +901,7 @@ func (h *SelfHostedAuthHandler) RegisterHTTPRoutes(router *mux.Router) {
 				"name":  userWithOrgs.User.Name,
 			},
 		})
-	}).Methods("POST")
+	})).Methods("POST")
 }
 
 // Ensure SelfHostedAuthHandler implements authconnect.AuthServiceHandler at compile time.

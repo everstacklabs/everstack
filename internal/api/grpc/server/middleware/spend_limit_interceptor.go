@@ -60,6 +60,12 @@ func (i *SpendLimitInterceptor) checkSpendLimit(procedure string) error {
 
 	// Only check spend limits for metered paths (AI gateway endpoints)
 	if i.policy != nil && !i.policy.ShouldMeterRequest(procedure) {
+		// G0 shadow: observe billable AI paths outside the metered
+		// allowlist. Log-only; promoting a path to MeteredPathPrefixes is
+		// a behavior change (trial counting + spend gating).
+		if i.policy.ShouldShadowMeterRequest(procedure) {
+			logger.Warnf("spend_limit_interceptor: shadow observation - billable AI path outside metered prefixes: %s", procedure)
+		}
 		return nil // Non-metered endpoints are not subject to spend limits
 	}
 

@@ -34,7 +34,7 @@ full: true
 <Tab value="cURL">
 
 ```bash
-curl -X GET "http://localhost:8089/v1/responses/{responseId}" \
+curl -X GET "http://localhost:8089/openai/v1/responses/{responseId}" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json"
 ```
@@ -43,7 +43,7 @@ curl -X GET "http://localhost:8089/v1/responses/{responseId}" \
 <Tab value="JavaScript">
 
 ```js
-const response = await fetch("http://localhost:8089/v1/responses/{responseId}", {
+const response = await fetch("http://localhost:8089/openai/v1/responses/{responseId}", {
   method: "GET",
   headers: {
     "Authorization": "Bearer YOUR_API_KEY",
@@ -60,7 +60,7 @@ const data = await response.json();
 import requests
 
 response = requests.get(
-    "http://localhost:8089/v1/responses/{responseId}",
+    "http://localhost:8089/openai/v1/responses/{responseId}",
     headers={
         "Authorization": "Bearer YOUR_API_KEY",
         "Content-Type": "application/json",
@@ -118,14 +118,16 @@ data = response.json()
         "textTokens": 0,
         "audioTokens": 0,
         "imageTokens": 0,
-        "reasoningTokens": 0
+        "reasoningTokens": 0,
+        "cacheWriteTokens": 0
       },
       "outputTokensDetails": {
         "cachedTokens": 0,
         "textTokens": 0,
         "audioTokens": 0,
         "imageTokens": 0,
-        "reasoningTokens": 0
+        "reasoningTokens": 0,
+        "cacheWriteTokens": 0
       }
     },
     "temperature": 0,

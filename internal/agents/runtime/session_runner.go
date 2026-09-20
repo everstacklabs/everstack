@@ -215,7 +215,7 @@ func (sr *SessionRunner) Start(ctx context.Context, input *LoopInput) {
 				Timestamp: time.Now(),
 				Reason:    newState.FinishReason,
 				Data: map[string]interface{}{
-					"auto_continue": true,
+					"auto_continue":  true,
 					"continue_count": continueCount + 1,
 				},
 			})
@@ -293,6 +293,8 @@ func (sr *SessionRunner) Start(ctx context.Context, input *LoopInput) {
 				PromptTokens:     sr.state.CumulativeUsage.PromptTokens,
 				CompletionTokens: sr.state.CumulativeUsage.CompletionTokens,
 				TotalTokens:      sr.state.CumulativeUsage.TotalTokens,
+				CacheReadTokens:  sr.state.CumulativeUsage.CacheReadTokens,
+				CacheWriteTokens: sr.state.CumulativeUsage.CacheWriteTokens,
 			},
 		}
 		if err != nil {

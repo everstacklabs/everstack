@@ -440,6 +440,11 @@ func (l *LicenseEnforcer) WithLicenseEnforcement(next http.Handler) http.Handler
 						return
 					}
 				}
+				// G0 shadow: observe billable AI paths outside the metered
+				// allowlist. Log-only; no counting change.
+				if l.policy != nil && l.policy.ShouldShadowMeterRequest(r.URL.Path) {
+					logger.Warnf("license_enforcer: shadow observation - billable AI path outside metered prefixes: %s", r.URL.Path)
+				}
 				// Add trial mode header for UI awareness
 				w.Header().Set("X-Everstack-Mode", "trial")
 				next.ServeHTTP(w, r)

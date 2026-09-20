@@ -139,6 +139,7 @@ export const routeActions: RouteActions = {
     '/agents': DeploymentsAgentsActions,
     '/agents/*': DeploymentsAgentsDetailActions,
     '/agents/sessions/*': DeploymentsAgentsSessionDetailActions,
+    '/agents/openai-sessions/*': DeploymentsAgentsSessionDetailActions,
     '/studio': DeploymentsStudioActions,
     '/studio/new': DeploymentsStudioNewActions,
     '/sandboxes': DeploymentsSandboxesActions,

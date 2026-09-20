@@ -24,7 +24,7 @@ var _ workflowspb.WorkflowsServiceServer = (*GrpcServer)(nil)
 
 // Ensure Server implements ConnectServer contract from internal/api/grpc/server
 var _ interface {
-	RegisterConnectServer(...connect.Interceptor) (string, http.Handler)
+	RegisterConnectServer(...connect.HandlerOption) (string, http.Handler)
 	FileDescriptor() protoreflect.FileDescriptor
 } = (*Server)(nil)
 
@@ -107,8 +107,8 @@ func CreateClassicServerWithContext(ctx context.Context) workflowspb.WorkflowsSe
 }
 
 // Connect server plumbing
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return workflowsconnect.NewWorkflowsServiceHandler(s, connect.WithInterceptors(interceptors...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return workflowsconnect.NewWorkflowsServiceHandler(s, opts...)
 }
 
 func (s *Server) FileDescriptor() protoreflect.FileDescriptor {

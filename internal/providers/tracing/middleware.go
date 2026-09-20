@@ -213,15 +213,16 @@ func (m *TracingMiddleware) Chat(ctx context.Context, req gw.ChatCompletionReque
 
 		// Calculate costs if calculator is available
 		if m.costCalculator != nil {
-			breakdown := m.costCalculator.CalculateCost(
+			breakdown := m.costCalculator.CalculateCostWithCacheTokens(
 				m.provider.Name(),
 				resp.Model,
 				resp.Usage.PromptTokens,
 				resp.Usage.CompletionTokens,
 				resp.Usage.CacheReadCount(),
+				resp.Usage.CacheWriteCount(),
 			)
 
-			attrs.SetLLMCost(span, breakdown.InputCost, breakdown.OutputCost, breakdown.EstimatedUSD)
+			attrs.SetLLMCost(span, breakdown.InputCost+breakdown.CachedCost, breakdown.OutputCost, breakdown.EstimatedUSD)
 
 			// Also set usage_details JSON for consistency with cost_details
 			usageDetailsJSON := attrs.SerializeToJSON(map[string]int64{
@@ -434,14 +435,15 @@ func (m *TracingMiddleware) ChatStream(ctx context.Context, req gw.ChatCompletio
 			if model == "" {
 				model = req.Model
 			}
-			breakdown := m.costCalculator.CalculateCost(
+			breakdown := m.costCalculator.CalculateCostWithCacheTokens(
 				m.provider.Name(),
 				model,
 				streamUsage.PromptTokens,
 				streamUsage.CompletionTokens,
 				streamUsage.CacheReadCount(),
+				streamUsage.CacheWriteCount(),
 			)
-			attrs.SetLLMCost(span, breakdown.InputCost, breakdown.OutputCost, breakdown.EstimatedUSD)
+			attrs.SetLLMCost(span, breakdown.InputCost+breakdown.CachedCost, breakdown.OutputCost, breakdown.EstimatedUSD)
 		}
 	}
 	if streamModel != "" {

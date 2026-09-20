@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	health "github.com/everstacklabs/everstack/pkg/grpc/everstack/health/v1"
 	healthconnect "github.com/everstacklabs/everstack/pkg/grpc/everstack/health/v1/healthconnect"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -32,8 +32,8 @@ func CreateServer(
 	}
 }
 
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return healthconnect.NewHealthServiceHandler(s, connect.WithInterceptors(interceptors...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return healthconnect.NewHealthServiceHandler(s, opts...)
 }
 
 func (s *Server) FileDescriptor() protoreflect.FileDescriptor {

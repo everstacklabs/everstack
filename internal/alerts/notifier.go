@@ -32,7 +32,7 @@ type NotificationRouter struct {
 	store        AlertStore
 	channelMgr   ChannelNotifier
 	httpClient   *http.Client
-	dashboardURL string // optional base URL for deep-linking (e.g. "https://app.everstack.dev")
+	dashboardURL string // optional base URL for deep-linking (e.g. "https://app.everstack.ai")
 }
 
 // NewNotificationRouter creates a new NotificationRouter.

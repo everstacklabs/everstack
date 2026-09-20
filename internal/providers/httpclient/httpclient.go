@@ -53,3 +53,46 @@ func Transport() *http.Transport {
 	Default() // Ensure initialized
 	return defaultClient.Transport.(*http.Transport)
 }
+
+var (
+	unaryTransportOnce sync.Once
+	unaryTransport     *http.Transport
+)
+
+// Unary returns a client for non-streaming provider calls (chat completions,
+// embeddings, moderation) which must be bounded by the caller's context
+// deadline alone.
+//
+// It deliberately omits Default's ResponseHeaderTimeout. That guard measures
+// the gap between finishing the request write and receiving response headers,
+// which is exactly right for streaming — upstreams emit headers at first token
+// — but wrong for unary completions, where upstreams withhold headers until the
+// whole completion is generated. On a unary call the setting therefore acts as
+// a hard cap on total generation time, so any request whose output is long
+// enough to exceed it fails with "timeout awaiting response headers" no matter
+// how generous the caller's own deadline is.
+//
+// Every other tuning knob matches Default. The transport (and therefore the
+// connection pool) is shared across calls, but each call returns a fresh
+// http.Client so that callers which wrap Transport for instrumentation affect
+// only their own client rather than every other provider's.
+func Unary() *http.Client {
+	unaryTransportOnce.Do(func() {
+		unaryTransport = &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   3 * time.Second,
+				KeepAlive: 90 * time.Second,
+			}).DialContext,
+			ForceAttemptHTTP2:     true,
+			MaxIdleConns:          1024,
+			MaxIdleConnsPerHost:   256,
+			MaxConnsPerHost:       512,
+			IdleConnTimeout:       120 * time.Second,
+			TLSHandshakeTimeout:   3 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			DisableCompression:    false,
+		}
+	})
+	return &http.Client{Transport: unaryTransport}
+}

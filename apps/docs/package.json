@@ -9,7 +9,7 @@
     "build": "NODE_OPTIONS=--max-old-space-size=8192 vite build",
     "generate:llms": "node --import tsx/esm scripts/generate-llms.mts",
     "start": "sh -c \"wrangler deploy --config wrangler.toml --x-autoconfig=false\"",
-    "test": "node --import tsx/esm --test src/lib/layout.shared.test.mts",
+    "test": "node --import tsx/esm --test src/lib/*.test.mts",
     "types:check": "fumadocs-mdx && tsc --noEmit",
     "postinstall": "fumadocs-mdx",
     "lint": "biome check",

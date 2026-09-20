@@ -33,11 +33,13 @@ func (s *Server) WithInterceptors(interceptors ...connect.Interceptor) *Server {
 	return s
 }
 
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	all := make([]connect.Interceptor, 0, len(s.serviceInterceptors)+len(interceptors))
-	all = append(all, s.serviceInterceptors...)
-	all = append(all, interceptors...)
-	return eventsconnect.NewEventsServiceHandler(s, connect.WithInterceptors(all...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	// The service\'s own interceptors run first, then whatever the caller
+	// supplied. connect accumulates interceptors across options, so this
+	// preserves the previous ordering while letting the caller pass other
+	// handler options through untouched.
+	all := append([]connect.HandlerOption{connect.WithInterceptors(s.serviceInterceptors...)}, opts...)
+	return eventsconnect.NewEventsServiceHandler(s, all...)
 }
 func (s *Server) FileDescriptor() protoreflect.FileDescriptor {
 	return eventspb.File_everstack_events_v1_events_service_proto

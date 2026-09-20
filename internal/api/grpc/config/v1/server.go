@@ -5,20 +5,20 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/jmoiron/sqlx"
 	configgrpc "github.com/everstacklabs/everstack/internal/api/grpc/config"
 	configsvc "github.com/everstacklabs/everstack/internal/config"
 	"github.com/everstacklabs/everstack/internal/events"
 	configpb "github.com/everstacklabs/everstack/pkg/grpc/everstack/config/v1"
 	"github.com/everstacklabs/everstack/pkg/grpc/everstack/config/v1/configconnect"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/jmoiron/sqlx"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // Ensure Server implements ConnectServer contract from internal/api/grpc/server
 var _ interface {
-	RegisterConnectServer(...connect.Interceptor) (string, http.Handler)
+	RegisterConnectServer(...connect.HandlerOption) (string, http.Handler)
 	FileDescriptor() protoreflect.FileDescriptor
 } = (*Server)(nil)
 
@@ -81,8 +81,8 @@ func CreateServerWithSchemasDBAndEventBus(schemaFiles map[string]string, db *sql
 }
 
 // Connect server plumbing
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return configconnect.NewConfigServiceHandler(s, connect.WithInterceptors(interceptors...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return configconnect.NewConfigServiceHandler(s, opts...)
 }
 
 func (s *Server) FileDescriptor() protoreflect.FileDescriptor {

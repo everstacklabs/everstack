@@ -15,6 +15,13 @@ type Policy struct {
 	// Only these paths will have requests recorded for metering purposes.
 	// This is an allowlist approach - if a path doesn't match, it won't be metered.
 	MeteredPathPrefixes []string
+
+	// ShadowMeteredPathPrefixes are billable AI paths that are NOT in
+	// MeteredPathPrefixes yet. They are observed log-only (see
+	// ShouldShadowMeterRequest) so the metering gap can be measured before
+	// any gate trusts them. Adding a path here changes no enforcement
+	// behavior. G0 metering-truth slice.
+	ShadowMeteredPathPrefixes []string
 }
 
 // NewDefaultPolicy returns a policy with minimal bypasses for bootstrap only.
@@ -62,6 +69,29 @@ func NewDefaultPolicy() *Policy {
 			// ConnectRPC/gRPC endpoints (GatewayService AI methods)
 			"/everstack.gateway.v1.GatewayService/ChatCompletion",
 			"/everstack.gateway.v1.GatewayService/Embeddings",
+		},
+		ShadowMeteredPathPrefixes: []string{
+			// Billable AI paths missing from MeteredPathPrefixes above.
+			// Observed log-only via ShouldShadowMeterRequest (G0); promoting
+			// a path to MeteredPathPrefixes is a behavior change (trial
+			// counting + spend gating) and needs its own review.
+
+			// REST/HTTP endpoints (OpenAI-compatible API)
+			"/v1/responses",
+			"/v1/rerank",
+
+			// ConnectRPC/gRPC endpoints (GatewayService AI methods).
+			// Metadata-only response ops (Get/Cancel/Delete/List) are
+			// deliberately excluded: they serve no model work.
+			"/everstack.gateway.v1.GatewayService/Speech",
+			"/everstack.gateway.v1.GatewayService/Transcription",
+			"/everstack.gateway.v1.GatewayService/Translation",
+			"/everstack.gateway.v1.GatewayService/ImageGeneration",
+			"/everstack.gateway.v1.GatewayService/ImageEdit",
+			"/everstack.gateway.v1.GatewayService/ImageVariation",
+			"/everstack.gateway.v1.GatewayService/Moderation",
+			"/everstack.gateway.v1.GatewayService/Rerank",
+			"/everstack.gateway.v1.GatewayService/CreateResponse",
 		},
 	}
 }
@@ -142,6 +172,25 @@ func (p *Policy) ShouldMeterRequest(path string) bool {
 		return false
 	}
 	for _, prefix := range p.MeteredPathPrefixes {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// ShouldShadowMeterRequest returns true if the path serves billable AI work
+// that is NOT yet in MeteredPathPrefixes. Callers must treat this as
+// observation only (log, never block or count): promoting a path to
+// MeteredPathPrefixes changes trial/spend behavior. G0 metering-truth slice.
+func (p *Policy) ShouldShadowMeterRequest(path string) bool {
+	if p == nil || path == "" || len(p.ShadowMeteredPathPrefixes) == 0 {
+		return false
+	}
+	if p.ShouldMeterRequest(path) {
+		return false
+	}
+	for _, prefix := range p.ShadowMeteredPathPrefixes {
 		if strings.HasPrefix(path, prefix) {
 			return true
 		}

@@ -37,7 +37,10 @@ func TestCacheLoadsModelParametersFromEmbeddedCatalog(t *testing.T) {
 		{"openai", "gpt-5.2", "temperature", false},
 		{"openai", "gpt-5.2", "reasoning_effort", true},
 		{"openai", "gpt-5.2", "verbosity", true},
+		{"openai", "gpt-6-astra", "temperature", false},
+		{"openai", "gpt-6-astra", "reasoning_effort", true},
 		{"anthropic", "claude-sonnet-4-5", "top_k", true},
+		{"anthropic", "claude-fable-5-1", "reasoning_effort", true},
 		// Anthropic removed sampling on Opus 4.7 and later.
 		{"anthropic", "claude-opus-5", "temperature", false},
 	}

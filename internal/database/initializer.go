@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/everstacklabs/everstack/cmd/config/gateway/validator"
 	"github.com/everstacklabs/everstack/internal/database/dialect"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/jmoiron/sqlx"
 )
 
 // Environment variable names for database DSN overrides
@@ -19,8 +19,8 @@ const (
 	EnvClickHouseDSN = "EVS_CLICKHOUSE_DSN"
 )
 
-// getPostgresDSN returns the Postgres DSN, preferring environment variable over config
-func getPostgresDSN(cfg *validator.Config) string {
+// PostgresDSN returns the Postgres DSN, preferring the environment override.
+func PostgresDSN(cfg *validator.Config) string {
 	if envDSN := os.Getenv(EnvPostgresDSN); envDSN != "" {
 		logger.Debugf("Using Postgres DSN from %s environment variable", EnvPostgresDSN)
 		return envDSN
@@ -31,8 +31,8 @@ func getPostgresDSN(cfg *validator.Config) string {
 	return ""
 }
 
-// getClickHouseDSN returns the ClickHouse DSN, preferring environment variable over config
-func getClickHouseDSN(cfg *validator.Config) string {
+// ClickHouseDSN returns the ClickHouse DSN, preferring the environment override.
+func ClickHouseDSN(cfg *validator.Config) string {
 	if envDSN := os.Getenv(EnvClickHouseDSN); envDSN != "" {
 		logger.Debugf("Using ClickHouse DSN from %s environment variable", EnvClickHouseDSN)
 		return envDSN
@@ -56,6 +56,9 @@ func InitializeFromConfig(ctx context.Context, cfg *validator.Config) (*InitResu
 	if cfg == nil {
 		return &InitResult{Mode: ""}, nil
 	}
+	if cfg.Database == nil {
+		return &InitResult{Mode: ""}, nil
+	}
 	mode := strings.ToLower(cfg.Database.Mode)
 	if mode == "hybrid" {
 		return initHybrid(ctx, cfg)
@@ -73,14 +76,14 @@ func initSingle(ctx context.Context, cfg *validator.Config) (*InitResult, error)
 	var dbc Config
 	switch typeStr {
 	case "postgres":
-		dbc = Config{Type: TypePostgres, DSN: getPostgresDSN(cfg), MaxOpen: cfg.Database.Postgres.MaxOpen, MaxIdle: cfg.Database.Postgres.MaxIdle}
+		dbc = Config{Type: TypePostgres, DSN: PostgresDSN(cfg), MaxOpen: cfg.Database.Postgres.MaxOpen, MaxIdle: cfg.Database.Postgres.MaxIdle}
 	case "clickhouse":
-		dbc = Config{Type: TypeClickHouse, DSN: getClickHouseDSN(cfg), MaxOpen: cfg.Database.ClickHouse.MaxOpen, MaxIdle: cfg.Database.ClickHouse.MaxIdle}
+		dbc = Config{Type: TypeClickHouse, DSN: ClickHouseDSN(cfg), MaxOpen: cfg.Database.ClickHouse.MaxOpen, MaxIdle: cfg.Database.ClickHouse.MaxIdle}
 	case "memory":
 		dbc = Config{Type: TypeMemory}
 	default:
 		logger.Warnf("unknown database.type=%s; defaulting to postgres", typeStr)
-		dbc = Config{Type: TypePostgres, DSN: getPostgresDSN(cfg), MaxOpen: cfg.Database.Postgres.MaxOpen, MaxIdle: cfg.Database.Postgres.MaxIdle}
+		dbc = Config{Type: TypePostgres, DSN: PostgresDSN(cfg), MaxOpen: cfg.Database.Postgres.MaxOpen, MaxIdle: cfg.Database.Postgres.MaxIdle}
 	}
 
 	if dbc.Type == "" {
@@ -119,42 +122,74 @@ func initSingle(ctx context.Context, cfg *validator.Config) (*InitResult, error)
 }
 
 func initHybrid(ctx context.Context, cfg *validator.Config) (*InitResult, error) {
+	return initHybridWithOpen(ctx, cfg, Open)
+}
+
+type openConnectionFunc func(context.Context, Config) (*Conn, error)
+
+func initHybridWithOpen(ctx context.Context, cfg *validator.Config, open openConnectionFunc) (*InitResult, error) {
 	// Primary: Postgres
-	pgDSN := getPostgresDSN(cfg)
+	pgDSN := PostgresDSN(cfg)
 	pgCfg := Config{Type: TypePostgres, DSN: pgDSN, MaxOpen: cfg.Database.Postgres.MaxOpen, MaxIdle: cfg.Database.Postgres.MaxIdle}
-	pgConn, err := Open(ctx, pgCfg)
+	pgConn, err := open(ctx, pgCfg)
 	if err != nil {
 		return nil, fmt.Errorf("open postgres connection: %w", err)
 	}
 	if pgConn.RW != nil {
 		pingCtx, pingCancel := context.WithTimeout(ctx, 10*time.Second)
-		defer pingCancel()
 		if err := pgConn.RW.PingContext(pingCtx); err != nil {
+			pingCancel()
+			_ = pgConn.Close(ctx)
 			return nil, fmt.Errorf("postgres ping failed: %w", err)
 		}
+		pingCancel()
 		if err := (dialect.Postgres{}).EnsureSchema(ctx, pgConn.RW); err != nil {
+			_ = pgConn.Close(ctx)
 			return nil, fmt.Errorf("postgres schema ensure failed: %w", err)
 		}
 		logger.Infof("postgres migrations applied and schema verified")
 	}
 
 	// Analytics: ClickHouse
-	dsn := getClickHouseDSN(cfg)
+	dsn := ClickHouseDSN(cfg)
 	if dsn == "" {
+		if cfg.Database.ClickHouse.Optional {
+			logger.Warnf("ClickHouse analytics unavailable: DSN not configured; continuing because database.clickhouse.optional=true")
+			return &InitResult{Mode: "hybrid", Primary: pgConn}, nil
+		}
+		_ = pgConn.Close(ctx)
 		return nil, fmt.Errorf("database.mode=hybrid requires database.clickhouse.dsn to be set (via config or %s env var)", EnvClickHouseDSN)
 	}
-	chConn, err := Open(ctx, Config{Type: TypeClickHouse, DSN: dsn, MaxOpen: cfg.Database.ClickHouse.MaxOpen, MaxIdle: cfg.Database.ClickHouse.MaxIdle})
+	chConn, err := open(ctx, Config{Type: TypeClickHouse, DSN: dsn, MaxOpen: cfg.Database.ClickHouse.MaxOpen, MaxIdle: cfg.Database.ClickHouse.MaxIdle})
 	if err != nil {
+		if cfg.Database.ClickHouse.Optional {
+			logger.WithError(err).Warn("ClickHouse analytics unavailable at startup; transactional APIs remain available")
+			return &InitResult{Mode: "hybrid", Primary: pgConn}, nil
+		}
+		_ = pgConn.Close(ctx)
 		return nil, fmt.Errorf("open clickhouse connection: %w", err)
 	}
 	var chx *sqlx.DB
 	if chConn.RW != nil {
 		chPingCtx, chPingCancel := context.WithTimeout(ctx, 10*time.Second)
-		defer chPingCancel()
 		if err := chConn.RW.PingContext(chPingCtx); err != nil {
+			chPingCancel()
+			_ = chConn.Close(ctx)
+			if cfg.Database.ClickHouse.Optional {
+				logger.WithError(err).Warn("ClickHouse analytics ping failed at startup; transactional APIs remain available")
+				return &InitResult{Mode: "hybrid", Primary: pgConn}, nil
+			}
+			_ = pgConn.Close(ctx)
 			return nil, fmt.Errorf("clickhouse ping failed: %w", err)
 		}
+		chPingCancel()
 		if err := (dialect.ClickHouse{}).EnsureSchema(ctx, chConn.RW); err != nil {
+			_ = chConn.Close(ctx)
+			if cfg.Database.ClickHouse.Optional {
+				logger.WithError(err).Warn("ClickHouse analytics schema validation failed at startup; transactional APIs remain available")
+				return &InitResult{Mode: "hybrid", Primary: pgConn}, nil
+			}
+			_ = pgConn.Close(ctx)
 			return nil, fmt.Errorf("clickhouse schema ensure failed: %w", err)
 		}
 		logger.Infof("clickhouse migrations applied and schema verified")

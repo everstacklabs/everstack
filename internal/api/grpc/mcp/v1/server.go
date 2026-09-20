@@ -8,15 +8,15 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
-	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/jmoiron/sqlx"
 	"github.com/everstacklabs/everstack/internal/cqrs"
 	"github.com/everstacklabs/everstack/internal/database"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/mcp"
 	mcppb "github.com/everstacklabs/everstack/pkg/grpc/everstack/mcp/v1"
 	"github.com/everstacklabs/everstack/pkg/grpc/everstack/mcp/v1/mcpconnect"
+	"github.com/google/uuid"
+	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/jmoiron/sqlx"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -48,8 +48,8 @@ func CreateServer(ctx context.Context, db *sqlx.DB, registry *mcp.Registry, heal
 }
 
 // RegisterConnectServer returns the Connect handler path and handler.
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return mcpconnect.NewMcpServiceHandler(s, connect.WithInterceptors(interceptors...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return mcpconnect.NewMcpServiceHandler(s, opts...)
 }
 
 // FileDescriptor returns the proto file descriptor for reflection.

@@ -2,6 +2,7 @@
   "title": "Agents",
   "pages": [
     "overview",
+    "openai-agents-api",
     "creating-agents",
     "tools",
     "sessions",

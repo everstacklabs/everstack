@@ -18,7 +18,11 @@ type Server interface {
 
 type ConnectServer interface {
 	Server
-	RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler)
+	// RegisterConnectServer takes handler options rather than bare
+	// interceptors so cross-cutting handler configuration (compression
+	// thresholds, read limits) can be applied uniformly by the caller instead
+	// of being repeated, or forgotten, in each of thirty services.
+	RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler)
 	FileDescriptor() protoreflect.FileDescriptor
 }
 

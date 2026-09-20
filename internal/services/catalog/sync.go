@@ -386,6 +386,9 @@ func convertModelToLegacy(provider string, model map[string]interface{}) map[str
 		"publisher":          identity.Publisher,
 		"canonical_model_id": identity.CanonicalModelID,
 	}
+	if apiType, ok := model["api_type"]; ok {
+		legacy["api_type"] = apiType
+	}
 	if releaseDate, ok := model["release_date"]; ok {
 		legacy["release_date"] = releaseDate
 	}
@@ -405,6 +408,23 @@ func convertModelToLegacy(provider string, model map[string]interface{}) map[str
 		}
 		if v, ok := cost["cache_write_per_1k"]; ok {
 			legacy["cache_write_cost_per_1k"] = v
+		}
+		if v, ok := cost["cache_write_1h_per_1k"]; ok {
+			legacy["cache_write_1h_cost_per_1k"] = v
+		}
+		if pricing, ok := cost["long_context"].(map[string]interface{}); ok {
+			if v, ok := pricing["threshold_tokens"]; ok {
+				legacy["long_context_threshold_tokens"] = v
+			}
+			if v, ok := pricing["input_multiplier"]; ok {
+				legacy["long_context_input_multiplier"] = v
+			}
+			if v, ok := pricing["cache_multiplier"]; ok {
+				legacy["long_context_cache_multiplier"] = v
+			}
+			if v, ok := pricing["output_multiplier"]; ok {
+				legacy["long_context_output_multiplier"] = v
+			}
 		}
 	}
 

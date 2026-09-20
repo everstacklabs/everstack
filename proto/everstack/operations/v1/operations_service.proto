@@ -13,18 +13,24 @@ service OperationsService {
   rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
   rpc GetOverview(GetOverviewRequest) returns (GetOverviewResponse);
   rpc ListOrganizations(ListOrganizationsRequest) returns (ListOrganizationsResponse);
+  rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse);
   rpc ListInstallations(ListInstallationsRequest) returns (ListInstallationsResponse);
   rpc ListLicenses(ListLicensesRequest) returns (ListLicensesResponse);
   rpc ListInstances(ListInstancesRequest) returns (ListInstancesResponse);
   rpc GetInstance(GetInstanceRequest) returns (GetInstanceResponse);
+  rpc GetInstanceDiagnostics(GetInstanceDiagnosticsRequest) returns (GetInstanceDiagnosticsResponse);
+  rpc ListInstanceAutomations(ListInstanceAutomationsRequest) returns (ListInstanceAutomationsResponse);
+  rpc ChangeInstanceAutomation(ChangeInstanceAutomationRequest) returns (ChangeInstanceAutomationResponse);
   rpc ChangeInstanceLifecycle(ChangeInstanceLifecycleRequest) returns (ChangeInstanceLifecycleResponse);
   rpc ListSandboxes(ListSandboxesRequest) returns (ListSandboxesResponse);
   rpc ListEnvironments(ListEnvironmentsRequest) returns (ListEnvironmentsResponse);
   rpc GetEnvironment(GetEnvironmentRequest) returns (GetEnvironmentResponse);
+  rpc GetWorkload(GetWorkloadRequest) returns (GetWorkloadResponse);
   rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
   rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse);
   rpc GetIdentityOverview(GetIdentityOverviewRequest) returns (GetIdentityOverviewResponse);
   rpc ListIdentityUsers(ListIdentityUsersRequest) returns (ListIdentityUsersResponse);
+  rpc GetCustomerUser(GetCustomerUserRequest) returns (GetCustomerUserResponse);
   rpc ListIdentitySessions(ListIdentitySessionsRequest) returns (ListIdentitySessionsResponse);
   rpc RevokeIdentitySession(RevokeIdentitySessionRequest) returns (RevokeIdentitySessionResponse);
   rpc ListIdentityConnections(ListIdentityConnectionsRequest) returns (ListIdentityConnectionsResponse);
@@ -38,6 +44,9 @@ service OperationsService {
   rpc AcknowledgeIncident(AcknowledgeIncidentRequest) returns (AcknowledgeIncidentResponse);
   rpc SnoozeIncident(SnoozeIncidentRequest) returns (SnoozeIncidentResponse);
   rpc ResolveIncident(ResolveIncidentRequest) returns (ResolveIncidentResponse);
+  rpc AssignIncident(AssignIncidentRequest) returns (AssignIncidentResponse);
+  rpc AddIncidentNote(AddIncidentNoteRequest) returns (AddIncidentNoteResponse);
+  rpc ListIncidentsForSubject(ListIncidentsForSubjectRequest) returns (ListIncidentsForSubjectResponse);
   rpc ListAlertRules(ListAlertRulesRequest) returns (ListAlertRulesResponse);
   rpc ListNotificationTargets(ListNotificationTargetsRequest) returns (ListNotificationTargetsResponse);
 

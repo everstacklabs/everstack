@@ -109,7 +109,7 @@ full: true
 <Tab value="cURL">
 
 ```bash
-curl -X POST "http://localhost:8089/v1/responses" \
+curl -X POST "http://localhost:8089/openai/v1/responses" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"string","instructions":"string","input":[{"type":"string","role":"ROLE_UNSPECIFIED","content":[],"itemId":"string"}],"tools":[{"type":"string","function":{"name":"string","description":"string"}}],"builtinTools":[{"type":"string","webSearch":{"maxResults":0,"searchContextSize":"string"},"fileSearch":{"vectorStoreIds":[],"maxNumResults":0},"computerUse":{"environment":"string","displayWidth":0,"displayHeight":0},"mcp":{"url":"string","name":"string","requireApproval":true,"allowedTools":[]}}],"toolChoice":{"mode":"string","specificTool":{"type":"string","function":{"name":"string","description":"string"}}},"parallelToolCalls":true,"text":{"format":{"type":"string"}},"reasoning":{"effort":"string","generateSummary":"string"},"maxOutputTokens":0,"temperature":0,"topP":0,"truncation":{"type":"string","lastMessages":0},"store":true,"previousResponseId":"string","stream":true}'
@@ -119,7 +119,7 @@ curl -X POST "http://localhost:8089/v1/responses" \
 <Tab value="JavaScript">
 
 ```js
-const response = await fetch("http://localhost:8089/v1/responses", {
+const response = await fetch("http://localhost:8089/openai/v1/responses", {
   method: "POST",
   headers: {
     "Authorization": "Bearer YOUR_API_KEY",
@@ -211,7 +211,7 @@ const data = await response.json();
 import requests
 
 response = requests.post(
-    "http://localhost:8089/v1/responses",
+    "http://localhost:8089/openai/v1/responses",
     headers={
         "Authorization": "Bearer YOUR_API_KEY",
         "Content-Type": "application/json",
@@ -344,14 +344,16 @@ data = response.json()
         "textTokens": 0,
         "audioTokens": 0,
         "imageTokens": 0,
-        "reasoningTokens": 0
+        "reasoningTokens": 0,
+        "cacheWriteTokens": 0
       },
       "outputTokensDetails": {
         "cachedTokens": 0,
         "textTokens": 0,
         "audioTokens": 0,
         "imageTokens": 0,
-        "reasoningTokens": 0
+        "reasoningTokens": 0,
+        "cacheWriteTokens": 0
       }
     },
     "temperature": 0,

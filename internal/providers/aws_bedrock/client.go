@@ -404,14 +404,18 @@ func derefUsage(usage *bedrocktypes.TokenUsage) gw.Usage {
 	if usage == nil {
 		return gw.Usage{}
 	}
-	prompt := int(aws.ToInt32(usage.InputTokens))
+	freshInput := int(aws.ToInt32(usage.InputTokens))
+	cacheRead := int(aws.ToInt32(usage.CacheReadInputTokens))
+	cacheWrite := int(aws.ToInt32(usage.CacheWriteInputTokens))
+	prompt := freshInput + cacheRead + cacheWrite
 	completion := int(aws.ToInt32(usage.OutputTokens))
-	total := int(aws.ToInt32(usage.TotalTokens))
+	total := prompt + completion
 	gwUsage := gw.Usage{PromptTokens: prompt, CompletionTokens: completion, TotalTokens: total}
-	if aws.ToInt32(usage.CacheReadInputTokens) > 0 || aws.ToInt32(usage.CacheWriteInputTokens) > 0 {
+	if cacheRead > 0 || cacheWrite > 0 {
 		gwUsage.PromptDetails = &gw.TokenDetails{
-			CachedTokens: int(aws.ToInt32(usage.CacheReadInputTokens) + aws.ToInt32(usage.CacheWriteInputTokens)),
-			TextTokens:   prompt,
+			CachedTokens:     cacheRead + cacheWrite,
+			CacheReadTokens:  cacheRead,
+			CacheWriteTokens: cacheWrite,
 		}
 	}
 	return gwUsage

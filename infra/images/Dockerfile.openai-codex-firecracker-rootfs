@@ -1,0 +1,22 @@
+# prepare-openai-codex-firecracker-rootfs.sh appends this overlay starting at
+# USER root to the canonical services/sandbox-rootfs/Dockerfile. That single
+# composed build preserves VM init, vsock, network and sandbox-user behavior.
+# BASE_ROOTFS_IMAGE supports separate builds when a suitable base is available.
+ARG BASE_ROOTFS_IMAGE=everstack/openai-codex-base:local
+FROM ${BASE_ROOTFS_IMAGE}
+
+USER root
+ARG CODEX_VERSION=0.154.0
+ARG CODEX_INTEGRITY=sha512-FV/x1OHXYv/ifjf3mXj9ThTTAWcUZN6cGIRQRhRxkKNOPuImu1WW0c8ev1vUkE9XGH90dEnYG1tBjIkxRikg0w==
+ARG SOURCE_REVISION=unknown
+RUN npm install --global --include=optional \
+      --integrity="${CODEX_INTEGRITY}" "@openai/codex@${CODEX_VERSION}" \
+    && test "$(codex --version)" = "codex-cli ${CODEX_VERSION}" \
+    && codex exec-server --help >/dev/null \
+    && test -s /etc/ssl/certs/ca-certificates.crt \
+    && mkdir -p /workspace \
+    && chown 1000:1000 /workspace \
+    && printf 'openai-codex-%s-r3-source-%s\n' "$CODEX_VERSION" "$SOURCE_REVISION" > /etc/everstack-rootfs-version
+
+LABEL org.opencontainers.image.title="Everstack OpenAI executor Firecracker rootfs" \
+      org.opencontainers.image.source="https://github.com/everstacklabs/platform"

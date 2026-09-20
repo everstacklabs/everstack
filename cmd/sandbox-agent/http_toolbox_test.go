@@ -2,12 +2,15 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/everstacklabs/everstack/internal/sandbox/toolbox"
 )
@@ -15,6 +18,73 @@ import (
 type httpToolboxResponse struct {
 	Result json.RawMessage `json:"result,omitempty"`
 	Error  string          `json:"error,omitempty"`
+}
+
+func TestHTTPToolboxExecOutlivesBodyReadDeadline(t *testing.T) {
+	server := httptest.NewUnstartedServer(handleHTTPToolboxRPC(toolbox.MethodExec))
+	server.Config.ReadTimeout = 100 * time.Millisecond
+	server.Start()
+	defer server.Close()
+	payload, err := json.Marshal(toolbox.ExecRequest{Command: []string{"sh", "-c", "sleep 0.3; printf survived"}, TimeoutMS: 2000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := server.Client().Post(server.URL, "application/json", bytes.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	var envelope httpToolboxResponse
+	if err := json.NewDecoder(response.Body).Decode(&envelope); err != nil {
+		t.Fatal(err)
+	}
+	var result toolbox.ExecResponse
+	if err := json.Unmarshal(envelope.Result, &result); err != nil {
+		t.Fatalf("exec response: %s", envelope.Error)
+	}
+	if result.ExitCode != 0 || result.Stdout != "survived" {
+		t.Fatalf("body deadline canceled execution: %+v", result)
+	}
+}
+
+func TestHTTPToolboxExecCancellationStopsChildren(t *testing.T) {
+	dir := t.TempDir()
+	payload, err := json.Marshal(toolbox.ExecRequest{
+		Command:   []string{"sh", "-c", "(sleep 2; touch orphan) & touch ready; wait"},
+		WorkDir:   dir,
+		TimeoutMS: 30000,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	req := httptest.NewRequest(http.MethodPost, "/toolbox/exec", bytes.NewReader(payload)).WithContext(ctx)
+	done := make(chan struct{})
+	go func() {
+		handleHTTPToolboxRPC(toolbox.MethodExec)(httptest.NewRecorder(), req)
+		close(done)
+	}()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "ready")); err == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("command did not start")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("HTTP cancellation did not stop execution promptly")
+	}
+	time.Sleep(2200 * time.Millisecond)
+	if _, err := os.Stat(filepath.Join(dir, "orphan")); !os.IsNotExist(err) {
+		t.Fatalf("child survived request cancellation: %v", err)
+	}
 }
 
 func TestHTTPToolboxFilesRoundTrip(t *testing.T) {

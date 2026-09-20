@@ -12,6 +12,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/repository"
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/service"
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/transport"
+	"github.com/everstacklabs/everstack/internal/lib/authratelimit"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/everstacklabs/everstack/pkg/authz"
@@ -35,6 +36,11 @@ type Config struct {
 	SessionSameSite   string
 	ExternalURL       string
 	DeviceTokens      *deviceauth.TokenManager
+
+	// EmailSender delivers magic-link and invitation mail. Nil in builds with
+	// no email provider configured, in which case those flows fall back to
+	// logging the token. Injected rather than imported: see service.EmailSender.
+	EmailSender service.EmailSender
 }
 
 // Server implements grpcserver.ConnectServer for self-hosted auth.
@@ -43,6 +49,7 @@ type Server struct {
 	selfHostedHandler *transport.SelfHostedAuthHandler
 	orgServer         *OrgServer
 	seatLimit         int
+	limiter           *authratelimit.AuthRateLimiter
 }
 
 // OrgServer implements grpcserver.ConnectServer for the OrganizationService.
@@ -52,8 +59,8 @@ type OrgServer struct {
 
 var _ grpcserver.ConnectServer = (*OrgServer)(nil)
 
-func (s *OrgServer) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return orgconnect.NewOrganizationServiceHandler(s.handler, connect.WithInterceptors(interceptors...))
+func (s *OrgServer) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return orgconnect.NewOrganizationServiceHandler(s.handler, opts...)
 }
 
 func (s *OrgServer) FileDescriptor() protoreflect.FileDescriptor {
@@ -100,7 +107,7 @@ func CreateServer(db *sqlx.DB, cfg *Config, seatLimit int) (*Server, error) {
 	// Create self-hosted service
 	selfHostedSvc := service.NewSelfHostedAuthService(
 		internalCfg, userRepo, sessionRepo, credentialsRepo, invitationRepo, magicLinkRepo, orgRepo, authConfigRepo,
-	)
+	).WithEmail(cfg.EmailSender, cfg.ExternalURL)
 
 	// Build the frontend PDP against the same relation tuples used by the
 	// gateway PEP and resource recorder.
@@ -151,6 +158,9 @@ func CreateServer(db *sqlx.DB, cfg *Config, seatLimit int) (*Server, error) {
 		selfHostedHandler: selfHostedHandler,
 		orgServer:         &OrgServer{handler: orgHandler},
 		seatLimit:         seatLimit,
+		// Shared with the HTTP routes on purpose: one budget per caller
+		// across both surfaces, not one each.
+		limiter: selfHostedHandler.Limiter(),
 	}, nil
 }
 
@@ -160,8 +170,18 @@ func (s *Server) OrgService() *OrgServer {
 }
 
 // RegisterConnectServer returns the path and handler for Connect RPC.
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return authconnect.NewAuthServiceHandler(s.handler, connect.WithInterceptors(interceptors...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	path, handler := authconnect.NewAuthServiceHandler(s.handler, opts...)
+	// The Connect surface carries the same credential operations as the HTTP
+	// routes, and on instance hosts it is the only way to reach some of them:
+	// RequestMagicLink has no HTTP route, so limiting the routes alone would
+	// leave the endpoint that sends mail wide open. The gateway's own
+	// tenant-aware limiter cannot cover this, because a request arriving here
+	// has no tenant yet.
+	if s.limiter != nil {
+		handler = s.limiter.WrapSensitive(handler)
+	}
+	return path, handler
 }
 
 // FileDescriptor returns the protobuf file descriptor.

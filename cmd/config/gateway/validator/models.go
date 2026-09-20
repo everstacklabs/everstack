@@ -23,6 +23,7 @@ type ProviderConfig struct {
 type DefaultModel struct {
 	Name             string  `mapstructure:"name"`
 	DisplayName      string  `mapstructure:"display_name"`
+	APIType          string  `mapstructure:"api_type"`
 	ReleaseDate      string  `mapstructure:"release_date"`
 	AddedInVersion   string  `mapstructure:"added_in_version"`
 	Publisher        string  `mapstructure:"publisher"`
@@ -32,16 +33,21 @@ type DefaultModel struct {
 	OutputCost       float64 `mapstructure:"output_cost_per_1k"`
 	// Zero means the catalog does not price cache reads/writes for this model;
 	// callers fall back to a multiplier rather than charging nothing.
-	CacheReadCost    float64          `mapstructure:"cache_read_cost_per_1k"`
-	CacheWriteCost   float64          `mapstructure:"cache_write_cost_per_1k"`
-	Capabilities     []string         `mapstructure:"capabilities"`
-	Status           string           `mapstructure:"status"`
-	MaxOutputTokens  int              `mapstructure:"max_output_tokens"`
-	InputModalities  []string         `mapstructure:"input_modalities"`
-	OutputModalities []string         `mapstructure:"output_modalities"`
-	StructuredOutput bool             `mapstructure:"structured_output"`
-	Parameters       []ModelParameter `mapstructure:"parameters"`
-	Variants         []ModelVariant   `mapstructure:"variants"`
+	CacheReadCost               float64          `mapstructure:"cache_read_cost_per_1k"`
+	CacheWriteCost              float64          `mapstructure:"cache_write_cost_per_1k"`
+	CacheWrite1hCost            float64          `mapstructure:"cache_write_1h_cost_per_1k"`
+	LongContextThresholdTokens  int              `mapstructure:"long_context_threshold_tokens"`
+	LongContextInputMultiplier  float64          `mapstructure:"long_context_input_multiplier"`
+	LongContextCacheMultiplier  float64          `mapstructure:"long_context_cache_multiplier"`
+	LongContextOutputMultiplier float64          `mapstructure:"long_context_output_multiplier"`
+	Capabilities                []string         `mapstructure:"capabilities"`
+	Status                      string           `mapstructure:"status"`
+	MaxOutputTokens             int              `mapstructure:"max_output_tokens"`
+	InputModalities             []string         `mapstructure:"input_modalities"`
+	OutputModalities            []string         `mapstructure:"output_modalities"`
+	StructuredOutput            bool             `mapstructure:"structured_output"`
+	Parameters                  []ModelParameter `mapstructure:"parameters"`
+	Variants                    []ModelVariant   `mapstructure:"variants"`
 }
 
 // ParseModelsDefaults parses defaults/models.yaml bytes into a ModelsConfig.

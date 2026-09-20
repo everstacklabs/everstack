@@ -110,6 +110,11 @@ import {
   AGENT_SESSION_JSON_DOWNLOAD_EVENT,
   getAgentSessionJsonDownloadDetail,
 } from './session-json-export-events'
+import {
+  ChatComposerFrame,
+  ChatTranscript,
+  ChatUserMessage,
+} from './chat-presentation'
 
 const {
   Checkbox,
@@ -3731,7 +3736,7 @@ export function SessionTimeline({
             onScroll={handleScroll}
             className="flex-1 overflow-y-auto min-h-0"
           >
-            <div className="max-w-3xl mx-auto pl-6 pr-3 py-6 space-y-6">
+            <ChatTranscript>
               {/* Empty state — only show when hydration is complete */}
               {hydrationDone &&
                 orderedTurns.length === 0 &&
@@ -3794,18 +3799,16 @@ export function SessionTimeline({
                           attachments: msgAttachments,
                         } = parseAttachedFiles(rawMsg)
                         return (
-                          <div className="flex justify-end">
-                            <div className="max-w-[80%] rounded-md bg-brand-secondary-600/20 px-4 pt-1.5 pb-2">
-                              {msgText && (
-                                <MentionText className="text-sm text-white/90 whitespace-pre-wrap light:text-black/90">
-                                  {msgText}
-                                </MentionText>
-                              )}
-                              <AttachedFilesPreview
-                                attachments={msgAttachments}
-                              />
-                            </div>
-                          </div>
+                          <ChatUserMessage>
+                            {msgText && (
+                              <MentionText className="text-sm text-white/90 whitespace-pre-wrap light:text-black/90">
+                                {msgText}
+                              </MentionText>
+                            )}
+                            <AttachedFilesPreview
+                              attachments={msgAttachments}
+                            />
+                          </ChatUserMessage>
                         )
                       })()}
 
@@ -4239,7 +4242,7 @@ export function SessionTimeline({
                   </div>
                 </div>
               )}
-            </div>
+            </ChatTranscript>
 
             {/* Scroll-to-bottom button */}
             {!autoScroll && (
@@ -4439,7 +4442,7 @@ export function SessionTimeline({
                   showInlineProviderSetup && (
                     <div className="mb-3">{inlineProviderSetupCard}</div>
                   )}
-                <div
+                <ChatComposerFrame
                   className={`relative rounded border bg-brand-main-950 transition-colors focus-within:ring-1 ${isHitlMode ? 'border-brand-secondary-500/40 focus-within:ring-brand-secondary-500/60' : 'border-brand-main-600 focus-within:ring-brand-secondary-500'}`}
                 >
                   {mentionOpen && showAgentMentionDropdown && (
@@ -4678,7 +4681,7 @@ export function SessionTimeline({
                       }
                     </div>
                   </div>
-                </div>
+                </ChatComposerFrame>
                 <div className="mt-2 px-1">
                   <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
                     <div className="flex flex-wrap items-center gap-1.5">

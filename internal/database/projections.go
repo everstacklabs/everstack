@@ -1846,7 +1846,16 @@ func (pm *ProjectionManager) handleAgentTurnCompleted(ctx context.Context, event
 	promptTokens := payloadInt(payload["prompt_tokens"])
 	completionTokens := payloadInt(payload["completion_tokens"])
 	totalTokensInt := payloadInt(payload["total_tokens"])
-	cost := metrics.CalculateCost("", model, promptTokens, completionTokens, 0)
+	cacheReadTokens := payloadInt(payload["cache_read_input_tokens"])
+	cacheWriteTokens := payloadInt(payload["cache_write_input_tokens"])
+	cost := metrics.CalculateCostWithCacheTokens(
+		"",
+		model,
+		promptTokens,
+		completionTokens,
+		cacheReadTokens,
+		cacheWriteTokens,
+	)
 	createdAt := payloadTime(payload["created_at"])
 	completedAt := payloadTime(payload["completed_at"])
 
@@ -1863,15 +1872,17 @@ func (pm *ProjectionManager) handleAgentTurnCompleted(ctx context.Context, event
 		Unit:           "tokens",
 		CostUSD:        cost.EstimatedUSD,
 		Metadata: map[string]interface{}{
-			"turn_id":           payload["id"],
-			"turn_number":       payload["turn_number"],
-			"status":            payload["status"],
-			"model":             model,
-			"prompt_tokens":     promptTokens,
-			"completion_tokens": completionTokens,
-			"total_tokens":      totalTokensInt,
-			"latency_ms":        payload["latency_ms"],
-			"error":             payload["error"],
+			"turn_id":                  payload["id"],
+			"turn_number":              payload["turn_number"],
+			"status":                   payload["status"],
+			"model":                    model,
+			"prompt_tokens":            promptTokens,
+			"completion_tokens":        completionTokens,
+			"total_tokens":             totalTokensInt,
+			"cache_read_input_tokens":  cacheReadTokens,
+			"cache_write_input_tokens": cacheWriteTokens,
+			"latency_ms":               payload["latency_ms"],
+			"error":                    payload["error"],
 		},
 		PeriodStart: createdAt,
 		PeriodEnd:   completedAt,

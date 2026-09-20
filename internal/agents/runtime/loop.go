@@ -763,11 +763,8 @@ func (l *Loop) Run(ctx context.Context, state *LoopState, input *LoopInput) (*Lo
 		// Accumulate usage. Cache buckets (read/write) live on PromptDetails
 		// and are accumulated separately so the turn-level breakdown survives
 		// multi-call turns.
-		var callCacheRead, callCacheWrite int
-		if resp.Usage.PromptDetails != nil {
-			callCacheRead = resp.Usage.PromptDetails.CacheReadTokens
-			callCacheWrite = resp.Usage.PromptDetails.CacheWriteTokens
-		}
+		callCacheRead := resp.Usage.CacheReadCount()
+		callCacheWrite := resp.Usage.CacheWriteCount()
 		state.TurnUsage.PromptTokens += resp.Usage.PromptTokens
 		state.TurnUsage.CompletionTokens += resp.Usage.CompletionTokens
 		state.TurnUsage.TotalTokens += resp.Usage.TotalTokens
@@ -813,8 +810,8 @@ func (l *Loop) Run(ctx context.Context, state *LoopState, input *LoopInput) (*Lo
 				if resp.Usage.PromptDetails != nil {
 					pd = &attrs.TokenBreakdown{
 						CachedTokens:     int64(resp.Usage.PromptDetails.CachedTokens),
-						CacheReadTokens:  int64(resp.Usage.PromptDetails.CacheReadTokens),
-						CacheWriteTokens: int64(resp.Usage.PromptDetails.CacheWriteTokens),
+						CacheReadTokens:  int64(resp.Usage.CacheReadCount()),
+						CacheWriteTokens: int64(resp.Usage.CacheWriteCount()),
 						AudioTokens:      int64(resp.Usage.PromptDetails.AudioTokens),
 					}
 				}
@@ -1880,6 +1877,8 @@ func (l *Loop) Run(ctx context.Context, state *LoopState, input *LoopInput) (*Lo
 			PromptTokens:     state.TurnUsage.PromptTokens,
 			CompletionTokens: state.TurnUsage.CompletionTokens,
 			TotalTokens:      state.TurnUsage.TotalTokens,
+			CacheReadTokens:  state.TurnUsage.CacheReadTokens,
+			CacheWriteTokens: state.TurnUsage.CacheWriteTokens,
 		},
 		Data: map[string]interface{}{
 			"model":                   input.Model,

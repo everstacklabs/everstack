@@ -68,7 +68,7 @@ var _ agentspb.AgentsServiceServer = (*GrpcServer)(nil)
 
 // Ensure Server implements ConnectServer contract from internal/api/grpc/server
 var _ interface {
-	RegisterConnectServer(...connect.Interceptor) (string, http.Handler)
+	RegisterConnectServer(...connect.HandlerOption) (string, http.Handler)
 	FileDescriptor() protoreflect.FileDescriptor
 } = (*Server)(nil)
 
@@ -488,16 +488,21 @@ func CreateClassicServerWithContext(ctx context.Context) agentspb.AgentsServiceS
 }
 
 // Connect server plumbing
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
 	// Prepend the sandbox-ownership interceptor so every AgentsService RPC that
 	// targets a specific sandbox is scoped to the caller's tenant/instance
 	// before the handler runs. This is the ConnectRPC-native counterpart of the
 	// RequireSandboxOwnership HTTP middleware (used only for the non-RPC
 	// streaming/multipart routes).
-	all := append([]connect.Interceptor{s.sandboxOwnershipInterceptor()}, interceptors...)
+	// Ownership check first, then whatever the caller supplied. connect
+	// accumulates interceptors across options, so ordering is preserved and the
+	// caller's other handler options pass through untouched.
+	all := append([]connect.HandlerOption{
+		connect.WithInterceptors(s.sandboxOwnershipInterceptor()),
+	}, opts...)
 	return agentsconnect.NewAgentsServiceHandler(
 		s,
-		connect.WithInterceptors(all...),
+		connect.WithHandlerOptions(all...),
 		connect.WithConditionalHandlerOptions(func(spec connect.Spec) []connect.HandlerOption {
 			if spec.Procedure == agentsconnect.AgentsServiceCreateAgentRevisionProcedure {
 				return []connect.HandlerOption{connect.WithReadMaxBytes(maxCreateAgentRevisionReadBytes)}

@@ -1036,7 +1036,7 @@ func (m *SandboxManager) checkPersistentAgentLimit(ctx context.Context, tenantID
 			return fmt.Errorf("failed to check persistent agent limit: %w", err)
 		}
 		if count >= maxPersistent {
-			return fmt.Errorf("persistent agent limit reached: %d/%d (upgrade at https://everstack.dev/pricing)", count, maxPersistent)
+			return fmt.Errorf("persistent agent limit reached: %d/%d (upgrade at https://everstack.ai/pricing/)", count, maxPersistent)
 		}
 		return nil
 	}
@@ -1415,7 +1415,17 @@ func (m *SandboxManager) loadInstanceRowBySessionID(ctx context.Context, session
 // pulled, container started — and ready for Exec. Use this from agent
 // tools, REST handlers that exec immediately, the CLI, and the eval runner.
 func (m *SandboxManager) GetOrCreate(ctx context.Context, sessionID, tenantID string, config SandboxConfig) (*Instance, error) {
-	return m.getOrCreateImpl(ctx, sessionID, tenantID, config, false)
+	return m.getOrCreateImpl(ctx, sessionID, tenantID, "", config, false)
+}
+
+// GetOrCreateForInstance creates a sandbox with its instance ownership present
+// on the initial durable row. This is required by callers that authorize every
+// subsequent operation against both tenant and instance scope.
+func (m *SandboxManager) GetOrCreateForInstance(ctx context.Context, sessionID, tenantID, instanceID string, config SandboxConfig) (*Instance, error) {
+	if strings.TrimSpace(instanceID) == "" {
+		return nil, fmt.Errorf("sandbox instance scope is required")
+	}
+	return m.getOrCreateImpl(ctx, sessionID, tenantID, strings.TrimSpace(instanceID), config, false)
 }
 
 // GetOrCreateAsync returns immediately with a "pending" placeholder and
@@ -1425,16 +1435,40 @@ func (m *SandboxManager) GetOrCreate(ctx context.Context, sessionID, tenantID st
 // and the backend is not yet running. Used by the admin RPC so the UI does
 // not block on slow first-time image pulls.
 func (m *SandboxManager) GetOrCreateAsync(ctx context.Context, sessionID, tenantID string, config SandboxConfig) (*Instance, error) {
-	return m.getOrCreateImpl(ctx, sessionID, tenantID, config, true)
+	return m.getOrCreateImpl(ctx, sessionID, tenantID, "", config, true)
 }
 
-func (m *SandboxManager) getOrCreateImpl(ctx context.Context, sessionID, tenantID string, config SandboxConfig, async bool) (*Instance, error) {
+func (m *SandboxManager) getOrCreateImpl(ctx context.Context, sessionID, tenantID, instanceID string, config SandboxConfig, async bool) (*Instance, error) {
 	if err := m.RequireSandboxBilling(tenantID); err != nil {
 		return nil, err
 	}
+	requestedSandboxID := fmt.Sprintf("sbx_%s", sessionID)
 	m.mu.RLock()
 	inst, ok := m.instances[sessionID]
 	m.mu.RUnlock()
+	if !ok && instanceID != "" && m.db != nil {
+		persisted, err := m.findInstanceBySandboxIDWithDBFallback(ctx, requestedSandboxID)
+		if err == nil {
+			if !matchesSandboxOwner(persisted, tenantID, instanceID) {
+				return nil, fmt.Errorf("sandbox is not owned by authenticated instance")
+			}
+			m.mu.Lock()
+			if raced := m.instances[sessionID]; raced != nil {
+				inst = raced
+			} else {
+				m.instances[sessionID] = persisted
+				m.instancesBySandbox[persisted.ID] = persisted
+				inst = persisted
+			}
+			m.mu.Unlock()
+			ok = true
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			return nil, err
+		}
+	}
+	if ok && instanceID != "" && !matchesSandboxOwner(inst, tenantID, instanceID) {
+		return nil, fmt.Errorf("sandbox is not owned by authenticated instance")
+	}
 
 	if ok && inst.Status == StatusRunning {
 		// If config now requires a git repo but the running sandbox lacks one,
@@ -1460,7 +1494,6 @@ func (m *SandboxManager) getOrCreateImpl(ctx context.Context, sessionID, tenantI
 		// Fall through to acquire write lock and recreate
 	}
 
-	requestedSandboxID := fmt.Sprintf("sbx_%s", sessionID)
 	if err := m.RequireConcurrentSandboxSlot(ctx, tenantID, requestedSandboxID); err != nil {
 		return nil, err
 	}
@@ -1471,14 +1504,20 @@ func (m *SandboxManager) getOrCreateImpl(ctx context.Context, sessionID, tenantI
 	// explicitly call m.mu.Unlock().
 
 	// Double-check after acquiring write lock
-	if inst, ok := m.instances[sessionID]; ok && inst.Status == StatusRunning {
-		needsGitUpgrade := config.GitRepoURL != "" && config.GitInstallationID > 0 &&
-			inst.Config.RepoHostPath == "" && !m.lazyGitCloneEnabledForSession(sessionID)
-		needsNetworkUpgrade := networkConfigChanged(inst, config)
-		if !needsGitUpgrade && !needsNetworkUpgrade {
-			inst.LastUsedAt = time.Now()
+	if inst, ok := m.instances[sessionID]; ok {
+		if instanceID != "" && !matchesSandboxOwner(inst, tenantID, instanceID) {
 			m.mu.Unlock()
-			return inst, nil
+			return nil, fmt.Errorf("sandbox is not owned by authenticated instance")
+		}
+		if inst.Status == StatusRunning {
+			needsGitUpgrade := config.GitRepoURL != "" && config.GitInstallationID > 0 &&
+				inst.Config.RepoHostPath == "" && !m.lazyGitCloneEnabledForSession(sessionID)
+			needsNetworkUpgrade := networkConfigChanged(inst, config)
+			if !needsGitUpgrade && !needsNetworkUpgrade {
+				inst.LastUsedAt = time.Now()
+				m.mu.Unlock()
+				return inst, nil
+			}
 		}
 	}
 
@@ -1632,6 +1671,7 @@ func (m *SandboxManager) getOrCreateImpl(ctx context.Context, sessionID, tenantI
 	// before the container exists.
 	placeholder := &Instance{
 		ID:             sandboxID,
+		InstanceID:     instanceID,
 		Status:         StatusPending,
 		LifecycleState: m.directCreateLifecycleState(),
 		Config:         instanceConfig,
@@ -1680,6 +1720,10 @@ func (m *SandboxManager) getOrCreateImpl(ctx context.Context, sessionID, tenantI
 	}
 
 	return m.finalizeCreate(ctx, placeholder, instanceConfig, config, sandboxID, sessionID, tenantID, image, eagerClone)
+}
+
+func matchesSandboxOwner(inst *Instance, tenantID, instanceID string) bool {
+	return inst != nil && inst.Config.TenantID == tenantID && inst.InstanceID == instanceID
 }
 
 // directCreateLifecycleState keeps the synchronous manager path distinct from
@@ -1762,6 +1806,7 @@ func (m *SandboxManager) finalizeCreate(ctx context.Context, placeholder *Instan
 	now := time.Now()
 	createDuration := now.Sub(createStart).Milliseconds()
 	inst.LastUsedAt = now
+	inst.InstanceID = placeholder.InstanceID
 	inst.BillingStartedAt = now.UTC()
 	inst.BillingEndedAt = time.Time{}
 	inst.Name = config.Name
@@ -3095,31 +3140,42 @@ func (m *SandboxManager) ListInstancesForTenant(tenantID string) []*Instance {
 	return out
 }
 
-// StopTenantSandboxes stops every running sandbox for one managed tenant.
-// Billing enforcement uses this after the central service reports that the
-// organization's one-time starter credit is exhausted.
-func (m *SandboxManager) StopTenantSandboxes(ctx context.Context, tenantID string) error {
+// StopTenantSandboxes stops every running sandbox for one managed tenant and
+// reports how many it actually stopped. Billing enforcement uses this when the
+// central service refuses compute for the organization.
+//
+// The count matters to the caller: enforcement runs on a timer and re-evaluates
+// a refused tenant on every tick, so "stopped nothing because nothing was
+// running" and "stopped four sandboxes" have to be distinguishable. Returning
+// only an error made both look identical and turned a steady-state tenant into
+// one log line per tick forever.
+func (m *SandboxManager) StopTenantSandboxes(ctx context.Context, tenantID string) (int, error) {
 	if m == nil || strings.TrimSpace(tenantID) == "" {
-		return nil
+		return 0, nil
 	}
 	sandboxIDs := make(map[string]struct{})
 	for _, inst := range m.ListInstancesForTenant(tenantID) {
-		if inst != nil &&
-			(inst.Status == StatusRunning || inst.LifecycleState == LifecycleRunning) {
+		if inst != nil && instanceIsRunning(string(inst.LifecycleState), string(inst.Status)) {
 			sandboxIDs[inst.ID] = struct{}{}
 		}
 	}
 	if m.db != nil {
 		var persistedIDs []string
+		// lifecycle_state is authoritative; the legacy status column is only
+		// consulted when it is unset. ORing the two columns selected rows that
+		// can never be stopped: eu-gra-1-prod holds sandbox_instances written in
+		// May 2026 with lifecycle_state='terminated' AND status='running', and
+		// StopSandbox drives its transition off lifecycle_state alone. Every one
+		// of those rows was selected, passed to StopSandbox, silently no-opped
+		// (setDesiredStateSQL's CASE has no arm out of a terminal state, yet it
+		// still reports success because the row exists), counted as stopped, and
+		// selected again on the next tick — forever.
 		if err := m.db.SelectContext(ctx, &persistedIDs, `
 			SELECT id
 			FROM sandbox_instances
 			WHERE tenant_id = $1
-			  AND (
-				COALESCE(lifecycle_state, '') = 'running'
-				OR COALESCE(status, '') = 'running'
-			  )`, tenantID); err != nil {
-			return fmt.Errorf("list running tenant sandboxes: %w", err)
+			  AND COALESCE(NULLIF(lifecycle_state, ''), status, '') = 'running'`, tenantID); err != nil {
+			return 0, fmt.Errorf("list running tenant sandboxes: %w", err)
 		}
 		for _, sandboxID := range persistedIDs {
 			sandboxIDs[sandboxID] = struct{}{}
@@ -3127,12 +3183,103 @@ func (m *SandboxManager) StopTenantSandboxes(ctx context.Context, tenantID strin
 	}
 
 	var stopErrors []error
+	stopped := 0
 	for sandboxID := range sandboxIDs {
 		if err := m.StopSandbox(ctx, sandboxID); err != nil {
 			stopErrors = append(stopErrors, fmt.Errorf("stop sandbox %s: %w", sandboxID, err))
+			continue
 		}
+		stopped++
 	}
-	return errors.Join(stopErrors...)
+	return stopped, errors.Join(stopErrors...)
+}
+
+// instanceIsRunning decides whether an instance still holds compute, treating
+// lifecycle_state as authoritative and falling back to the legacy status column
+// only when lifecycle_state is unset. The two columns have drifted apart on
+// long-lived rows, and a row whose lifecycle_state is terminal cannot be
+// stopped no matter what status says.
+func instanceIsRunning(lifecycleState, status string) bool {
+	if strings.TrimSpace(lifecycleState) != "" {
+		return lifecycleState == string(LifecycleRunning)
+	}
+	return status == string(StatusRunning)
+}
+
+// LifecycleStatusSuspended parks a persistent agent whose organization is not
+// allowed to run compute. It is deliberately NOT "sleeping".
+//
+// Sleeping means "hibernated for idleness, wake me on demand", and both wake
+// paths act on it: AgentMessageBus auto-wakes a sleeping agent when a message
+// arrives, and the WakeAgent RPC accepts it. Reusing sleeping here would let a
+// tenant whose billing was refused resume compute simply by sending its agent a
+// message. Both of those paths test for exactly "sleeping", so a distinct value
+// is refused by them without any change to either.
+const LifecycleStatusSuspended = "suspended"
+
+// SuspendTenantAgents parks every live persistent agent for one tenant so the
+// reconciler stops reviving it.
+//
+// Stopping the VM alone does not hold. The persistent-agent reconciler treats
+// any agent in created/idle/running/provisioning whose sandbox is missing as an
+// orphan and reprovisions it, so billing enforcement stopping a sandbox every
+// 30s and the reconciler restoring it every 90s fought each other indefinitely:
+// on eu-gra-1-prod six sandboxes stayed up through roughly 8,640 stop calls a
+// day. The reconciler already models exactly this with "sleeping", which it
+// excludes precisely because the reaper parks agents there on purpose. Billing
+// needs the same handshake, with a status the wake paths will not resurrect.
+//
+// Agents already sleeping are left alone: they hold no VM, so there is no
+// compute to stop, and overwriting that status would lose the fact that the
+// reaper — not billing — put them down.
+func (m *SandboxManager) SuspendTenantAgents(ctx context.Context, tenantID string) (int, error) {
+	if m == nil || m.db == nil || strings.TrimSpace(tenantID) == "" {
+		return 0, nil
+	}
+	result, err := m.db.ExecContext(ctx, `
+		UPDATE agent_definitions
+		SET lifecycle_status = $2, updated_at = NOW()
+		WHERE tenant_id = $1
+		  AND lifecycle_mode = 'persistent'
+		  AND deleted_at IS NULL
+		  AND lifecycle_status IN ('created', 'idle', 'running', 'provisioning')`,
+		tenantID, LifecycleStatusSuspended)
+	if err != nil {
+		return 0, fmt.Errorf("suspend tenant agents: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return 0, nil
+	}
+	return int(affected), nil
+}
+
+// ResumeTenantAgents releases agents suspended for billing back to idle, which
+// is the state the reconciler reprovisions from.
+//
+// Without this a tenant that pays is stuck: nothing else writes the suspended
+// status, the reconciler skips it by design, and neither wake path will accept
+// it. Recovery therefore has to come from the same loop that suspended them,
+// which re-evaluates access every tick.
+func (m *SandboxManager) ResumeTenantAgents(ctx context.Context, tenantID string) (int, error) {
+	if m == nil || m.db == nil || strings.TrimSpace(tenantID) == "" {
+		return 0, nil
+	}
+	result, err := m.db.ExecContext(ctx, `
+		UPDATE agent_definitions
+		SET lifecycle_status = 'idle', updated_at = NOW()
+		WHERE tenant_id = $1
+		  AND deleted_at IS NULL
+		  AND lifecycle_status = $2`,
+		tenantID, LifecycleStatusSuspended)
+	if err != nil {
+		return 0, fmt.Errorf("resume tenant agents: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return 0, nil
+	}
+	return int(affected), nil
 }
 
 // GetInstance returns the sandbox instance for a session, if any.

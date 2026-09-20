@@ -1,0 +1,1642 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "everstack/openai_agents/v1/openai_agents_service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "OpenAIAgentsService"
+    }
+  ],
+  "paths": {
+    "/everstack.openai_agents.v1.OpenAIAgentsService/CancelSession": {
+      "post": {
+        "operationId": "OpenAIAgentsService_CancelSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CancelSessionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CancelSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/CreateConnection": {
+      "post": {
+        "operationId": "OpenAIAgentsService_CreateConnection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreateConnectionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateConnectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/CreateSession": {
+      "post": {
+        "operationId": "OpenAIAgentsService_CreateSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreateSessionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/DeleteConnection": {
+      "post": {
+        "operationId": "OpenAIAgentsService_DeleteConnection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteConnectionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1DeleteConnectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/DeleteSession": {
+      "post": {
+        "operationId": "OpenAIAgentsService_DeleteSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteSessionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1DeleteSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/DeleteSessionArtifact": {
+      "post": {
+        "operationId": "OpenAIAgentsService_DeleteSessionArtifact",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteSessionArtifactResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1DeleteSessionArtifactRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/ExportSessionArtifact": {
+      "post": {
+        "operationId": "OpenAIAgentsService_ExportSessionArtifact",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ExportSessionArtifactResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ExportSessionArtifactRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/GetArtifactDownload": {
+      "post": {
+        "operationId": "OpenAIAgentsService_GetArtifactDownload",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetArtifactDownloadResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1GetArtifactDownloadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/GetCapabilities": {
+      "post": {
+        "operationId": "OpenAIAgentsService_GetCapabilities",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetCapabilitiesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1GetCapabilitiesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/GetConnection": {
+      "post": {
+        "operationId": "OpenAIAgentsService_GetConnection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetConnectionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1GetConnectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/GetSession": {
+      "post": {
+        "operationId": "OpenAIAgentsService_GetSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetSessionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1GetSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/GetSessionUsage": {
+      "post": {
+        "operationId": "OpenAIAgentsService_GetSessionUsage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetSessionUsageResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1GetSessionUsageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/ListApprovals": {
+      "post": {
+        "operationId": "OpenAIAgentsService_ListApprovals",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListApprovalsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ListApprovalsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/ListConnections": {
+      "post": {
+        "operationId": "OpenAIAgentsService_ListConnections",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListConnectionsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ListConnectionsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/ListSessionArtifacts": {
+      "post": {
+        "operationId": "OpenAIAgentsService_ListSessionArtifacts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListSessionArtifactsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ListSessionArtifactsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/ListSessionEvents": {
+      "post": {
+        "operationId": "OpenAIAgentsService_ListSessionEvents",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListSessionEventsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ListSessionEventsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/ListSessions": {
+      "post": {
+        "operationId": "OpenAIAgentsService_ListSessions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListSessionsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ListSessionsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/ResolveApproval": {
+      "post": {
+        "operationId": "OpenAIAgentsService_ResolveApproval",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ResolveApprovalResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ResolveApprovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/SendInput": {
+      "post": {
+        "operationId": "OpenAIAgentsService_SendInput",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1SendInputResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1SendInputRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/UpdateConnection": {
+      "post": {
+        "operationId": "OpenAIAgentsService_UpdateConnection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1UpdateConnectionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1UpdateConnectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    },
+    "/everstack.openai_agents.v1.OpenAIAgentsService/UploadSessionInput": {
+      "post": {
+        "operationId": "OpenAIAgentsService_UploadSessionInput",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1UploadSessionInputResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1UploadSessionInputRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "OpenAIAgentsService"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "protobufAny": {
+        "type": "object",
+        "properties": {
+          "@type": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": {}
+      },
+      "protobufNullValue": {
+        "type": "string",
+        "enum": [
+          "NULL_VALUE"
+        ],
+        "default": "NULL_VALUE",
+        "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+      },
+      "rpcStatus": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/protobufAny"
+            }
+          }
+        }
+      },
+      "v1Approval": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "turnId": {
+            "type": "string"
+          },
+          "callId": {
+            "type": "string"
+          },
+          "toolName": {
+            "type": "string"
+          },
+          "resourceKind": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "requestedBy": {
+            "type": "string"
+          },
+          "arguments": {},
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1Artifact": {
+        "type": "object",
+        "properties": {
+          "objectId": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "string",
+            "format": "int64"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1ArtifactDownload": {
+        "type": "object",
+        "properties": {
+          "artifact": {
+            "$ref": "#/components/schemas/v1Artifact"
+          },
+          "url": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1CancelSessionRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          }
+        }
+      },
+      "v1CancelSessionResponse": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1Capabilities": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "environmentModes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "toolTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fileOperations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "executorVersion": {
+            "type": "string"
+          },
+          "readiness": {
+            "type": "string"
+          },
+          "canManageConnections": {
+            "type": "boolean"
+          },
+          "canRunSessions": {
+            "type": "boolean"
+          },
+          "canResolveApprovals": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1Connection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "principalId": {
+            "type": "string"
+          },
+          "allowedModels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string"
+          },
+          "lastError": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1CreateConnectionRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "apiKey": {
+            "type": "string"
+          },
+          "executorKey": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "principalId": {
+            "type": "string"
+          },
+          "allowedModels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "v1CreateConnectionResponse": {
+        "type": "object",
+        "properties": {
+          "connection": {
+            "$ref": "#/components/schemas/v1Connection"
+          }
+        }
+      },
+      "v1CreateSessionRequest": {
+        "type": "object",
+        "properties": {
+          "connectionId": {
+            "type": "string"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "instructions": {
+            "type": "string"
+          },
+          "environment": {
+            "$ref": "#/components/schemas/v1EnvironmentSpec"
+          },
+          "input": {},
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ToolSpec"
+            }
+          }
+        }
+      },
+      "v1CreateSessionResponse": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/v1Session"
+          }
+        }
+      },
+      "v1DeleteConnectionRequest": {
+        "type": "object",
+        "properties": {
+          "connectionId": {
+            "type": "string"
+          }
+        }
+      },
+      "v1DeleteConnectionResponse": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1DeleteSessionArtifactRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "objectId": {
+            "type": "string"
+          }
+        }
+      },
+      "v1DeleteSessionArtifactResponse": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1DeleteSessionRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          }
+        }
+      },
+      "v1DeleteSessionResponse": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1EnvironmentSpec": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "workspaceDirectory": {
+            "type": "string"
+          }
+        }
+      },
+      "v1ExportSessionArtifactRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        }
+      },
+      "v1ExportSessionArtifactResponse": {
+        "type": "object",
+        "properties": {
+          "artifact": {
+            "$ref": "#/components/schemas/v1Artifact"
+          }
+        }
+      },
+      "v1GetArtifactDownloadRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "objectId": {
+            "type": "string"
+          }
+        }
+      },
+      "v1GetArtifactDownloadResponse": {
+        "type": "object",
+        "properties": {
+          "download": {
+            "$ref": "#/components/schemas/v1ArtifactDownload"
+          }
+        }
+      },
+      "v1GetCapabilitiesRequest": {
+        "type": "object"
+      },
+      "v1GetCapabilitiesResponse": {
+        "type": "object",
+        "properties": {
+          "capabilities": {
+            "$ref": "#/components/schemas/v1Capabilities"
+          }
+        }
+      },
+      "v1GetConnectionRequest": {
+        "type": "object",
+        "properties": {
+          "connectionId": {
+            "type": "string"
+          }
+        }
+      },
+      "v1GetConnectionResponse": {
+        "type": "object",
+        "properties": {
+          "connection": {
+            "$ref": "#/components/schemas/v1Connection"
+          }
+        }
+      },
+      "v1GetSessionRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          }
+        }
+      },
+      "v1GetSessionResponse": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/v1Session"
+          }
+        }
+      },
+      "v1GetSessionUsageRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          }
+        }
+      },
+      "v1GetSessionUsageResponse": {
+        "type": "object",
+        "properties": {
+          "usage": {
+            "$ref": "#/components/schemas/v1SessionUsage"
+          }
+        }
+      },
+      "v1ListApprovalsRequest": {
+        "type": "object"
+      },
+      "v1ListApprovalsResponse": {
+        "type": "object",
+        "properties": {
+          "approvals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Approval"
+            }
+          }
+        }
+      },
+      "v1ListConnectionsRequest": {
+        "type": "object"
+      },
+      "v1ListConnectionsResponse": {
+        "type": "object",
+        "properties": {
+          "connections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Connection"
+            }
+          }
+        }
+      },
+      "v1ListSessionArtifactsRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          }
+        }
+      },
+      "v1ListSessionArtifactsResponse": {
+        "type": "object",
+        "properties": {
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Artifact"
+            }
+          }
+        }
+      },
+      "v1ListSessionEventsRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "afterCursor": {
+            "type": "string",
+            "format": "int64"
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ListSessionEventsResponse": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SessionEvent"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "format": "int64"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1ListSessionsRequest": {
+        "type": "object"
+      },
+      "v1ListSessionsResponse": {
+        "type": "object",
+        "properties": {
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Session"
+            }
+          }
+        }
+      },
+      "v1ResolveApprovalRequest": {
+        "type": "object",
+        "properties": {
+          "approvalId": {
+            "type": "string"
+          },
+          "decision": {
+            "type": "string"
+          }
+        }
+      },
+      "v1ResolveApprovalResponse": {
+        "type": "object",
+        "properties": {
+          "resolved": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1SendInputRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "input": {}
+        }
+      },
+      "v1SendInputResponse": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1Session": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "connectionId": {
+            "type": "string"
+          },
+          "conversationId": {
+            "type": "string"
+          },
+          "upstreamSessionId": {
+            "type": "string"
+          },
+          "upstreamEnvironmentId": {
+            "type": "string"
+          },
+          "sandboxId": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "environment": {
+            "$ref": "#/components/schemas/v1EnvironmentSpec"
+          },
+          "status": {
+            "type": "string"
+          },
+          "readiness": {
+            "type": "string"
+          },
+          "cleanupStatus": {
+            "type": "string"
+          },
+          "environmentCleanupStatus": {
+            "type": "string"
+          },
+          "lastError": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1SessionEvent": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "format": "int64"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "upstreamItemId": {
+            "type": "string"
+          },
+          "payload": {},
+          "toolFailed": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1SessionUsage": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "inputTokens": {
+            "type": "string",
+            "format": "int64"
+          },
+          "outputTokens": {
+            "type": "string",
+            "format": "int64"
+          },
+          "totalTokens": {
+            "type": "string",
+            "format": "int64"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string"
+          }
+        }
+      },
+      "v1ToolSpec": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "v1UpdateConnectionRequest": {
+        "type": "object",
+        "properties": {
+          "connectionId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "apiKey": {
+            "type": "string"
+          },
+          "executorKey": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "principalId": {
+            "type": "string"
+          },
+          "allowedModels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "updateMask": {
+            "type": "string"
+          }
+        }
+      },
+      "v1UpdateConnectionResponse": {
+        "type": "object",
+        "properties": {
+          "connection": {
+            "$ref": "#/components/schemas/v1Connection"
+          }
+        }
+      },
+      "v1UploadSessionInputRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string",
+            "format": "byte"
+          },
+          "destination": {
+            "type": "string"
+          }
+        }
+      },
+      "v1UploadSessionInputResponse": {
+        "type": "object",
+        "properties": {
+          "artifact": {
+            "$ref": "#/components/schemas/v1Artifact"
+          }
+        }
+      }
+    }
+  }
+}

@@ -87,6 +87,7 @@ type CatalogModelConfig struct {
 	Name             string            `yaml:"name"`
 	DisplayName      string            `yaml:"display_name"`
 	Family           string            `yaml:"family"`
+	APIType          string            `yaml:"api_type"`
 	Status           string            `yaml:"status"`
 	ReleaseDate      string            `yaml:"release_date"`
 	AddedInVersion   string            `yaml:"added_in_version"`
@@ -108,10 +109,21 @@ type CatalogModelConfig struct {
 // value means "unknown", and callers fall back to a provider-shaped multiplier
 // rather than pricing cached tokens at zero.
 type CatalogCost struct {
-	InputPer1k      float64 `yaml:"input_per_1k"`
-	OutputPer1k     float64 `yaml:"output_per_1k"`
-	CacheReadPer1k  float64 `yaml:"cache_read_per_1k"`
-	CacheWritePer1k float64 `yaml:"cache_write_per_1k"`
+	InputPer1k        float64                    `yaml:"input_per_1k"`
+	OutputPer1k       float64                    `yaml:"output_per_1k"`
+	CacheReadPer1k    float64                    `yaml:"cache_read_per_1k"`
+	CacheWritePer1k   float64                    `yaml:"cache_write_per_1k"`
+	CacheWrite1hPer1k float64                    `yaml:"cache_write_1h_per_1k"`
+	LongContext       *CatalogLongContextPricing `yaml:"long_context"`
+}
+
+// CatalogLongContextPricing describes a whole-request price multiplier that
+// starts once the input crosses a provider-defined token threshold.
+type CatalogLongContextPricing struct {
+	ThresholdTokens  int     `yaml:"threshold_tokens"`
+	InputMultiplier  float64 `yaml:"input_multiplier"`
+	CacheMultiplier  float64 `yaml:"cache_multiplier"`
+	OutputMultiplier float64 `yaml:"output_multiplier"`
 }
 
 // CatalogLimits represents model limits
@@ -316,6 +328,9 @@ func buildLegacyModelsProvider(provider *CatalogProviderConfig, models []Catalog
 			"parameters":         m.Parameters,
 			"variants":           m.Variants,
 		}
+		if m.APIType != "" {
+			legacyModel["api_type"] = m.APIType
+		}
 		// Emitted only when priced, so a missing rate stays distinguishable
 		// from a genuine zero and consumers can pick their fallback.
 		if m.Cost.CacheReadPer1k > 0 {
@@ -323,6 +338,15 @@ func buildLegacyModelsProvider(provider *CatalogProviderConfig, models []Catalog
 		}
 		if m.Cost.CacheWritePer1k > 0 {
 			legacyModel["cache_write_cost_per_1k"] = m.Cost.CacheWritePer1k
+		}
+		if m.Cost.CacheWrite1hPer1k > 0 {
+			legacyModel["cache_write_1h_cost_per_1k"] = m.Cost.CacheWrite1hPer1k
+		}
+		if pricing := m.Cost.LongContext; pricing != nil {
+			legacyModel["long_context_threshold_tokens"] = pricing.ThresholdTokens
+			legacyModel["long_context_input_multiplier"] = pricing.InputMultiplier
+			legacyModel["long_context_cache_multiplier"] = pricing.CacheMultiplier
+			legacyModel["long_context_output_multiplier"] = pricing.OutputMultiplier
 		}
 		if m.ReleaseDate != "" {
 			legacyModel["release_date"] = m.ReleaseDate

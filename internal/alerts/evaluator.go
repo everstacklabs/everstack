@@ -266,6 +266,31 @@ func metricsHourlySelectExpr(metric string) (string, error) {
 	}
 }
 
+// nanoTimestampBound renders a bound for a comparison against a
+// DateTime64(9) column (otel_traces.Timestamp, otel_trace_scores.Timestamp).
+//
+// clickhouse-go substitutes a time.Time argument as toDateTime('...') — plain
+// second-precision DateTime. Comparing that against a DateTime64(9) column
+// makes the server attempt a widening conversion that raises, catches, and
+// counts a TYPE_MISMATCH in system.errors on every evaluation. The query still
+// returns the right answer, so nothing fails, but each score rule burned four
+// counted errors per run: ~34k/day on eu-gra-1-prod, enough to bury a real
+// type error in the noise. Wrapping the placeholder folds the constant to the
+// column's own type at parse time, so no conversion is attempted.
+//
+// Measured against eu-gra-1-prod: 4 errors per query before, 0 after.
+const nanoTimestampBound = "toDateTime64(?, 9)"
+
+// nanoTimestampRange renders the inclusive lower/upper bound pair for a
+// DateTime64(9) column. Both query paths share it so a later edit cannot
+// reintroduce the plain-placeholder form on one path and not the other.
+func nanoTimestampRange(column string) []string {
+	return []string{
+		column + " >= " + nanoTimestampBound,
+		column + " <= " + nanoTimestampBound,
+	}
+}
+
 // queryScoreMetric queries outcome metrics from the otel_trace_scores table.
 // Score metrics use the format "score.<aggregation>.<score_name>" where:
 //   - aggregation: avg, rate_true, rate_false, count
@@ -282,7 +307,10 @@ func (e *Evaluator) queryScoreMetric(ctx context.Context, rule *AlertRuleRecord)
 
 	// queryMetric guarantees non-empty tenant. Tenant lives in the
 	// Environment column for otel_trace_scores (set by the recorder).
-	whereConditions := []string{"Timestamp >= ?", "Timestamp <= ?", "Name = ?", "Source = 'EVAL'", "Environment = ?"}
+	whereConditions := append(
+		nanoTimestampRange("Timestamp"),
+		"Name = ?", "Source = 'EVAL'", "Environment = ?",
+	)
 	args := []interface{}{start, now, scoreName, rule.TenantID}
 
 	where := ""
@@ -381,11 +409,11 @@ func (e *Evaluator) queryTraceMetricRaw(ctx context.Context, rule *AlertRuleReco
 	// empty-string guard on SpanAttributes prevents cross-tenant matches
 	// when the gateway's resource happens to be a different tenant —
 	// see internal/query/handlers/traces/tenant_filter.go for rationale.
-	whereConditions := []string{
-		"Timestamp >= ?", "Timestamp <= ?",
+	whereConditions := append(
+		nanoTimestampRange("Timestamp"),
 		"SpanName IN ('gateway.chat.completion', 'gateway.embeddings')",
 		"(SpanAttributes['tenant.id'] = ? OR (SpanAttributes['tenant.id'] = '' AND ResourceAttributes['tenant.id'] = ?))",
-	}
+	)
 	args := []interface{}{start, now, rule.TenantID, rule.TenantID}
 
 	if len(rule.Filters) > 0 {

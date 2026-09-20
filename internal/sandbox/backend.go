@@ -154,6 +154,7 @@ type Instance struct {
 	// charged to the customer. It is cleared with BillingStartedAt after the
 	// ledger transaction commits.
 	BillingEndedAt    time.Time `json:"billing_ended_at,omitempty"`
+	DestroyedAt       time.Time `json:"destroyed_at,omitempty"`
 	ExpiresAt         time.Time `json:"expires_at"`
 	LastUsedAt        time.Time `json:"last_used_at"`
 	IdleRetentionSecs int       `json:"idle_retention_secs"`

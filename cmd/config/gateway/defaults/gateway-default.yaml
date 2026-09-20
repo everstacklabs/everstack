@@ -113,6 +113,9 @@ database:
     # DSN format: clickhouse://user:password@host:9000/database
     # Override by setting EVS_CLICKHOUSE_DSN environment variable (takes precedence)
     dsn: "clickhouse://clickhouse:clickhouse@localhost:9000/everstack"
+    # Keep false by default for backward compatibility. Managed production
+    # enables this so an analytics outage cannot stop transactional APIs.
+    optional: false
     max_open_conns: 50
     max_idle_conns: 25
     conn_max_lifetime: "10m"
@@ -164,6 +167,9 @@ auth:
 # Override with environment variables:
 #   EVS_CACHE_TYPE=redis
 #   EVS_CACHE_REDIS_ADDRESS=redis:6379
+# Or for Sentinel failover:
+#   EVS_CACHE_REDIS_SENTINEL_MASTER_NAME=everstack
+#   EVS_CACHE_REDIS_SENTINEL_ADDRESSES=redis-0:26379,redis-1:26379,redis-2:26379
 
 cache:
   enabled: true
@@ -175,6 +181,8 @@ cache:
 
   redis:
     address: ""
+    sentinel_master_name: ""
+    sentinel_addresses: []
     password: ""
     db: 0
     ttl: "10m"

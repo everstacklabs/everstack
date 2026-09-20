@@ -1,0 +1,186 @@
+---
+title: "POST Create Agent Link"
+full: true
+---
+
+<APILayout>
+<APIHeader>
+
+<div className="mb-6">
+  <h1 className="mb-2 text-2xl font-bold">Create Agent Link</h1>
+  <div className="flex items-center gap-2">
+    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400">POST</span>
+    <code className="text-sm text-fd-muted-foreground">{"/v1/agents/{sourceAgentId}/links"}</code>
+  </div>
+</div>
+
+
+</APIHeader>
+<APITryIt>
+
+<APIPlayground
+  method="post"
+  path="/v1/agents/{sourceAgentId}/links"
+  parameters={[{"name":"sourceAgentId","in":"path","required":true,"schema":{"type":"string"}}]}
+  defaultBody={`{
+  "tenantId": "string",
+  "targetType": "string",
+  "targetId": "string",
+  "targetName": "string",
+  "linkType": "AGENT_LINK_TYPE_UNSPECIFIED",
+  "protocol": "AGENT_LINK_PROTOCOL_UNSPECIFIED"
+}`}
+/>
+
+</APITryIt>
+<APIRequest>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Request</p>
+
+<Tabs items={["cURL", "JavaScript", "Python"]}>
+<Tab value="cURL">
+
+```bash
+curl -X POST "http://localhost:8089/v1/agents/{sourceAgentId}/links" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"tenantId":"string","targetType":"string","targetId":"string","targetName":"string","linkType":"AGENT_LINK_TYPE_UNSPECIFIED","protocol":"AGENT_LINK_PROTOCOL_UNSPECIFIED"}'
+```
+
+</Tab>
+<Tab value="JavaScript">
+
+```js
+const response = await fetch("http://localhost:8089/v1/agents/{sourceAgentId}/links", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "tenantId": "string",
+  "targetType": "string",
+  "targetId": "string",
+  "targetName": "string",
+  "linkType": "AGENT_LINK_TYPE_UNSPECIFIED",
+  "protocol": "AGENT_LINK_PROTOCOL_UNSPECIFIED"
+}),
+});
+const data = await response.json();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8089/v1/agents/{sourceAgentId}/links",
+    headers={
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+  "tenantId": "string",
+  "targetType": "string",
+  "targetId": "string",
+  "targetName": "string",
+  "linkType": "AGENT_LINK_TYPE_UNSPECIFIED",
+  "protocol": "AGENT_LINK_PROTOCOL_UNSPECIFIED"
+},
+)
+data = response.json()
+```
+
+</Tab>
+</Tabs>
+
+</APIRequest>
+<APIResponse>
+
+<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">Response</p>
+
+
+<Tabs items={["200", "default"]}>
+<Tab value="200">
+
+```json
+{
+  "link": {
+    "id": "string",
+    "tenantId": "string",
+    "sourceAgentId": "string",
+    "targetType": "string",
+    "targetId": "string",
+    "targetName": "string",
+    "linkType": "AGENT_LINK_TYPE_UNSPECIFIED",
+    "protocol": "AGENT_LINK_PROTOCOL_UNSPECIFIED",
+    "status": "AGENT_LINK_STATUS_UNSPECIFIED",
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+</Tab>
+<Tab value="default">
+
+```json
+{
+  "code": 0,
+  "message": "string",
+  "details": [
+    {
+      "@type": "string"
+    }
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+</APIResponse>
+<APIContent>
+
+
+### Parameters
+
+| Name | In | Type | Required | Description |
+|------|-----|------|----------|-------------|
+| `sourceAgentId` | path | `string` | **Yes** |  |
+
+
+### Request Body
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `tenantId` | `string` | No |  |
+| `targetType` | `string` | No |  |
+| `targetId` | `string` | No |  |
+| `targetName` | `string` | No |  |
+| `linkType` | `"AGENT_LINK_TYPE_UNSPECIFIED" \| "AGENT_LINK_TYPE_COLLABORATOR" \| "AGENT_LINK_TYPE_SUPERVISOR" \| "AGENT_LINK_TYPE_SUBORDINATE" \| "AGENT_LINK_TYPE_PEER"` | No | AgentLinkType describes the relationship between linked agents. |
+| `protocol` | `"AGENT_LINK_PROTOCOL_UNSPECIFIED" \| "AGENT_LINK_PROTOCOL_INTERNAL" \| "AGENT_LINK_PROTOCOL_CHANNEL" \| "AGENT_LINK_PROTOCOL_WEBHOOK"` | No | AgentLinkProtocol describes how linked agents communicate. |
+| `config` | `object` | No |  |
+
+
+### Responses
+
+#### 200 Create a link between agents
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `link` | `object` | AgentLink represents a connection between an agent and another entity. |
+
+#### default An unexpected error response.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `code` | `integer` |  |
+| `message` | `string` |  |
+| `details` | `object[]` |  |
+
+
+</APIContent>
+</APILayout>

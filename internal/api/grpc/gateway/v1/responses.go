@@ -110,12 +110,16 @@ func (s *Server) CreateResponse(ctx context.Context, req *connect.Request[gatewa
 func (s *Server) handleStreamingResponse(ctx context.Context, provider gw.ResponsesProvider, providerName string, req gw.CreateResponseRequest, stream *connect.ServerStream[gatewaypb.CreateResponseResponse]) error {
 	var streamUsage *gw.ResponseUsage
 	var streamModel string
+	var streamID string
 	err := provider.CreateResponseStream(ctx, req, func(resp gw.CreateResponseResponse) error {
 		if resp.Usage != nil {
 			streamUsage = resp.Usage
 		}
 		if resp.Model != "" {
 			streamModel = resp.Model
+		}
+		if resp.ID != "" {
+			streamID = resp.ID
 		}
 		protoResp := convertResponseToProto(&resp)
 		if err := stream.Send(protoResp); err != nil {
@@ -131,13 +135,23 @@ func (s *Server) handleStreamingResponse(ctx context.Context, provider gw.Respon
 	// actually served this Responses request (chosen by capability), not a
 	// model->provider re-resolve.
 	if streamUsage != nil {
-		costDetails := metrics.CalculateCost(providerName, streamModel, streamUsage.InputTokens, streamUsage.OutputTokens, 0)
+		costDetails := metrics.CalculateCostWithCacheTokens(
+			providerName,
+			streamModel,
+			streamUsage.InputTokens,
+			streamUsage.OutputTokens,
+			streamUsage.CacheReadCount(),
+			streamUsage.CacheWriteCount(),
+		)
 		s.recordUsageMetrics(
 			int64(streamUsage.InputTokens),
 			int64(streamUsage.OutputTokens),
 			costDetails.EstimatedUSD,
 			0, false,
 		)
+		// G0 shadow: the Responses path has no wallet meter. Track the
+		// served cost as unbilled, log-only.
+		reportShadowCost(ctx, s, streamID, "CreateResponse", shadowUnmeteredProcedure, s.effectiveKeySource(ctx), costDetails.EstimatedUSD)
 	}
 	return nil
 }
@@ -168,7 +182,14 @@ func (s *Server) handleUnaryResponse(ctx context.Context, provider gw.ResponsesP
 	// Record usage metrics. Use the provider that actually served this Responses
 	// request (chosen by capability), not a model->provider re-resolve.
 	if resp.Usage != nil {
-		costDetails := metrics.CalculateCost(providerName, resp.Model, resp.Usage.InputTokens, resp.Usage.OutputTokens, 0)
+		costDetails := metrics.CalculateCostWithCacheTokens(
+			providerName,
+			resp.Model,
+			resp.Usage.InputTokens,
+			resp.Usage.OutputTokens,
+			resp.Usage.CacheReadCount(),
+			resp.Usage.CacheWriteCount(),
+		)
 		estimatedCost := costDetails.EstimatedUSD
 		cacheSavings := 0.0
 		if cacheOutcome.Hit {
@@ -181,6 +202,10 @@ func (s *Server) handleUnaryResponse(ctx context.Context, provider gw.ResponsesP
 			estimatedCost,
 			cacheSavings, cacheOutcome.Hit,
 		)
+		// G0 shadow: the Responses path has no wallet meter. Track the
+		// served cost as unbilled, log-only (0 on cache hits still records
+		// the unmetered-procedure observation).
+		reportShadowCost(ctx, s, resp.ID, "CreateResponse", shadowUnmeteredProcedure, s.effectiveKeySource(ctx), estimatedCost)
 	}
 
 	// Store the response
@@ -292,7 +317,14 @@ func (s *Server) handleAgenticResponse(ctx context.Context, req gw.CreateRespons
 		// Record usage metrics for this agentic loop iteration
 		if chatResp.Usage.PromptTokens > 0 || chatResp.Usage.CompletionTokens > 0 {
 			iterProvider := s.getProviderForModel(ctx, chatResp.Model)
-			iterCost := metrics.CalculateCost(iterProvider, chatResp.Model, chatResp.Usage.PromptTokens, chatResp.Usage.CompletionTokens, 0)
+			iterCost := metrics.CalculateCostWithCacheTokens(
+				iterProvider,
+				chatResp.Model,
+				chatResp.Usage.PromptTokens,
+				chatResp.Usage.CompletionTokens,
+				chatResp.Usage.CacheReadCount(),
+				chatResp.Usage.CacheWriteCount(),
+			)
 			estimatedCost := iterCost.EstimatedUSD
 			cacheSavings := 0.0
 			if cacheHit {
@@ -380,11 +412,7 @@ func (s *Server) handleAgenticResponse(ctx context.Context, req gw.CreateRespons
 			// No tool calls or tool execution disabled - we're done
 			if choice.FinishReason == "stop" || choice.FinishReason == "end_turn" || len(choice.Message.ToolCalls) == 0 {
 				response.Status = "completed"
-				response.Usage = &gw.ResponseUsage{
-					InputTokens:  chatResp.Usage.PromptTokens,
-					OutputTokens: chatResp.Usage.CompletionTokens,
-					TotalTokens:  chatResp.Usage.TotalTokens,
-				}
+				response.Usage = responseUsageFromChat(&chatResp.Usage)
 				globalResponseStore.Set(responseID, response)
 				return stream.Send(convertResponseToProto(response))
 			}
@@ -410,6 +438,38 @@ func reasoningEffort(reasoning *gw.ReasoningConfig) string {
 		return ""
 	}
 	return reasoning.Effort
+}
+
+func responseUsageFromChat(usage *gw.Usage) *gw.ResponseUsage {
+	if usage == nil {
+		return nil
+	}
+	responseUsage := &gw.ResponseUsage{
+		InputTokens:  usage.PromptTokens,
+		OutputTokens: usage.CompletionTokens,
+		TotalTokens:  usage.TotalTokens,
+	}
+	if details := usage.PromptDetails; details != nil {
+		responseUsage.InputTokensDetails = &gw.ResponseUsageDetails{
+			CachedTokens:     usage.CacheReadCount(),
+			CacheWriteTokens: usage.CacheWriteCount(),
+			TextTokens:       details.TextTokens,
+			AudioTokens:      details.AudioTokens,
+			ImageTokens:      details.ImageTokens,
+			ReasoningTokens:  details.ReasoningTokens,
+		}
+	}
+	if details := usage.CompletionDetails; details != nil {
+		responseUsage.OutputTokensDetails = &gw.ResponseUsageDetails{
+			CachedTokens:     details.CachedTokens,
+			CacheWriteTokens: details.CacheWriteTokens,
+			TextTokens:       details.TextTokens,
+			AudioTokens:      details.AudioTokens,
+			ImageTokens:      details.ImageTokens,
+			ReasoningTokens:  details.ReasoningTokens,
+		}
+	}
+	return responseUsage
 }
 
 // processChatCompletionInternal is a wrapper to call the internal chat completion.
@@ -862,20 +922,22 @@ func convertResponseToProto(resp *gw.CreateResponseResponse) *gatewaypb.CreateRe
 		}
 		if resp.Usage.InputTokensDetails != nil {
 			protoResp.Usage.InputTokensDetails = &gatewaypb.ResponseUsageDetails{
-				CachedTokens:    int32(resp.Usage.InputTokensDetails.CachedTokens),
-				TextTokens:      int32(resp.Usage.InputTokensDetails.TextTokens),
-				AudioTokens:     int32(resp.Usage.InputTokensDetails.AudioTokens),
-				ImageTokens:     int32(resp.Usage.InputTokensDetails.ImageTokens),
-				ReasoningTokens: int32(resp.Usage.InputTokensDetails.ReasoningTokens),
+				CachedTokens:     int32(resp.Usage.InputTokensDetails.CachedTokens),
+				CacheWriteTokens: int32(resp.Usage.InputTokensDetails.CacheWriteTokens),
+				TextTokens:       int32(resp.Usage.InputTokensDetails.TextTokens),
+				AudioTokens:      int32(resp.Usage.InputTokensDetails.AudioTokens),
+				ImageTokens:      int32(resp.Usage.InputTokensDetails.ImageTokens),
+				ReasoningTokens:  int32(resp.Usage.InputTokensDetails.ReasoningTokens),
 			}
 		}
 		if resp.Usage.OutputTokensDetails != nil {
 			protoResp.Usage.OutputTokensDetails = &gatewaypb.ResponseUsageDetails{
-				CachedTokens:    int32(resp.Usage.OutputTokensDetails.CachedTokens),
-				TextTokens:      int32(resp.Usage.OutputTokensDetails.TextTokens),
-				AudioTokens:     int32(resp.Usage.OutputTokensDetails.AudioTokens),
-				ImageTokens:     int32(resp.Usage.OutputTokensDetails.ImageTokens),
-				ReasoningTokens: int32(resp.Usage.OutputTokensDetails.ReasoningTokens),
+				CachedTokens:     int32(resp.Usage.OutputTokensDetails.CachedTokens),
+				CacheWriteTokens: int32(resp.Usage.OutputTokensDetails.CacheWriteTokens),
+				TextTokens:       int32(resp.Usage.OutputTokensDetails.TextTokens),
+				AudioTokens:      int32(resp.Usage.OutputTokensDetails.AudioTokens),
+				ImageTokens:      int32(resp.Usage.OutputTokensDetails.ImageTokens),
+				ReasoningTokens:  int32(resp.Usage.OutputTokensDetails.ReasoningTokens),
 			}
 		}
 	}

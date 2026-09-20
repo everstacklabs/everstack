@@ -34,6 +34,34 @@ var (
 	okSpellings    = []string{"ok", "status_code_ok"}
 )
 
+// IsErrorValue reports whether a status value read back from ClickHouse is an
+// error, under either spelling.
+//
+// The SQL builders above cover comparisons made *inside* a query. This covers
+// the other half: a status that has already been scanned into Go. Comparing it
+// with a hand-written `strings.EqualFold(status, "error")` is the same bug in a
+// different place -- it matches "Error" and silently misses "STATUS_CODE_ERROR".
+//
+// Do not "simplify" this to whichever spelling looks dominant where you happen
+// to be looking: the two environments invert, because dev is dominated by the
+// OTLP HTTP ingest path and prod by the collector exporter. Measured
+// 2026-09-08/09, short spelling vs enum:
+//
+//	dev    64 short / 268 enum    -- matching only "error" loses 268 of 332
+//	prod   34 short /   7 enum    -- matching only the enum loses 34 of 41
+//
+// Whichever environment you sample, the other one's majority spelling is the
+// one you would throw away. Both must match.
+func IsErrorValue(status string) bool {
+	lowered := strings.ToLower(strings.TrimSpace(status))
+	for _, spelling := range errorSpellings {
+		if lowered == spelling {
+			return true
+		}
+	}
+	return false
+}
+
 // IsError renders a predicate matching spans whose status is an error, under
 // either spelling.
 func IsError(column string) string {

@@ -119,6 +119,11 @@ func (i *LicenseConnectInterceptor) enforceStateWithTrialFallback(ctx context.Co
 						return connect.NewError(connect.CodeResourceExhausted, errMsg("trial limit exceeded: "+err.Error()))
 					}
 				}
+				// G0 shadow: observe billable AI procedures outside the
+				// metered allowlist. Log-only; no counting change.
+				if i.policy != nil && i.policy.ShouldShadowMeterRequest(procedure) {
+					logger.Warnf("license_enforcer_interceptor: shadow observation - billable AI procedure outside metered prefixes: %s", procedure)
+				}
 			}
 		}
 		// Unlicensed is a terminal, non-blocking CE state.

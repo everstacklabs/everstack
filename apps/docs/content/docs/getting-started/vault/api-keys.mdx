@@ -67,7 +67,7 @@ Everstack is compatible with the OpenAI SDK. Point the base URL to your instance
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="https://your-instance.example.com/v1",
+    base_url="https://{instance}.{region}.everstack.ai/openai/v1",
     api_key="evs_your_api_key_here",  # passed via x-evs-api-key internally
 )
 ```

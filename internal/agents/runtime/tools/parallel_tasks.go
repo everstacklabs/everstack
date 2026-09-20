@@ -401,6 +401,8 @@ func (h *ParallelTasksHandler) runChild(
 		PromptTokens:     finalState.CumulativeUsage.PromptTokens,
 		CompletionTokens: finalState.CumulativeUsage.CompletionTokens,
 		TotalTokens:      finalState.CumulativeUsage.TotalTokens,
+		CacheReadTokens:  finalState.CumulativeUsage.CacheReadTokens,
+		CacheWriteTokens: finalState.CumulativeUsage.CacheWriteTokens,
 	}
 	result.ToolCalls = finalState.TotalToolCalls
 

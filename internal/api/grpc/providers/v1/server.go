@@ -12,8 +12,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/jmoiron/sqlx"
 	"github.com/everstacklabs/everstack/internal/api/grpc/mferrors"
 	providerHandler "github.com/everstacklabs/everstack/internal/commands/handlers/provider"
 	providerCmd "github.com/everstacklabs/everstack/internal/commands/provider"
@@ -31,13 +29,15 @@ import (
 	provider_config_svc "github.com/everstacklabs/everstack/internal/services/provider_config"
 	providerspb "github.com/everstacklabs/everstack/pkg/grpc/everstack/providers/v1"
 	"github.com/everstacklabs/everstack/pkg/grpc/everstack/providers/v1/providersconnect"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/jmoiron/sqlx"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // Ensure Server implements ConnectServer contract
 var _ interface {
-	RegisterConnectServer(...connect.Interceptor) (string, http.Handler)
+	RegisterConnectServer(...connect.HandlerOption) (string, http.Handler)
 	FileDescriptor() protoreflect.FileDescriptor
 } = (*Server)(nil)
 
@@ -156,8 +156,8 @@ func CreateServerWithContext(ctx context.Context, configPath string) (*Server, e
 }
 
 // Connect server plumbing
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return providersconnect.NewProvidersServiceHandler(s, connect.WithInterceptors(interceptors...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return providersconnect.NewProvidersServiceHandler(s, opts...)
 }
 
 func (s *Server) FileDescriptor() protoreflect.FileDescriptor {
@@ -187,7 +187,7 @@ func (s *Server) AddProviderAPIKey(ctx context.Context, req *connect.Request[pro
 	cmd := providerCmd.AddProviderAPIKeyCommand{
 		ProviderConfigID: msg.ProviderConfigId,
 		KeyName:          msg.KeyName,
-		APIKey:           msg.ApiKey,
+		APIKey:           NormalizeAPIKey(msg.ApiKey),
 		Weight:           int(msg.Weight),
 		UserID:           "", // TODO: Extract from context
 		TraceID:          "", // TODO: Extract from context

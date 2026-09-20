@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 import type { GenFile, GenService } from "@bufbuild/protobuf/codegenv1";
-import type { AcknowledgeIncidentRequestSchema, AcknowledgeIncidentResponseSchema, ChangeInstanceLifecycleRequestSchema, ChangeInstanceLifecycleResponseSchema, DeleteIdentityConnectionRequestSchema, DeleteIdentityConnectionResponseSchema, GetAgentSnapshotRequestSchema, GetAgentSnapshotResponseSchema, GetEnvironmentRequestSchema, GetEnvironmentResponseSchema, GetIdentityOverviewRequestSchema, GetIdentityOverviewResponseSchema, GetIncidentRequestSchema, GetIncidentResponseSchema, GetInstanceRequestSchema, GetInstanceResponseSchema, GetOverviewRequestSchema, GetOverviewResponseSchema, GetSessionRequestSchema, GetSessionResponseSchema, ListAlertRulesRequestSchema, ListAlertRulesResponseSchema, ListAuditEventsRequestSchema, ListAuditEventsResponseSchema, ListEnvironmentsRequestSchema, ListEnvironmentsResponseSchema, ListEventsRequestSchema, ListEventsResponseSchema, ListIdentityConnectionsRequestSchema, ListIdentityConnectionsResponseSchema, ListIdentitySessionsRequestSchema, ListIdentitySessionsResponseSchema, ListIdentityUsersRequestSchema, ListIdentityUsersResponseSchema, ListIncidentsRequestSchema, ListIncidentsResponseSchema, ListInstallationsRequestSchema, ListInstallationsResponseSchema, ListInstancesRequestSchema, ListInstancesResponseSchema, ListLicensesRequestSchema, ListLicensesResponseSchema, ListNotificationTargetsRequestSchema, ListNotificationTargetsResponseSchema, ListOrganizationsRequestSchema, ListOrganizationsResponseSchema, ListSandboxesRequestSchema, ListSandboxesResponseSchema, ResolveIncidentRequestSchema, ResolveIncidentResponseSchema, RevokeIdentitySessionRequestSchema, RevokeIdentitySessionResponseSchema, SnoozeIncidentRequestSchema, SnoozeIncidentResponseSchema, UpsertIdentityConnectionRequestSchema, UpsertIdentityConnectionResponseSchema } from "./operations_pb.js";
+import type { AcknowledgeIncidentRequestSchema, AcknowledgeIncidentResponseSchema, AddIncidentNoteRequestSchema, AddIncidentNoteResponseSchema, AssignIncidentRequestSchema, AssignIncidentResponseSchema, ChangeInstanceAutomationRequestSchema, ChangeInstanceAutomationResponseSchema, ChangeInstanceLifecycleRequestSchema, ChangeInstanceLifecycleResponseSchema, DeleteIdentityConnectionRequestSchema, DeleteIdentityConnectionResponseSchema, GetAgentSnapshotRequestSchema, GetAgentSnapshotResponseSchema, GetCustomerUserRequestSchema, GetCustomerUserResponseSchema, GetEnvironmentRequestSchema, GetEnvironmentResponseSchema, GetIdentityOverviewRequestSchema, GetIdentityOverviewResponseSchema, GetIncidentRequestSchema, GetIncidentResponseSchema, GetInstanceDiagnosticsRequestSchema, GetInstanceDiagnosticsResponseSchema, GetInstanceRequestSchema, GetInstanceResponseSchema, GetOrganizationRequestSchema, GetOrganizationResponseSchema, GetOverviewRequestSchema, GetOverviewResponseSchema, GetSessionRequestSchema, GetSessionResponseSchema, GetWorkloadRequestSchema, GetWorkloadResponseSchema, ListAlertRulesRequestSchema, ListAlertRulesResponseSchema, ListAuditEventsRequestSchema, ListAuditEventsResponseSchema, ListEnvironmentsRequestSchema, ListEnvironmentsResponseSchema, ListEventsRequestSchema, ListEventsResponseSchema, ListIdentityConnectionsRequestSchema, ListIdentityConnectionsResponseSchema, ListIdentitySessionsRequestSchema, ListIdentitySessionsResponseSchema, ListIdentityUsersRequestSchema, ListIdentityUsersResponseSchema, ListIncidentsForSubjectRequestSchema, ListIncidentsForSubjectResponseSchema, ListIncidentsRequestSchema, ListIncidentsResponseSchema, ListInstallationsRequestSchema, ListInstallationsResponseSchema, ListInstanceAutomationsRequestSchema, ListInstanceAutomationsResponseSchema, ListInstancesRequestSchema, ListInstancesResponseSchema, ListLicensesRequestSchema, ListLicensesResponseSchema, ListNotificationTargetsRequestSchema, ListNotificationTargetsResponseSchema, ListOrganizationsRequestSchema, ListOrganizationsResponseSchema, ListSandboxesRequestSchema, ListSandboxesResponseSchema, ResolveIncidentRequestSchema, ResolveIncidentResponseSchema, RevokeIdentitySessionRequestSchema, RevokeIdentitySessionResponseSchema, SnoozeIncidentRequestSchema, SnoozeIncidentResponseSchema, UpsertIdentityConnectionRequestSchema, UpsertIdentityConnectionResponseSchema } from "./operations_pb.js";
 import type { HostingOverviewRequestSchema, HostingOverviewResponseSchema, ListAbuseReportsRequestSchema, ListAbuseReportsResponseSchema, ListOperatorSitesRequestSchema, ListOperatorSitesResponseSchema, RestoreSiteRequestSchema, RestoreSiteResponseSchema, ReviewAbuseReportRequestSchema, ReviewAbuseReportResponseSchema, TakedownSiteRequestSchema, TakedownSiteResponseSchema } from "../../hosting/v1/hosting_pb.js";
 
 /**
@@ -43,6 +43,14 @@ export declare const OperationsService: GenService<{
     output: typeof ListOrganizationsResponseSchema;
   },
   /**
+   * @generated from rpc everstack.operations.v1.OperationsService.GetOrganization
+   */
+  getOrganization: {
+    methodKind: "unary";
+    input: typeof GetOrganizationRequestSchema;
+    output: typeof GetOrganizationResponseSchema;
+  },
+  /**
    * @generated from rpc everstack.operations.v1.OperationsService.ListInstallations
    */
   listInstallations: {
@@ -73,6 +81,30 @@ export declare const OperationsService: GenService<{
     methodKind: "unary";
     input: typeof GetInstanceRequestSchema;
     output: typeof GetInstanceResponseSchema;
+  },
+  /**
+   * @generated from rpc everstack.operations.v1.OperationsService.GetInstanceDiagnostics
+   */
+  getInstanceDiagnostics: {
+    methodKind: "unary";
+    input: typeof GetInstanceDiagnosticsRequestSchema;
+    output: typeof GetInstanceDiagnosticsResponseSchema;
+  },
+  /**
+   * @generated from rpc everstack.operations.v1.OperationsService.ListInstanceAutomations
+   */
+  listInstanceAutomations: {
+    methodKind: "unary";
+    input: typeof ListInstanceAutomationsRequestSchema;
+    output: typeof ListInstanceAutomationsResponseSchema;
+  },
+  /**
+   * @generated from rpc everstack.operations.v1.OperationsService.ChangeInstanceAutomation
+   */
+  changeInstanceAutomation: {
+    methodKind: "unary";
+    input: typeof ChangeInstanceAutomationRequestSchema;
+    output: typeof ChangeInstanceAutomationResponseSchema;
   },
   /**
    * @generated from rpc everstack.operations.v1.OperationsService.ChangeInstanceLifecycle
@@ -107,6 +139,14 @@ export declare const OperationsService: GenService<{
     output: typeof GetEnvironmentResponseSchema;
   },
   /**
+   * @generated from rpc everstack.operations.v1.OperationsService.GetWorkload
+   */
+  getWorkload: {
+    methodKind: "unary";
+    input: typeof GetWorkloadRequestSchema;
+    output: typeof GetWorkloadResponseSchema;
+  },
+  /**
    * @generated from rpc everstack.operations.v1.OperationsService.ListEvents
    */
   listEvents: {
@@ -137,6 +177,14 @@ export declare const OperationsService: GenService<{
     methodKind: "unary";
     input: typeof ListIdentityUsersRequestSchema;
     output: typeof ListIdentityUsersResponseSchema;
+  },
+  /**
+   * @generated from rpc everstack.operations.v1.OperationsService.GetCustomerUser
+   */
+  getCustomerUser: {
+    methodKind: "unary";
+    input: typeof GetCustomerUserRequestSchema;
+    output: typeof GetCustomerUserResponseSchema;
   },
   /**
    * @generated from rpc everstack.operations.v1.OperationsService.ListIdentitySessions
@@ -220,6 +268,30 @@ export declare const OperationsService: GenService<{
     methodKind: "unary";
     input: typeof ResolveIncidentRequestSchema;
     output: typeof ResolveIncidentResponseSchema;
+  },
+  /**
+   * @generated from rpc everstack.operations.v1.OperationsService.AssignIncident
+   */
+  assignIncident: {
+    methodKind: "unary";
+    input: typeof AssignIncidentRequestSchema;
+    output: typeof AssignIncidentResponseSchema;
+  },
+  /**
+   * @generated from rpc everstack.operations.v1.OperationsService.AddIncidentNote
+   */
+  addIncidentNote: {
+    methodKind: "unary";
+    input: typeof AddIncidentNoteRequestSchema;
+    output: typeof AddIncidentNoteResponseSchema;
+  },
+  /**
+   * @generated from rpc everstack.operations.v1.OperationsService.ListIncidentsForSubject
+   */
+  listIncidentsForSubject: {
+    methodKind: "unary";
+    input: typeof ListIncidentsForSubjectRequestSchema;
+    output: typeof ListIncidentsForSubjectResponseSchema;
   },
   /**
    * @generated from rpc everstack.operations.v1.OperationsService.ListAlertRules

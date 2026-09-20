@@ -111,6 +111,20 @@ SECRET_PATTERNS = (
     ("OpenAI key", re.compile(r"\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}\b")),
     ("Anthropic key", re.compile(r"\bsk-ant-[A-Za-z0-9_-]{32,}\b")),
 )
+# Files allowed to name a marker, each for one stated reason. Keep this list
+# short and specific; a new entry is a policy decision, not a convenience.
+PRIVATE_MARKER_EXEMPTIONS = frozenset(
+    {
+        # The OpenAI Codex Firecracker rootfs is published only as a release
+        # asset in the commercial binary repository. The guide's download
+        # commands must name the real URL or they do not work. Revisit when
+        # EVS-141 settles where public binaries live.
+        (
+            "apps/docs/content/docs/getting-started/agents/openai-agents-api.mdx",
+            "legacy binary repository",
+        ),
+    }
+)
 PRIVATE_MARKERS = (
     ("private source repository", "everstacklabs/" + "es-core"),
     ("legacy binary repository", "everstacklabs/" + "releases"),
@@ -270,7 +284,7 @@ def validate_secrets(root: Path, paths: list[Path], errors: list[str]) -> None:
                 errors.append(f"possible {label} in public file: {relative}")
         normalized = text.lower()
         for label, marker in PRIVATE_MARKERS:
-            if marker in normalized:
+            if marker in normalized and (relative.as_posix(), label) not in PRIVATE_MARKER_EXEMPTIONS:
                 errors.append(f"{label} leaked into public file: {relative}")
 
 
@@ -347,6 +361,14 @@ def validate_installer_and_release(root: Path, errors: list[str]) -> None:
         errors.append("installer minimum safe release must be v0.1.25 or newer")
     if 'validate_release_version "$VERSION"' not in installer:
         errors.append("installer does not enforce its minimum safe release")
+    # The projection rewrites RELEASES_REPO for the public tree (see
+    # retarget_installer_for_ce in sync-public-repo.sh). The private file names
+    # the commercial releases repository so the hosted installer works; the
+    # projected file must say everstacklabs/everstack so CE does not depend on
+    # that binary channel. PRIVATE_MARKERS enforces the same policy from the
+    # other side by forbidding the string outright, so these two guards agree.
+    # (This comment cannot spell the repository out: this file is itself part
+    # of the projection and would trip its own marker scan.)
     if 'RELEASES_REPO="everstacklabs/everstack"' not in installer:
         errors.append("installer must download releases from the public source repository")
 

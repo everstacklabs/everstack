@@ -50,6 +50,16 @@ const SERVICES = [
     title: "Agents",
   },
   {
+    id: "openai-agents",
+    file: "openai_agents/v1/openai_agents_service.swagger.json",
+    title: "OpenAI Agents Connect JSON",
+  },
+  {
+    id: "openai-agents-rest",
+    openapiFile: "openai-agents-rest.source.json",
+    title: "OpenAI Agents REST",
+  },
+  {
     id: "workflows",
     file: "workflows/v1/workflows_service.swagger.json",
     title: "Workflows",
@@ -242,8 +252,13 @@ function renderHeader(
   lines.push(
     `    <span className="rounded-md px-2 py-0.5 text-xs font-bold uppercase ${color}">${method.toUpperCase()}</span>`,
   );
+  // Path templates carry {param} segments. Inside JSX children MDX reads a
+  // brace pair as an expression, so such a path is emitted as a JSX string
+  // literal, the form the checked-in pages already use and the public-tree
+  // validator accepts. A raw templated path renders as a ReferenceError.
+  const renderedPath = path.includes("{") ? `{${JSON.stringify(path)}}` : path;
   lines.push(
-    `    <code className="text-sm text-fd-muted-foreground">${path}</code>`,
+    `    <code className="text-sm text-fd-muted-foreground">${renderedPath}</code>`,
   );
   lines.push(`  </div>`);
   if (description) {
@@ -692,7 +707,10 @@ let ok = 0;
 let failed = 0;
 
 for (const service of SERVICES) {
-  const swaggerPath = resolve(OPENAPI_BASE, service.file);
+  const sourceIsOpenAPI = "openapiFile" in service;
+  const swaggerPath = sourceIsOpenAPI
+    ? resolve(SPEC_DIR, service.openapiFile)
+    : resolve(OPENAPI_BASE, service.file);
 
   let swagger: object;
   try {
@@ -705,7 +723,7 @@ for (const service of SERVICES) {
 
   let spec: any;
   try {
-    spec = await toOpenAPI3(swagger);
+    spec = sourceIsOpenAPI ? swagger : await toOpenAPI3(swagger);
   } catch (err) {
     console.warn(`⚠  Skipping ${service.id} — conversion failed:`, err);
     failed++;

@@ -1,3 +1,66 @@
-# https://www.robotstxt.org/robotstxt.html
+# Everstack documentation. Every page here is public and meant to be crawled,
+# indexed, and quoted, by search engines and AI assistants alike.
+#
+# The named groups below are redundant with "User-agent: *" by the letter of
+# the spec. They are not redundant in practice: several AI crawlers were
+# measured taking a 403 at the edge on everstack.ai in August 2026, which
+# leaves their operators no on-site signal about intent. Naming each agent
+# states the intent plainly. A crawler obeys the most specific group that
+# matches it and ignores "*" entirely, so each group is self-contained.
+#
+# Structured copies of these docs, built for AI clients:
+#   https://docs.everstack.ai/llms.txt       compact index of every page
+#   https://docs.everstack.ai/llms-full.txt  the complete corpus in one file
+
 User-agent: *
-Disallow:
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+Sitemap: https://docs.everstack.ai/sitemap.xml

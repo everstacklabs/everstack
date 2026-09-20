@@ -3100,6 +3100,11 @@
             "type": "integer",
             "format": "int32",
             "title": "Reasoning tokens"
+          },
+          "cacheWriteTokens": {
+            "type": "integer",
+            "format": "int32",
+            "title": "Tokens written to the provider prompt cache"
           }
         }
       },

@@ -5,12 +5,46 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/everstacklabs/everstack/internal/sandbox/toolbox"
 )
+
+func TestToolboxExecCancellationDoesNotPermitReplay(t *testing.T) {
+	started := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		close(started)
+		<-r.Context().Done()
+	}))
+	defer server.Close()
+	client := &toolboxHTTPClient{baseURL: server.URL, client: server.Client()}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() {
+		_, err := client.Exec(ctx, toolbox.ExecRequest{Command: []string{"long-running"}})
+		done <- err
+	}()
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("request not received")
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) || errors.Is(err, ErrToolboxHTTPUnavailable) {
+			t.Fatalf("canceled execution could be replayed over vsock: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("canceled execution did not return")
+	}
+}
 
 func TestToolboxHTTPClientExec(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

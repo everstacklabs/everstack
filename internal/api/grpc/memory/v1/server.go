@@ -5,11 +5,11 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
-	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/jmoiron/sqlx"
 	"github.com/everstacklabs/everstack/internal/memory"
 	memorypb "github.com/everstacklabs/everstack/pkg/grpc/everstack/memory/v1"
 	"github.com/everstacklabs/everstack/pkg/grpc/everstack/memory/v1/memorypbconnect"
+	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/jmoiron/sqlx"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -64,8 +64,8 @@ func (s *Server) Ready() bool {
 }
 
 // RegisterConnectServer registers the ConnectRPC handler.
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return memorypbconnect.NewMemoryServiceHandler(s, connect.WithInterceptors(interceptors...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return memorypbconnect.NewMemoryServiceHandler(s, opts...)
 }
 
 // FileDescriptor returns the proto file descriptor.

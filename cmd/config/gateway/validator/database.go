@@ -22,6 +22,10 @@ type ClickHouseDB struct {
 	MaxOpen     int    `mapstructure:"max_open_conns"`
 	MaxIdle     int    `mapstructure:"max_idle_conns"`
 	MaxLifetime string `mapstructure:"conn_max_lifetime"`
+	// Optional keeps the transactional API available when the analytics store
+	// is offline. It is false by default so existing self-hosted deployments
+	// retain their current strict startup behavior unless explicitly opted in.
+	Optional bool `mapstructure:"optional"`
 }
 
 type MemoryDB struct {

@@ -25,6 +25,75 @@ export interface TransportOptions {
     userId?: string;
     /** Additional headers to include */
     headers?: Record<string, string>;
+    /**
+     * Deadline applied to every call, in milliseconds. Connect sends this to
+     * the server as the request timeout as well as enforcing it client side.
+     */
+    timeoutMs?: number;
+    /**
+     * Override the fetch implementation used by the fetch-based transports.
+     * Ignored by the Node transport, which speaks HTTP/2 directly.
+     */
+    fetch?: typeof globalThis.fetch;
+    /**
+     * Force a particular runtime instead of detecting one. Useful in tests and
+     * in hosts that emulate another runtime closely enough to fool detection.
+     */
+    runtime?: RuntimeKind;
+}
+
+/**
+ * Runtimes this SDK distinguishes between, because they disagree about which
+ * transport primitives actually work.
+ */
+export type RuntimeKind = "browser" | "node" | "bun" | "deno" | "edge";
+
+/**
+ * Detects the current runtime.
+ *
+ * Node is identified positively rather than by elimination: it is the only
+ * runtime where the HTTP/2 transport is known to work, so anything we cannot
+ * confidently identify as Node is better served by fetch. Bun reports a
+ * `process.versions.node` of its own, so it has to be excluded explicitly or
+ * it would be mistaken for Node and routed onto a transport that stalls.
+ */
+export function detectRuntime(): RuntimeKind {
+    if (typeof window !== "undefined" && typeof (window as { document?: unknown }).document !== "undefined") {
+        return "browser";
+    }
+    const versions = typeof process !== "undefined" ? process.versions : undefined;
+    if (versions?.bun !== undefined) {
+        return "bun";
+    }
+    if (typeof (globalThis as { Deno?: unknown }).Deno !== "undefined") {
+        return "deno";
+    }
+    if (versions?.node !== undefined) {
+        return "node";
+    }
+    return "edge";
+}
+
+/**
+ * Wraps a fetch implementation so it can be used from Connect on runtimes that
+ * reject `redirect: "error"`.
+ *
+ * Connect's fetch transports set that value unconditionally. The fetch standard
+ * allows it, but Cloudflare Workers throws on it at runtime, which takes down
+ * every call made from a Worker. `"manual"` is the closest supported behaviour:
+ * a redirect is surfaced as an opaque response rather than followed, so a
+ * misrouted call still fails instead of silently succeeding somewhere else.
+ */
+export function createCompatibleFetch(
+    baseFetch: typeof globalThis.fetch = globalThis.fetch,
+): typeof globalThis.fetch {
+    return (input, init) => {
+        if (init?.redirect === "error") {
+            const { redirect: _unsupported, ...rest } = init;
+            return baseFetch(input, { ...rest, redirect: "manual" });
+        }
+        return baseFetch(input, init);
+    };
 }
 
 /**
@@ -76,6 +145,25 @@ export function createWebTransport(options: TransportOptions): Transport {
     return createWebConnectTransport({
         baseUrl: options.baseUrl,
         interceptors: [createAuthInterceptor(options)],
+        defaultTimeoutMs: options.timeoutMs,
+        ...(options.fetch ? { fetch: options.fetch } : {}),
+    });
+}
+
+/**
+ * Creates a transport for runtimes that have fetch but no usable HTTP/2 client:
+ * Cloudflare Workers and other edge hosts, Bun, and Deno.
+ *
+ * Cloudflare stubs out `node:http2` without implementing it and Bun's HTTP/2
+ * client stalls, so the Node transport cannot be used in any of them. The
+ * Connect protocol runs perfectly well over fetch, which all of them support.
+ */
+export function createFetchTransport(options: TransportOptions): Transport {
+    return createWebConnectTransport({
+        baseUrl: options.baseUrl,
+        interceptors: [createAuthInterceptor(options)],
+        defaultTimeoutMs: options.timeoutMs,
+        fetch: createCompatibleFetch(options.fetch),
     });
 }
 
@@ -93,19 +181,24 @@ export function createNodeTransport(options: TransportOptions): Transport {
         baseUrl: options.baseUrl,
         httpVersion: "2",
         interceptors: [createAuthInterceptor(options)],
+        defaultTimeoutMs: options.timeoutMs,
     });
 }
 
 /**
- * Detects the runtime environment and creates the appropriate transport
+ * Detects the runtime environment and creates the appropriate transport.
+ *
+ * Only Node gets the HTTP/2 transport. Every other runtime gets fetch, which is
+ * the safer default: a runtime we failed to recognise is far more likely to
+ * support fetch than to support `node:http2`.
  */
 export function createTransport(options: TransportOptions): Transport {
-    // Check if we're in a browser environment
-    const isBrowser = typeof window !== "undefined" && typeof window.document !== "undefined";
-
-    if (isBrowser) {
-        return createWebTransport(options);
+    switch (options.runtime ?? detectRuntime()) {
+        case "browser":
+            return createWebTransport(options);
+        case "node":
+            return createNodeTransport(options);
+        default:
+            return createFetchTransport(options);
     }
-
-    return createNodeTransport(options);
 }

@@ -488,16 +488,26 @@ func (b *FCAgentBackend) Create(ctx context.Context, id string, config sandbox.I
 }
 
 func (b *FCAgentBackend) Exec(ctx context.Context, id string, cmd sandbox.ExecRequest) (*sandbox.ExecResult, error) {
-	resp, err := withRoute(b, ctx, id, func(cli fcpb.FirecrackerAgentClient) (*fcpb.ExecResult, error) {
-		return cli.Exec(ctx, &fcpb.ExecRequest{
-			SandboxId: id,
-			Command:   cmd.Command,
-			WorkDir:   cmd.WorkDir,
-			Env:       cmd.Env,
-			TimeoutMs: int32(cmd.Timeout / time.Millisecond),
-		})
+	// Once sent, execution has an ambiguous outcome on transport failure.
+	// Route recovery must not replay a potentially running command.
+	cli, _, err := b.routeFor(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := cli.Exec(ctx, &fcpb.ExecRequest{
+		SandboxId: id,
+		Command:   cmd.Command,
+		WorkDir:   cmd.WorkDir,
+		Env:       cmd.Env,
+		TimeoutMs: int32(cmd.Timeout / time.Millisecond),
 	})
 	if err != nil {
+		// Do not replay an Exec whose outcome may be ambiguous, but do discard a
+		// route that is known or likely to be stale. A later caller can then
+		// rediscover the owning agent before issuing a new command.
+		if isVMNotFoundRPCError(err) || isRouteRecoverableRPCError(err) {
+			b.clearRoute(id)
+		}
 		return nil, err
 	}
 	return &sandbox.ExecResult{

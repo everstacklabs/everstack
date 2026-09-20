@@ -69,7 +69,16 @@ func SetManagedGateway(v bool) { managedGateway.Store(v) }
 func ManagedGateway() bool { return managedGateway.Load() }
 
 // ResolveEntitlements resolves the effective entitlements for a request.
+// It records every outcome in the entitlementResolutions counter (EVS-6
+// shadow sink: source × tier mix, no tenant labels) and delegates the
+// truth-table logic to resolveEntitlements.
 func ResolveEntitlements(ctx context.Context, monitor LicenseMonitor) Entitlements {
+	ent := resolveEntitlements(ctx, monitor)
+	observeEntitlementResolution(ent)
+	return ent
+}
+
+func resolveEntitlements(ctx context.Context, monitor LicenseMonitor) Entitlements {
 	if IsDev() {
 		return Entitlements{Tier: "dev", Source: "dev"}
 	}

@@ -112,7 +112,13 @@ func handleHTTPToolboxRPC(method string) http.HandlerFunc {
 			return
 		}
 
-		resp := handleRequest(rpcRequest{Method: method, Params: json.RawMessage(body)})
+		// ReadTimeout protects headers and the bounded request body. Once the
+		// body has arrived, its deadline must not cancel a long-running exec
+		// through net/http's background disconnect reader.
+		if method == toolbox.MethodExec {
+			_ = http.NewResponseController(w).SetReadDeadline(time.Time{})
+		}
+		resp := handleRequestContext(r.Context(), rpcRequest{Method: method, Params: json.RawMessage(body)})
 		status := http.StatusOK
 		if resp.Error != "" {
 			status = http.StatusBadRequest

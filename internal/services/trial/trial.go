@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/everstacklabs/everstack/pkg/plans"
 )
 
 // Default trial limits - aligned with Free tier in plans.json
@@ -56,7 +57,13 @@ type Config struct {
 	TokenLimit int64
 }
 
-// DefaultConfig returns the default trial configuration
+// DefaultConfig returns the default trial configuration.
+//
+// Deprecated: prefer ConfigFromCatalog. These constants duplicate the free tier
+// in plans.json by hand. They agree with it today, which is exactly what makes
+// the duplication unreliable: the comment claiming alignment is an assertion,
+// not a mechanism. Nothing enforces it, nothing fails if it breaks, and editing
+// plans.json surfaces nothing here.
 func DefaultConfig() Config {
 	return Config{
 		Duration:   DefaultTrialDuration,
@@ -64,6 +71,48 @@ func DefaultConfig() Config {
 		RPMLimit:   DefaultRPM,
 		TokenLimit: DefaultTokenLimit,
 	}
+}
+
+// ConfigFromCatalog builds a trial configuration from the canonical plan
+// catalog rather than from local constants.
+//
+// It resolves the safe tier through plans.ResolveEntitlements, which fails
+// closed: an unresolvable catalog yields free-tier limits and an error rather
+// than nil, so a caller that ignores the error is still bounded.
+//
+// Scope, stated because it is easy to misread this as complete: the free tier
+// declares 21 usage limits and this configures the 3 the trial manager is able
+// to enforce -- requests, RPM and tokens. The other 18, including
+// CONCURRENT_SANDBOXES, CONCURRENT_BROWSERS, SANDBOX_MEMORY_MB, PERSISTENT_AGENTS
+// and SPAWN_DEPTH, are not missing values here; they have no gate anywhere on
+// the execution path. Sourcing these three correctly does not bound a trial
+// user's compute. See docs/design/free-tier-and-trial-contract.md and EVS-126.
+func ConfigFromCatalog(pc *plans.PlansConfig, duration time.Duration) (Config, error) {
+	cfg := Config{Duration: duration}
+
+	ent, err := pc.ResolveEntitlements(plans.SafeTier)
+	if ent == nil {
+		// Only reachable when the catalog has no free tier at all, which means
+		// there is no safe answer to fall back to.
+		return DefaultConfig(), fmt.Errorf("trial config from catalog: %w", err)
+	}
+
+	// A limit the catalog does not declare keeps the historical constant rather
+	// than becoming unlimited. Absent must never widen a limit.
+	cfg.DailyLimit = limitOr(ent, "REQUESTS", DefaultDailyLimit)
+	cfg.RPMLimit = limitOr(ent, "RPM", DefaultRPM)
+	cfg.TokenLimit = limitOr(ent, "TOKENS", DefaultTokenLimit)
+
+	return cfg, err
+}
+
+// limitOr returns the catalog value for name, or fallback when the catalog does
+// not declare it. A declared -1 (unlimited) is honoured as declared.
+func limitOr(ent *plans.Entitlements, name string, fallback int64) int64 {
+	if v, ok := ent.Limit(name); ok {
+		return v
+	}
+	return fallback
 }
 
 // Storage interface for persisting trial state

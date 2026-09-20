@@ -108,21 +108,49 @@ func (s *Scheduler) isDue(t *Trigger, now time.Time) bool {
 		logger.WithFields("trigger_id", t.ID, "error", err.Error()).Debug("trigger_scheduler: invalid cron expression")
 		return false
 	}
+	timezone := t.CronTimezone
+	if timezone == "" {
+		timezone = "UTC"
+	}
+	location, err := time.LoadLocation(timezone)
+	if err != nil {
+		logger.WithFields("trigger_id", t.ID, "error", err.Error()).Debug("trigger_scheduler: invalid cron timezone")
+		return false
+	}
 
 	// Check if the cron expression says we should run within the scheduler window
 	// (10s interval + 1s buffer to avoid missing a tick)
-	checkFrom := now.Add(-(schedulerInterval + time.Second))
+	checkFrom := now.In(location).Add(-(schedulerInterval + time.Second))
 	nextRun := sched.Next(checkFrom)
-	return !nextRun.After(now)
+	if nextRun.IsZero() {
+		return false
+	}
+	return !nextRun.After(now.In(location))
 }
 
 // NextRun returns the next scheduled run time for a cron expression.
 func NextRun(expression string) (*time.Time, error) {
+	return NextRunWithTimezone(expression, "UTC", time.Now())
+}
+
+// NextRunWithTimezone returns the next UTC instant for a five-field cron in
+// an IANA timezone.
+func NextRunWithTimezone(expression, timezone string, from time.Time) (*time.Time, error) {
 	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	sched, err := parser.Parse(expression)
 	if err != nil {
 		return nil, fmt.Errorf("parse cron: %w", err)
 	}
-	next := sched.Next(time.Now())
+	if timezone == "" {
+		timezone = "UTC"
+	}
+	location, err := time.LoadLocation(timezone)
+	if err != nil {
+		return nil, fmt.Errorf("load cron timezone: %w", err)
+	}
+	next := sched.Next(from.In(location)).UTC()
+	if next.IsZero() {
+		return nil, fmt.Errorf("cron has no future run time")
+	}
 	return &next, nil
 }

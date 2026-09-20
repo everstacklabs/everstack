@@ -5,7 +5,7 @@ import { ui } from '@everstack/ui'
 import { Button, Loader } from '@everstack/ui/components'
 import { Iconify } from '@everstack/ui/icons'
 import { formatRelativeTime } from '@everstack/utils/functions/index'
-import { useSites } from '@/hooks/sites/use-sites'
+import { useHostingCapabilities, useSites } from '@/hooks/sites/use-sites'
 import type { Site } from '@/server/sites'
 import { SiteStatusBadge } from '@/components/sites/site-status-badge'
 import { PublishSiteDialog } from '@/components/sites/publish-site-dialog'
@@ -31,6 +31,8 @@ function SitesPage() {
   const { search } = Route.useSearch()
   const navigate = useNavigate()
   const { data: sites = [], isLoading, isFetching, error, refetch } = useSites()
+  const { data: capabilities, isLoading: capabilitiesLoading } =
+    useHostingCapabilities()
   const [status, setStatus] = useState<CustomerSiteStatusFilter>('all')
 
   const filteredSites = useMemo(
@@ -159,10 +161,39 @@ function SitesPage() {
     [],
   )
 
-  if (isLoading) {
+  if (isLoading || capabilitiesLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center text-white/70 light:text-black/70">
         <Loader loaderText="Loading sites..." />
+      </div>
+    )
+  }
+
+  // Hosting is a per-deployment capability: self-hosted installs and any
+  // environment without the R2/KV configuration register SitesService but
+  // answer Unavailable. That is a switched-off feature, not a failure, so it
+  // gets a plain explanation and no Retry, which could never succeed.
+  if (capabilities && !capabilities.hostingEnabled) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-3 px-6 text-center">
+        <div className="relative mb-2">
+          <div className="relative rounded-xl border border-brand-main-600 bg-brand-main-800/80 p-4">
+            <Iconify.Icon
+              icon="lucide:globe"
+              className="size-8 text-white/40 light:text-black/40"
+            />
+          </div>
+        </div>
+        <div>
+          <p className="text-base font-medium text-white light:text-brand-main-50">
+            Site hosting is not enabled on this deployment
+          </p>
+          <p className="mt-1 max-w-lg text-sm text-white/50 light:text-black/50">
+            Publishing static sites requires object storage and edge
+            configuration that this environment does not have. Nothing is
+            wrong with your account.
+          </p>
+        </div>
       </div>
     )
   }

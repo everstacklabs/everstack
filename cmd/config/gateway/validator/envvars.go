@@ -146,6 +146,12 @@ var EnvVarRegistry = []EnvVar{
 		DefaultValue: "memory",
 	},
 	{
+		ConfigKey:    "cache.redis.required",
+		EnvName:      "EVS_CACHE_REDIS_REQUIRED",
+		Description:  "Fail gateway startup and readiness when Redis is unavailable",
+		DefaultValue: "false",
+	},
+	{
 		ConfigKey:   "cache.redis.address",
 		EnvName:     "EVS_CACHE_REDIS_ADDRESS",
 		Description: "Redis server address (e.g., redis:6379)",
@@ -154,6 +160,32 @@ var EnvVarRegistry = []EnvVar{
 		ConfigKey:   "cache.redis.password",
 		EnvName:     "EVS_CACHE_REDIS_PASSWORD",
 		Description: "Redis password",
+	},
+	{
+		ConfigKey:   "cache.redis.sentinel_master_name",
+		EnvName:     "EVS_CACHE_REDIS_SENTINEL_MASTER_NAME",
+		Description: "Redis Sentinel master set name",
+	},
+	{
+		ConfigKey:   "cache.redis.sentinel_addresses",
+		EnvName:     "EVS_CACHE_REDIS_SENTINEL_ADDRESSES",
+		Description: "Comma-separated Redis Sentinel addresses",
+	},
+	{
+		ConfigKey:    "cache.redis.tls_enabled",
+		EnvName:      "EVS_CACHE_REDIS_TLS_ENABLED",
+		Description:  "Require verified TLS for Redis and Sentinel",
+		DefaultValue: "false",
+	},
+	{
+		ConfigKey:   "cache.redis.tls_ca_file",
+		EnvName:     "EVS_CACHE_REDIS_TLS_CA_FILE",
+		Description: "PEM CA file used to verify Redis and Sentinel",
+	},
+	{
+		ConfigKey:   "cache.redis.tls_server_name",
+		EnvName:     "EVS_CACHE_REDIS_TLS_SERVER_NAME",
+		Description: "Stable TLS server name presented by Redis and Sentinel",
 	},
 	{
 		ConfigKey:    "cache.redis.db",

@@ -165,6 +165,11 @@ func (s *Server) ChatCompletion(ctx context.Context, req *connect.Request[gatewa
 			"correlation_id", correlationID,
 			"procedure", "ChatCompletion",
 			"mock", true,
+			"tenant_id", tid,
+			"model", resolvedModel,
+			// G0 shadow: mock responses skip providers entirely (zero
+			// cost) but also skip all metering; tag for abuse tracking.
+			"shadow", "mock_unmetered_path",
 		).Info("Connect mock short-circuit")
 		resp := &gatewaypb.ChatCompletionResponse{
 			Id:      correlationID,
@@ -234,10 +239,17 @@ func (g *GrpcServer) ChatCompletion(req *gatewaypb.ChatCompletionRequest, srv ga
 		}
 		if len(vals) > 0 && strings.EqualFold(vals[0], "true") {
 			cid := correlation.GetCorrelationID(srv.Context())
+			mockTid := database.TenantSchemaFromContext(srv.Context())
+			if mockTid == "" {
+				mockTid = contextkeys.GetTenantID(srv.Context())
+			}
 			logger.WithFields(
 				"correlation_id", cid,
 				"procedure", "ChatCompletion",
 				"mock", true,
+				"tenant_id", mockTid,
+				// G0 shadow: see Connect mock path above.
+				"shadow", "mock_unmetered_path",
 			).Info("gRPC mock short-circuit")
 			model := req.GetModel()
 			if model == "" {

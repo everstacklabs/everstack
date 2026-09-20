@@ -1,0 +1,68 @@
+name: "claude-fable-5-1"
+display_name: "Claude Fable 5.1"
+family: "claude-fable"
+status: "stable"
+release_date: "2026-09-01"
+
+cost:
+  input_per_1k: 0.01
+  output_per_1k: 0.05
+  cache_read_per_1k: 0.00025
+  cache_write_per_1k: 0.0125
+  cache_write_1h_per_1k: 0.02
+
+limits:
+  max_tokens: 1000000
+  max_completion_tokens: 128000
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - extended_thinking
+  - computer_use
+
+modalities:
+  input: ["text","image","pdf"]
+  output: ["text"]
+
+knowledge_cutoff: "2026-06"
+notes: "Latest Claude Fable model for demanding reasoning and long-horizon agentic work with adaptive thinking always on"
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 128000
+    has_max_value: true
+  - key: "reasoning_effort"
+    display_name: "Reasoning effort"
+    type: "enum"
+    options: ["low","medium","high","xhigh","max"]
+variants:
+  - id: "low"
+    display_name: "Low reasoning"
+    description: "Lower latency and cost for straightforward tasks."
+    parameters:
+      reasoning_effort: "low"
+  - id: "medium"
+    display_name: "Medium reasoning"
+    description: "Balanced reasoning for general-purpose work."
+    parameters:
+      reasoning_effort: "medium"
+  - id: "high"
+    display_name: "High reasoning"
+    description: "Deeper reasoning for complex analysis and coding."
+    parameters:
+      reasoning_effort: "high"
+  - id: "xhigh"
+    display_name: "Extra-high reasoning"
+    description: "Extended reasoning for long-horizon agentic work."
+    parameters:
+      reasoning_effort: "xhigh"
+  - id: "max"
+    display_name: "Maximum reasoning"
+    description: "Maximum available reasoning depth for the model."
+    parameters:
+      reasoning_effort: "max"

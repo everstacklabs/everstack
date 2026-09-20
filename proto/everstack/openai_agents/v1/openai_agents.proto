@@ -1,0 +1,283 @@
+syntax = "proto3";
+
+package everstack.openai_agents.v1;
+
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "validate/validate.proto";
+
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/openai_agents/v1;openaiagents";
+
+message Capabilities {
+  bool enabled = 1;
+  string provider = 2;
+  repeated string environment_modes = 3;
+  repeated string tool_types = 4;
+  repeated string file_operations = 5;
+  string executor_version = 6;
+  string readiness = 7;
+  bool can_manage_connections = 8;
+  bool can_run_sessions = 9;
+  bool can_resolve_approvals = 10;
+}
+
+message Connection {
+  string id = 1;
+  string name = 2;
+  string provider = 3;
+  string project_id = 4;
+  string organization_id = 5;
+  string principal_id = 6;
+  repeated string allowed_models = 7;
+  string status = 8;
+  string last_error = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message EnvironmentSpec {
+  string type = 1 [(validate.rules).string.min_len = 1];
+  string workspace_directory = 2;
+}
+
+message ToolSpec {
+  string type = 1 [(validate.rules).string.min_len = 1];
+  string resource_id = 2;
+  string name = 3;
+}
+
+message Session {
+  string id = 1;
+  string provider = 2;
+  string connection_id = 3;
+  string conversation_id = 4;
+  string upstream_session_id = 5;
+  string upstream_environment_id = 6;
+  string sandbox_id = 7;
+  string model = 8;
+  EnvironmentSpec environment = 9;
+  string status = 10;
+  string readiness = 11;
+  string cleanup_status = 12;
+  string environment_cleanup_status = 13;
+  string last_error = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}
+
+message SessionEvent {
+  int64 cursor = 1;
+  string event_id = 2;
+  string type = 3;
+  string version = 4;
+  string upstream_item_id = 5;
+  google.protobuf.Value payload = 6;
+  bool tool_failed = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message SessionUsage {
+  string status = 1;
+  optional int64 input_tokens = 2;
+  optional int64 output_tokens = 3;
+  optional int64 total_tokens = 4;
+  optional google.protobuf.Timestamp updated_at = 5;
+  string source = 6;
+}
+
+message Approval {
+  string id = 1;
+  string session_id = 2;
+  string turn_id = 3;
+  string call_id = 4;
+  string tool_name = 5;
+  string resource_kind = 6;
+  string resource_id = 7;
+  string status = 8;
+  string requested_by = 9;
+  google.protobuf.Value arguments = 10;
+  google.protobuf.Timestamp requested_at = 11;
+  google.protobuf.Timestamp expires_at = 12;
+}
+
+message Artifact {
+  string object_id = 1;
+  string filename = 2;
+  string content_type = 3;
+  int64 size_bytes = 4;
+  string sha256 = 5;
+  string kind = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message ArtifactDownload {
+  Artifact artifact = 1;
+  string url = 2;
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+message GetCapabilitiesRequest {}
+message GetCapabilitiesResponse {
+  Capabilities capabilities = 1;
+}
+
+message CreateConnectionRequest {
+  string name = 1 [(validate.rules).string.min_len = 1];
+  string api_key = 2 [(validate.rules).string.min_len = 1];
+  string executor_key = 3;
+  string project_id = 4;
+  string organization_id = 5;
+  string principal_id = 6;
+  repeated string allowed_models = 7;
+}
+message CreateConnectionResponse {
+  Connection connection = 1;
+}
+message ListConnectionsRequest {}
+message ListConnectionsResponse {
+  repeated Connection connections = 1;
+}
+message GetConnectionRequest {
+  string connection_id = 1 [(validate.rules).string.uuid = true];
+}
+message GetConnectionResponse {
+  Connection connection = 1;
+}
+message UpdateConnectionRequest {
+  string connection_id = 1 [(validate.rules).string.uuid = true];
+  optional string name = 2;
+  optional string api_key = 3;
+  optional string executor_key = 4;
+  optional string project_id = 5;
+  optional string organization_id = 6;
+  optional string principal_id = 7;
+  repeated string allowed_models = 8;
+  google.protobuf.FieldMask update_mask = 9 [(validate.rules).message.required = true];
+}
+message UpdateConnectionResponse {
+  Connection connection = 1;
+}
+message DeleteConnectionRequest {
+  string connection_id = 1 [(validate.rules).string.uuid = true];
+}
+message DeleteConnectionResponse {
+  bool deleted = 1;
+}
+
+message CreateSessionRequest {
+  string connection_id = 1 [(validate.rules).string.uuid = true];
+  string idempotency_key = 2 [(validate.rules).string.min_len = 1];
+  string model = 3 [(validate.rules).string.min_len = 1];
+  string instructions = 4;
+  EnvironmentSpec environment = 5 [(validate.rules).message.required = true];
+  google.protobuf.Value input = 6;
+  repeated ToolSpec tools = 7;
+}
+message CreateSessionResponse {
+  Session session = 1;
+}
+message ListSessionsRequest {}
+message ListSessionsResponse {
+  repeated Session sessions = 1;
+}
+message GetSessionRequest {
+  string session_id = 1 [(validate.rules).string.uuid = true];
+}
+message GetSessionResponse {
+  Session session = 1;
+}
+message DeleteSessionRequest {
+  string session_id = 1 [(validate.rules).string.uuid = true];
+}
+message DeleteSessionResponse {
+  bool deleted = 1;
+}
+message SendInputRequest {
+  string session_id = 1 [(validate.rules).string.uuid = true];
+  string idempotency_key = 2 [(validate.rules).string.min_len = 1];
+  google.protobuf.Value input = 3 [(validate.rules).message.required = true];
+}
+message SendInputResponse {
+  bool accepted = 1;
+}
+message CancelSessionRequest {
+  string session_id = 1 [(validate.rules).string.uuid = true];
+}
+message CancelSessionResponse {
+  bool accepted = 1;
+}
+message ListSessionEventsRequest {
+  string session_id = 1 [(validate.rules).string.uuid = true];
+  int64 after_cursor = 2 [(validate.rules).int64.gte = 0];
+  int32 limit = 3 [(validate.rules).int32 = {
+    gte: 0
+    lte: 1000
+  }];
+}
+message ListSessionEventsResponse {
+  repeated SessionEvent events = 1;
+  int64 next_cursor = 2;
+  bool has_more = 3;
+}
+message GetSessionUsageRequest {
+  string session_id = 1 [(validate.rules).string.uuid = true];
+}
+message GetSessionUsageResponse {
+  SessionUsage usage = 1;
+}
+
+message ListApprovalsRequest {}
+message ListApprovalsResponse {
+  repeated Approval approvals = 1;
+}
+message ResolveApprovalRequest {
+  string approval_id = 1 [(validate.rules).string.uuid = true];
+  string decision = 2 [(validate.rules).string = {
+    in: [
+      "approved",
+      "denied"
+    ]
+  }];
+}
+message ResolveApprovalResponse {
+  bool resolved = 1;
+}
+
+message UploadSessionInputRequest {
+  string session_id = 1 [(validate.rules).string.uuid = true];
+  string filename = 2 [(validate.rules).string.min_len = 1];
+  string content_type = 3;
+  bytes content = 4 [(validate.rules).bytes.max_len = 2097152];
+  string destination = 5;
+}
+message UploadSessionInputResponse {
+  Artifact artifact = 1;
+}
+message ListSessionArtifactsRequest {
+  string session_id = 1 [(validate.rules).string.uuid = true];
+}
+message ListSessionArtifactsResponse {
+  repeated Artifact artifacts = 1;
+}
+message ExportSessionArtifactRequest {
+  string session_id = 1 [(validate.rules).string.uuid = true];
+  string path = 2 [(validate.rules).string.min_len = 1];
+}
+message ExportSessionArtifactResponse {
+  Artifact artifact = 1;
+}
+message GetArtifactDownloadRequest {
+  string session_id = 1 [(validate.rules).string.uuid = true];
+  string object_id = 2 [(validate.rules).string.uuid = true];
+}
+message GetArtifactDownloadResponse {
+  ArtifactDownload download = 1;
+}
+message DeleteSessionArtifactRequest {
+  string session_id = 1 [(validate.rules).string.uuid = true];
+  string object_id = 2 [(validate.rules).string.uuid = true];
+}
+message DeleteSessionArtifactResponse {
+  bool deleted = 1;
+}

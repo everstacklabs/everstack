@@ -10,8 +10,8 @@ import (
 	"connectrpc.com/connect"
 	storagesvc "github.com/everstacklabs/everstack/internal/api/grpc/storage/v1"
 	"github.com/everstacklabs/everstack/internal/domain/voice_clone"
-	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
+	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	voicepb "github.com/everstacklabs/everstack/pkg/grpc/everstack/voice/v1"
 	"github.com/everstacklabs/everstack/pkg/grpc/everstack/voice/v1/voiceconnect"
@@ -65,11 +65,13 @@ func (s *Server) SetStorageServer(ss *storagesvc.Server) {
 	s.storageServer = ss
 }
 
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	all := make([]connect.Interceptor, 0, len(s.serviceInterceptors)+len(interceptors))
-	all = append(all, s.serviceInterceptors...)
-	all = append(all, interceptors...)
-	return voiceconnect.NewVoiceServiceHandler(s, connect.WithInterceptors(all...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	// The service\'s own interceptors run first, then whatever the caller
+	// supplied. connect accumulates interceptors across options, so this
+	// preserves the previous ordering while letting the caller pass other
+	// handler options through untouched.
+	all := append([]connect.HandlerOption{connect.WithInterceptors(s.serviceInterceptors...)}, opts...)
+	return voiceconnect.NewVoiceServiceHandler(s, all...)
 }
 
 func (s *Server) FileDescriptor() protoreflect.FileDescriptor {
@@ -275,19 +277,19 @@ func (s *Server) DeleteVoiceCloneProfile(ctx context.Context, req *connect.Reque
 
 func profileToProto(p *voice_clone.VoiceCloneProfile) *voicepb.VoiceCloneProfile {
 	pb := &voicepb.VoiceCloneProfile{
-		Id:                           p.ID,
-		OrgId:                        p.OrgID,
-		Name:                         p.Name,
-		Description:                  p.Description,
-		ReferenceAudioObjectId:       p.ReferenceAudioObjectID,
+		Id:                            p.ID,
+		OrgId:                         p.OrgID,
+		Name:                          p.Name,
+		Description:                   p.Description,
+		ReferenceAudioObjectId:        p.ReferenceAudioObjectID,
 		ReferenceAudioDurationSeconds: p.ReferenceAudioDurationSeconds,
-		ReferenceText:                p.ReferenceText,
-		Provider:                     p.Provider,
-		Model:                        p.Model,
-		ProviderVoiceId:              p.ProviderVoiceID,
-		CreatedBy:                    p.CreatedBy,
-		CreatedAt:                    timestamppb.New(p.CreatedAt),
-		UpdatedAt:                    timestamppb.New(p.UpdatedAt),
+		ReferenceText:                 p.ReferenceText,
+		Provider:                      p.Provider,
+		Model:                         p.Model,
+		ProviderVoiceId:               p.ProviderVoiceID,
+		CreatedBy:                     p.CreatedBy,
+		CreatedAt:                     timestamppb.New(p.CreatedAt),
+		UpdatedAt:                     timestamppb.New(p.UpdatedAt),
 	}
 	return pb
 }

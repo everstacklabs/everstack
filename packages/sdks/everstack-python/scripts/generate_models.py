@@ -142,22 +142,23 @@ def generate(catalog: Dict[str, Any], metadata: Dict[str, str]) -> str:
     for provider_id in sorted(providers):
         provider = providers[provider_id]
         models = provider.get("models") or []
-        active = [m for m in models if m.get("status") != "deprecated"]
-        active.sort(key=lambda m: m["name"])
+        # Deprecated identifiers remain part of the public Literal for source
+        # compatibility. Consumers can use status metadata to hide them.
+        sdk_models = sorted(models, key=lambda m: m["name"])
 
-        if not active:
+        if not sdk_models:
             continue
 
         type_name = f"{to_title_case(provider_id)}Model"
         provider_type_names.append(type_name)
 
-        literals = [f"    {quote('@' + provider_id + '/' + m['name'])}" for m in active]
+        literals = [f"    {quote('@' + provider_id + '/' + m['name'])}" for m in sdk_models]
         lines.append(f"{type_name} = Literal[")
         lines.append(",\n".join(literals) + ",")
         lines.append("]")
         lines.append("")
 
-        for m in active:
+        for m in sdk_models:
             full_id = f"@{provider_id}/{m['name']}"
             all_model_ids.append(full_id)
             metadata_entries.append(
@@ -192,7 +193,7 @@ def generate(catalog: Dict[str, Any], metadata: Dict[str, str]) -> str:
     provider_ids = sorted(
         p
         for p in providers
-        if any(m.get("status") != "deprecated" for m in providers[p].get("models") or [])
+        if providers[p].get("models")
     )
     lines.append("Provider = Literal[")
     lines.append("    " + ", ".join(f'"{p}"' for p in provider_ids) + ",")
@@ -282,7 +283,7 @@ def main() -> None:
     print(f"Generated: {OUTPUT_PATH}")
 
     total = sum(
-        len([m for m in p.get("models", []) if m.get("status") != "deprecated"])
+        len(p.get("models", []))
         for p in providers.values()
     )
     print(f"Total models: {total}")

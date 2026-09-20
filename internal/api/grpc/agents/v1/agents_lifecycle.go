@@ -935,6 +935,15 @@ func (s *Server) reconcilePersistentAgentsTick(ctx context.Context) {
 		  -- auto-wakes on SendMessage; WakeAgent RPC for explicit wake).
 		  -- Reviving sleeping agents here re-provisions the VM every tick
 		  -- and fights the reaper, producing a ~2-min sleep/wake flap.
+		  --
+		  -- 'suspended' is excluded for the same reason and must stay excluded:
+		  -- billing enforcement parks agents there when their organization is
+		  -- refused compute (see SandboxManager.SuspendTenantAgents). Before
+		  -- that status existed, enforcement stopped the sandbox but left the
+		  -- agent live, so this loop reprovisioned it ~90s later and the two
+		  -- fought indefinitely — six sandboxes on eu-gra-1-prod survived
+		  -- roughly 8,640 stop calls a day. Adding either value to this list
+		  -- restores that fight.
 		  AND ad.lifecycle_status IN ('created', 'idle', 'running', 'provisioning')
 		  AND ad.deleted_at IS NULL
 		  -- Skip agents currently being provisioned (updated within the last 4 min).

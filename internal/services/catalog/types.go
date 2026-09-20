@@ -6,18 +6,24 @@ import "time"
 type ModelDefinition struct {
 	Name             string  `yaml:"name"`
 	DisplayName      string  `yaml:"display_name"`
+	APIType          string  `yaml:"api_type,omitempty"`
 	Publisher        string  `yaml:"publisher,omitempty"`
 	CanonicalModelID string  `yaml:"canonical_model_id,omitempty"`
 	MaxTokens        int     `yaml:"max_tokens"`
 	InputCostPer1k   float64 `yaml:"input_cost_per_1k"`
 	OutputCostPer1k  float64 `yaml:"output_cost_per_1k"`
 	// Zero means the catalog does not price cache reads/writes for this model.
-	CacheReadCostPer1k  float64  `yaml:"cache_read_cost_per_1k,omitempty"`
-	CacheWriteCostPer1k float64  `yaml:"cache_write_cost_per_1k,omitempty"`
-	Capabilities        []string `yaml:"capabilities"`
-	Status              string   `yaml:"status"`
-	Family              string   `yaml:"family,omitempty"`
-	ContextLength       int      `yaml:"context_length,omitempty"`
+	CacheReadCostPer1k          float64  `yaml:"cache_read_cost_per_1k,omitempty"`
+	CacheWriteCostPer1k         float64  `yaml:"cache_write_cost_per_1k,omitempty"`
+	CacheWrite1hCostPer1k       float64  `yaml:"cache_write_1h_cost_per_1k,omitempty"`
+	LongContextThresholdTokens  int      `yaml:"long_context_threshold_tokens,omitempty"`
+	LongContextInputMultiplier  float64  `yaml:"long_context_input_multiplier,omitempty"`
+	LongContextCacheMultiplier  float64  `yaml:"long_context_cache_multiplier,omitempty"`
+	LongContextOutputMultiplier float64  `yaml:"long_context_output_multiplier,omitempty"`
+	Capabilities                []string `yaml:"capabilities"`
+	Status                      string   `yaml:"status"`
+	Family                      string   `yaml:"family,omitempty"`
+	ContextLength               int      `yaml:"context_length,omitempty"`
 	// Parameters are the request controls this model accepts. The gateway
 	// uses them to decide whether a provider-wide default may be applied to
 	// this model, so a control the model rejects is never sent to it.

@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
-	"github.com/jmoiron/sqlx"
 	onboardingpb "github.com/everstacklabs/everstack/pkg/grpc/everstack/onboarding/v1"
 	"github.com/everstacklabs/everstack/pkg/grpc/everstack/onboarding/v1/onboardingpbconnect"
+	"github.com/jmoiron/sqlx"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -15,7 +15,7 @@ import (
 // internal/api/grpc/server (RegisterConnectServer + FileDescriptor). The
 // service is Connect-only, so no grpc-gateway/REST plumbing is wired.
 var _ interface {
-	RegisterConnectServer(...connect.Interceptor) (string, http.Handler)
+	RegisterConnectServer(...connect.HandlerOption) (string, http.Handler)
 	FileDescriptor() protoreflect.FileDescriptor
 } = (*Server)(nil)
 
@@ -39,8 +39,8 @@ func (s *Server) SetDB(db *sqlx.DB) {
 }
 
 // RegisterConnectServer registers the ConnectRPC handler.
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return onboardingpbconnect.NewOnboardingServiceHandler(s, connect.WithInterceptors(interceptors...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return onboardingpbconnect.NewOnboardingServiceHandler(s, opts...)
 }
 
 // FileDescriptor returns the proto file descriptor.

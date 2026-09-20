@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	tracespb "github.com/everstacklabs/everstack/pkg/grpc/everstack/traces/v1"
 	tracesconnect "github.com/everstacklabs/everstack/pkg/grpc/everstack/traces/v1/tracesconnect"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -24,8 +24,8 @@ func CreateServerWithContext(ctx context.Context) *Server {
 }
 
 // RegisterConnectServer registers the Connect RPC handler
-func (s *Server) RegisterConnectServer(interceptors ...connect.Interceptor) (string, http.Handler) {
-	return tracesconnect.NewObservabilityServiceHandler(s, connect.WithInterceptors(interceptors...))
+func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
+	return tracesconnect.NewObservabilityServiceHandler(s, opts...)
 }
 
 // FileDescriptor returns the file descriptor for this service

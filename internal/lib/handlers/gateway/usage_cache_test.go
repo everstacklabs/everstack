@@ -40,6 +40,14 @@ func TestUsageCacheReadCount(t *testing.T) {
 			want: 512,
 		},
 		{
+			name: "write-only details do not become cache reads",
+			usage: &Usage{
+				PromptTokens:  1000,
+				PromptDetails: &TokenDetails{CachedTokens: 512, CacheWriteTokens: 512},
+			},
+			want: 0,
+		},
+		{
 			name: "details present but nothing cached",
 			usage: &Usage{
 				PromptTokens:  1000,
@@ -54,6 +62,44 @@ func TestUsageCacheReadCount(t *testing.T) {
 			t.Parallel()
 			if got := tc.usage.CacheReadCount(); got != tc.want {
 				t.Fatalf("CacheReadCount() = %d, want %d", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestUsageCacheWriteCount(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		usage *Usage
+		want  int
+	}{
+		{name: "nil usage", usage: nil, want: 0},
+		{name: "no details", usage: &Usage{PromptTokens: 100}, want: 0},
+		{
+			name: "explicit cache write count",
+			usage: &Usage{
+				PromptTokens:  1000,
+				PromptDetails: &TokenDetails{CachedTokens: 700, CacheReadTokens: 500, CacheWriteTokens: 200},
+			},
+			want: 200,
+		},
+		{
+			name: "legacy aggregate does not imply writes",
+			usage: &Usage{
+				PromptTokens:  1000,
+				PromptDetails: &TokenDetails{CachedTokens: 700},
+			},
+			want: 0,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := tc.usage.CacheWriteCount(); got != tc.want {
+				t.Fatalf("CacheWriteCount() = %d, want %d", got, tc.want)
 			}
 		})
 	}

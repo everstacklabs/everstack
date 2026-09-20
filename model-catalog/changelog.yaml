@@ -1,4 +1,12 @@
 versions:
+  - version: "2.8.0"
+    date: "2026-09-03"
+    description: "Adds GPT-6 Astra and Claude Fable 5.1 from their first-party API documentation, including their complete low, medium, high, xhigh, and max reasoning-effort variants. GPT-6 Astra includes its 1.05M-token context, 128K output limit, Responses API guidance, structured output support, cache pricing, and the price multipliers above 272K input tokens. Claude Fable 5.1 includes its 1M-token context, 128K output limit, adaptive-thinking controls, reduced cache-read price, and both 5-minute and 1-hour cache-write rates. This release also corrects Claude Fable 5's first-party release date from June 7 to June 9, 2026, and refreshes the provider UI with OpenRouter's current official glyph."
+    changes:
+      new_models:
+        - { provider: anthropic, model: "claude-fable-5-1", display_name: "Claude Fable 5.1" }
+        - { provider: openai, model: "gpt-6-astra", display_name: "GPT-6 Astra" }
+
   - version: "2.7.0"
     date: "2026-08-25"
     description: "Adds Voyage AI as a direct embeddings provider with 6 retrieval models, closing the largest gap in a modality Everstack already supports: the gateway has carried an embeddings interface and the catalog has carried embedding models all along, but Voyage, the most widely recommended retrieval embedding provider, was absent. Model ids, pricing and context lengths were taken from Voyage's own documentation rather than models.dev, which indexes text generation only. Voyage's rerankers are deliberately excluded: the shared OpenAI-compatible client does not implement gateway.RerankProvider, so a reranker in the catalog would resolve to a provider that cannot serve it. This entry also carries the additions from 2.5.0 and 2.6.0, which publish on the same merge, so every model added across the three releases is marked new exactly once."

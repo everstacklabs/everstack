@@ -259,12 +259,24 @@ func (c *toolboxHTTPClient) call(ctx context.Context, method string, reqBody any
 
 	resp, err := c.client.Do(req)
 	if err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if method == toolbox.MethodExec {
+			return fmt.Errorf("toolbox exec outcome unknown: %w", err)
+		}
 		return fmt.Errorf("%w: %v", ErrToolboxHTTPUnavailable, err)
 	}
 	defer resp.Body.Close()
 
 	var envelope toolboxHTTPResponse
 	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if method == toolbox.MethodExec {
+			return fmt.Errorf("toolbox exec response incomplete: %w", err)
+		}
 		return fmt.Errorf("%w: decode response: %v", ErrToolboxHTTPUnavailable, err)
 	}
 	if envelope.Error != "" {
