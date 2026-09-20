@@ -2,6 +2,7 @@ package serve
 
 import (
 	"context"
+	"github.com/everstacklabs/everstack/internal/enterprise"
 	"testing"
 
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
@@ -66,5 +67,16 @@ func TestNewTrialManagerInitializesSelfHostedGateway(t *testing.T) {
 	}
 	if !manager.IsActive() {
 		t.Fatal("newTrialManager() returned an inactive self-hosted trial manager")
+	}
+}
+
+func TestShouldStartSelfHostedCloudLicensingMatchesBuildEdition(t *testing.T) {
+	if shouldStartSelfHostedCloudLicensing(true) {
+		t.Fatal("managed gateway enabled self-hosted cloud licensing")
+	}
+
+	want := enterprise.Edition() != "ce"
+	if got := shouldStartSelfHostedCloudLicensing(false); got != want {
+		t.Fatalf("shouldStartSelfHostedCloudLicensing(false) = %t, want %t for %s edition", got, want, enterprise.Edition())
 	}
 }

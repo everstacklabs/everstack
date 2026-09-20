@@ -847,6 +847,8 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 		// pre-opened SharedDB or EVS_PLATFORM_DSN.
 		if managedGateway {
 			logger.Info("managed gateway mode: skipping self-hosted license/trial/activation")
+		} else if !shouldStartSelfHostedCloudLicensing(managedGateway) {
+			logger.Info("community edition: cloud license, trial, activation, and usage sync disabled")
 		} else {
 			// Load license policy from services config if available, else viper
 			lp := policy.FromGlobal()
@@ -1082,7 +1084,7 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 	// Instance activation: ensure a pending row and start async activation manager
 	// Skip in every managed cloud topology — the control plane manages instance lifecycle.
 	var instanceMgr enterprise.InstanceManager
-	if !managedGateway && initRes != nil && initRes.Primary != nil && initRes.Primary.RW != nil {
+	if shouldStartSelfHostedCloudLicensing(managedGateway) && initRes != nil && initRes.Primary != nil && initRes.Primary.RW != nil {
 		actCfg := enterprise.InstanceConfig{}
 		if svcCfg, err := servicescfg.Load(""); err == nil && svcCfg != nil {
 			actCfg.PlatformURL = svcCfg.GetLicenseServiceURL()
@@ -4548,6 +4550,15 @@ func newTrialManager(ctx context.Context, managedGateway bool, redisClient *cach
 		return nil, err
 	}
 	return trialMgr, nil
+}
+
+// shouldStartSelfHostedCloudLicensing reports whether this process should wire
+// the cloud license service, the anonymous trial, instance activation and
+// usage sync. Never on a managed gateway (the control plane owns lifecycle)
+// and never in the Community Edition, which has no activation and is governed
+// by CE limits instead. Ported from the OSS readiness branch.
+func shouldStartSelfHostedCloudLicensing(managedGateway bool) bool {
+	return !managedGateway && enterprise.Edition() != "ce"
 }
 
 // legacy loader removed; activation now uses services/config/config.yaml

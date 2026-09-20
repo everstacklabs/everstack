@@ -45,9 +45,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/CreateConnection": {
@@ -85,9 +83,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/CreateSession": {
@@ -125,9 +121,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/DeleteConnection": {
@@ -165,9 +159,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/DeleteSession": {
@@ -205,9 +197,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/DeleteSessionArtifact": {
@@ -245,9 +235,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/ExportSessionArtifact": {
@@ -285,9 +273,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/GetArtifactDownload": {
@@ -325,9 +311,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/GetCapabilities": {
@@ -365,9 +349,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/GetConnection": {
@@ -405,9 +387,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/GetSession": {
@@ -445,9 +425,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/GetSessionUsage": {
@@ -485,9 +463,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/ListApprovals": {
@@ -525,9 +501,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/ListConnections": {
@@ -565,9 +539,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/ListSessionArtifacts": {
@@ -605,9 +577,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/ListSessionEvents": {
@@ -645,9 +615,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/ListSessions": {
@@ -685,9 +653,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/ResolveApproval": {
@@ -725,9 +691,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/SendInput": {
@@ -765,9 +729,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/UpdateConnection": {
@@ -805,9 +767,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     },
     "/everstack.openai_agents.v1.OpenAIAgentsService/UploadSessionInput": {
@@ -845,9 +805,7 @@
           },
           "required": true
         },
-        "tags": [
-          "OpenAIAgentsService"
-        ]
+        "tags": ["OpenAIAgentsService"]
       }
     }
   },
@@ -864,9 +822,7 @@
       },
       "protobufNullValue": {
         "type": "string",
-        "enum": [
-          "NULL_VALUE"
-        ],
+        "enum": ["NULL_VALUE"],
         "default": "NULL_VALUE",
         "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
       },

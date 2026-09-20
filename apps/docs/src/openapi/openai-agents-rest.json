@@ -108,9 +108,7 @@
                       }
                     }
                   },
-                  "required": [
-                    "data"
-                  ]
+                  "required": ["data"]
                 }
               }
             }
@@ -462,9 +460,7 @@
                       "type": "boolean"
                     }
                   },
-                  "required": [
-                    "deleted"
-                  ]
+                  "required": ["deleted"]
                 }
               }
             }
@@ -560,9 +556,7 @@
                       }
                     }
                   },
-                  "required": [
-                    "data"
-                  ]
+                  "required": ["data"]
                 }
               }
             }
@@ -827,9 +821,7 @@
                       "type": "boolean"
                     }
                   },
-                  "required": [
-                    "deleted"
-                  ]
+                  "required": ["deleted"]
                 }
               }
             }
@@ -922,9 +914,7 @@
                       "type": "boolean"
                     }
                   },
-                  "required": [
-                    "accepted"
-                  ]
+                  "required": ["accepted"]
                 }
               }
             }
@@ -1029,9 +1019,7 @@
                       "type": "boolean"
                     }
                   },
-                  "required": [
-                    "accepted"
-                  ]
+                  "required": ["accepted"]
                 }
               }
             }
@@ -1134,11 +1122,7 @@
                       "type": "boolean"
                     }
                   },
-                  "required": [
-                    "data",
-                    "next_cursor",
-                    "has_more"
-                  ]
+                  "required": ["data", "next_cursor", "has_more"]
                 }
               }
             }
@@ -1435,9 +1419,7 @@
                       }
                     }
                   },
-                  "required": [
-                    "data"
-                  ]
+                  "required": ["data"]
                 }
               }
             }
@@ -1724,9 +1706,7 @@
                       "type": "boolean"
                     }
                   },
-                  "required": [
-                    "deleted"
-                  ]
+                  "required": ["deleted"]
                 }
               }
             }
@@ -1830,9 +1810,7 @@
                       }
                     }
                   },
-                  "required": [
-                    "data"
-                  ]
+                  "required": ["data"]
                 }
               }
             }
@@ -1915,9 +1893,7 @@
                       "type": "boolean"
                     }
                   },
-                  "required": [
-                    "resolved"
-                  ]
+                  "required": ["resolved"]
                 }
               }
             }
@@ -2026,9 +2002,7 @@
             "$ref": "#/components/schemas/ErrorDetail"
           }
         },
-        "required": [
-          "error"
-        ]
+        "required": ["error"]
       },
       "ErrorDetail": {
         "type": "object",
@@ -2040,10 +2014,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "code",
-          "message"
-        ]
+        "required": ["code", "message"]
       },
       "Capabilities": {
         "type": "object",
@@ -2140,30 +2111,20 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "provider",
-          "status"
-        ]
+        "required": ["id", "name", "provider", "status"]
       },
       "Environment": {
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "none",
-              "self_hosted"
-            ]
+            "enum": ["none", "self_hosted"]
           },
           "workspace_directory": {
             "type": "string"
           }
         },
-        "required": [
-          "type"
-        ]
+        "required": ["type"]
       },
       "Tool": {
         "type": "object",
@@ -2178,10 +2139,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "type",
-          "resource_id"
-        ]
+        "required": ["type", "resource_id"]
       },
       "Session": {
         "type": "object",
@@ -2365,10 +2323,7 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "reported",
-              "unavailable"
-            ]
+            "enum": ["reported", "unavailable"]
           },
           "input_tokens": {
             "type": "integer",
@@ -2393,10 +2348,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "status",
-          "source"
-        ]
+        "required": ["status", "source"]
       },
       "Approval": {
         "type": "object",
@@ -2476,10 +2428,7 @@
             }
           }
         },
-        "required": [
-          "name",
-          "api_key"
-        ]
+        "required": ["name", "api_key"]
       },
       "UpdateConnection": {
         "type": "object",
@@ -2536,12 +2485,7 @@
             }
           }
         },
-        "required": [
-          "connection_id",
-          "idempotency_key",
-          "model",
-          "environment"
-        ]
+        "required": ["connection_id", "idempotency_key", "model", "environment"]
       },
       "Input": {
         "type": "object",
@@ -2551,10 +2495,7 @@
           },
           "input": {}
         },
-        "required": [
-          "idempotency_key",
-          "input"
-        ]
+        "required": ["idempotency_key", "input"]
       },
       "Upload": {
         "type": "object",
@@ -2573,10 +2514,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "filename",
-          "content_base64"
-        ]
+        "required": ["filename", "content_base64"]
       },
       "Export": {
         "type": "object",
@@ -2585,24 +2523,17 @@
             "type": "string"
           }
         },
-        "required": [
-          "path"
-        ]
+        "required": ["path"]
       },
       "Resolve": {
         "type": "object",
         "properties": {
           "decision": {
             "type": "string",
-            "enum": [
-              "approved",
-              "denied"
-            ]
+            "enum": ["approved", "denied"]
           }
         },
-        "required": [
-          "decision"
-        ]
+        "required": ["decision"]
       }
     }
   }

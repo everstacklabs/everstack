@@ -9,9 +9,12 @@ COPY proto/ ./proto/
 COPY model-catalog/ ./model-catalog/
 COPY packages/ ./packages/
 COPY apps/admin/ ./apps/admin/
-COPY services/license/config/plans.json ./services/license/config/plans.json
+# The admin UI imports the plan catalog directly (packages/admin-core/src/lib/plans.ts).
+COPY pkg/plans/plans.json ./pkg/plans/plans.json
 
-RUN corepack enable && corepack prepare pnpm@10.5.2 --activate
+# pnpm via npm rather than corepack: Node images newer than 24 no longer ship
+# corepack, and this file must survive a base-image bump.
+RUN npm install -g pnpm@10.5.2
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm config set store-dir /pnpm/store && \
     pnpm install --frozen-lockfile
@@ -51,7 +54,6 @@ COPY --from=go-builder /out/everstack /app/everstack
 COPY --from=go-builder --chown=everstack:everstack /src/cmd /app/cmd
 COPY --from=go-builder --chown=everstack:everstack /src/internal/database/migrations /app/internal/database/migrations
 COPY --from=go-builder --chown=everstack:everstack /src/model-catalog /app/model-catalog
-COPY --from=go-builder --chown=everstack:everstack /src/services/license/config/plans.json /app/services/license/config/plans.json
 COPY --from=go-builder --chown=everstack:everstack /src/cmd/config/gateway/defaults/gateway-default.yaml /app/config/default.yaml
 RUN mkdir -p /app/data /app/logs && chown -R everstack:everstack /app
 

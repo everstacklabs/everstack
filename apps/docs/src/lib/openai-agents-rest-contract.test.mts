@@ -38,8 +38,11 @@ test("OpenAI Agents REST reference matches the custom handler inventory and wire
   );
   assert.deepEqual(spec.components.schemas.CreateSession.properties.input, {});
   assert.deepEqual(spec.components.schemas.Input.properties.input, {});
-  for (const item of Object.values(spec.paths) as Array<Record<string, any>>) {
-    for (const operation of Object.values(item) as Array<any>) {
+  type Operation = { requestBody?: Record<string, unknown> };
+  for (const item of Object.values(spec.paths) as Array<
+    Record<string, Operation>
+  >) {
+    for (const operation of Object.values(item)) {
       if (operation.requestBody)
         assert.equal(
           operation.requestBody["x-max-body-bytes"],

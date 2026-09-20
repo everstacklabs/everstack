@@ -12,8 +12,8 @@ import {
 } from "fumadocs-ui/layouts/docs/page";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import { BookOpen, Boxes, Code, Rocket, Terminal } from "lucide-react";
-import { useMemo } from "react";
 import type { MDXContent } from "mdx/types";
+import { useMemo } from "react";
 import {
   APIContent,
   APIHeader,
