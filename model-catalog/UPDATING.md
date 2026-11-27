@@ -21,14 +21,78 @@ For a catalog-wide refresh from the same models.dev source used by the current
 catalog, review the allowlist and run:
 
 ```bash
-# Dry run
+# Dry run: prints the path of every file it would add
 node model-catalog/scripts/sync-models-dev.mjs --source /path/to/api.json
 
-# Apply reviewed additions and release-date backfills
+# Add the reviewed new models
 node model-catalog/scripts/sync-models-dev.mjs \
   --source /path/to/api.json \
   --write
 ```
+
+By default the script only adds models the catalog does not have. Existing
+model files are never rewritten, so hand-verified prices, statuses and
+descriptors are safe. Every check that can fail runs before the first file is
+written, so an error leaves the catalog untouched.
+
+The script also accepts:
+
+- `--only <provider[,provider...]>` restricts the run (additions, reconcile
+  and deprecation) to the listed catalog provider slugs, for example
+  `--only aws-bedrock,vertex-ai`. Unknown slugs are an error.
+- `--added-in-version x.y.z` stamps `added_in_version: "x.y.z"` on newly
+  written files. Existing files are never stamped.
+- `--reconcile` opts in to updating existing files from models.dev (status,
+  release date, cost, limits, capabilities, modalities). The dry run lists
+  each changed file with its changed top-level keys. Even then:
+  - files whose header has a line starting `# Verified` are skipped unless
+    `--include-verified` is also passed;
+  - `status: "deprecated"` is never changed back;
+  - `cost.long_context`, `cost.cache_write_1h_per_1k` (and any other cost
+    entry models.dev does not carry) and `unsupported_parameters` are kept
+    verbatim; the run aborts rather than drop them.
+- `--deprecate-missing` (requires `--reconcile`) marks full-inventory models
+  models.dev no longer lists as deprecated.
+- `--additions-only` is still accepted; it is now the default behaviour.
+
+Run with `--write` only after reviewing the dry-run output. When you verify a
+model file against the provider's own documentation, start its header with
+`# Verified <date>.` so a later reconcile leaves it alone.
+
+## Request controls a model rejects
+
+Some models return an error for request controls the gateway otherwise
+forwards. List them on the model file, only when the provider documents the
+rejection:
+
+```yaml
+unsupported_parameters:
+  - "temperature"
+  - "top_p"
+```
+
+Recognised keys (defined in `internal/services/catalog/types.go`, applied by
+`internal/providers/modelparams`):
+
+| Key | Request field it clears |
+| --- | --- |
+| `temperature` | `temperature` |
+| `top_p` | `top_p` |
+| `top_k` | `top_k` |
+| `thinking_toggle` | an explicit thinking enabled or disabled switch |
+| `thinking_budget` | a manual reasoning token budget |
+
+Before a chat request (unary or streaming) reaches the provider adapter, the
+gateway removes any listed control the caller or a configured default set, and
+logs the names it removed at debug level. Unknown keys are ignored. Reasoning
+effort and forced tool choice are never removed, because dropping them would
+change what the request means. Key matching is case-insensitive. The request's
+model is resolved to a catalog entry by exact ID, then without a `[1m]`-style
+suffix, then by the longest catalog ID it extends with a `-` (dated
+snapshots), so a snapshot ID inherits its base model's list. Set the field on
+each provider's copy of a model separately; it is not inherited across
+providers. `sync-models-dev.mjs` never writes or changes this field, and its
+reconcile pass stops with an error rather than alter it.
 
 ## Regenerate artifacts
 

@@ -27,7 +27,11 @@ func (e *AgentExecutor) attachSyntheticTools(
 	}
 
 	runtimeConfig := agentDef.RuntimeConfig
-	sandboxConfig := sandbox.ParseSandboxConfig(runtimeConfig)
+	sandboxConfig, err := sandbox.ParseSandboxConfig(runtimeConfig)
+	if err != nil {
+		logger.WithFields("agent_id", agentDef.ID, "error", err.Error()).Warn("workflow agent sandbox config rejected")
+		return nil
+	}
 	browserConfig := sandbox.ParseBrowserConfig(runtimeConfig)
 	if !sandboxConfig.Enabled && !browserConfig.Enabled {
 		return nil

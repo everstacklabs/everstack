@@ -14,7 +14,7 @@ import (
 	"github.com/everstacklabs/everstack/pkg/tenant"
 )
 
-func TestWithAPIKeyValidation_BypassesForTenantContext(t *testing.T) {
+func TestWithAPIKeyValidation_TenantConfigAloneDoesNotAuthenticate(t *testing.T) {
 	interceptor := NewAPIKeyInterceptor(false)
 	handler := interceptor.WithAPIKeyValidation(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
@@ -29,8 +29,8 @@ func TestWithAPIKeyValidation_BypassesForTenantContext(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusNoContent {
-		t.Fatalf("expected %d, got %d", http.StatusNoContent, rr.Code)
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("expected %d, got %d", http.StatusUnauthorized, rr.Code)
 	}
 }
 

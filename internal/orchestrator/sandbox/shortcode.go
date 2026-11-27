@@ -3,6 +3,7 @@ package lifecycle
 import (
 	"crypto/rand"
 	"fmt"
+	"strings"
 )
 
 // shortCodeAlphabet excludes visually ambiguous chars (0/O/1/l/I) so a
@@ -31,4 +32,19 @@ func GenerateShortCode() (string, error) {
 		out[i] = shortCodeAlphabet[int(b)%len(shortCodeAlphabet)]
 	}
 	return string(out), nil
+}
+
+// IsShortCode reports whether value has the exact public sandbox short-code
+// format.
+func IsShortCode(value string) bool {
+	value = strings.TrimSpace(value)
+	if len(value) != shortCodeLength {
+		return false
+	}
+	for _, ch := range value {
+		if !strings.ContainsRune(shortCodeAlphabet, ch) {
+			return false
+		}
+	}
+	return true
 }

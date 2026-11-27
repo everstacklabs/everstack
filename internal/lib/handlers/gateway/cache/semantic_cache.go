@@ -3,6 +3,7 @@ package cache
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -41,6 +42,11 @@ func DefaultSemanticCacheConfig() SemanticCacheConfig {
 
 // SemanticCacheEntry holds a cached response with its MinHash signature.
 type SemanticCacheEntry struct {
+	// Partition is the tenant + request-context partition this entry belongs
+	// to (see SemanticPartition). Lookups only consider entries of the
+	// caller's partition.
+	Partition string
+
 	// Query is the original query text (for similarity verification)
 	Query string
 
@@ -108,8 +114,8 @@ func NewSemanticCache(cfg SemanticCacheConfig) *SemanticCache {
 
 // Get looks up a similar cached response for the given query.
 // Returns the cached response and true if a similar query was found.
-func (c *SemanticCache) Get(query string) (*CachedResponse, bool) {
-	if query == "" {
+func (c *SemanticCache) Get(partition, query string) (*CachedResponse, bool) {
+	if query == "" || partition == "" {
 		c.misses.Add(1)
 		return nil, false
 	}
@@ -146,6 +152,11 @@ func (c *SemanticCache) Get(query string) (*CachedResponse, bool) {
 		}
 
 		entry := c.entries[pos]
+
+		// Never compare against another tenant's (or another context's) entry.
+		if entry.Partition != partition {
+			continue
+		}
 
 		// Check TTL
 		if now.Sub(entry.CreatedAt) > c.cfg.TTL {
@@ -191,8 +202,8 @@ func (c *SemanticCache) Get(query string) (*CachedResponse, bool) {
 }
 
 // Put stores a response in the cache associated with the query.
-func (c *SemanticCache) Put(query string, response *CachedResponse) {
-	if query == "" || response == nil {
+func (c *SemanticCache) Put(partition, query string, response *CachedResponse) {
+	if query == "" || partition == "" || response == nil {
 		return
 	}
 
@@ -209,6 +220,7 @@ func (c *SemanticCache) Put(query string, response *CachedResponse) {
 
 	// Create new entry
 	entry := SemanticCacheEntry{
+		Partition: partition,
 		Query:     query,
 		Signature: sig,
 		Response:  response,
@@ -393,23 +405,6 @@ func (c *SemanticCache) EstimateSimilarity(query1, query2 string) float64 {
 	return c.hasher.EstimateSimilarity(sig1, sig2)
 }
 
-// GetWithContext is a wrapper for Get that accepts a context (for interface compatibility)
-func (c *SemanticCache) GetWithContext(ctx context.Context, query string) (*CachedResponse, bool) {
-	return c.Get(query)
-}
-
-// PutWithContext is a wrapper for Put that accepts a context (for interface compatibility)
-func (c *SemanticCache) PutWithContext(ctx context.Context, query string, response *CachedResponse) error {
-	c.Put(query, response)
-	return nil
-}
-
-// ClearWithContext is a wrapper for Clear that accepts a context (for interface compatibility)
-func (c *SemanticCache) ClearWithContext(ctx context.Context) error {
-	c.Clear()
-	return nil
-}
-
 // SemanticCacheAdapter wraps SemanticCache to implement SemanticCacheInterface.
 // This allows using the MinHash-based cache where the interface is expected.
 type SemanticCacheAdapter struct {
@@ -421,14 +416,17 @@ func NewSemanticCacheAdapter(cache *SemanticCache) *SemanticCacheAdapter {
 	return &SemanticCacheAdapter{cache: cache}
 }
 
-// Get looks up a semantically similar cached response.
-func (a *SemanticCacheAdapter) Get(ctx context.Context, query string) (*CachedResponse, bool) {
-	return a.cache.Get(query)
+// Get looks up a semantically similar cached response within partition.
+func (a *SemanticCacheAdapter) Get(ctx context.Context, partition, query string) (*CachedResponse, bool) {
+	return a.cache.Get(partition, query)
 }
 
-// Put stores a response in the semantic cache.
-func (a *SemanticCacheAdapter) Put(ctx context.Context, query string, response *CachedResponse) error {
-	a.cache.Put(query, response)
+// Put stores a response in the semantic cache under partition.
+func (a *SemanticCacheAdapter) Put(ctx context.Context, partition, query string, response *CachedResponse) error {
+	if partition == "" {
+		return fmt.Errorf("semantic cache: refusing to store without a tenant partition")
+	}
+	a.cache.Put(partition, query, response)
 	return nil
 }
 

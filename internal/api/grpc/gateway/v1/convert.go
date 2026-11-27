@@ -29,8 +29,18 @@ func toGatewayRequest(in *gatewaypb.ChatCompletionRequest) gw.ChatCompletionRequ
 		value := sampling.GetSeed()
 		seed = &value
 	}
+	var logprobs *bool
+	var topLogprobs *int
+	if sampling != nil {
+		logprobs = sampling.Logprobs
+		if sampling.TopLogprobs != nil {
+			value := int(sampling.GetTopLogprobs())
+			topLogprobs = &value
+		}
+	}
 	out := gw.ChatCompletionRequest{
-		Model: in.GetModel(),
+		Model:             in.GetModel(),
+		ParallelToolCalls: in.ParallelToolCalls,
 		Sampling: gw.SamplingParams{
 			Temperature:           float64(sampling.GetTemperature()),
 			TemperatureConfigured: sampling != nil && sampling.Temperature != nil,
@@ -49,9 +59,14 @@ func toGatewayRequest(in *gatewaypb.ChatCompletionRequest) gw.ChatCompletionRequ
 			TopK:                  topK,
 			Seed:                  seed,
 			Verbosity:             sampling.GetVerbosity(),
+			Logprobs:              logprobs,
+			TopLogprobs:           topLogprobs,
+			LogitBias:             sampling.GetLogitBias(),
 		},
-		Stream:   in.GetStream(),
-		Metadata: convertMetadata(in.GetMetadata()),
+		Stream:         in.GetStream(),
+		Metadata:       convertMetadata(in.GetMetadata()),
+		ResponseFormat: convertResponseFormat(in.GetResponseFormat()),
+		ServiceTier:    in.GetServiceTier(),
 	}
 	for _, m := range in.GetMessages() {
 		parts := make([]gw.ContentPart, 0, len(m.GetContent()))
@@ -73,6 +88,7 @@ func toGatewayRequest(in *gatewaypb.ChatCompletionRequest) gw.ChatCompletionRequ
 			case "image_url":
 				u := p.GetImageUrl()
 				part.ImageURL = &u
+				part.ImageDetail = p.GetImageDetail()
 			}
 			if raw := p.GetProviderJson(); raw != "" {
 				providerJSON := json.RawMessage(raw)
@@ -85,6 +101,7 @@ func toGatewayRequest(in *gatewaypb.ChatCompletionRequest) gw.ChatCompletionRequ
 			}
 		}
 		msg := gw.NewMessage(mapRoleFromProto(m.GetRole()), parts...)
+		msg.Name = m.GetName()
 		// Convert tool calls if present
 		for _, tc := range m.GetToolCalls() {
 			msg.ToolCalls = append(msg.ToolCalls, gw.ToolCall{
@@ -110,6 +127,7 @@ func toGatewayRequest(in *gatewaypb.ChatCompletionRequest) gw.ChatCompletionRequ
 			Function: gw.ToolFunctionDef{
 				Name:        t.GetFunction().GetName(),
 				Description: t.GetFunction().GetDescription(),
+				Strict:      t.GetFunction().Strict,
 			},
 		}
 		// Convert parameters from Struct to map
@@ -156,6 +174,33 @@ func mapRoleFromProto(r gatewaypb.Role) gw.MessageRole {
 	}
 }
 
+// convertResponseFormat reads the OpenAI response_format object
+// ({"type":"json_object"} or {"type":"json_schema","json_schema":{name,
+// description, schema, strict}}) into the gateway shape. An absent or
+// typeless value is nil, meaning plain text.
+func convertResponseFormat(pbStruct *structpb.Struct) *gw.ChatResponseFormat {
+	if pbStruct == nil {
+		return nil
+	}
+	raw := pbStruct.AsMap()
+	typ, _ := raw["type"].(string)
+	if typ == "" {
+		return nil
+	}
+	out := &gw.ChatResponseFormat{Type: typ}
+	if js, ok := raw["json_schema"].(map[string]interface{}); ok {
+		schema := &gw.ChatJSONSchema{}
+		schema.Name, _ = js["name"].(string)
+		schema.Description, _ = js["description"].(string)
+		schema.Schema, _ = js["schema"].(map[string]interface{})
+		if strict, ok := js["strict"].(bool); ok {
+			schema.Strict = &strict
+		}
+		out.JSONSchema = schema
+	}
+	return out
+}
+
 // convertMetadata converts google.protobuf.Struct to map[string]interface{}
 func convertMetadata(pbStruct *structpb.Struct) map[string]interface{} {
 	if pbStruct == nil {
@@ -169,7 +214,7 @@ func toProtoResponse(resp gw.ChatCompletionResponse) *gatewaypb.ChatCompletionRe
 		Id:      resp.ID,
 		Created: resp.Created.Unix(),
 		Model:   resp.Model,
-		Usage:   &gatewaypb.Usage{PromptTokens: int32(resp.Usage.PromptTokens), CompletionTokens: int32(resp.Usage.CompletionTokens), TotalTokens: int32(resp.Usage.TotalTokens)},
+		Usage:   toProtoUsage(&resp.Usage),
 	}
 	for _, c := range resp.Choices {
 		out.Choices = append(out.Choices, &gatewaypb.Choice{
@@ -212,33 +257,36 @@ func toProtoChunk(chunk gw.ChatResponseChunk) *gatewaypb.ChatResponseChunk {
 // toProtoResponseFromChunk converts a streaming chunk into a minimal
 // ChatCompletionResponse by concatenating text deltas into a single message.
 func toProtoResponseFromChunk(ch gw.ChatResponseChunk) *gatewaypb.ChatCompletionResponse {
-	var parts []gw.ContentPart
+	// Group repeated deltas for the same choice without mixing distinct choices.
+	// This preserves historical single-choice frames (for example Gemini text
+	// parts) while retaining the real index for multi-choice streams.
+	choices := make([]*gatewaypb.Choice, 0, len(ch.Choices))
+	positions := map[int]int{}
 	for _, d := range ch.Choices {
-		parts = append(parts, d.Delta.Content...)
-	}
-
-	msg := toProtoMessage(gw.NewMessage(gw.RoleAssistant, parts...))
-
-	choice := &gatewaypb.Choice{
-		Index:   0,
-		Message: msg,
-	}
-	// Providers only set finish_reason on the final chunk, so carry it through
-	// when it is there. Without it the OpenAI-compatible surface reconstructs
-	// every response with a hardcoded "stop", which is wrong for a response
-	// truncated by max_tokens or halted by a content filter.
-	for _, d := range ch.Choices {
-		if d.FinishReason != "" {
-			choice.FinishReason = d.FinishReason
-			break
+		position, ok := positions[d.Index]
+		if !ok {
+			position = len(choices)
+			positions[d.Index] = position
+			choices = append(choices, &gatewaypb.Choice{Index: int32(d.Index), Message: toProtoMessage(gw.NewMessage(gw.RoleAssistant))})
 		}
+		choice := choices[position]
+		msg := toProtoMessage(d.Delta)
+		choice.Message.Content = append(choice.Message.Content, msg.Content...)
+		choice.Message.ToolCalls = append(choice.Message.ToolCalls, msg.ToolCalls...)
+		if choice.FinishReason == "" {
+			choice.FinishReason = d.FinishReason
+		}
+	}
+	// Preserve the historical usage-only single-choice terminator.
+	if len(choices) == 0 {
+		choices = append(choices, &gatewaypb.Choice{Message: toProtoMessage(gw.NewMessage(gw.RoleAssistant))})
 	}
 
 	resp := &gatewaypb.ChatCompletionResponse{
 		Id:      ch.ID,
 		Created: ch.Created.Unix(),
 		Model:   ch.Model,
-		Choices: []*gatewaypb.Choice{choice},
+		Choices: choices,
 	}
 
 	// Carry token usage through. The non-streaming path already does this (see
@@ -248,14 +296,37 @@ func toProtoResponseFromChunk(ch gw.ChatResponseChunk) *gatewaypb.ChatCompletion
 	// could not attribute cost at all. The counts were already being read here
 	// for internal cost metrics; they were simply never returned to the caller.
 	if ch.Usage != nil {
-		resp.Usage = &gatewaypb.Usage{
-			PromptTokens:     int32(ch.Usage.PromptTokens),
-			CompletionTokens: int32(ch.Usage.CompletionTokens),
-			TotalTokens:      int32(ch.Usage.TotalTokens),
-		}
+		resp.Usage = toProtoUsage(ch.Usage)
 	}
 
 	return resp
+}
+
+// toProtoUsage converts usage to the OpenAI-shaped proto, including the
+// prompt and completion breakdowns when the provider reported them. cached
+// tokens follow OpenAI's meaning (prompt tokens read from cache), and
+// reasoning tokens are a subset of completion_tokens, never extra.
+func toProtoUsage(u *gw.Usage) *gatewaypb.Usage {
+	out := &gatewaypb.Usage{
+		PromptTokens:     int32(u.PromptTokens),
+		CompletionTokens: int32(u.CompletionTokens),
+		TotalTokens:      int32(u.TotalTokens),
+	}
+	if d := u.PromptDetails; d != nil {
+		if cached := u.CacheReadCount(); cached > 0 || d.AudioTokens > 0 {
+			out.PromptTokensDetails = &gatewaypb.UsageTokenDetails{
+				CachedTokens: int32(cached),
+				AudioTokens:  int32(d.AudioTokens),
+			}
+		}
+	}
+	if d := u.CompletionDetails; d != nil && (d.ReasoningTokens > 0 || d.AudioTokens > 0) {
+		out.CompletionTokensDetails = &gatewaypb.UsageTokenDetails{
+			ReasoningTokens: int32(d.ReasoningTokens),
+			AudioTokens:     int32(d.AudioTokens),
+		}
+	}
+	return out
 }
 
 func toProtoMessage(m gw.Message) *gatewaypb.Message {

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
+	"strings"
 	"sync"
 
 	licv1 "github.com/everstacklabs/everstack/pkg/grpc/everstack/license/v1"
@@ -32,6 +34,27 @@ type PlansConfig struct {
 	BrowserRuntimePricing *BrowserRuntimePricing `json:"browser_runtime_pricing,omitempty"`
 	SandboxComputePricing *SandboxComputePricing `json:"sandbox_compute_pricing,omitempty"`
 	CreditPricing         *CreditPricing         `json:"credit_pricing,omitempty"`
+
+	// FreeInferenceAllowlist is the cheap-model allowlist for platform-key
+	// inference by a free organization (docs/design/prepaid-credits-v2.md
+	// 6.8). Each entry is a "provider/model" glob (path.Match syntax,
+	// case-insensitive); the provider part is the gateway provider name, so
+	// a pattern never matches the same model served by another provider.
+	// BYOK is never subject to it. An absent list allows nothing.
+	FreeInferenceAllowlist []string `json:"free_inference_allowlist,omitempty"`
+	// Guardrails are flat operational limits that apply to every
+	// organization regardless of tier (6.8). S9 moves the remaining
+	// hardcoded guardrails here.
+	Guardrails *Guardrails `json:"guardrails,omitempty"`
+}
+
+// Guardrails are flat per-organization limits, the same for every tier.
+type Guardrails struct {
+	// MaxInflightPlatformRequests bounds concurrent platform-key provider
+	// attempts per organization per gateway replica. It bounds the total
+	// estimator error in flight and the crash-window settle loss
+	// (docs/design/prepaid-credits-v2.md section 5). 0 means no cap.
+	MaxInflightPlatformRequests int `json:"max_inflight_platform_requests"`
 }
 
 // CreditPricing is the machine-readable rate card for the usage-credit wallet.
@@ -48,6 +71,19 @@ type CreditPricing struct {
 	RetentionPerGiBMonth    float64 `json:"retention_per_gib_month"`
 	ScoresPer1k             float64 `json:"scores_per_1k"`
 	ScoresPer1kFree         float64 `json:"scores_per_1k_free"`
+	// ExtraInstancePerMonth is the monthly wallet debit for each managed
+	// instance an organization keeps running beyond its plan's instance
+	// limit (docs/design/instance-over-limit.md): $10 per instance per
+	// month, decided 2026-09-30. 0 disables the pay option.
+	ExtraInstancePerMonth float64 `json:"extra_instance_per_month"`
+	// Self-serve credit top-up policy (docs/design/prepaid-credits-v2.md
+	// 6.3, decided 2026-09-29): presets and floor are pre-tax USD; tax is
+	// added on top at checkout. The server rejects any amount below the floor
+	// or above the ceiling; the ceiling defaults to $5,000 pending a fraud
+	// review.
+	TopUpPresetsUSD []int64 `json:"topup_presets_usd,omitempty"`
+	TopUpMinUSD     int64   `json:"topup_min_usd,omitempty"`
+	TopUpMaxUSD     int64   `json:"topup_max_usd,omitempty"`
 }
 
 // Plan defines a license and billing tier.
@@ -89,10 +125,38 @@ type Feature struct {
 }
 
 // UsageLimit represents a named plan usage limit. A value of -1 is unlimited.
+//
+// Billing says what crossing the limit means. Absent (the default) it is a
+// hard cap that credit cannot buy past. UsageLimitBillingAllowance marks a
+// Cloud usage allowance: usage up to Value each period is included in the
+// plan and usage beyond it is paid from prepaid credit at OverageRateUSD per
+// Unit (docs/design/cloud-plan-allowances.md). Allowances are a Cloud wallet
+// concept, so they never travel in a license (ToProtoUsageLimits skips them).
 type UsageLimit struct {
 	Type    string `json:"type"`
 	Value   int64  `json:"value"`
 	SubText string `json:"subText,omitempty"`
+
+	Unit           string  `json:"unit,omitempty"`
+	Billing        string  `json:"billing,omitempty"`
+	OverageRateUSD float64 `json:"overage_rate_usd,omitempty"`
+}
+
+// UsageLimitBillingAllowance is the UsageLimit.Billing value of a Cloud usage
+// allowance (included each period, overage paid from credit).
+const UsageLimitBillingAllowance = "allowance"
+
+// Cloud compute allowance limit types (docs/design/cloud-plan-allowances.md).
+const (
+	UsageLimitSandboxVCPUHours      = "SANDBOX_VCPU_HOURS"
+	UsageLimitSandboxMemoryGiBHours = "SANDBOX_MEMORY_GIB_HOURS"
+	UsageLimitBrowserHours          = "BROWSER_HOURS"
+)
+
+// IsAllowance reports whether the limit is a Cloud usage allowance rather
+// than a hard cap.
+func (l UsageLimit) IsAllowance() bool {
+	return strings.EqualFold(strings.TrimSpace(l.Billing), UsageLimitBillingAllowance)
 }
 
 // Pricing represents plan pricing for the supported billing periods.
@@ -273,6 +337,37 @@ func (pc *PlansConfig) GetCreditPricing() *CreditPricing {
 	return pc.CreditPricing
 }
 
+// FreeInferenceAllowed reports whether a free organization may be served
+// model on provider's platform key. Matching is case-insensitive against
+// "provider/model"; a malformed pattern matches nothing. Nil config or an
+// empty list allows nothing (fail closed).
+func (pc *PlansConfig) FreeInferenceAllowed(provider, model string) bool {
+	if pc == nil {
+		return false
+	}
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	model = strings.ToLower(strings.TrimSpace(model))
+	if provider == "" || model == "" {
+		return false
+	}
+	subject := provider + "/" + model
+	for _, pattern := range pc.FreeInferenceAllowlist {
+		if ok, err := path.Match(strings.ToLower(strings.TrimSpace(pattern)), subject); err == nil && ok {
+			return true
+		}
+	}
+	return false
+}
+
+// MaxInflightPlatformRequests returns the per-organization, per-replica
+// in-flight platform-key attempt cap, or 0 when unset (no cap).
+func (pc *PlansConfig) MaxInflightPlatformRequests() int {
+	if pc == nil || pc.Guardrails == nil || pc.Guardrails.MaxInflightPlatformRequests < 0 {
+		return 0
+	}
+	return pc.Guardrails.MaxInflightPlatformRequests
+}
+
 // GetUsageLimit returns a named usage limit and whether the plan defined it.
 func (limits *PlanLimits) GetUsageLimit(limitType string) (int64, bool) {
 	if limits == nil {
@@ -296,10 +391,17 @@ func (p *Plan) ToProtoFeatures() []*licv1.FeatureFlag {
 
 // ToProtoUsageLimits converts catalog limits without dropping their identity.
 // STORAGE is the legacy wire name for the catalog's object STORAGE_BYTES.
+// Cloud usage allowances (UsageLimit.IsAllowance) are not license limits and
+// are left out.
 func (p *Plan) ToProtoUsageLimits() ([]*licv1.UsageLimits, error) {
 	limits := make([]*licv1.UsageLimits, 0, len(p.UsageLimits))
 	seen := make(map[licv1.UsageLimitsType]bool, len(p.UsageLimits))
 	for _, limit := range p.UsageLimits {
+		if limit.IsAllowance() {
+			// A Cloud wallet allowance, not a license limit: self-hosted
+			// gateways have no compute wallet to apply it to.
+			continue
+		}
 		name := limit.Type
 		if name == "STORAGE_BYTES" {
 			name = "STORAGE"

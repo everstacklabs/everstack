@@ -37,14 +37,20 @@ func (s *Server) SandboxMetricsHistory(
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("metrics history not configured"))
 	}
 	sandboxID := req.Msg.GetSandboxId()
-	if _, _, err := s.resolveSandbox(sandboxID); err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, err)
+	scope, err := s.resolveSandboxTenantInstanceScope(ctx, "")
+	if err != nil {
+		return nil, err
 	}
+	inst := s.resolveSandboxByScope(ctx, sandboxID, scope)
+	if inst == nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("sandbox not found"))
+	}
+	sandboxID = inst.ID
 	limit := int(req.Msg.GetLimit())
 	if limit <= 0 {
 		limit = 120
 	}
-	snaps, err := s.metricsRepo.History(ctx, sandboxID, limit)
+	snaps, err := s.metricsRepo.History(ctx, scope.SandboxTenantID(), sandboxID, limit)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -74,7 +80,27 @@ func (s *Server) SandboxMetricsBatch(
 	if len(ids) > 50 {
 		ids = ids[:50]
 	}
-	snaps, err := s.metricsRepo.LatestBatch(ctx, ids)
+	scope, err := s.resolveSandboxTenantInstanceScope(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	ownedIDs := make([]string, 0, len(ids))
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		inst := s.resolveSandboxByScope(ctx, id, scope)
+		if inst == nil {
+			continue
+		}
+		if _, exists := seen[inst.ID]; exists {
+			continue
+		}
+		seen[inst.ID] = struct{}{}
+		ownedIDs = append(ownedIDs, inst.ID)
+	}
+	if len(ownedIDs) == 0 {
+		return connect.NewResponse(&agentspb.SandboxMetricsBatchResponse{Metrics: map[string]*agentspb.MetricSnapshot{}}), nil
+	}
+	snaps, err := s.metricsRepo.LatestBatch(ctx, scope.SandboxTenantID(), ownedIDs)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}

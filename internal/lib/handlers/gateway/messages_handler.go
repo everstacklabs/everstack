@@ -50,12 +50,15 @@ func MessagesHandler(router *Router, defaultModel string) http.Handler {
 			return
 		}
 
+		// One cache view of the request so fingerprints are computed once.
+		cacheReq := &chatRequestAdapter{req: req}
+
 		// Fast-path: Check caches for non-streaming requests
 		if !req.Stream {
 			if engine := fastpath.EngineFromContext(ctx); engine != nil && engine.IsEnabled() {
 				// 1. Check exact cache first (fastest)
 				tracker.StartStage(metrics.StageCacheLookup)
-				if cached, found := engine.GetCachedResponse(&chatRequestAdapter{req}); found {
+				if cached, found := engine.GetCachedResponseWithContext(ctx, cacheReq); found {
 					tracker.EndStage(metrics.StageCacheLookup)
 					engine.RecordFastPathRequest()
 					w.Header().Set("X-Cache", "HIT")
@@ -68,11 +71,16 @@ func MessagesHandler(router *Router, defaultModel string) http.Handler {
 				tracker.EndStage(metrics.StageCacheLookup)
 
 				// 2. Check semantic cache (similarity-based)
+				// NOTE: the gRPC gateway path (processors.go) honors the
+				// EVS_PERF_DISABLE_SEMANTIC_CACHE attribution toggle; this
+				// alternate HTTP path does not yet wire that toggle because it
+				// lives in a package without access to it. Keep behavior here
+				// unchanged until the toggle moves to a shared package.
 				if engine.IsSemanticCacheEnabled() {
 					queryText := extractQueryText(req)
 					if queryText != "" {
 						tracker.StartStage(metrics.StageSemanticLookup)
-						if cached, found := engine.GetSemanticCachedResponse(queryText); found {
+						if cached, found := engine.GetSemanticCachedResponseWithContext(ctx, cacheReq, queryText); found {
 							tracker.EndStage(metrics.StageSemanticLookup)
 							engine.RecordFastPathRequest()
 							w.Header().Set("X-Cache", "HIT")
@@ -116,6 +124,9 @@ func MessagesHandler(router *Router, defaultModel string) http.Handler {
 
 		// Fast-path: Cache the response for future requests
 		if engine := fastpath.EngineFromContext(ctx); engine != nil && engine.IsEnabled() {
+			// Keep the request's tenant identity for the async store; entries
+			// are tenant-owned and a tenantless context stores nothing.
+			storeCtx := context.WithoutCancel(ctx)
 			go func() {
 				respBytes, err := fastpath.Marshal(resp)
 				if err == nil {
@@ -125,13 +136,13 @@ func MessagesHandler(router *Router, defaultModel string) http.Handler {
 						OutputTokens: resp.Usage.CompletionTokens,
 					}
 					// Store in exact cache
-					engine.CacheResponse(&chatRequestAdapter{req}, cachedResp)
+					engine.CacheResponseWithContext(storeCtx, cacheReq, cachedResp)
 
 					// Also store in semantic cache for similarity matching
 					if engine.IsSemanticCacheEnabled() {
 						queryText := extractQueryText(req)
 						if queryText != "" {
-							engine.CacheSemanticResponse(queryText, cachedResp)
+							engine.CacheSemanticResponseWithContext(storeCtx, cacheReq, queryText, cachedResp)
 						}
 					}
 				}
@@ -153,7 +164,8 @@ func readBodyFastPath(r *http.Request) ([]byte, error) {
 
 // chatRequestAdapter adapts ChatCompletionRequest to the cache.ChatRequest interface.
 type chatRequestAdapter struct {
-	req ChatCompletionRequest
+	req  ChatCompletionRequest
+	memo cache.FingerprintMemo
 }
 
 func (a *chatRequestAdapter) GetModel() string        { return a.req.Model }
@@ -161,6 +173,12 @@ func (a *chatRequestAdapter) GetTemperature() float64 { return a.req.Sampling.Te
 func (a *chatRequestAdapter) GetMaxTokens() int       { return a.req.Sampling.MaxTokens }
 func (a *chatRequestAdapter) GetTopP() float64        { return a.req.Sampling.TopP }
 func (a *chatRequestAdapter) GetStream() bool         { return a.req.Stream }
+func (a *chatRequestAdapter) CacheFingerprint() []byte {
+	return a.memo.Exact(func() []byte { return ChatCacheFingerprint(a.req) })
+}
+func (a *chatRequestAdapter) SemanticContextFingerprint() []byte {
+	return a.memo.Semantic(func() []byte { return ChatSemanticContextFingerprint(a.req) })
+}
 func (a *chatRequestAdapter) GetMessages() []cache.Message {
 	msgs := make([]cache.Message, len(a.req.Messages))
 	for i := range a.req.Messages {

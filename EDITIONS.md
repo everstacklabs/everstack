@@ -1,15 +1,18 @@
 # Everstack editions
 
-Everstack uses an open-core distribution model with a genuinely useful Apache
-2.0 Community Edition.
+Everstack is open core. This repository is the Apache-2.0 Community Edition.
+Everstack Cloud and the Enterprise features are separate commercial offerings,
+and their source is not in this repository. [LICENSING.md](./LICENSING.md)
+states the licence terms.
 
 ## Community Edition
 
-The code in this repository is the Community Edition. You can run, modify,
-redistribute, and embed it under the terms of the [Apache 2.0 license](./LICENSE).
-It includes the core gateway, agent runtime, workflows, sandboxes, memory, MCP,
-observability, APIs, CLI, and self-hosted admin application present in this
-source tree.
+Community Edition is the code in this repository. You can run, modify,
+redistribute, and embed it under the terms of the
+[Apache 2.0 license](./LICENSE). It includes the core gateway, agent runtime,
+workflows, sandboxes, memory, MCP, observability, APIs, CLI, and self-hosted
+admin application. The Community Edition server binary is built with
+`go build .` with no tags, or with `-tags ce`.
 
 Community Edition is operated by you. Your model-provider credentials are used
 to call those providers directly, provider inference is billed by those
@@ -19,15 +22,15 @@ providers, and the Everstack model-usage charge is $0.
 
 Everstack Cloud is the managed service. Everstack operates the control plane,
 databases, upgrades, backups, regional infrastructure, and supported runtime
-capacity. The hosted identity, billing, and fleet-management services are not
-part of this repository.
+capacity. Its identity, billing, licensing, and fleet-management services are
+commercial software and are not included in this repository.
 
 ## Enterprise
 
-Commercial enterprise capabilities may include managed or customer-hosted
-deployment, SSO and directory lifecycle, advanced audit and governance,
-private networking, contractual support, and SLAs. Commercial components do
-not change the Apache 2.0 license of Community Edition files.
+The enterprise build of the server adds licence activation and enforcement and
+the wiring for managed instances. It is commercial software, available under a
+commercial agreement with Everstack, and its source is not included in this
+repository.
 
 ## Feature requests and boundaries
 

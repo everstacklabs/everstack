@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { replayBlock } from '@/lib/replay-privacy'
 import {
   Copy,
   RotateCcw,
@@ -188,6 +189,7 @@ export function AttachedFilesPreview({
           {images.map((att) => (
             <a
               key={att.url}
+              {...replayBlock}
               href={att.url}
               target="_blank"
               rel="noopener noreferrer"
@@ -195,7 +197,7 @@ export function AttachedFilesPreview({
             >
               <img
                 src={att.url}
-                alt={att.name}
+                alt="Attachment"
                 className="max-w-[240px] max-h-[180px] object-contain rounded-lg"
                 loading="lazy"
               />
@@ -213,6 +215,7 @@ export function AttachedFilesPreview({
           {files.map((att) => (
             <a
               key={att.url}
+              {...replayBlock}
               href={att.url}
               target="_blank"
               rel="noopener noreferrer"
@@ -566,9 +569,9 @@ export function TurnCard({
                 <div className="text-sm text-white/80 light:text-black/80">{seg.question}</div>
               </div>
               {seg.cancelled ? (
-                <div className="flex items-start gap-2.5 rounded px-3 py-2.5 border border-yellow-500/20 bg-yellow-500/5">
-                  <Clock className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
-                  <div className="text-xs text-yellow-400/70">
+                <div className="flex items-start gap-2.5 rounded px-3 py-2.5 border border-warning-border bg-warning-surface/60">
+                  <Clock className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+                  <div className="text-xs text-warning/70">
                     No response received
                   </div>
                 </div>
@@ -612,7 +615,7 @@ export function TurnCard({
                     <span className="text-white/45 light:text-black/45"> ({segBreakdown})</span>
                   )}
                   {segFailed.length > 0 && (
-                    <span className="text-red-400">
+                    <span className="text-danger">
                       {' '}
                       ({segFailed.length} failed)
                     </span>
@@ -683,7 +686,7 @@ export function TurnCard({
                         disabled={disableActions}
                         className={`inline-flex items-center justify-center w-6 h-6 rounded transition-colors ${
                           feedbackValue === 'up'
-                            ? 'text-green-300 bg-green-500/10'
+                            ? 'text-success bg-success-surface'
                             : 'text-white/40 hover:text-white/80 hover:bg-brand-main-800/60 light:text-black/40 light:hover:text-black/80'
                         } light:hover:text-black/80`}
                       >
@@ -697,7 +700,7 @@ export function TurnCard({
                         disabled={disableActions}
                         className={`inline-flex items-center justify-center w-6 h-6 rounded transition-colors ${
                           feedbackValue === 'down'
-                            ? 'text-red-300 bg-red-500/10'
+                            ? 'text-danger bg-danger-surface'
                             : 'text-white/40 hover:text-white/80 hover:bg-brand-main-800/60 light:text-black/40 light:hover:text-black/80'
                         } light:hover:text-black/80`}
                       >
@@ -801,10 +804,11 @@ export function TurnCard({
                   return (
                     <a
                       key={`${src.url}-${i}`}
+                      {...replayBlock}
                       href={src.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded bg-brand-main-800/40 border border-brand-main-700/30 hover:border-blue-500/30 hover:bg-brand-main-800/60 transition-colors p-2.5"
+                      className="rounded bg-brand-main-800/40 border border-brand-main-700/30 hover:border-info-border hover:bg-brand-main-800/60 transition-colors p-2.5"
                     >
                       <div className="flex items-center gap-2 mb-1.5 min-w-0">
                         <img
@@ -838,6 +842,7 @@ export function TurnCard({
                 {linkEmbeds.map((url) => (
                   <a
                     key={url}
+                    {...replayBlock}
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -857,7 +862,7 @@ export function TurnCard({
 
       {/* Error */}
       {turn.error && (
-        <div className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-400 border border-red-500/15">
+        <div className="rounded-xl bg-danger-surface px-4 py-3 text-sm text-danger border border-danger-border">
           {turn.error}
         </div>
       )}

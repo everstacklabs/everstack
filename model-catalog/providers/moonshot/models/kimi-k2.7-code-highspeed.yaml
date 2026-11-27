@@ -24,7 +24,7 @@ modalities:
   output: ["text"]
 
 knowledge_cutoff: "2025-01"
-notes: "Coding-focused Kimi model, stronger on long-horizon repo work with less overthinking"
+notes: "Moonshot closed the K2 series to newly registered users on 2026-10-31 and plans to retire all K2 models by the end of December 2026. Migrate to kimi-k3.1-pro. Coding-focused Kimi model, stronger on long-horizon repo work with less overthinking"
 parameters:
   - key: "max_output_tokens"
     display_name: "Max output tokens"

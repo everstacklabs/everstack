@@ -6,6 +6,8 @@ import { useAgents } from '@/hooks/deployments/use-agents'
 import { useCreateChannel, useUpdateChannel, useChannel, usePlatformChannels } from '@/hooks/deployments/use-channels'
 import { Platform, SessionMode } from '@/server/channels'
 import type { JsonObject } from '@everstack/client'
+import { PlanLimitNotice } from '@/components/billing/plan-limit-notice'
+import { isPlanLimitError } from '@/lib/plan-limit-error'
 
 const {
     Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetBody,
@@ -176,6 +178,8 @@ export function ChannelConfigSheet({ open, onOpenChange, mode, channelId }: Chan
             }
             onOpenChange(false)
         } catch (error) {
+            // A plan cap is shown inline with an Upgrade link, not as an error.
+            if (isPlanLimitError(error)) return
             toast.error(`Failed to ${mode} channel: ${error instanceof Error ? error.message : 'Unknown error'}`)
         }
     }
@@ -230,7 +234,7 @@ export function ChannelConfigSheet({ open, onOpenChange, mode, channelId }: Chan
                                 <div className="space-y-4">
                                     <div className="space-y-2">
                                         <Label className="text-white light:text-brand-main-50 font-medium">
-                                            Name <span className="text-red-400 light:text-red-600">*</span>
+                                            Name <span className="text-danger">*</span>
                                         </Label>
                                         <Input
                                             placeholder="e.g., Discord Support Bot"
@@ -244,7 +248,7 @@ export function ChannelConfigSheet({ open, onOpenChange, mode, channelId }: Chan
                                     {mode === 'create' && (
                                         <div className="space-y-2">
                                             <Label className="text-white light:text-brand-main-50 font-medium">
-                                                Platform <span className="text-red-400 light:text-red-600">*</span>
+                                                Platform <span className="text-danger">*</span>
                                             </Label>
                                             <Select value={platform} onValueChange={setPlatform}>
                                                 <SelectTrigger className="w-full bg-brand-main-900/60 border-brand-main-600 text-zinc-200 light:text-zinc-800">
@@ -273,7 +277,7 @@ export function ChannelConfigSheet({ open, onOpenChange, mode, channelId }: Chan
                                             <SelectContent className="bg-brand-main-900 border-brand-main-600 text-zinc-200 light:text-zinc-800">
                                                 <SelectItem value="__dispatcher__">
                                                     <span className="inline-flex items-center gap-2">
-                                                        <Iconify.Icon icon="lucide:route" className="h-4 w-4 text-amber-400 light:text-amber-700" />
+                                                        <Iconify.Icon icon="lucide:route" className="h-4 w-4 text-warning" />
                                                         Dispatcher mode (auto-route)
                                                     </span>
                                                 </SelectItem>
@@ -327,7 +331,7 @@ export function ChannelConfigSheet({ open, onOpenChange, mode, channelId }: Chan
                                 <div className="space-y-4">
                                     <div className="space-y-2">
                                         <Label className="text-white light:text-brand-main-50 font-medium">
-                                            Bot Token {mode === 'create' && <span className="text-red-400 light:text-red-600">*</span>}
+                                            Bot Token {mode === 'create' && <span className="text-danger">*</span>}
                                         </Label>
                                         <Input
                                             type="password"
@@ -346,7 +350,7 @@ export function ChannelConfigSheet({ open, onOpenChange, mode, channelId }: Chan
                                     {isSlack && (
                                         <div className="space-y-2">
                                             <Label className="text-white light:text-brand-main-50 font-medium">
-                                                App-Level Token {mode === 'create' && <span className="text-red-400 light:text-red-600">*</span>}
+                                                App-Level Token {mode === 'create' && <span className="text-danger">*</span>}
                                             </Label>
                                             <Input
                                                 type="password"
@@ -363,7 +367,7 @@ export function ChannelConfigSheet({ open, onOpenChange, mode, channelId }: Chan
 
                                     <div className="rounded-md border border-brand-main-600 bg-brand-main-800/30 p-3">
                                         <div className="flex items-start gap-2">
-                                            <Iconify.Icon icon="lucide:shield-check" className="h-4 w-4 text-emerald-400 light:text-emerald-600 mt-0.5 shrink-0" />
+                                            <Iconify.Icon icon="lucide:shield-check" className="h-4 w-4 text-success mt-0.5 shrink-0" />
                                             <p className="text-xs text-white/50 light:text-black/50">
                                                 Credentials are encrypted at rest using AES-256-GCM and are never returned in API responses.
                                             </p>
@@ -490,6 +494,9 @@ export function ChannelConfigSheet({ open, onOpenChange, mode, channelId }: Chan
                                 </div>
                             </TabsContent>
 
+                            {mode === 'create' && (
+                                <PlanLimitNotice error={createChannel.error} className="mb-3" />
+                            )}
                             <Button
                                 type="submit"
                                 className="w-full"

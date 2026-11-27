@@ -108,3 +108,34 @@ func TestLoadBindsRedisSentinelSettings(t *testing.T) {
 		t.Fatalf("license Redis TLS = %#v", cfg.Services.License.RateLimit.Redis)
 	}
 }
+
+func TestLoadBindsAuthRateLimitRedisSettings(t *testing.T) {
+	t.Setenv("EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_ADDRESS", "redis:6379")
+	t.Setenv("EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_PASSWORD", "auth-password")
+	t.Setenv("EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_REQUIRED", "true")
+	t.Setenv("EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_SENTINEL_MASTER_NAME", "everstack")
+	t.Setenv("EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_SENTINEL_ADDRESSES", "redis-a:26379,redis-b:26379")
+	t.Setenv("EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_TLS_ENABLED", "true")
+	t.Setenv("EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_TLS_CA_FILE", "/redis/ca.crt")
+	t.Setenv("EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_TLS_SERVER_NAME", "ha-data-redis")
+
+	path := filepath.Join(t.TempDir(), "services.yaml")
+	if err := os.WriteFile(path, []byte("services: {}\n"), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	redis := cfg.Services.Auth.RateLimit.Redis
+	if redis.Address != "redis:6379" || redis.Password != "auth-password" || !redis.Required {
+		t.Fatalf("auth rate-limit Redis = %#v", redis)
+	}
+	if redis.SentinelMasterName != "everstack" || len(redis.SentinelAddresses) != 2 || redis.SentinelAddresses[1] != "redis-b:26379" {
+		t.Fatalf("auth rate-limit Sentinel = %#v", redis)
+	}
+	if !redis.TLSEnabled || redis.TLSCAFile != "/redis/ca.crt" || redis.TLSServerName != "ha-data-redis" {
+		t.Fatalf("auth rate-limit TLS = %#v", redis)
+	}
+}

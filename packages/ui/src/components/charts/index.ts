@@ -27,5 +27,17 @@ export {
     areaGradient,
     insideZoom,
     withAlpha,
+    bucketAxis,
+    sparkline,
+    viewportTooltipPosition,
+    SPARKLINE_BRIDGE,
 } from './presets.js'
+export {
+    bucketTicks,
+    bucketIndexAt,
+    formatBucketRange,
+    formatBucketDay,
+    formatBucketTime,
+} from './buckets.js'
+export type { BucketTick, BucketFormatOptions } from './buckets.js'
 export { echarts } from './core.js'

@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 
 	"connectrpc.com/connect"
+	"github.com/everstacklabs/everstack/internal/billingmeter"
 	"github.com/everstacklabs/everstack/internal/commands/handlers/gateway/chat"
 	"github.com/everstacklabs/everstack/internal/database"
 	rtconfig "github.com/everstacklabs/everstack/internal/domain/runtime_config"
@@ -31,6 +32,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/proto"
 )
 
 // Provider latency EWMA in milliseconds (alpha≈0.2 via integer smoothing)
@@ -57,6 +59,10 @@ func ProviderLatencyMsEWMA() int64 { return atomic.LoadInt64(&providerLatencyMsE
 
 // Shared handler for ChatCompletion across Connect & gRPC
 func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.ChatCompletionRequest, send func(*gatewaypb.ChatCompletionResponse) error) (err error) {
+	// Every exit: an upstream provider failure leaves with the matching
+	// status (a provider 400 is the caller's 400, not our 500).
+	defer func() { err = providerErrorToConnect(err) }()
+
 	// Per-tenant function-calling gate. Reject if the request includes
 	// `tools` while the tenant has function calling disabled. The chat
 	// itself still works without tools so we don't block the whole call.
@@ -70,8 +76,14 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 	if err := base.EnsureProvidersForRequest(ctx); err != nil {
 		logger.WithFields("error", err.Error()).Warn("gateway: failed to refresh tenant providers for chat request")
 	}
-	if base.routerFor(ctx) == nil {
+	// In shared mode a tenant's bundle comes only from its own rows (or its
+	// own last loaded bundle while a reload fails); the config bootstrap
+	// installs the process default, which shared mode never serves.
+	if base.routerFor(ctx) == nil && !base.isSharedMode() {
 		base.bootstrapFromConfig()
+	}
+	if base.routerFor(ctx) == nil {
+		return errProvidersUnavailable()
 	}
 	// Inject repository from server context into request context
 	if base.ctx != nil {
@@ -109,13 +121,9 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 		}
 	}()
 
-	// Inference metering (shadow phase): accumulate platform-key cost as attempts
-	// complete and settle once on a detached context when the request ends. nil and
-	// every method is a no-op when metering does not apply (no billing DB / no org).
-	// G0 also tracks unbilled cost (fallback winners/losers, tool-loop
-	// iterations, retry failures, cancels) as shadow: observed, never debited.
-	meter := newInferenceMeter(ctx, base, correlationID)
-	defer meter.settle(ctx, span)
+	// Wallet metering happens at provider dispatch (internal/providers/billing):
+	// every attempt this handler makes, including fallback and parallel-race
+	// losers and every tool-loop iteration, is its own settle unit there.
 
 	// Tag trace span with tenant_id for cloud instance isolation
 	if tid := database.TenantSchemaFromContext(ctx); tid != "" {
@@ -154,6 +162,13 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 
 	startTime := time.Now()
 
+	// Perf attribution (EVS-83): per-stage breakdown into the fast-path
+	// histograms. Provider vs gateway-overhead split reads directly off
+	// the provider/gateway_overhead series. Always on: a few atomic
+	// histogram observes per request, negligible next to JSON work.
+	perfTracker := fpmetrics.StartLatencyTracker()
+	defer perfTracker.RecordTotal()
+
 	// Inject sticky key from gRPC metadata if configured
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		ctx = base.withKeySourceFromMetadata(ctx, md)
@@ -170,6 +185,15 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 		}
 	}
 
+	if model == "auto" {
+		normalized := toGatewayRequest(req)
+		state := decisionChatState(normalized.Messages, len(req.GetTools()) > 0)
+		model, err = base.selectDecisionRoute(ctx, model, state)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Add model to span
 	span.SetAttributes(
 		attribute.String("model.requested", model),
@@ -177,6 +201,7 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 
 	// Build normalized request with tracing
 	normStart := time.Now()
+	perfTracker.StartStage(fpmetrics.StageNormalize)
 	ctx, normSpan := telemetry.StartRequestNormalizationSpan(ctx)
 
 	// Add span event for normalization start
@@ -243,7 +268,11 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 
 	// Use centralized attribute setters
 	// Analyze messages for rich metadata
-	msgMetadata := attrs.AnalyzeMessages(norm.Messages)
+	// Attribution toggle: skip when isolating gateway overhead (EVS-83).
+	var msgMetadata attrs.MessageMetadata
+	if !perfTelemetryAttrsDisabled() {
+		msgMetadata = attrs.AnalyzeMessages(norm.Messages)
+	}
 
 	// Set request metadata
 	attrs.SetRequestMetadata(normSpan, len(norm.Messages), norm.Stream, norm.Sampling)
@@ -271,9 +300,15 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 	rulesApplied = append(rulesApplied, "strip_whitespace", "validate_schema", "add_defaults")
 	transformations += 3
 
+	// Serialize the normalized messages once and share across the span
+	// attributes below. Previously this same payload was marshaled twice
+	// here (plus once more inside SetTraceInput below). Full fidelity is
+	// preserved: one marshal, same string everywhere.
+	normMessagesJSON := perfSerializeToJSON(norm.Messages)
+
 	attrs.SetNormalizationDetails(normSpan,
-		attrs.SerializeToJSON(req.Messages),
-		attrs.SerializeToJSON(norm.Messages),
+		perfSerializeToJSON(req.Messages),
+		normMessagesJSON,
 		"1.2",
 		strings.Join(rulesApplied, ","),
 		transformations,
@@ -286,12 +321,15 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 	telemetry.AddSpanEvent(normSpan, attrs.EventNormalizationComplete,
 		attribute.Bool("output_valid", true))
 
-	// Capture input at trace level (root span)
-	attrs.SetTraceInput(span, norm.Messages)
+	// Capture input at trace level (root span), full fidelity.
+	// Reuses the shared marshal (identical value to SetTraceInput:
+	// same serialization, same redaction) — one fewer marshal of the
+	// same payload (EVS-83).
+	attrs.SetTraceInputJSON(span, normMessagesJSON)
 
-	// Set request details on root span
-	inputJSON := attrs.SerializeToJSON(norm.Messages)
-	attrs.SetRequestDetails(span, correlationID, inputJSON, "", "", msgMetadata.TotalChars, len(inputJSON))
+	// Set request details on root span. normMessagesJSON is computed once and
+	// shared here (option B: dedup repeated serialization of the same payload).
+	attrs.SetRequestDetails(span, correlationID, normMessagesJSON, "", "", msgMetadata.TotalChars, len(normMessagesJSON))
 
 	// Update trace context with model parameters
 	traceCtx = telemetry.GetTraceContext(ctx)
@@ -305,6 +343,7 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 	ctx = telemetry.WithTraceContext(ctx, traceCtx)
 
 	normSpan.End()
+	perfTracker.EndStage(fpmetrics.StageNormalize)
 
 	// Validate model exists BEFORE dispatching command with tracing
 	// This prevents session.started events for model-not-found errors.
@@ -314,6 +353,7 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 	var resolvedProvider string
 	if base.routerFor(ctx) != nil {
 		resolveStart := time.Now()
+		perfTracker.StartStage(fpmetrics.StageResolve)
 		ctx, resolveSpan := telemetry.StartModelResolutionSpan(ctx, model)
 		provider, actualModel, err := base.routerFor(ctx).ResolveWithContext(ctx, model)
 		resolveDuration := time.Since(resolveStart).Milliseconds()
@@ -375,6 +415,7 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 
 		resolveSpan.SetStatus(codes.Ok, "model resolved")
 		resolveSpan.End()
+		perfTracker.EndStage(fpmetrics.StageResolve)
 	}
 
 	// Execute CQRS command for chat completion asynchronously (after validation, before processing)
@@ -401,36 +442,83 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 
 	if norm.Stream {
 		// Streaming: mid-stream fallback with per-step timeout/backoff/attempts
-		steps := base.fallbackPlan(ctx)
-		if len(steps) == 0 {
-			steps = []FallbackStep{{Aliases: []string{model}, Strategy: "priority"}}
-		} else {
-			// Ensure primary alias is first in plan if absent
-			hasPrimary := false
-			for _, st := range steps {
-				for _, al := range st.Aliases {
-					if al == model {
-						hasPrimary = true
-						break
-					}
-				}
-			}
-			if !hasPrimary {
-				steps = append([]FallbackStep{{Aliases: []string{model}, Strategy: "priority"}}, steps...)
-			}
-		}
+		perfTracker.StartStage(fpmetrics.StageProvider)
+		// The requested model first, then the fallback plan, each alias at
+		// most once (see streamAttemptPlan).
+		steps := streamAttemptPlan(model, base.fallbackPlan(ctx))
 
 		// Capture usage from the final streaming chunk for metrics recording
 		var streamUsage *gw.Usage
 		var streamModel string
-		captureSend := func(c gw.ChatResponseChunk) error {
+		// Every chunk reaches the client through gate, which records
+		// whether this request has put content on the wire. Once it has, no
+		// retry, key rotation or fallback may start: the client would get
+		// one model's partial answer followed by another's complete answer
+		// in a single response.
+		//
+		// Fallback reporting matches unary: every fallback attempt is
+		// counted as it is dispatched, and when a fallback target serves,
+		// its first message carries the fallback info, so the
+		// x-evs-fallback-* headers are set before the first byte.
+		streamFallbackAttempts := int32(0)
+		streamFallbackStarted := false
+		streamFallbackStart := time.Now()
+		servingAlias, servingReason := model, ""
+		noteStreamFallback := func(reason string) {
+			if !streamFallbackStarted {
+				streamFallbackStarted = true
+				streamFallbackStart = time.Now()
+				span.SetAttributes(attribute.Bool("fallback.triggered", true))
+				telemetry.AddSpanEvent(span, attrs.EventFallbackStarted,
+					attribute.String("reason", "primary model failed"),
+					attribute.String("primary_model", model),
+					attribute.Int("fallback_options", len(steps)-1))
+				// Off the request path: the event writer is a synchronous
+				// database insert, and this runs right before a dispatch.
+				go base.emitFallbackTriggeredEvent(context.WithoutCancel(ctx), model, reason, userID, apiKeyHash, correlationID)
+			}
+			streamFallbackAttempts++
+		}
+		gate := &streamDelivery{sink: func(c gw.ChatResponseChunk, first bool) error {
 			if c.Usage != nil {
 				streamUsage = c.Usage
 			}
 			if c.Model != "" {
 				streamModel = c.Model
 			}
-			return send(toProtoResponseFromChunk(c))
+			resp := toProtoResponseFromChunk(c)
+			if first && streamFallbackAttempts > 0 && !strings.EqualFold(servingAlias, model) {
+				served := c.Model
+				if served == "" {
+					served = servingAlias
+				}
+				resp = attachFallbackInfo(resp, model, served, servingReason, streamFallbackAttempts)
+			}
+			return send(resp)
+		}}
+		// finishStream ends the provider stage and, when the request fell
+		// back and still failed, records that.
+		finishStream := func(err error) error {
+			perfTracker.EndStage(fpmetrics.StageProvider)
+			if err != nil && streamFallbackAttempts > 0 {
+				go base.emitFallbackFailedEvent(context.WithoutCancel(ctx), model, "fallback_exhausted", streamFallbackAttempts, userID, apiKeyHash, correlationID, err.Error())
+				span.SetAttributes(attribute.Int("fallback.attempts", int(streamFallbackAttempts)))
+				telemetry.AddSpanEvent(span, attrs.EventFallbackExhausted,
+					attribute.Int("attempts", int(streamFallbackAttempts)))
+			}
+			return err
+		}
+		// firstByte bounds the wait for the upstream's first chunk (the
+		// step's timeout_ms), not the stream's total duration.
+		// router is captured by the caller before dispatch, so an auth
+		// failure can be traced to the key the attempt actually used.
+		attemptStream := func(tx context.Context, router *gw.Router, firstByte time.Duration, r gw.ChatCompletionRequest) error {
+			err := runStreamAttempt(tx, firstByte, router, r, gate)
+			if err == nil {
+				return gate.flush()
+			}
+			gate.discard()
+			return err
 		}
 		recordStreamUsage := func() {
 			if streamUsage != nil {
@@ -456,9 +544,6 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 				)
 				attrs.SetCostDetails(span, costDetails.EstimatedUSD, costDetails.ActualUSD, costDetails.SavingsUSD, costDetails.CarbonSavedGrams, costDetails.PricingModel)
 
-				// Meter the streamed attempt against the wallet (platform-key only).
-				meter.record(streamUsage.KeySource, costDetails.EstimatedUSD)
-
 				base.recordUsageMetrics(
 					int64(streamUsage.PromptTokens),
 					int64(streamUsage.CompletionTokens),
@@ -470,25 +555,41 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 		}
 
 		var lastErr error
-		for _, step := range steps {
-			for _, alias := range step.Aliases {
+		streamDispatches := 0
+		for si, step := range steps {
+			for ai, alias := range step.Aliases {
 				attempts := step.MaxAttempts
 				if attempts <= 0 {
 					attempts = 1
 				}
 				for a := 1; a <= attempts; a++ {
+					// The client is gone: start nothing more.
+					if cerr := ctx.Err(); cerr != nil {
+						return finishStream(cerr)
+					}
 					start := time.Now()
-					tx := ctx
-					var cancel context.CancelFunc = func() {}
-					if step.TimeoutMs > 0 {
-						tx, cancel = context.WithTimeout(ctx, time.Duration(step.TimeoutMs)*time.Millisecond)
+					// The request's first try, a fallback target's first
+					// try, then the repeats the customer's max_attempts
+					// allows.
+					kind := billingmeter.KindFallback
+					switch {
+					case a > 1:
+						kind = billingmeter.KindRetry
+					case streamDispatches == 0:
+						kind = billingmeter.KindPrimary
 					}
-					r := requestForModel(alias)
-					err := gw.HandleChatStream(tx, base.routerFor(ctx), r, captureSend)
+					streamDispatches++
+					// Nothing is configured after the last repeat of the last
+					// target: a failure there is interrupted, not a fallback.
+					last := si == len(steps)-1 && ai == len(step.Aliases)-1 && a == attempts
+					tx := billingmeter.WithLastAttempt(billingmeter.WithAttemptKind(ctx, kind), last)
+					servingAlias, servingReason = alias, step.Name
+					if si > 0 {
+						noteStreamFallback(step.Name)
+					}
+					attemptRouter := base.routerFor(ctx)
+					err := attemptStream(tx, attemptRouter, time.Duration(step.TimeoutMs)*time.Millisecond, requestForModel(alias))
 					elapsed := time.Since(start)
-					if cancel != nil {
-						cancel()
-					}
 					if err == nil {
 						logger.WithFields(
 							"metric", "gateway_stream_success_latency_ms",
@@ -503,78 +604,104 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 						).Info("chat completion succeeded")
 
 						recordStreamUsage()
+						if streamFallbackAttempts > 0 {
+							served := streamModel
+							if served == "" {
+								served = alias
+							}
+							go base.emitFallbackSucceededEvent(context.WithoutCancel(ctx), model, served, step.Name, streamFallbackAttempts, userID, apiKeyHash, correlationID, time.Since(streamFallbackStart).Milliseconds())
+							span.SetAttributes(attribute.Int("fallback.attempts", int(streamFallbackAttempts)))
+							telemetry.AddSpanEvent(span, attrs.EventFallbackSuccess,
+								attribute.String("served_model", served),
+								attribute.Int("attempts", int(streamFallbackAttempts)))
+						}
+						perfTracker.EndStage(fpmetrics.StageProvider)
 						return nil
 					}
 					lastErr = err
+					// A model trial refusal is terminal: no retry, no key
+					// rotation, no fallback target.
+					if trialErr, ok := billingmeter.ModelTrialConnectError(err); ok {
+						perfTracker.EndStage(fpmetrics.StageProvider)
+						return trialErr
+					}
 					logger.WithFields(
 						"alias", alias,
 						"attempt", a,
 						"elapsed_ms", elapsed.Milliseconds(),
 						"retryable", retrypolicy.IsRetryable(err),
+						"content_delivered", gate.delivered,
 					).Warn("stream attempt failed")
-					// G0 shadow: failed stream attempts report no usage.
-					// Count it, log-only.
-					meter.recordShadow(shadowRetryFailed, base.effectiveKeySource(ctx), 0)
-
+					// Content already reached the client: the stream ends
+					// here with the error (the mid-stream error path emits
+					// an OpenAI error event). No retry, rotation or
+					// fallback may append another answer to it.
+					if gate.delivered {
+						return finishStream(err)
+					}
 					// If auth error on first attempt, try key rotation before giving up on this alias
 					if a == 1 && retrypolicy.IsAuthenticationError(err) {
 						logger.WithCategory(logger.CategoryOperational).SetFields("alias", alias, "error", err.Error()).Info("gateway: stream auth error, attempting key rotation")
+						authErr := err
+						// The key the failing attempt's provider was built on.
+						failedKeyID := servedKeyID(ctx, attemptRouter, alias)
 						maxKeyRotations := 10
 						for keyRotation := 0; keyRotation < maxKeyRotations; keyRotation++ {
-							rotated, currentKeyID := base.attemptKeyRotation(ctx, alias)
-							if !rotated {
+							if _, rotated := base.attemptKeyRotation(ctx, alias, failedKeyID); !rotated {
 								break
 							}
-							if currentKeyID != "" {
-								base.markFailedKey(currentKeyID)
-							}
+							rotatedRouter := base.routerFor(ctx)
 
 							// Retry with rotated key
 							logger.WithCategory(logger.CategoryOperational).SetFields("alias", alias, "rotation_attempt", keyRotation+1).Info("gateway: stream retrying with rotated key")
-							tx2 := ctx
-							var cancel2 context.CancelFunc = func() {}
-							if step.TimeoutMs > 0 {
-								tx2, cancel2 = context.WithTimeout(ctx, time.Duration(step.TimeoutMs)*time.Millisecond)
-							}
-							r2 := requestForModel(alias)
-							err = gw.HandleChatStream(tx2, base.routerFor(ctx), r2, captureSend)
-							if cancel2 != nil {
-								cancel2()
+							// A retry the platform makes for its own reasons:
+							// if it fails it is recorded and never charged.
+							tx2 := billingmeter.WithAttemptKind(ctx, billingmeter.KindPlatformRetry)
+							err = attemptStream(tx2, rotatedRouter, time.Duration(step.TimeoutMs)*time.Millisecond, requestForModel(alias))
+							if err != nil && gate.delivered {
+								return finishStream(keyRotationError(authErr, err))
 							}
 
 							if err == nil {
-								if currentKeyID != "" {
-									base.clearFailedKey(currentKeyID)
-								}
 								logger.WithCategory(logger.CategoryOperational).SetFields("alias", alias, "rotation_attempt", keyRotation+1).Info("gateway: stream success after key rotation")
 								recordStreamUsage()
+								perfTracker.EndStage(fpmetrics.StageProvider)
 								return nil
 							}
 
 							if !retrypolicy.IsAuthenticationError(err) {
 								break // Different error, stop rotating
 							}
-							// G0 shadow: failed rotation retry, no usage reported.
-							meter.recordShadow(shadowRetryFailed, base.effectiveKeySource(ctx), 0)
+							failedKeyID = servedKeyID(ctx, rotatedRouter, alias)
 							logger.WithCategory(logger.CategoryOperational).SetFields("alias", alias, "rotation_attempt", keyRotation+1).Info("gateway: stream key rotation failed")
 						}
-						// After all rotations, update lastErr and break to next alias
-						lastErr = err
+						// After all rotations, update lastErr and break to next alias.
+						// Keep the original auth failure: the last key's error alone
+						// can hide why the first one was rejected.
+						lastErr = keyRotationError(authErr, err)
 						break
 					}
 
 					if !retrypolicy.IsRetryable(err) || a == attempts {
 						break
 					}
-					if step.BackoffMs > 0 {
-						time.Sleep(time.Duration(step.BackoffMs) * time.Millisecond)
+					// Jittered, and abandoned the moment the client goes.
+					if berr := retrypolicy.Backoff(ctx, time.Duration(step.BackoffMs)*time.Millisecond); berr != nil {
+						return finishStream(berr)
 					}
+				}
+				// Only upstream trouble falls back: a request error from
+				// the requested model would fail the same way on every
+				// target, and each of those attempts is charged.
+				if si == 0 && lastErr != nil && !retrypolicy.ShouldFallback(lastErr) {
+					return finishStream(lastErr)
 				}
 			}
 		}
 		if lastErr != nil {
-			return lastErr
+			return finishStream(lastErr)
 		}
+		perfTracker.EndStage(fpmetrics.StageProvider)
 		return nil
 	}
 	// Unary: try primary, then fallbacks per plan
@@ -587,6 +714,9 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 
 	// Fast-path: Check caches for non-streaming requests
 	isStreaming := req.Stream != nil && *req.Stream
+	// One cache view of the request: its fingerprints are computed once and
+	// shared by the exact/semantic lookups and the async stores.
+	cacheReq := &grpcRequestAdapter{req: req}
 	logger.WithFields(
 		"is_streaming", isStreaming,
 		"correlation_id", correlation.GetCorrelationID(ctx),
@@ -602,6 +732,7 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 
 		if engine != nil && engine.IsEnabled() {
 			// Start unified cache lookup span
+			perfTracker.StartStage(fpmetrics.StageCacheLookup)
 			cacheStartTime := time.Now()
 			cacheCtx, cacheSpan := telemetry.StartUnifiedCacheLookupSpan(ctx)
 
@@ -623,7 +754,7 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 			exactChecked = true
 			telemetry.AddSpanEvent(cacheSpan, attrs.EventCacheExactLookup)
 
-			if cached, found := engine.GetCachedResponse(&grpcRequestAdapter{req}); found {
+			if cached, found := engine.GetCachedResponseWithContext(cacheCtx, cacheReq); found {
 				exactHit = true
 				exactDurationMs = time.Since(exactStart).Milliseconds()
 				engine.RecordFastPathRequest()
@@ -725,19 +856,22 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 
 					span.SetStatus(codes.Ok, "cache hit - exact")
 
+					perfTracker.EndStage(fpmetrics.StageCacheLookup)
 					return send(toProtoResponse(cachedResp))
 				}
 			}
 		exactCacheMiss:
 			exactDurationMs = time.Since(exactStart).Milliseconds()
 
-			// 2. Check semantic cache (similarity-based)
+			// 2. Check semantic cache (similarity-based).
+			// Attribution toggle: skip when isolating gateway overhead (EVS-83).
 			logger.WithFields(
 				"semantic_enabled", engine.IsSemanticCacheEnabled(),
 				"correlation_id", correlation.GetCorrelationID(ctx),
 			).Info("Fast-path: about to check semantic cache")
 
-			if engine.IsSemanticCacheEnabled() {
+			if engine.IsSemanticCacheEnabled() && !perfSemanticCacheDisabled() {
+				perfTracker.StartStage(fpmetrics.StageSemanticLookup)
 				queryText := extractQueryTextFromProto(req)
 				logger.WithFields(
 					"query_text", queryText,
@@ -758,7 +892,7 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 						"correlation_id", correlation.GetCorrelationID(ctx),
 					).Info("Checking semantic cache")
 
-					if cached, found := engine.GetSemanticCachedResponseWithContext(cacheCtx, queryText); found {
+					if cached, found := engine.GetSemanticCachedResponseWithContext(cacheCtx, cacheReq, queryText); found {
 						semanticHit = true
 						semanticDurationMs = time.Since(semanticStart).Milliseconds()
 						engine.RecordFastPathRequest()
@@ -862,6 +996,8 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 
 								span.SetStatus(codes.Ok, "cache hit - semantic")
 
+								perfTracker.EndStage(fpmetrics.StageSemanticLookup)
+								perfTracker.EndStage(fpmetrics.StageCacheLookup)
 								return send(toProtoResponse(cachedResp))
 							}
 						} else {
@@ -874,6 +1010,7 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 							"correlation_id", correlation.GetCorrelationID(ctx),
 						).Debug("Semantic cache MISS")
 					}
+					perfTracker.EndStage(fpmetrics.StageSemanticLookup)
 				}
 			}
 
@@ -887,21 +1024,35 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 				attribute.Bool("exact_checked", exactChecked),
 				attribute.Bool("semantic_checked", semanticChecked))
 			cacheSpan.End()
+			perfTracker.EndStage(fpmetrics.StageCacheLookup)
 		}
 	}
 
 	requestedModel := model // Store for fallback tracking
-	resp, err := gw.HandleChat(ctx, base.routerFor(ctx), norm)
+	// Every dispatch below tags its attempt (billingmeter.AttemptKind, Race)
+	// so the metering seam records why it was made: that decides its role in
+	// billing.inference_attempts and whether a failed attempt is charged.
+	// A failed first try (or tool-loop turn) falls back only when a fallback
+	// target is configured; otherwise it is interrupted.
+	primaryCtx := billingmeter.WithLastAttempt(billingmeter.WithAttemptKind(ctx, billingmeter.KindPrimary),
+		!hasFallbackTarget(base.fallbackPlan(ctx), model))
+	perfTracker.StartStage(fpmetrics.StageProvider)
+	// The router each primary dispatch used, so an auth failure can be
+	// traced to the key that actually produced it.
+	primaryRouter := base.routerFor(ctx)
+	resp, err := handleChatOn(primaryCtx, primaryRouter, norm)
+	perfTracker.EndStage(fpmetrics.StageProvider)
 
 	// Tool Loop: Execute serverless functions if response contains tool calls
 	// This loop continues until the LLM returns a response without tool calls
 	// or the maximum iteration limit is reached
 	toolLoopIterations := 0
 	maxToolLoopIterations := 10 // Safety limit to prevent infinite loops
-	// Get org ID from license monitor (gateway is single-tenant, associated with one org)
-	toolLoopOrgID := base.GetOrganizationID()
+	// Lookup and execution must use the authenticated request scope, never
+	// the process-wide license organization. Missing scope fails closed.
+	toolLoopTenantID := contextkeys.ExtractTenantID(ctx)
 
-	for err == nil && base.ShouldExecuteToolLoop(&resp) && toolLoopIterations < maxToolLoopIterations {
+	for err == nil && base.CanExecuteToolLoop(ctx, toolLoopTenantID, &resp) && toolLoopIterations < maxToolLoopIterations {
 		toolLoopIterations++
 
 		toolCallCount := 0
@@ -916,7 +1067,7 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 		).Info("gateway: executing tool loop iteration")
 
 		// Execute tools and get result messages
-		toolMessages, toolErr := base.ExecuteToolLoop(ctx, toolLoopOrgID, correlationID, correlationID, &resp)
+		toolMessages, toolErr := base.ExecuteToolLoop(ctx, toolLoopTenantID, correlationID, correlationID, &resp)
 		if toolErr != nil {
 			logger.WithFields(
 				"correlation_id", correlationID,
@@ -936,21 +1087,9 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 		// If tool_choice was "required", the LLM would keep calling tools forever
 		norm.ToolChoice = nil
 
-		// G0 shadow: this response is about to be overwritten by the
-		// re-invocation below, so its upstream cost would vanish (only the
-		// final response is wallet-billed). Track it as unbilled, log-only.
-		if resp.Usage.TotalTokens > 0 {
-			iterProvider := base.getProviderForModel(ctx, resp.Model)
-			iterCost := metrics.CalculateCostWithCacheTokens(
-				iterProvider, resp.Model,
-				resp.Usage.PromptTokens, resp.Usage.CompletionTokens,
-				resp.Usage.CacheReadCount(), resp.Usage.CacheWriteCount(),
-			)
-			meter.recordShadow(shadowToolLoop, resp.KeySource, iterCost.EstimatedUSD)
-		}
-
 		// Re-invoke the LLM with the updated conversation
-		resp, err = gw.HandleChat(ctx, base.routerFor(ctx), norm)
+		primaryRouter = base.routerFor(ctx)
+		resp, err = handleChatOn(primaryCtx, primaryRouter, norm)
 
 		// Add telemetry for tool loop iteration
 		span.AddEvent("tool_loop_iteration", trace.WithAttributes(
@@ -974,6 +1113,7 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 	if err == nil {
 		// Success - process response with tracing
 		respStart := time.Now()
+		perfTracker.StartStage(fpmetrics.StageTelemetry)
 		_, respSpan := telemetry.StartResponseProcessingSpan(ctx)
 
 		latencyMs := time.Since(startTime).Milliseconds()
@@ -1002,12 +1142,16 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 		}
 
 		// Use centralized setter for response processing
-		respMetadata := attrs.AnalyzeResponse(resp)
+		// Attribution toggle: skip when isolating gateway overhead (EVS-83).
+		var respMetadata attrs.ResponseMetadata
+		if !perfTelemetryAttrsDisabled() {
+			respMetadata = attrs.AnalyzeResponse(resp)
+		}
 		respDuration := time.Since(respStart).Milliseconds()
 		attrs.SetResponseProcessing(respSpan, resp.Model, resp.ID, respMetadata, respDuration)
 
 		// Add detailed response attributes
-		outputJSON := attrs.SerializeToJSON(resp.Choices)
+		outputJSON := perfSerializeToJSON(resp.Choices)
 		finishReason := ""
 		if len(resp.Choices) > 0 {
 			finishReason = resp.Choices[0].FinishReason
@@ -1023,8 +1167,10 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 		respSpan.SetStatus(codes.Ok, "response processed")
 		respSpan.End()
 
-		// Capture output at trace level (root span)
-		attrs.SetTraceOutput(span, resp.Choices)
+		// Capture output at trace level (root span), full fidelity (EVS-83:
+		// no truncation of trace payloads). Reuses the shared marshal,
+		// identical value to SetTraceOutput — one fewer marshal.
+		attrs.SetTraceOutputJSON(span, outputJSON)
 
 		// Calculate and set cost details using the resolved provider (respProvider resolved above)
 		costDetails := metrics.CalculateCostWithCacheTokens(
@@ -1036,9 +1182,6 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 			resp.Usage.CacheWriteCount(),
 		)
 		attrs.SetCostDetails(span, costDetails.EstimatedUSD, costDetails.ActualUSD, costDetails.SavingsUSD, costDetails.CarbonSavedGrams, costDetails.PricingModel)
-
-		// Meter the served attempt against the wallet (platform-key only).
-		meter.record(resp.KeySource, costDetails.EstimatedUSD)
 
 		// Record Prometheus metrics for tokens and cost
 		fpmetrics.RecordTokens(int64(resp.Usage.PromptTokens), int64(resp.Usage.CompletionTokens))
@@ -1077,22 +1220,11 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 			latencyMs,                                   // provider latency
 		)
 
-		// Calculate and set performance metrics
-		p50, p95, p99, _ := getPerformancePercentiles()
-		throughputTPS := 0.0
-		if latencyMs > 0 {
-			throughputTPS = float64(resp.Usage.TotalTokens) / (float64(latencyMs) / 1000.0)
-		}
-		latencyCategory := categorizeLatency(float64(latencyMs))
-		attrs.SetPerformanceMetrics(span, float64(latencyMs), p50, p95, p99, throughputTPS, latencyCategory)
-
-		// Classify and set business metrics
-		businessMetrics := classifyBusinessMetrics(norm.Messages, resp)
-		attrs.SetBusinessMetrics(span, businessMetrics.UseCase, businessMetrics.Domain, businessMetrics.QueryType, businessMetrics.QualityScore)
-
 		span.SetStatus(codes.Ok, "success")
 
-		// Fast-path: Cache the response for future requests (async)
+		// Fast-path: Cache the response for future requests (async).
+		// Unchanged by the perf work except the semantic-cache attribution
+		// gate below; the goroutine was already off the latency path.
 		if !isStreaming {
 			if engine := fastpath.EngineFromContext(ctx); engine != nil && engine.IsEnabled() {
 				corrID := correlation.GetCorrelationID(ctx)
@@ -1101,6 +1233,9 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 				// Create a detached context that won't be cancelled when request completes
 				traceCtx := telemetry.GetTraceContext(ctx)
 				parentSpanContext := span.SpanContext()
+				// Cache entries are tenant-owned: carry the authenticated
+				// tenant into the detached context or nothing is stored.
+				cacheTenantID := contextkeys.ExtractTenantID(ctx)
 
 				go func() {
 					if !isValidCachedChatResponse(resp) {
@@ -1116,6 +1251,9 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 					asyncCtx := trace.ContextWithRemoteSpanContext(context.Background(), parentSpanContext)
 					asyncCtx = correlation.WithCorrelationID(asyncCtx, corrID)
 					asyncCtx = telemetry.WithTraceContext(asyncCtx, traceCtx)
+					if cacheTenantID != "" {
+						asyncCtx = contextkeys.WithTenantID(asyncCtx, cacheTenantID)
+					}
 
 					// Start async cache storage span as a child of the parent span
 					asyncCtx, asyncSpan := telemetry.StartCacheStoreSpan(asyncCtx, "async")
@@ -1132,11 +1270,11 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 						}
 
 						// Store in exact cache with context
-						engine.CacheResponseWithContext(asyncCtx, &grpcRequestAdapter{req}, cachedResp)
+						engine.CacheResponseWithContext(asyncCtx, cacheReq, cachedResp)
 						logger.WithFields("correlation_id", corrID).Info("Stored response in exact cache")
 
 						// Also store in semantic cache for similarity matching
-						if engine.IsSemanticCacheEnabled() {
+						if engine.IsSemanticCacheEnabled() && !perfSemanticCacheDisabled() {
 							queryText := extractQueryTextFromProto(req)
 							logger.WithFields(
 								"correlation_id", corrID,
@@ -1145,14 +1283,16 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 							).Info("Fast-path: about to store in semantic cache")
 
 							if queryText != "" {
-								engine.CacheSemanticResponseWithContext(asyncCtx, queryText, cachedResp)
+								engine.CacheSemanticResponseWithContext(asyncCtx, cacheReq, queryText, cachedResp)
 								logger.WithFields(
 									"correlation_id", corrID,
 									"query_text", queryText,
 								).Info("Stored response in semantic cache")
 							}
 						} else {
-							logger.WithFields("correlation_id", corrID).Warn("Semantic cache not enabled during storage")
+							// The semantic cache is optional and off by default;
+							// its absence is the normal case, not a warning.
+							logger.WithFields("correlation_id", corrID).Debug("Semantic cache not enabled during storage")
 						}
 
 						asyncSpan.SetStatus(codes.Ok, "cache storage completed")
@@ -1164,7 +1304,40 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 			}
 		}
 
-		return send(toProtoResponse(resp))
+		// Calculate and set performance metrics, and classify business
+		// metrics. This is pure string scanning over request+response text
+		// that only feeds dashboard attributes, so it runs AFTER the response
+		// is sent (option B): the client no longer waits for it. The span
+		// stays open via the deferred span.End(), so ClickHouse keeps the
+		// full attribute set.
+		perfTracker.EndStage(fpmetrics.StageTelemetry)
+		sendErr := send(toProtoResponse(resp))
+		perfTracker.StartStage(fpmetrics.StageTelemetry)
+		if !perfTelemetryAttrsDisabled() {
+			// Calculate and set performance metrics
+			p50, p95, p99, _ := getPerformancePercentiles()
+			throughputTPS := 0.0
+			if latencyMs > 0 {
+				throughputTPS = float64(resp.Usage.TotalTokens) / (float64(latencyMs) / 1000.0)
+			}
+			latencyCategory := categorizeLatency(float64(latencyMs))
+			attrs.SetPerformanceMetrics(span, float64(latencyMs), p50, p95, p99, throughputTPS, latencyCategory)
+
+			// Classify and set business metrics
+			businessMetrics := classifyBusinessMetrics(norm.Messages, resp)
+			attrs.SetBusinessMetrics(span, businessMetrics.UseCase, businessMetrics.Domain, businessMetrics.QueryType, businessMetrics.QualityScore)
+		}
+		perfTracker.EndStage(fpmetrics.StageTelemetry)
+		return sendErr
+	}
+
+	// A model trial refusal is terminal: no retry, no key rotation, no
+	// fallback plan. Rendered as ResourceExhausted with the reason, which
+	// /v1 answers as 402 (429 with Retry-After for the interval).
+	if trialErr, ok := billingmeter.ModelTrialConnectError(err); ok {
+		telemetry.RecordError(span, err)
+		span.SetStatus(codes.Error, "model trial refused")
+		return trialErr
 	}
 
 	// Check if this is a model not found error - these should NOT trigger fallback
@@ -1202,33 +1375,31 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 			attribute.String("provider", telemetry.GetProviderForModel(model)),
 			attribute.String("reason", "auth_error"))
 
+		authErr := err
+
 		// Try rotating through all available keys for this provider
 		maxKeyRotations := 10 // Prevent infinite loop
 		keysTried := 0
 		rotationSuccess := false
 		keyRotationStart := time.Now()
 
+		// The key the failing attempt's provider was built on; rotation
+		// marks it failed and rebuilds the bundle without it.
+		failedKeyID := servedKeyID(ctx, primaryRouter, model)
 		for keyRotation := 0; keyRotation < maxKeyRotations; keyRotation++ {
-			rotated, currentKeyID := base.attemptKeyRotation(ctx, model)
-			if !rotated {
+			if _, rotated := base.attemptKeyRotation(ctx, model, failedKeyID); !rotated {
 				logger.WithCategory(logger.CategoryOperational).Info("gateway: no more keys available for rotation, proceeding to provider fallback")
 				break
 			}
 			keysTried++
-
-			// Mark the current key as failed
-			if currentKeyID != "" {
-				base.markFailedKey(currentKeyID)
-			}
+			rotatedRouter := base.routerFor(ctx)
 
 			// Retry with rotated provider
 			logger.WithCategory(logger.CategoryOperational).SetFields("model", model, "rotation_attempt", keyRotation+1).Info("gateway: retrying with rotated key")
-			resp, err = gw.HandleChat(ctx, base.routerFor(ctx), norm)
+			// A retry the platform makes for its own reasons: if it fails it
+			// is recorded and never charged.
+			resp, err = handleChatOn(billingmeter.WithAttemptKind(ctx, billingmeter.KindPlatformRetry), rotatedRouter, norm)
 			if err == nil {
-				// Success! Clear the failed key marker for next request
-				if currentKeyID != "" {
-					base.clearFailedKey(currentKeyID)
-				}
 				rotationSuccess = true
 
 				// Record key rotation metrics
@@ -1245,9 +1416,14 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 				logger.WithCategory(logger.CategoryOperational).SetFields("model", model, "error", err.Error()).Info("gateway: non-auth error after key rotation")
 				break // Different error type, proceed to fallback
 			}
+			failedKeyID = servedKeyID(ctx, rotatedRouter, model)
 
 			logger.WithCategory(logger.CategoryOperational).SetFields("model", model, "rotation_attempt", keyRotation+1, "error", err.Error()).Info("gateway: key rotation attempt failed")
 		}
+
+		// Keep the original auth failure alongside whatever the rotated keys
+		// returned, so the actionable error is not replaced by a later one.
+		err = keyRotationError(authErr, err)
 
 		// Record key rotation completion if we exhausted keys without success
 		if !rotationSuccess && keysTried > 0 {
@@ -1258,25 +1434,52 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 		}
 	}
 
+	// Only upstream trouble falls back (429, 5xx, timeouts, connection
+	// failures, and a rejected key once rotation is exhausted). A request
+	// error (400, 404, 422, context length exceeded) would fail the same way
+	// on every fallback target, and each of those attempts is charged. See
+	// retrypolicy.ShouldFallback for why context-length errors stay here.
+	if !retrypolicy.ShouldFallback(err) {
+		telemetry.RecordError(span, err)
+		span.SetStatus(codes.Error, "request error: no fallback")
+		return err
+	}
+
 	// Build fallback plan (supports priority, round_robin, parallel)
 	plan := base.fallbackPlan(ctx)
-	fallbackAttempts := int32(0)
 	fallbackStartTime := time.Now()
-
-	// Mark that fallback was triggered using proper event
-	span.SetAttributes(attribute.Bool("fallback.triggered", true))
-	telemetry.AddSpanEvent(span, attrs.EventFallbackStarted,
-		attribute.String("reason", "primary model failed"),
-		attribute.String("primary_model", requestedModel),
-		attribute.Int("fallback_options", len(plan)))
+	// fallbackAttempts counts every fallback attempt as it is dispatched
+	// (failed ones included), so the x-evs-fallback-attempts header and the
+	// fallback.failed event report what was tried. It used to be
+	// incremented only on success, so the header always read 1 and the
+	// failure event never fired.
+	fallbackAttempts := int32(0)
+	fallbackStarted := false
+	noteFallbackDispatch := func(n int, reason string) {
+		if !fallbackStarted {
+			fallbackStarted = true
+			span.SetAttributes(attribute.Bool("fallback.triggered", true))
+			telemetry.AddSpanEvent(span, attrs.EventFallbackStarted,
+				attribute.String("reason", "primary model failed"),
+				attribute.String("primary_model", requestedModel),
+				attribute.Int("fallback_options", len(plan)))
+			// Off the request path: the event writer is a synchronous
+			// database insert, and this runs right before a dispatch.
+			go base.emitFallbackTriggeredEvent(context.WithoutCancel(ctx), requestedModel, reason, userID, apiKeyHash, correlationID)
+		}
+		fallbackAttempts += int32(n)
+	}
 
 	// User info already extracted earlier for OTEL logging
 
-	for _, step := range plan {
+	for si, step := range plan {
 		if len(step.Aliases) == 0 {
 			continue
 		}
 		if step.Strategy == "parallel" && len(step.Aliases) > 1 {
+			if cerr := ctx.Err(); cerr != nil {
+				return cerr
+			}
 			// Race all aliases; return first success
 			var tx context.Context = ctx
 			var cancel context.CancelFunc = func() {}
@@ -1286,57 +1489,42 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 				tx, cancel = context.WithCancel(ctx)
 			}
 			defer cancel()
-			resCh := make(chan gw.ChatCompletionResponse, 1)
-			errCh := make(chan error, len(step.Aliases))
 			cfg := telemetry.GetGlobalTracingConfig()
-			for i, alias := range step.Aliases {
-				al := alias
-				attemptNum := int(fallbackAttempts) + i + 1
-				go func(attemptIdx int) {
-					r := requestForModel(al)
+			// The race decides which leg is served; every leg is recorded
+			// (served or race_loser) and charged for what it generated.
+			race := billingmeter.NewRace()
+			defer race.Close()
+			legBase := int(fallbackAttempts)
+			noteFallbackDispatch(len(step.Aliases), step.Name)
+			rr, raceErr := raceLegs(tx, race, len(step.Aliases), func(legCtx context.Context, leg int) (gw.ChatCompletionResponse, error) {
+				al := step.Aliases[leg]
+				r := requestForModel(al)
 
-					// Create fallback span for this parallel attempt if tracing is enabled
-					var fallbackCtx context.Context = tx
-					var fallbackSpan trace.Span
-					if cfg != nil && cfg.TraceFallbacks {
-						fallbackCtx, fallbackSpan = telemetry.StartFallbackSpan(tx, attemptIdx, step.Name+" (parallel)",
-							telemetry.WithRequestID(correlationID),
-							telemetry.WithModel(al))
-						defer fallbackSpan.End()
-					}
+				// Create fallback span for this parallel attempt if tracing is enabled
+				fallbackCtx := legCtx
+				var fallbackSpan trace.Span
+				if cfg != nil && cfg.TraceFallbacks {
+					fallbackCtx, fallbackSpan = telemetry.StartFallbackSpan(fallbackCtx, legBase+leg+1, step.Name+" (parallel)",
+						telemetry.WithRequestID(correlationID),
+						telemetry.WithModel(al))
+					defer fallbackSpan.End()
+				}
 
-					if rr, e := gw.HandleChat(fallbackCtx, base.routerFor(ctx), r); e == nil {
-						if fallbackSpan != nil {
-							fallbackSpan.SetStatus(codes.Ok, "parallel fallback succeeded")
-						}
-						// G0 shadow: the race winner returns at the fallback
-						// exit without wallet metering, and losers spent
-						// upstream tokens that vanish entirely. Track both as
-						// unbilled, log-only. recordShadow is mutex-guarded
-						// for these goroutines.
-						rrCost := metrics.CalculateCostWithCacheTokens(
-							base.getProviderForModel(ctx, rr.Model), rr.Model,
-							rr.Usage.PromptTokens, rr.Usage.CompletionTokens,
-							rr.Usage.CacheReadCount(), rr.Usage.CacheWriteCount(),
-						)
-						select {
-						case resCh <- rr:
-							meter.recordShadow(shadowFallbackServed, rr.KeySource, rrCost.EstimatedUSD)
-						default:
-							meter.recordShadow(shadowParallelLoser, rr.KeySource, rrCost.EstimatedUSD)
-						}
-					} else {
-						if fallbackSpan != nil {
-							telemetry.RecordError(fallbackSpan, e)
-						}
-						errCh <- e
+				rr, e := handleChatOn(fallbackCtx, base.routerFor(ctx), r)
+				if e != nil {
+					if fallbackSpan != nil {
+						telemetry.RecordError(fallbackSpan, e)
 					}
-				}(attemptNum)
-			}
-			select {
-			case rr := <-resCh:
-				cancel()
-				fallbackAttempts++
+					return rr, fmt.Errorf("%s: %w", al, e)
+				}
+				if fallbackSpan != nil {
+					fallbackSpan.SetStatus(codes.Ok, "parallel fallback succeeded")
+				}
+				return rr, nil
+			})
+			won := raceErr == nil
+			cancel()
+			if won {
 				durationMs := time.Since(fallbackStartTime).Milliseconds()
 				logger.WithFields(
 					"requested_model", requestedModel,
@@ -1355,18 +1543,28 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 					attribute.String("provider", base.getProviderForModel(ctx, rr.Model)),
 					attribute.Int("fallback.attempts", int(fallbackAttempts)),
 				)
+				telemetry.AddSpanEvent(span, attrs.EventFallbackSuccess,
+					attribute.String("served_model", rr.Model),
+					attribute.Int("attempts", int(fallbackAttempts)))
 				span.SetStatus(codes.Ok, "fallback succeeded")
 
 				return send(attachFallbackInfo(toProtoResponse(rr), requestedModel, rr.Model, step.Name, fallbackAttempts))
-			case <-tx.Done():
-				// timeout/cancel without success; proceed to next step
-				cancel()
 			}
+			// No winner; proceed to next step, keeping the legs' failures on
+			// the error the request returns if nothing later succeeds.
+			logger.WithFields(
+				"requested_model", requestedModel,
+				"fallback_reason", step.Name,
+				"legs", len(step.Aliases),
+				"error", raceErr.Error(),
+				"correlation_id", correlationID,
+			).Warn("gateway: parallel fallback step had no winner")
+			err = withRaceFailure(err, step.Name, raceErr)
 			continue
 		}
 		// priority / round_robin already expanded into single-alias steps
-		for _, alias := range step.Aliases {
-			if alias == "" || alias == model {
+		for ai, alias := range step.Aliases {
+			if alias == "" || strings.EqualFold(alias, model) {
 				continue
 			}
 			attempts := step.MaxAttempts
@@ -1375,30 +1573,41 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 			}
 			var last error
 			for a := 1; a <= attempts; a++ {
-				var tx context.Context = ctx
+				// The client is gone: start nothing more.
+				if cerr := ctx.Err(); cerr != nil {
+					return cerr
+				}
+				// The first try of a fallback target, then the repeats the
+				// customer's max_attempts allows.
+				kind := billingmeter.KindFallback
+				if a > 1 {
+					kind = billingmeter.KindRetry
+				}
+				final := si == len(plan)-1 && ai == len(step.Aliases)-1 && a == attempts
+				var tx context.Context = billingmeter.WithLastAttempt(billingmeter.WithAttemptKind(ctx, kind), final)
 				var cancel context.CancelFunc = func() {}
 				if step.TimeoutMs > 0 {
-					tx, cancel = context.WithTimeout(ctx, time.Duration(step.TimeoutMs)*time.Millisecond)
+					tx, cancel = context.WithTimeout(tx, time.Duration(step.TimeoutMs)*time.Millisecond)
 				}
 				start := time.Now()
 				r := requestForModel(alias)
+				noteFallbackDispatch(1, step.Name)
 
 				// Create fallback span if tracing is enabled
 				cfg := telemetry.GetGlobalTracingConfig()
 				var fallbackSpan trace.Span
 				if cfg != nil && cfg.TraceFallbacks {
-					tx, fallbackSpan = telemetry.StartFallbackSpan(tx, int(fallbackAttempts)+1, step.Name,
+					tx, fallbackSpan = telemetry.StartFallbackSpan(tx, int(fallbackAttempts), step.Name,
 						telemetry.WithRequestID(correlationID),
 						telemetry.WithModel(alias))
 					defer fallbackSpan.End()
 				}
 
-				if rr, e := gw.HandleChat(tx, base.routerFor(ctx), r); e == nil {
+				if rr, e := handleChatOn(tx, base.routerFor(ctx), r); e == nil {
 					if cancel != nil {
 						cancel()
 					}
 					elapsed := time.Since(start)
-					fallbackAttempts++
 					durationMs := time.Since(fallbackStartTime).Milliseconds()
 					logger.WithFields(
 						"metric", "gateway_unary_success_latency_ms",
@@ -1426,18 +1635,10 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 						attribute.Int("fallback.attempts", int(fallbackAttempts)),
 						attribute.Int64("latency_ms", elapsed.Milliseconds()),
 					)
+					telemetry.AddSpanEvent(span, attrs.EventFallbackSuccess,
+						attribute.String("served_model", rr.Model),
+						attribute.Int("attempts", int(fallbackAttempts)))
 					span.SetStatus(codes.Ok, "fallback succeeded")
-
-					// G0 shadow: fallback-served responses return here without
-					// wallet metering. Track the served cost as unbilled, log-only.
-					if rr.Usage.TotalTokens > 0 {
-						fbCost := metrics.CalculateCostWithCacheTokens(
-							base.getProviderForModel(ctx, rr.Model), rr.Model,
-							rr.Usage.PromptTokens, rr.Usage.CompletionTokens,
-							rr.Usage.CacheReadCount(), rr.Usage.CacheWriteCount(),
-						)
-						meter.recordShadow(shadowFallbackServed, rr.KeySource, fbCost.EstimatedUSD)
-					}
 
 					return send(attachFallbackInfo(toProtoResponse(rr), requestedModel, rr.Model, step.Name, fallbackAttempts))
 				} else {
@@ -1458,14 +1659,12 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 						"elapsed_ms", elapsed.Milliseconds(),
 						"retryable", retrypolicy.IsRetryable(e),
 					).Warn("unary attempt failed")
-					// G0 shadow: the failed attempt reports no usage, so its
-					// upstream spend (if any) is invisible. Count it, log-only.
-					meter.recordShadow(shadowRetryFailed, base.effectiveKeySource(ctx), 0)
 					if !retrypolicy.IsRetryable(e) || a == attempts {
 						break
 					}
-					if step.BackoffMs > 0 {
-						time.Sleep(time.Duration(step.BackoffMs) * time.Millisecond)
+					// Jittered, and abandoned the moment the client goes.
+					if berr := retrypolicy.Backoff(ctx, time.Duration(step.BackoffMs)*time.Millisecond); berr != nil {
+						return berr
 					}
 				}
 			}
@@ -1491,6 +1690,8 @@ func processChatCompletion(ctx context.Context, base *Server, req *gatewaypb.Cha
 		span.SetAttributes(
 			attribute.Int("fallback.attempts", int(fallbackAttempts)),
 		)
+		telemetry.AddSpanEvent(span, attrs.EventFallbackExhausted,
+			attribute.Int("attempts", int(fallbackAttempts)))
 	}
 
 	// Record final error on span
@@ -1531,8 +1732,14 @@ func processEmbeddings(ctx context.Context, base *Server, req *gatewaypb.Embeddi
 	if err := base.EnsureProvidersForRequest(ctx); err != nil {
 		logger.WithFields("error", err.Error()).Warn("gateway: failed to refresh tenant providers for embeddings request")
 	}
-	if base.routerFor(ctx) == nil {
+	// In shared mode a tenant's bundle comes only from its own rows (or its
+	// own last loaded bundle while a reload fails); the config bootstrap
+	// installs the process default, which shared mode never serves.
+	if base.routerFor(ctx) == nil && !base.isSharedMode() {
 		base.bootstrapFromConfig()
+	}
+	if base.routerFor(ctx) == nil {
+		return errProvidersUnavailable()
 	}
 	// Ensure a server-side correlation ID exists for this request (with emb_ prefix)
 	ctx, _ = correlation.EnsureEndpointCorrelationID(ctx, correlation.EndpointEmbeddings)
@@ -1719,7 +1926,8 @@ func processEmbeddings(ctx context.Context, base *Server, req *gatewaypb.Embeddi
 
 	// Primary provider call
 	norm := gw.EmbeddingsRequest{Model: model, Input: inputText}
-	resp, err := gw.HandleEmbeddings(ctx, base.routerFor(ctx), norm)
+	resp, err := handleEmbeddingsOn(billingmeter.WithLastAttempt(billingmeter.WithAttemptKind(ctx, billingmeter.KindPrimary),
+		!hasFallbackTarget(base.fallbackPlan(ctx), model)), base.routerFor(ctx), norm)
 	if err == nil {
 		// Start response processing span
 		_, respSpan := telemetry.StartResponseProcessingSpan(ctx)
@@ -1746,9 +1954,6 @@ func processEmbeddings(ctx context.Context, base *Server, req *gatewaypb.Embeddi
 		}
 		costDetails := metrics.CalculateCost(providerName, model, inputTokens, 0, 0)
 		attrs.SetCostDetails(span, costDetails.EstimatedUSD, costDetails.ActualUSD, costDetails.SavingsUSD, costDetails.CarbonSavedGrams, costDetails.PricingModel)
-		// G0 shadow: the embeddings path has no wallet meter. Track the
-		// served cost as unbilled, log-only.
-		reportShadowCost(ctx, base, correlationID, "Embeddings", shadowUnmeteredProcedure, base.effectiveKeySource(ctx), costDetails.EstimatedUSD)
 
 		// Calculate embedding magnitude for meaningful metrics
 		var magnitude float64
@@ -1862,24 +2067,22 @@ func processEmbeddings(ctx context.Context, base *Server, req *gatewaypb.Embeddi
 		}
 		if step.Strategy == "parallel" && len(step.Aliases) > 1 {
 			tx, cancel := context.WithCancel(ctx)
-			resCh := make(chan gw.EmbeddingsResponse, 1)
-			errCh := make(chan error, len(step.Aliases))
-			for _, alias := range step.Aliases {
-				al := alias
-				go func() {
-					if rr, e := gw.HandleEmbeddings(tx, base.routerFor(ctx), gw.EmbeddingsRequest{Model: al, Input: inputText}); e == nil {
-						select {
-						case resCh <- rr:
-						default:
-						}
-					} else {
-						errCh <- e
-					}
-				}()
+			race := billingmeter.NewRace()
+			defer race.Close()
+			rr, raceErr := raceLegs(tx, race, len(step.Aliases), func(legCtx context.Context, leg int) (gw.EmbeddingsResponse, error) {
+				al := step.Aliases[leg]
+				rr, e := handleEmbeddingsOn(legCtx, base.routerFor(ctx), gw.EmbeddingsRequest{Model: al, Input: inputText})
+				if e != nil {
+					return rr, fmt.Errorf("%s: %w", al, e)
+				}
+				return rr, nil
+			})
+			won := raceErr == nil
+			cancel()
+			if !won {
+				err = withRaceFailure(err, step.Name, raceErr)
 			}
-			select {
-			case rr := <-resCh:
-				cancel()
+			if won {
 
 				// Record fallback success
 				latencyMs := time.Since(startTime).Milliseconds()
@@ -1903,9 +2106,6 @@ func processEmbeddings(ctx context.Context, base *Server, req *gatewaypb.Embeddi
 				fallbackProvider := base.getProviderForModel(ctx, rr.Model)
 				fallbackCost := metrics.CalculateCost(fallbackProvider, rr.Model, fallbackTokens, 0, 0)
 				base.recordUsageMetrics(int64(fallbackTokens), 0, fallbackCost.EstimatedUSD, 0, false)
-				// G0 shadow: fallback winners cost extra upstream calls with
-				// no wallet meter on this path. Track as unbilled, log-only.
-				reportShadowCost(ctx, base, correlationID, "Embeddings", shadowFallbackServed, base.effectiveKeySource(ctx), fallbackCost.EstimatedUSD)
 
 				emb := make([]float32, len(rr.Embedding))
 				for i, v := range rr.Embedding {
@@ -1927,8 +2127,6 @@ func processEmbeddings(ctx context.Context, base *Server, req *gatewaypb.Embeddi
 						TotalTokens:  int32(fallbackTokens),
 					},
 				})
-			case <-tx.Done():
-				cancel()
 			}
 			continue
 		}
@@ -1936,7 +2134,7 @@ func processEmbeddings(ctx context.Context, base *Server, req *gatewaypb.Embeddi
 			if alias == "" || alias == model {
 				continue
 			}
-			if rr, e := gw.HandleEmbeddings(ctx, base.routerFor(ctx), gw.EmbeddingsRequest{Model: alias, Input: inputText}); e == nil {
+			if rr, e := handleEmbeddingsOn(billingmeter.WithAttemptKind(ctx, billingmeter.KindFallback), base.routerFor(ctx), gw.EmbeddingsRequest{Model: alias, Input: inputText}); e == nil {
 				// Record fallback success
 				latencyMs := time.Since(startTime).Milliseconds()
 				span.SetAttributes(
@@ -1960,8 +2158,6 @@ func processEmbeddings(ctx context.Context, base *Server, req *gatewaypb.Embeddi
 				seqFallbackProvider := base.getProviderForModel(ctx, rr.Model)
 				seqFallbackCost := metrics.CalculateCost(seqFallbackProvider, rr.Model, fallbackTokens, 0, 0)
 				base.recordUsageMetrics(int64(fallbackTokens), 0, seqFallbackCost.EstimatedUSD, 0, false)
-				// G0 shadow: see parallel fallback above.
-				reportShadowCost(ctx, base, correlationID, "Embeddings", shadowFallbackServed, base.effectiveKeySource(ctx), seqFallbackCost.EstimatedUSD)
 
 				emb := make([]float32, len(rr.Embedding))
 				for i, v := range rr.Embedding {
@@ -1995,7 +2191,8 @@ func processEmbeddings(ctx context.Context, base *Server, req *gatewaypb.Embeddi
 
 // grpcRequestAdapter adapts gRPC ChatCompletionRequest to the cache.ChatRequest interface.
 type grpcRequestAdapter struct {
-	req *gatewaypb.ChatCompletionRequest
+	req  *gatewaypb.ChatCompletionRequest
+	memo cache.FingerprintMemo
 }
 
 func (a *grpcRequestAdapter) GetModel() string {
@@ -2028,6 +2225,51 @@ func (a *grpcRequestAdapter) GetStream() bool {
 		return *a.req.Stream
 	}
 	return false
+}
+
+// CacheFingerprint is the deterministic wire encoding of the whole request
+// (model, every message and content part, tool calls, sampling, response
+// format, tools, tool choice) with only the stream hint and caller metadata
+// cleared.
+func (a *grpcRequestAdapter) CacheFingerprint() []byte {
+	return a.memo.Exact(func() []byte { return protoCacheFingerprint(a.req, false) })
+}
+
+// SemanticContextFingerprint is CacheFingerprint with the text of the final
+// user message (the semantic query) blanked.
+func (a *grpcRequestAdapter) SemanticContextFingerprint() []byte {
+	return a.memo.Semantic(func() []byte { return protoCacheFingerprint(a.req, true) })
+}
+
+func protoCacheFingerprint(req *gatewaypb.ChatCompletionRequest, blankQuery bool) []byte {
+	if req == nil {
+		return nil
+	}
+	c := proto.Clone(req).(*gatewaypb.ChatCompletionRequest)
+	c.Stream = nil
+	c.Metadata = nil
+	if blankQuery {
+		for i := len(c.Messages) - 1; i >= 0; i-- {
+			if c.Messages[i].GetRole() != gatewaypb.Role_ROLE_USER {
+				continue
+			}
+			for _, part := range c.Messages[i].Content {
+				if part.GetType() == "text" {
+					part.Data = nil
+				}
+			}
+			break
+		}
+	}
+	b, err := proto.MarshalOptions{Deterministic: true}.Marshal(c)
+	if err != nil {
+		return nil
+	}
+	kind := "grpc-chat"
+	if blankQuery {
+		kind = "grpc-chat-semantic"
+	}
+	return append([]byte(kind+"\x00"), b...)
 }
 
 func (a *grpcRequestAdapter) GetMessages() []cache.Message {
@@ -2212,4 +2454,18 @@ func rtconfigFromCtx(ctx context.Context, base *Server) *rtconfig.Service {
 		}
 	}
 	return nil
+}
+
+// hasFallbackTarget reports whether the fallback plan names any target other
+// than the requested model, i.e. whether a failed first try can fall back.
+func hasFallbackTarget(plan []FallbackStep, model string) bool {
+	for _, step := range plan {
+		for _, alias := range step.Aliases {
+			// Plan aliases are lower-cased; the requested model is not.
+			if alias != "" && !strings.EqualFold(alias, model) {
+				return true
+			}
+		}
+	}
+	return false
 }

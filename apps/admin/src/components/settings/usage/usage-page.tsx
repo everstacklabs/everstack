@@ -58,18 +58,18 @@ export function UsagePage() {
     if (isError) {
         return (
             <div className="flex h-[50vh] items-center justify-center p-4">
-                <Card className="w-full max-w-md border-red-500/20 bg-red-500/5">
+                <Card className="w-full max-w-md border-danger-border bg-danger-surface/60">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-red-400 light:text-red-600">
+                        <CardTitle className="flex items-center gap-2 text-danger">
                             <Icon icon="lucide:alert-circle" className="h-5 w-5" />
                             Error Loading License
                         </CardTitle>
-                        <CardDescription className="text-red-200/60 light:text-red-700/60">
+                        <CardDescription className="text-danger/60">
                             {error?.message || 'Failed to load license information'}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Button onClick={handleRefresh} variant="outline" className="w-full border-red-500/20 hover:bg-red-500/10 hover:text-red-400 light:hover:text-red-600">
+                        <Button onClick={handleRefresh} variant="outline" className="w-full border-danger-border hover:bg-danger-surface hover:text-danger">
                             <Icon icon="lucide:refresh-cw" className="mr-2 h-4 w-4" />
                             Try Again
                         </Button>
@@ -88,21 +88,21 @@ export function UsagePage() {
             {/* Alerts Section */}
             <div className="space-y-4">
                 {isLocked && (
-                    <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4 flex items-start gap-4">
-                        <Icon icon="lucide:lock" className="h-5 w-5 text-red-400 light:text-red-600 mt-0.5" />
+                    <div className="rounded-lg border border-danger-border bg-danger-surface p-4 flex items-start gap-4">
+                        <Icon icon="lucide:lock" className="h-5 w-5 text-danger mt-0.5" />
                         <div>
-                            <h3 className="font-medium text-red-400 light:text-red-600">Gateway Locked</h3>
-                            <p className="text-sm text-red-300/80 light:text-red-600/80 mt-1">{gateway.lock_reason}</p>
+                            <h3 className="font-medium text-danger">Gateway Locked</h3>
+                            <p className="text-sm text-danger/80 mt-1">{gateway.lock_reason}</p>
                         </div>
                     </div>
                 )}
 
                 {isSpendBlocked && !isLocked && (
-                    <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4 flex items-start gap-4">
-                        <Icon icon="lucide:alert-triangle" className="h-5 w-5 text-amber-400 light:text-amber-700 mt-0.5" />
+                    <div className="rounded-lg border border-warning-border bg-warning-surface p-4 flex items-start gap-4">
+                        <Icon icon="lucide:alert-triangle" className="h-5 w-5 text-warning mt-0.5" />
                         <div>
-                            <h3 className="font-medium text-amber-400 light:text-amber-700">Usage Limit Reached</h3>
-                            <p className="text-sm text-amber-300/80 light:text-amber-700/80 mt-1">
+                            <h3 className="font-medium text-warning">Usage Limit Reached</h3>
+                            <p className="text-sm text-warning/80 mt-1">
                                 {gateway.spend_blocked_reason || 'AI gateway requests are paused. Upgrade your plan or wait for limits to reset.'}
                             </p>
                         </div>
@@ -110,13 +110,13 @@ export function UsagePage() {
                 )}
 
                 {(isExpiringSoon || isTrialExpiringSoon) && !isLocked && !isSpendBlocked && (
-                    <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4 flex items-start gap-4">
-                        <Icon icon="lucide:alert-triangle" className="h-5 w-5 text-yellow-400 light:text-yellow-700 mt-0.5" />
+                    <div className="rounded-lg border border-warning-border bg-warning-surface p-4 flex items-start gap-4">
+                        <Icon icon="lucide:alert-triangle" className="h-5 w-5 text-warning mt-0.5" />
                         <div>
-                            <h3 className="font-medium text-yellow-400 light:text-yellow-700">
+                            <h3 className="font-medium text-warning">
                                 {license.is_paid ? 'License Expiring Soon' : 'Free Plan Ending Soon'}
                             </h3>
-                            <p className="text-sm text-yellow-300/80 light:text-yellow-700/80 mt-1">
+                            <p className="text-sm text-warning/80 mt-1">
                                 {license.is_paid && license.expires_at
                                     ? `Your license expires ${dayjs(license.expires_at).fromNow()}. Please renew to avoid service interruption.`
                                     : license.trial_expires
@@ -232,7 +232,7 @@ export function UsagePage() {
                 <Card className="w-full border-white/10 light:border-black/10 bg-brand-main-950/50 mt-6">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <Icon icon="lucide:dollar-sign" className="h-5 w-5 text-emerald-400 light:text-emerald-600" />
+                            <Icon icon="lucide:dollar-sign" className="h-5 w-5 text-success" />
                             Cost & Savings
                         </CardTitle>
                         <CardDescription>
@@ -249,7 +249,7 @@ export function UsagePage() {
                             </div>
                             <div className="space-y-1">
                                 <div className="text-xs text-white/50 light:text-black/50 uppercase tracking-wider">Cache Savings</div>
-                                <div className="text-2xl font-mono font-semibold text-emerald-400 light:text-emerald-600">
+                                <div className="text-2xl font-mono font-semibold text-success">
                                     {formatCurrency(usage.cache_savings_usd)}
                                 </div>
                             </div>
@@ -278,7 +278,7 @@ export function UsagePage() {
                         <div className="grid gap-6 md:grid-cols-3">
                             <div className="space-y-1">
                                 <div className="text-xs text-white/50 light:text-black/50 uppercase tracking-wider">Cache Hits</div>
-                                <div className="text-2xl font-mono font-semibold text-emerald-400 light:text-emerald-600">
+                                <div className="text-2xl font-mono font-semibold text-success">
                                     {formatNumber(usage.cache_hits)}
                                 </div>
                             </div>
@@ -303,7 +303,7 @@ export function UsagePage() {
                             <div className="mt-6">
                                 <div className="h-2 w-full overflow-hidden rounded-full bg-white/5 light:bg-black/5">
                                     <div
-                                        className="h-full bg-gradient-to-r from-cyan-500 to-emerald-500 transition-all duration-500"
+                                        className="h-full bg-gradient-to-r from-cyan-500 to-success-solid transition-all duration-500"
                                         style={{
                                             width: `${(usage.cache_hits / (usage.cache_hits + usage.cache_misses)) * 100}%`
                                         }}

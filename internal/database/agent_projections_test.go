@@ -31,16 +31,17 @@ func agentProjectionManager(t *testing.T) (*ProjectionManager, sqlmock.Sqlmock) 
 
 func TestAgentUpdatedProjectsAgentConfigurationFields(t *testing.T) {
 	pm, mock := agentProjectionManager(t)
-	query := regexp.QuoteMeta("UPDATE agent_definitions SET updated_at = $2::timestamptz, mode = $3, max_steps = $4, task_permission_mode = $5, hidden = $6, color = $7, working_directory = $8, mention_alias = $9 WHERE id = $1")
+	query := regexp.QuoteMeta("UPDATE agent_definitions SET updated_at = $2::timestamptz, mode = $3, max_steps = $4, task_permission_mode = $5, hidden = $6, color = $7, working_directory = $8, mention_alias = $9 WHERE id = $1 AND tenant_id = $10")
 	mock.ExpectExec(query).
 		WithArgs(
 			"agent-1", "2026-08-09T12:00:00Z", "primary", float64(12), "deny",
-			true, "violet", "/workspace", "reviewer",
+			true, "violet", "/workspace", "reviewer", agentProjectionTenant,
 		).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	event := projectionUpdateEvent(t, "agent.updated", map[string]interface{}{
 		"id":                   "agent-1",
+		"tenant_id":            agentProjectionTenant,
 		"updated_at":           "2026-08-09T12:00:00Z",
 		"mode":                 "primary",
 		"max_steps":            12,

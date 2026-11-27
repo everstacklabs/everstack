@@ -8,10 +8,11 @@ import {
     login as loginApi,
     register as registerApi,
     requestMagicLink as requestMagicLinkApi,
+    verifyMagicLink as verifyMagicLinkApi,
     signOut as signOutApi,
 } from '@/server/auth'
 import { isCloudManaged } from '@/lib/cloud-mode'
-import { identifyUser, resetPostHog } from '@/lib/posthog'
+import { identifyUser, resetIfIdentified, resetPostHog } from '@/lib/posthog'
 import { setActiveOrgId } from '@/lib/active-org'
 import { useAgentSessionStore } from '@/stores/agent-session-store'
 
@@ -132,6 +133,12 @@ export function useSession() {
     useEffect(() => {
         const user = query.data?.user?.user
         const org = query.data?.user?.organizations?.[0]
+        // Signed out without an explicit sign-out (expired or revoked
+        // session): drop the previous user's analytics identity.
+        if (query.data && !query.data.authenticated) {
+            resetIfIdentified()
+            return
+        }
         if (query.data?.authenticated && user) {
             identifyUser({
                 userId: user.id,
@@ -231,6 +238,18 @@ export function useRequestMagicLink() {
         mutationFn: async ({ email }: { email: string }) => {
             const response = await requestMagicLinkApi(email)
             return response
+        },
+    })
+}
+
+// Exchanges the token from a magic-link email for a session. The server sets
+// the session cookie on the response.
+export function useVerifyMagicLink() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: async ({ token }: { token: string }) => verifyMagicLinkApi(token),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['auth', 'session'] })
         },
     })
 }

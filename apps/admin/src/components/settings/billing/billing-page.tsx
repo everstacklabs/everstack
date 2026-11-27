@@ -7,7 +7,7 @@ import { useGatewayPlans } from '@/hooks/license/use-plans'
 import { UpgradeLicenseDialog } from '../usage/upgrade-license-dialog'
 import { UpgradePlanDialog } from './upgrade-plan-dialog'
 import { SpendLimitsSection } from './spend-limits-section'
-import { useCallback, useState, useEffect, useRef } from 'react'
+import { useCallback, useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { ui, useCopyToClipboard } from '@everstack/ui'
 import { Icon } from '@iconify/react'
 import dayjs from 'dayjs'
@@ -29,6 +29,7 @@ import {
 import { useSearch } from '@tanstack/react-router'
 import { FeatureKey } from '@/config/features'
 import { Feature } from '@/hooks/use-features'
+import { urlWithoutActivationToken } from '@/lib/activation-token-url'
 dayjs.extend(relativeTime)
 
 const {
@@ -334,6 +335,14 @@ export function BillingPage() {
     return () => clearInterval(intervalId)
   }, [isActivating, refetch, refetchGatewayStatus, activationPlan])
 
+  // An activation token in the address bar must not linger in history or
+  // leak through Referer. The router has already parsed it into searchParams,
+  // so strip it from the URL before paint, whatever else the URL carries.
+  useLayoutEffect(() => {
+    const cleaned = urlWithoutActivationToken(window.location.href)
+    if (cleaned) window.history.replaceState(window.history.state, '', cleaned)
+  }, [])
+
   // Handle upgrade success from URL params (returned from Stripe checkout)
   useEffect(() => {
     if (searchParams?.upgrade_success && !upgradeSuccessShown) {
@@ -419,13 +428,13 @@ export function BillingPage() {
   if (isError || plansError) {
     return (
       <div className="flex h-[50vh] items-center justify-center p-4">
-        <Card className="w-full max-w-md border-red-500/20 bg-red-500/5">
+        <Card className="w-full max-w-md border-danger-border bg-danger-surface/60">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-400 light:text-red-600">
+            <CardTitle className="flex items-center gap-2 text-danger">
               <Icon icon="lucide:alert-circle" className="h-5 w-5" />
               Error Loading Billing Info
             </CardTitle>
-            <CardDescription className="text-red-200/60 light:text-red-700/60">
+            <CardDescription className="text-danger/60">
               {error?.message || 'Failed to load billing information'}
             </CardDescription>
           </CardHeader>
@@ -433,7 +442,7 @@ export function BillingPage() {
             <Button
               onClick={() => refetch()}
               variant="outline"
-              className="w-full border-red-500/20 hover:bg-red-500/10 hover:text-red-400 light:hover:text-red-600"
+              className="w-full border-danger-border hover:bg-danger-surface hover:text-danger"
             >
               <Icon icon="lucide:refresh-cw" className="mr-2 h-4 w-4" />
               Try Again
@@ -543,16 +552,16 @@ export function BillingPage() {
 
         {/* Activation in Progress Banner */}
         {isActivating && (
-          <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-4 flex items-start gap-4">
+          <div className="rounded-lg border border-info-border bg-info-surface p-4 flex items-start gap-4">
             <Icon
               icon="lucide:loader-2"
-              className="h-5 w-5 text-blue-400 light:text-blue-600 mt-0.5 animate-spin"
+              className="h-5 w-5 text-info mt-0.5 animate-spin"
             />
             <div>
-              <h3 className="font-medium text-blue-400 light:text-blue-600">
+              <h3 className="font-medium text-info">
                 Activating Your Plan
               </h3>
-              <p className="text-sm text-blue-300/80 light:text-blue-600/80 mt-1">
+              <p className="text-sm text-info/80 mt-1">
                 Your payment was successful. The gateway is being activated with
                 your new plan. This usually takes just a few seconds...
               </p>
@@ -620,16 +629,16 @@ export function BillingPage() {
 
         {/* Alerts Section */}
         {isLocked && !isActivating && (
-          <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4 flex items-start gap-4">
+          <div className="rounded-lg border border-danger-border bg-danger-surface p-4 flex items-start gap-4">
             <Icon
               icon="lucide:lock"
-              className="h-5 w-5 text-red-400 light:text-red-600 mt-0.5"
+              className="h-5 w-5 text-danger mt-0.5"
             />
             <div>
-              <h3 className="font-medium text-red-400 light:text-red-600">
+              <h3 className="font-medium text-danger">
                 Gateway Locked
               </h3>
-              <p className="text-sm text-red-300/80 light:text-red-600/80 mt-1">
+              <p className="text-sm text-danger/80 mt-1">
                 {gateway.lock_reason}
               </p>
             </div>
@@ -637,18 +646,18 @@ export function BillingPage() {
         )}
 
         {(isExpiringSoon || isTrialExpiringSoon) && !isLocked && (
-          <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4 flex items-start gap-4">
+          <div className="rounded-lg border border-warning-border bg-warning-surface p-4 flex items-start gap-4">
             <Icon
               icon="lucide:alert-triangle"
-              className="h-5 w-5 text-yellow-400 light:text-yellow-700 mt-0.5"
+              className="h-5 w-5 text-warning mt-0.5"
             />
             <div>
-              <h3 className="font-medium text-yellow-400 light:text-yellow-700">
+              <h3 className="font-medium text-warning">
                 {license.is_paid
                   ? 'License Expiring Soon'
                   : 'Free Plan Ending Soon'}
               </h3>
-              <p className="text-sm text-yellow-300/80 light:text-yellow-700/80 mt-1">
+              <p className="text-sm text-warning/80 mt-1">
                 {license.is_paid && license.expires_at
                   ? `Your license expires ${dayjs(license.expires_at).fromNow()}. Please renew to avoid service interruption.`
                   : license.trial_expires
@@ -690,7 +699,7 @@ export function BillingPage() {
                     {copied ? (
                       <Icon
                         icon="lucide:check"
-                        className="h-3 w-3 text-green-500 mr-1"
+                        className="h-3 w-3 text-success mr-1"
                       />
                     ) : null}
                     {gatewayStatus.instanceId}
@@ -771,7 +780,7 @@ export function BillingPage() {
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <div
-                    className={`h-2 w-2 rounded-full ${license.active ? 'bg-green-500' : 'bg-red-500'}`}
+                    className={`h-2 w-2 rounded-full ${license.active ? 'bg-success-solid' : 'bg-danger-solid'}`}
                   />
                   <span className="capitalize text-sm font-medium text-white light:text-brand-main-50">
                     {license.status}
@@ -811,16 +820,16 @@ export function BillingPage() {
             {/* Warning for expiring soon */}
             {license.expires_at &&
               dayjs(license.expires_at).diff(dayjs(), 'days') <= 7 && (
-                <div className="p-4 rounded-lg border border-yellow-500/20 bg-yellow-500/10 flex items-start gap-3">
+                <div className="p-4 rounded-lg border border-warning-border bg-warning-surface flex items-start gap-3">
                   <Icon
                     icon="lucide:alert-triangle"
-                    className="h-5 w-5 text-yellow-400 light:text-yellow-700 mt-0.5 shrink-0"
+                    className="h-5 w-5 text-warning mt-0.5 shrink-0"
                   />
                   <div>
-                    <p className="font-medium text-yellow-400 light:text-yellow-700">
+                    <p className="font-medium text-warning">
                       Plan Expiring Soon
                     </p>
-                    <p className="text-sm text-yellow-300/80 light:text-yellow-700/80 mt-1">
+                    <p className="text-sm text-warning/80 mt-1">
                       Your plan expires {dayjs(license.expires_at).fromNow()}.
                       Renew now to avoid service interruption.
                     </p>

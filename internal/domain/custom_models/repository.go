@@ -23,6 +23,7 @@ const (
 // CustomModel represents a user-configured custom model from a meta-provider
 type CustomModel struct {
 	ID            string                 `db:"id"`
+	TenantID      string                 `db:"tenant_id"`
 	ProviderName  string                 `db:"provider_name"`
 	ModelName     string                 `db:"model_name"`
 	DisplayName   string                 `db:"display_name"`
@@ -38,25 +39,54 @@ type CustomModel struct {
 
 // Repository handles database operations for custom models
 type Repository struct {
-	db *sqlx.DB
+	db      *sqlx.DB
+	managed bool
 }
 
 // NewRepository creates a new custom models repository
-func NewRepository(db *sqlx.DB) *Repository {
-	return &Repository{db: db}
+func NewRepository(db *sqlx.DB, managed bool) *Repository {
+	return &Repository{db: db, managed: managed}
+}
+
+// ErrNotFound is returned when no custom model matches inside the caller's
+// tenant. A model that exists for another tenant is reported the same way.
+var ErrNotFound = errors.New("custom model not found")
+
+var ErrTenantRequired = errors.New("tenant id is required on a managed gateway")
+
+func (r *Repository) tenantPredicate(placeholder string) string {
+	if r.managed {
+		return "tenant_id = " + placeholder
+	}
+	return "(tenant_id = " + placeholder + " OR tenant_id = '')"
+}
+
+func (r *Repository) readAllowed(tenantID string) bool {
+	return !r.managed || tenantID != ""
+}
+
+func (r *Repository) writeAllowed(tenantID string) error {
+	if r.managed && tenantID == "" {
+		return ErrTenantRequired
+	}
+	return nil
 }
 
 // List returns all custom models
-func (r *Repository) List(ctx context.Context) ([]*CustomModel, error) {
-	query := `
-		SELECT id, provider_name, model_name, display_name, model_metadata,
+func (r *Repository) List(ctx context.Context, tenantID string) ([]*CustomModel, error) {
+	if !r.readAllowed(tenantID) {
+		return []*CustomModel{}, nil
+	}
+	query := fmt.Sprintf(`
+		SELECT id, tenant_id, provider_name, model_name, display_name, model_metadata,
 		       source, is_active, created_at, updated_at
 		FROM custom_models
+		WHERE %s
 		ORDER BY provider_name ASC, display_name ASC
-	`
+	`, r.tenantPredicate("$1"))
 
 	var rows []CustomModel
-	if err := r.db.SelectContext(ctx, &rows, query); err != nil {
+	if err := r.db.SelectContext(ctx, &rows, query, tenantID); err != nil {
 		return nil, fmt.Errorf("failed to list custom models: %w", err)
 	}
 
@@ -73,17 +103,20 @@ func (r *Repository) List(ctx context.Context) ([]*CustomModel, error) {
 }
 
 // ListByProvider returns all custom models for a specific provider
-func (r *Repository) ListByProvider(ctx context.Context, providerName string) ([]*CustomModel, error) {
-	query := `
-		SELECT id, provider_name, model_name, display_name, model_metadata,
+func (r *Repository) ListByProvider(ctx context.Context, tenantID, providerName string) ([]*CustomModel, error) {
+	if !r.readAllowed(tenantID) {
+		return []*CustomModel{}, nil
+	}
+	query := fmt.Sprintf(`
+		SELECT id, tenant_id, provider_name, model_name, display_name, model_metadata,
 		       source, is_active, created_at, updated_at
 		FROM custom_models
-		WHERE provider_name = $1
+		WHERE provider_name = $1 AND %s
 		ORDER BY display_name ASC
-	`
+	`, r.tenantPredicate("$2"))
 
 	var rows []CustomModel
-	if err := r.db.SelectContext(ctx, &rows, query, providerName); err != nil {
+	if err := r.db.SelectContext(ctx, &rows, query, providerName, tenantID); err != nil {
 		return nil, fmt.Errorf("failed to list custom models for provider %s: %w", providerName, err)
 	}
 
@@ -100,17 +133,20 @@ func (r *Repository) ListByProvider(ctx context.Context, providerName string) ([
 }
 
 // ListActiveByProvider returns all active custom models for a specific provider
-func (r *Repository) ListActiveByProvider(ctx context.Context, providerName string) ([]*CustomModel, error) {
-	query := `
-		SELECT id, provider_name, model_name, display_name, model_metadata,
+func (r *Repository) ListActiveByProvider(ctx context.Context, tenantID, providerName string) ([]*CustomModel, error) {
+	if !r.readAllowed(tenantID) {
+		return []*CustomModel{}, nil
+	}
+	query := fmt.Sprintf(`
+		SELECT id, tenant_id, provider_name, model_name, display_name, model_metadata,
 		       source, is_active, created_at, updated_at
 		FROM custom_models
-		WHERE provider_name = $1 AND is_active = true
+		WHERE provider_name = $1 AND is_active = true AND %s
 		ORDER BY display_name ASC
-	`
+	`, r.tenantPredicate("$2"))
 
 	var rows []CustomModel
-	if err := r.db.SelectContext(ctx, &rows, query, providerName); err != nil {
+	if err := r.db.SelectContext(ctx, &rows, query, providerName, tenantID); err != nil {
 		return nil, fmt.Errorf("failed to list active custom models for provider %s: %w", providerName, err)
 	}
 
@@ -127,18 +163,23 @@ func (r *Repository) ListActiveByProvider(ctx context.Context, providerName stri
 }
 
 // Get returns a custom model by provider and model name
-func (r *Repository) Get(ctx context.Context, providerName, modelName string) (*CustomModel, error) {
-	query := `
-		SELECT id, provider_name, model_name, display_name, model_metadata,
+func (r *Repository) Get(ctx context.Context, tenantID, providerName, modelName string) (*CustomModel, error) {
+	if !r.readAllowed(tenantID) {
+		return nil, fmt.Errorf("%w: %s/%s", ErrNotFound, providerName, modelName)
+	}
+	query := fmt.Sprintf(`
+		SELECT id, tenant_id, provider_name, model_name, display_name, model_metadata,
 		       source, is_active, created_at, updated_at
 		FROM custom_models
-		WHERE provider_name = $1 AND model_name = $2
-	`
+		WHERE provider_name = $1 AND model_name = $2 AND %s
+		ORDER BY (tenant_id = $3) DESC
+		LIMIT 1
+	`, r.tenantPredicate("$3"))
 
 	var model CustomModel
-	if err := r.db.GetContext(ctx, &model, query, providerName, modelName); err != nil {
+	if err := r.db.GetContext(ctx, &model, query, providerName, modelName, tenantID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("custom model not found: %s/%s", providerName, modelName)
+			return nil, fmt.Errorf("%w: %s/%s", ErrNotFound, providerName, modelName)
 		}
 		return nil, fmt.Errorf("failed to get custom model: %w", err)
 	}
@@ -151,18 +192,21 @@ func (r *Repository) Get(ctx context.Context, providerName, modelName string) (*
 }
 
 // GetByID returns a custom model by ID
-func (r *Repository) GetByID(ctx context.Context, id string) (*CustomModel, error) {
-	query := `
-		SELECT id, provider_name, model_name, display_name, model_metadata,
+func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*CustomModel, error) {
+	if !r.readAllowed(tenantID) {
+		return nil, fmt.Errorf("%w: %s", ErrNotFound, id)
+	}
+	query := fmt.Sprintf(`
+		SELECT id, tenant_id, provider_name, model_name, display_name, model_metadata,
 		       source, is_active, created_at, updated_at
 		FROM custom_models
-		WHERE id = $1
-	`
+		WHERE id = $1 AND %s
+	`, r.tenantPredicate("$2"))
 
 	var model CustomModel
-	if err := r.db.GetContext(ctx, &model, query, id); err != nil {
+	if err := r.db.GetContext(ctx, &model, query, id, tenantID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("custom model not found: %s", id)
+			return nil, fmt.Errorf("%w: %s", ErrNotFound, id)
 		}
 		return nil, fmt.Errorf("failed to get custom model: %w", err)
 	}
@@ -175,16 +219,19 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*CustomModel, erro
 }
 
 // Exists checks if a custom model exists
-func (r *Repository) Exists(ctx context.Context, providerName, modelName string) (bool, error) {
-	query := `
+func (r *Repository) Exists(ctx context.Context, tenantID, providerName, modelName string) (bool, error) {
+	if !r.readAllowed(tenantID) {
+		return false, nil
+	}
+	query := fmt.Sprintf(`
 		SELECT EXISTS(
 			SELECT 1 FROM custom_models 
-			WHERE provider_name = $1 AND model_name = $2
+			WHERE provider_name = $1 AND model_name = $2 AND %s
 		)
-	`
+	`, r.tenantPredicate("$3"))
 
 	var exists bool
-	if err := r.db.GetContext(ctx, &exists, query, providerName, modelName); err != nil {
+	if err := r.db.GetContext(ctx, &exists, query, providerName, modelName, tenantID); err != nil {
 		return false, fmt.Errorf("failed to check if custom model exists: %w", err)
 	}
 
@@ -192,7 +239,10 @@ func (r *Repository) Exists(ctx context.Context, providerName, modelName string)
 }
 
 // Create creates a new custom model
-func (r *Repository) Create(ctx context.Context, model *CustomModel) error {
+func (r *Repository) Create(ctx context.Context, tenantID string, model *CustomModel) error {
+	if err := r.writeAllowed(tenantID); err != nil {
+		return err
+	}
 	// Generate ID if not set
 	if model.ID == "" {
 		model.ID = uuid.New().String()
@@ -205,8 +255,8 @@ func (r *Repository) Create(ctx context.Context, model *CustomModel) error {
 
 	query := `
 		INSERT INTO custom_models 
-		(id, provider_name, model_name, display_name, model_metadata, source, is_active, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		(id, tenant_id, provider_name, model_name, display_name, model_metadata, source, is_active, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id, created_at, updated_at
 	`
 
@@ -224,6 +274,7 @@ func (r *Repository) Create(ctx context.Context, model *CustomModel) error {
 
 	err := r.db.GetContext(ctx, &returned, query,
 		model.ID,
+		tenantID,
 		model.ProviderName,
 		model.ModelName,
 		model.DisplayName,
@@ -238,6 +289,7 @@ func (r *Repository) Create(ctx context.Context, model *CustomModel) error {
 	}
 
 	model.ID = returned.ID
+	model.TenantID = tenantID
 	model.CreatedAt = returned.CreatedAt
 	model.UpdatedAt = returned.UpdatedAt
 
@@ -245,21 +297,24 @@ func (r *Repository) Create(ctx context.Context, model *CustomModel) error {
 }
 
 // Update updates an existing custom model
-func (r *Repository) Update(ctx context.Context, model *CustomModel) error {
+func (r *Repository) Update(ctx context.Context, tenantID string, model *CustomModel) error {
+	if err := r.writeAllowed(tenantID); err != nil {
+		return err
+	}
 	// Marshal JSONB fields
 	if err := model.marshalJSONB(); err != nil {
 		return fmt.Errorf("failed to marshal JSONB: %w", err)
 	}
 
-	query := `
+	query := fmt.Sprintf(`
 		UPDATE custom_models
 		SET display_name = $1,
 		    model_metadata = $2,
 		    is_active = $3,
 		    updated_at = $4
-		WHERE id = $5
+		WHERE id = $5 AND %s
 		RETURNING updated_at
-	`
+	`, r.tenantPredicate("$6"))
 
 	model.UpdatedAt = time.Now()
 
@@ -270,10 +325,11 @@ func (r *Repository) Update(ctx context.Context, model *CustomModel) error {
 		model.IsActive,
 		model.UpdatedAt,
 		model.ID,
+		tenantID,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("custom model not found: %s", model.ID)
+			return fmt.Errorf("%w: %s", ErrNotFound, model.ID)
 		}
 		return fmt.Errorf("failed to update custom model: %w", err)
 	}
@@ -284,13 +340,16 @@ func (r *Repository) Update(ctx context.Context, model *CustomModel) error {
 }
 
 // Delete removes a custom model
-func (r *Repository) Delete(ctx context.Context, id string) error {
-	query := `
+func (r *Repository) Delete(ctx context.Context, tenantID, id string) error {
+	if err := r.writeAllowed(tenantID); err != nil {
+		return err
+	}
+	query := fmt.Sprintf(`
 		DELETE FROM custom_models
-		WHERE id = $1
-	`
+		WHERE id = $1 AND %s
+	`, r.tenantPredicate("$2"))
 
-	result, err := r.db.ExecContext(ctx, query, id)
+	result, err := r.db.ExecContext(ctx, query, id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete custom model: %w", err)
 	}
@@ -301,20 +360,23 @@ func (r *Repository) Delete(ctx context.Context, id string) error {
 	}
 
 	if rows == 0 {
-		return fmt.Errorf("custom model not found: %s", id)
+		return fmt.Errorf("%w: %s", ErrNotFound, id)
 	}
 
 	return nil
 }
 
 // DeleteByProviderAndModel removes a custom model by provider and model name
-func (r *Repository) DeleteByProviderAndModel(ctx context.Context, providerName, modelName string) error {
-	query := `
+func (r *Repository) DeleteByProviderAndModel(ctx context.Context, tenantID, providerName, modelName string) error {
+	if err := r.writeAllowed(tenantID); err != nil {
+		return err
+	}
+	query := fmt.Sprintf(`
 		DELETE FROM custom_models
-		WHERE provider_name = $1 AND model_name = $2
-	`
+		WHERE provider_name = $1 AND model_name = $2 AND %s
+	`, r.tenantPredicate("$3"))
 
-	result, err := r.db.ExecContext(ctx, query, providerName, modelName)
+	result, err := r.db.ExecContext(ctx, query, providerName, modelName, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete custom model: %w", err)
 	}
@@ -325,24 +387,34 @@ func (r *Repository) DeleteByProviderAndModel(ctx context.Context, providerName,
 	}
 
 	if rows == 0 {
-		return fmt.Errorf("custom model not found: %s/%s", providerName, modelName)
+		return fmt.Errorf("%w: %s/%s", ErrNotFound, providerName, modelName)
 	}
 
 	return nil
 }
 
 // SetActive sets the active status of a custom model
-func (r *Repository) SetActive(ctx context.Context, id string, isActive bool) error {
-	query := `
+func (r *Repository) SetActive(ctx context.Context, tenantID, id string, isActive bool) error {
+	if err := r.writeAllowed(tenantID); err != nil {
+		return err
+	}
+	query := fmt.Sprintf(`
 		UPDATE custom_models
 		SET is_active = $1,
 		    updated_at = $2
-		WHERE id = $3
-	`
+		WHERE id = $3 AND %s
+	`, r.tenantPredicate("$4"))
 
-	_, err := r.db.ExecContext(ctx, query, isActive, time.Now(), id)
+	result, err := r.db.ExecContext(ctx, query, isActive, time.Now(), id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to set active status: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("%w: %s", ErrNotFound, id)
 	}
 
 	return nil

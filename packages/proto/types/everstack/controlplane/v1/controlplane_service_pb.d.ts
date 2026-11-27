@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 import type { GenFile, GenService } from "@bufbuild/protobuf/codegenv1";
-import type { DeleteInstanceRequestSchema, DeleteInstanceResponseSchema, GetInstanceLogsRequestSchema, GetInstanceLogsResponseSchema, GetInstanceRequestSchema, GetInstanceResponseSchema, ListInstancesRequestSchema, ListInstancesResponseSchema, ListRegionsRequestSchema, ListRegionsResponseSchema, ProvisionInstanceRequestSchema, ProvisionInstanceResponseSchema, PushConfigRequestSchema, PushConfigResponseSchema, RemoveCustomDomainRequestSchema, RemoveCustomDomainResponseSchema, RestartInstanceRequestSchema, RestartInstanceResponseSchema, SetCustomDomainRequestSchema, SetCustomDomainResponseSchema, StartInstanceRequestSchema, StartInstanceResponseSchema, StopInstanceRequestSchema, StopInstanceResponseSchema, VerifyCustomDomainRequestSchema, VerifyCustomDomainResponseSchema } from "./controlplane_pb.js";
+import type { DeleteInstanceRequestSchema, DeleteInstanceResponseSchema, GetInstanceLimitStatusRequestSchema, GetInstanceLimitStatusResponseSchema, GetInstanceLogsRequestSchema, GetInstanceLogsResponseSchema, GetInstanceRequestSchema, GetInstanceResponseSchema, GetOrgActivityRequestSchema, GetOrgActivityResponseSchema, ListInstancesRequestSchema, ListInstancesResponseSchema, ListRegionsRequestSchema, ListRegionsResponseSchema, PauseInstanceRequestSchema, PauseInstanceResponseSchema, ProvisionInstanceRequestSchema, ProvisionInstanceResponseSchema, PushConfigRequestSchema, PushConfigResponseSchema, RemoveCustomDomainRequestSchema, RemoveCustomDomainResponseSchema, RestartInstanceRequestSchema, RestartInstanceResponseSchema, ResumeInstanceRequestSchema, ResumeInstanceResponseSchema, SetCustomDomainRequestSchema, SetCustomDomainResponseSchema, SetInstanceExtraBillingRequestSchema, SetInstanceExtraBillingResponseSchema, StartInstanceRequestSchema, StartInstanceResponseSchema, StopInstanceRequestSchema, StopInstanceResponseSchema, VerifyCustomDomainRequestSchema, VerifyCustomDomainResponseSchema } from "./controlplane_pb.js";
 
 /**
  * Describes the file everstack/controlplane/v1/controlplane_service.proto.
@@ -148,6 +148,62 @@ export declare const ControlPlaneService: GenService<{
     methodKind: "unary";
     input: typeof ListRegionsRequestSchema;
     output: typeof ListRegionsResponseSchema;
+  },
+  /**
+   * Instance limit (docs/design/instance-over-limit.md). Reads need org
+   * membership; the three mutations need the owner or admin role.
+   *
+   * @generated from rpc everstack.controlplane.v1.ControlPlaneService.GetInstanceLimitStatus
+   */
+  getInstanceLimitStatus: {
+    methodKind: "unary";
+    input: typeof GetInstanceLimitStatusRequestSchema;
+    output: typeof GetInstanceLimitStatusResponseSchema;
+  },
+  /**
+   * PauseInstance stops serving an instance and keeps everything else.
+   *
+   * @generated from rpc everstack.controlplane.v1.ControlPlaneService.PauseInstance
+   */
+  pauseInstance: {
+    methodKind: "unary";
+    input: typeof PauseInstanceRequestSchema;
+    output: typeof PauseInstanceResponseSchema;
+  },
+  /**
+   * ResumeInstance brings a paused instance back; ResourceExhausted when
+   * the org has no free slot.
+   *
+   * @generated from rpc everstack.controlplane.v1.ControlPlaneService.ResumeInstance
+   */
+  resumeInstance: {
+    methodKind: "unary";
+    input: typeof ResumeInstanceRequestSchema;
+    output: typeof ResumeInstanceResponseSchema;
+  },
+  /**
+   * SetInstanceExtraBilling opts an instance into (or out of) the monthly
+   * extra-instance fee debited from the prepaid wallet.
+   *
+   * @generated from rpc everstack.controlplane.v1.ControlPlaneService.SetInstanceExtraBilling
+   */
+  setInstanceExtraBilling: {
+    methodKind: "unary";
+    input: typeof SetInstanceExtraBillingRequestSchema;
+    output: typeof SetInstanceExtraBillingResponseSchema;
+  },
+  /**
+   * GetOrgActivity summarises model-call activity across the organization's
+   * own instances (docs/design/org-overview-redesign.md, section 4.3). Any
+   * member may read it. The instance set is resolved server-side from the
+   * organization; the request carries no instance or tenant identifiers.
+   *
+   * @generated from rpc everstack.controlplane.v1.ControlPlaneService.GetOrgActivity
+   */
+  getOrgActivity: {
+    methodKind: "unary";
+    input: typeof GetOrgActivityRequestSchema;
+    output: typeof GetOrgActivityResponseSchema;
   },
 }>;
 

@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
+	"github.com/everstacklabs/everstack/internal/billingmeter"
 	"github.com/everstacklabs/everstack/internal/lib/correlation"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
@@ -27,6 +29,7 @@ type Provider struct {
 	version string
 	client  *http.Client
 	models  map[string]struct{}
+	name    string
 
 	// unaryClient serves non-streaming calls. It omits the shared transport's
 	// ResponseHeaderTimeout, which would otherwise cap total generation time,
@@ -60,15 +63,24 @@ func NewProvider(cfg Config) *Provider {
 	if cli.Transport == nil {
 		cli.Transport = http.DefaultTransport
 	}
-	cli.Transport = attrs.NewInstrumentedTransport(cli.Transport, "anthropic")
+	name := strings.TrimSpace(cfg.ProviderName)
+	if name == "" {
+		name = "anthropic"
+	}
+	cli.Transport = attrs.NewInstrumentedTransport(cli.Transport, name)
 
 	unary := clientx.Unary()
-	unary.Transport = attrs.NewInstrumentedTransport(unary.Transport, "anthropic")
+	unary.Transport = attrs.NewInstrumentedTransport(unary.Transport, name)
 
-	return &Provider{baseURL: base, apiKey: cfg.APIKey, version: ver, client: cli, unaryClient: unary, models: m}
+	return &Provider{baseURL: base, apiKey: cfg.APIKey, version: ver, client: cli, unaryClient: unary, models: m, name: name}
 }
 
-func (p *Provider) Name() string { return "anthropic" }
+func (p *Provider) Name() string {
+	if p.name == "" {
+		return "anthropic"
+	}
+	return p.name
+}
 
 func (p *Provider) SupportsModel(model string) bool {
 	_, ok := p.models[strings.ToLower(model)]
@@ -128,17 +140,18 @@ type claudeTool struct {
 }
 
 type messagesReq struct {
-	Model        string                `json:"model"`
-	Messages     []msg                 `json:"messages"`
-	Tools        []claudeTool          `json:"tools,omitempty"`
-	ToolChoice   interface{}           `json:"tool_choice,omitempty"`
-	Stream       bool                  `json:"stream,omitempty"`
-	MaxTokens    int                   `json:"max_tokens,omitempty"`
-	Temperature  *float64              `json:"temperature,omitempty"`
-	TopP         *float64              `json:"top_p,omitempty"`
-	TopK         *int                  `json:"top_k,omitempty"`
-	OutputConfig *claudeOutputConfig   `json:"output_config,omitempty"`
-	Thinking     *claudeThinkingConfig `json:"thinking,omitempty"`
+	StopSequences []string              `json:"stop_sequences,omitempty"`
+	Model         string                `json:"model"`
+	Messages      []msg                 `json:"messages"`
+	Tools         []claudeTool          `json:"tools,omitempty"`
+	ToolChoice    interface{}           `json:"tool_choice,omitempty"`
+	Stream        bool                  `json:"stream,omitempty"`
+	MaxTokens     int                   `json:"max_tokens,omitempty"`
+	Temperature   *float64              `json:"temperature,omitempty"`
+	TopP          *float64              `json:"top_p,omitempty"`
+	TopK          *int                  `json:"top_k,omitempty"`
+	OutputConfig  *claudeOutputConfig   `json:"output_config,omitempty"`
+	Thinking      *claudeThinkingConfig `json:"thinking,omitempty"`
 }
 
 type claudeOutputConfig struct {
@@ -198,7 +211,7 @@ func (p *Provider) toClaude(req gw.ChatCompletionRequest) (messagesReq, error) {
 	if p.apiKey == "" {
 		return messagesReq{}, errors.New("anthropic api key not provided")
 	}
-	out := messagesReq{Model: req.Model, Stream: req.Stream}
+	out := messagesReq{Model: req.Model, Stream: req.Stream, StopSequences: req.Sampling.Stop}
 	switch {
 	case req.Sampling.MaxTokens > 0:
 		out.MaxTokens = req.Sampling.MaxTokens
@@ -272,6 +285,15 @@ func (p *Provider) toClaude(req gw.ChatCompletionRequest) (messagesReq, error) {
 		}
 	}
 
+	if req.ParallelToolCalls != nil && !*req.ParallelToolCalls && len(out.Tools) > 0 {
+		choice := map[string]interface{}{"type": "auto", "disable_parallel_tool_use": true}
+		if m, ok := out.ToolChoice.(map[string]string); ok {
+			for k, v := range m {
+				choice[k] = v
+			}
+		}
+		out.ToolChoice = choice
+	}
 	// Convert messages
 	for _, m := range req.Messages {
 		role := string(m.Role)
@@ -344,6 +366,13 @@ func (p *Provider) toClaude(req gw.ChatCompletionRequest) (messagesReq, error) {
 			// user or system → user
 			var parts []interface{}
 			for _, c := range m.Content {
+				if c.Type == "image_url" && c.ImageURL != nil {
+					image, err := anthropicImage(*c.ImageURL)
+					if err != nil {
+						return messagesReq{}, err
+					}
+					parts = append(parts, image)
+				}
 				if c.Type == "text" && c.Text != nil {
 					parts = append(parts, claudeContent{Type: "text", Text: *c.Text})
 				}
@@ -423,6 +452,9 @@ func stampLastBlock(content []interface{}, mark *cacheControl) {
 	case claudeContent:
 		v.CacheControl = mark
 		content[idx] = v
+	case claudeImageContent:
+		v.CacheControl = mark
+		content[idx] = v
 	case claudeToolUseContent:
 		v.CacheControl = mark
 		content[idx] = v
@@ -470,7 +502,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	// Observability: log outgoing provider request
 	cid := correlation.GetCorrelationID(ctx)
 	logger.WithFields(
-		"provider", "anthropic",
+		"provider", p.Name(),
 		"endpoint", p.messagesURL(),
 		"model", req.Model,
 		"stream", false,
@@ -483,7 +515,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	defer resp.Body.Close()
 
 	// Capture and monitor rate limit information
-	rateLimitInfo := ratelimit.ParseHeaders(resp.Header, "anthropic", req.Model)
+	rateLimitInfo := ratelimit.ParseHeaders(resp.Header, p.Name(), req.Model)
 	ratelimit.GlobalMonitor.Update(rateLimitInfo)
 
 	if resp.StatusCode >= 400 {
@@ -583,7 +615,7 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 	defer resp.Body.Close()
 
 	// Capture and monitor rate limit information for streaming
-	rateLimitInfo := ratelimit.ParseHeaders(resp.Header, "anthropic", req.Model)
+	rateLimitInfo := ratelimit.ParseHeaders(resp.Header, p.Name(), req.Model)
 	ratelimit.GlobalMonitor.Update(rateLimitInfo)
 
 	if resp.StatusCode >= 400 {
@@ -599,9 +631,10 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 
 	// Track streaming tool calls: index → accumulated data
 	type streamingToolCall struct {
-		ID       string
-		Name     string
-		ArgsJSON strings.Builder
+		ID          string
+		Name        string
+		ArgsJSON    strings.Builder
+		InitialArgs string
 	}
 	var activeToolCalls []streamingToolCall
 	var currentBlockIndex int
@@ -612,6 +645,21 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 		signature strings.Builder
 	}
 	activeThinkingBlocks := make(map[int]*streamingThinkingBlock)
+	sawMessageDelta := false
+	// Thinking is billed as it is generated but emitted only when its block
+	// ends; keep the metering seam told how much is buffered, so a stream
+	// that breaks off mid-thinking is still estimated.
+	pending := billingmeter.PendingOutputFrom(ctx)
+	reportPendingThinking := func() {
+		if pending == nil {
+			return
+		}
+		n := 0
+		for _, b := range activeThinkingBlocks {
+			n += b.thinking.Len()
+		}
+		pending.SetReasoningChars(n)
+	}
 
 	// Track initial input tokens from message_start
 	for {
@@ -660,6 +708,11 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 						if v, ok := usage["cache_creation_input_tokens"].(float64); ok {
 							cacheCreationInputTokens = int(v)
 						}
+						// The prompt usage is exact from here on: hand it
+						// to the metering seam, so a stream that breaks off
+						// before message_delta prices its prompt on it.
+						cached := cacheReadInputTokens + cacheCreationInputTokens
+						pending.SetPromptUsage(inputTokens+cached, cacheReadInputTokens, cacheCreationInputTokens)
 					}
 				}
 
@@ -678,8 +731,9 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 							activeToolCalls = append(activeToolCalls, streamingToolCall{})
 						}
 						activeToolCalls[currentBlockIndex] = streamingToolCall{
-							ID:   tcID,
-							Name: tcName,
+							ID:          tcID,
+							Name:        tcName,
+							InitialArgs: initialToolInput(cb["input"]),
 						}
 					} else if cbType == "thinking" || cbType == "redacted_thinking" {
 						fields := make(map[string]interface{}, len(cb))
@@ -694,6 +748,7 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 							state.signature.WriteString(value)
 						}
 						activeThinkingBlocks[currentBlockIndex] = state
+						reportPendingThinking()
 					}
 				}
 
@@ -721,6 +776,7 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 							idx, _ := m["index"].(float64)
 							if state := activeThinkingBlocks[int(idx)]; state != nil {
 								state.thinking.WriteString(value)
+								reportPendingThinking()
 							}
 						}
 					case "signature_delta":
@@ -754,17 +810,20 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 						Index: 0,
 						Delta: gw.Message{Role: gw.RoleAssistant, Content: []gw.ContentPart{part}},
 					}
+					// The chunk carries the block now: it is no longer
+					// pending (the seam counts it from the chunk).
+					delete(activeThinkingBlocks, blockIndex)
+					reportPendingThinking()
 					if err := onChunk(gw.NewChatChunk(id, firstNonEmpty(model, req.Model), []gw.ChoiceDelta{delta})); err != nil {
 						return err
 					}
-					delete(activeThinkingBlocks, blockIndex)
 				}
 				// If a tool_use block just finished, emit it as a streaming delta
 				if currentBlockIsToolUse && currentBlockIndex < len(activeToolCalls) {
 					tc := activeToolCalls[currentBlockIndex]
 					args := tc.ArgsJSON.String()
 					if args == "" {
-						args = "{}"
+						args = tc.InitialArgs
 					}
 					d := gw.ChoiceDelta{
 						Index: 0,
@@ -787,6 +846,7 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 				}
 
 			case "message_delta":
+				sawMessageDelta = true
 				// Extract stop_reason
 				if deltaObj, ok := m["delta"].(map[string]any); ok {
 					if sr, ok := deltaObj["stop_reason"].(string); ok {
@@ -864,6 +924,11 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 		}
 		if err != nil {
 			if err == io.EOF {
+				if !sawMessageDelta {
+					// Cut off before the final events: an aborted stream,
+					// not a completed one (its usage never arrived).
+					return fmt.Errorf("anthropic stream ended before message_delta: %w", io.ErrUnexpectedEOF)
+				}
 				return nil
 			}
 			return err
@@ -883,4 +948,41 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func initialToolInput(input interface{}) string {
+	if input == nil {
+		return "{}"
+	}
+	raw, err := json.Marshal(input)
+	if err != nil {
+		return "{}"
+	}
+	return string(raw)
+}
+
+// User image parts use the same conversion for unary and streaming requests.
+type claudeImageContent struct {
+	Type         string            `json:"type"`
+	Source       map[string]string `json:"source"`
+	CacheControl *cacheControl     `json:"cache_control,omitempty"`
+}
+
+func anthropicImage(imageURL string) (claudeImageContent, error) {
+	image := claudeImageContent{Type: "image"}
+	if strings.HasPrefix(imageURL, "data:") {
+		header, data, ok := strings.Cut(strings.TrimPrefix(imageURL, "data:"), ",")
+		media, encoded := strings.CutSuffix(header, ";base64")
+		if !ok || !encoded || media == "" {
+			return image, errors.New("unsupported image data URL")
+		}
+		image.Source = map[string]string{"type": "base64", "media_type": media, "data": data}
+	} else {
+		u, err := url.Parse(imageURL)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			return image, errors.New("unsupported image URL")
+		}
+		image.Source = map[string]string{"type": "url", "url": imageURL}
+	}
+	return image, nil
 }

@@ -85,8 +85,8 @@ export function MetricsTab() {
         <SandboxSessionPicker />
 
         {isStreaming && (
-          <span className="flex items-center gap-1 text-xs text-green-400 light:text-green-600">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+          <span className="flex items-center gap-1 text-xs text-success">
+            <span className="w-1.5 h-1.5 bg-success-solid rounded-full animate-pulse" />
             Live
           </span>
         )}
@@ -180,11 +180,10 @@ export function MetricsTab() {
                     className="flex items-center gap-3 text-sm"
                   >
                     <span
-                      className={`w-2 h-2 rounded-full ${exec.exitCode === 0 ? 'bg-green-500' : 'bg-red-500'}`}
+                      className={`w-2 h-2 rounded-full ${exec.exitCode === 0 ? 'bg-success-solid' : 'bg-danger-solid'}`}
                     />
                     <span
                       className="font-mono text-white/70 light:text-black/70 truncate flex-1"
-                      title={exec.command}
                     >
                       {exec.command.length > 80
                         ? exec.command.slice(0, 80) + '...'
@@ -194,7 +193,7 @@ export function MetricsTab() {
                       {exec.durationMs}ms
                     </span>
                     <span
-                      className={`text-xs ${exec.exitCode === 0 ? 'text-green-400 light:text-green-600' : 'text-red-400 light:text-red-600'}`}
+                      className={`text-xs ${exec.exitCode === 0 ? 'text-success' : 'text-danger'}`}
                     >
                       exit {exec.exitCode}
                     </span>

@@ -66,17 +66,17 @@ function RunStatusIcon({ status }: { status?: string }) {
   const s = status?.toLowerCase()
   if (s === 'completed')
     return (
-      <Check className="h-3.5 w-3.5 text-emerald-400 light:text-emerald-600" />
+      <Check className="h-3.5 w-3.5 text-success" />
     )
   if (s === 'running')
     return (
-      <Activity className="h-3.5 w-3.5 animate-pulse text-blue-400 light:text-blue-600" />
+      <Activity className="h-3.5 w-3.5 animate-pulse text-info" />
     )
   if (s === 'failed')
-    return <X className="h-3.5 w-3.5 text-red-400 light:text-red-600" />
+    return <X className="h-3.5 w-3.5 text-danger" />
   if (s === 'cancelled')
     return <X className="h-3.5 w-3.5 text-white/40 light:text-black/40" />
-  return <Clock className="h-3.5 w-3.5 text-yellow-400 light:text-yellow-700" />
+  return <Clock className="h-3.5 w-3.5 text-warning" />
 }
 
 function EvaluationsHomeContent() {
@@ -197,7 +197,7 @@ function GuidedStart({
                 <div
                   className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-medium ${
                     step.done
-                      ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-400 light:text-emerald-600'
+                      ? 'border-success-border bg-success-surface-strong text-success'
                       : isCurrent
                         ? 'border-brand-secondary-500/50 bg-brand-secondary-500/15 text-brand-secondary-300 light:text-brand-secondary-700'
                         : 'border-brand-main-600 text-white/40 light:border-brand-main-300 light:text-black/40'
@@ -211,7 +211,7 @@ function GuidedStart({
                       {step.title}
                     </h4>
                     {step.done && (
-                      <span className="text-xs text-emerald-400/80 light:text-emerald-600">
+                      <span className="text-xs text-success/80 light:text-success">
                         {step.doneNote}
                       </span>
                     )}
@@ -390,7 +390,7 @@ function Overview({
             </div>
             <div className="mt-1 flex items-center gap-1.5 text-xs text-white/45 light:text-black/50">
               {summary.live && (
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400 light:bg-blue-600" />
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-info-solid" />
               )}
               {summary.sub}
             </div>
@@ -437,7 +437,7 @@ function Overview({
                   {run.name}
                 </span>
                 {run.isBaseline && (
-                  <span className="inline-flex shrink-0 items-center gap-0.5 rounded border border-amber-500/30 bg-amber-500/20 px-1 py-0.5 text-[10px] font-medium text-amber-400 light:text-amber-700">
+                  <span className="inline-flex shrink-0 items-center gap-0.5 rounded border border-warning-border bg-warning-surface-strong px-1 py-0.5 text-[10px] font-medium text-warning">
                     <Flag className="h-2.5 w-2.5" /> Baseline
                   </span>
                 )}

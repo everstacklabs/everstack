@@ -140,7 +140,7 @@ export function NewVersionSheet({
                       <button
                         type="button"
                         onClick={() => remove(i)}
-                        className="p-0.5 rounded text-white/30 hover:text-rose-400 transition-colors light:text-black/30"
+                        className="p-0.5 rounded text-white/30 hover:text-danger transition-colors light:text-black/30"
                         title="Remove message"
                       >
                         <X className="h-3 w-3" />

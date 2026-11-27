@@ -73,6 +73,7 @@ var ceFeatures = map[string]bool{
 	"sandbox_firecracker": true,
 	"sandbox_kubernetes":  true, // backend choice is the operator's, not a paywall
 	"memory_external":     false,
+	"spend_limits":        false, // Build and above; Cloud only (docs/design/spend-limits-v2.md 4.4)
 }
 
 // CEFeatureEnabled reports whether a feature key is available under CE

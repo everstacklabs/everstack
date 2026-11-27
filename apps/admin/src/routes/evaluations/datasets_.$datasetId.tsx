@@ -38,6 +38,8 @@ import {
   UploadCloud,
 } from 'lucide-react'
 import { highlightCode } from '@/lib/shiki'
+import { PlanLimitNotice } from '@/components/billing/plan-limit-notice'
+import { isPlanLimitError } from '@/lib/plan-limit-error'
 
 const { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetBody } =
   ui
@@ -328,6 +330,8 @@ function AddItemSheet({
         setError('Input and expected output must be valid JSON.')
         return
       }
+      // A plan cap is shown inline with an Upgrade link, not as an error.
+      if (isPlanLimitError(err)) return
       toast.error('Failed to add dataset item')
     }
   }
@@ -344,10 +348,14 @@ function AddItemSheet({
 
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <SheetBody className={evaluationSheetBodyClass}>
-            {(error || createItemMutation.error) && (
-              <div className={evaluationErrorClass}>
-                {error ?? (createItemMutation.error as Error).message}
-              </div>
+            {!error && isPlanLimitError(createItemMutation.error) ? (
+              <PlanLimitNotice error={createItemMutation.error} />
+            ) : (
+              (error || createItemMutation.error) && (
+                <div className={evaluationErrorClass}>
+                  {error ?? (createItemMutation.error as Error).message}
+                </div>
+              )
             )}
 
             <DatasetJsonEditorDropdown
@@ -431,6 +439,8 @@ function EmptyDatasetDropzone({
           `Imported ${items.length} item${items.length === 1 ? '' : 's'}`,
         )
       } catch (err) {
+        // A plan cap is shown inline with an Upgrade link, not as an error.
+        if (isPlanLimitError(err)) return
         toast.error(
           `Failed to import file: ${err instanceof Error ? err.message : String(err)}`,
         )
@@ -493,6 +503,10 @@ function EmptyDatasetDropzone({
             CSV requires <span className="font-mono">input</span>;{' '}
             <span className="font-mono">expected_output</span> is optional.
           </div>
+          <PlanLimitNotice
+            error={batchMutation.error}
+            className="mt-4 max-w-md text-left"
+          />
         </label>
 
         <div className="flex min-h-[420px] flex-col rounded border border-brand-main-700 bg-brand-main-950 light:border-brand-main-200 light:bg-brand-main-50">
@@ -675,7 +689,7 @@ function DatasetDetailPageContent() {
         minWidth: 80,
         render: (item: any) =>
           item.sourceTraceId ? (
-            <span className="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium bg-blue-500/15 text-blue-400 light:text-blue-600">
+            <span className="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium bg-info-surface-strong text-info">
               trace
             </span>
           ) : (

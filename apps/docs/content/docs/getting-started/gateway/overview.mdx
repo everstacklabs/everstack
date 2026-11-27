@@ -47,7 +47,7 @@ This isolation is automatic. If you are running Everstack in multi-tenant mode, 
 
 The gateway translates between the OpenAI chat completions format and each provider's native API. This means:
 
-- you send `model: "claude-sonnet-4-20250514"` and the gateway routes to Anthropic's Messages API
+- you send `model: "claude-sonnet-5-5"` and the gateway routes to Anthropic's Messages API
 - you send `model: "gemini-2.0-flash"` and the gateway routes to Google's Generative Language API
 - streaming, tool calls, and structured output work across providers through format translation
 

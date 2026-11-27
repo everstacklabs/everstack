@@ -2,11 +2,13 @@ package v1
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 	agentrt "github.com/everstacklabs/everstack/internal/agents/runtime"
 	agenttools "github.com/everstacklabs/everstack/internal/agents/runtime/tools"
 	agentskills "github.com/everstacklabs/everstack/internal/agents/skills"
+	"github.com/everstacklabs/everstack/internal/api/grpc/planlimit"
 	agentscmd "github.com/everstacklabs/everstack/internal/commands/handlers/agents"
 	"github.com/everstacklabs/everstack/internal/cqrs"
 	"github.com/everstacklabs/everstack/internal/database"
@@ -36,6 +39,8 @@ import (
 	"github.com/everstacklabs/everstack/internal/telemetry/metrics"
 	"github.com/everstacklabs/everstack/internal/trooper"
 	agentspb "github.com/everstacklabs/everstack/pkg/grpc/everstack/agents/v1"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -133,32 +138,36 @@ func (s *Server) resolveTenantID(ctx context.Context, _ string) (string, error) 
 }
 
 // singleTenantFallback returns the only organization id in the database
-// when — and only when — there is exactly one. In a multi-tenant
-// deployment any other answer would mean serving foreign data, so we
-// refuse. The result is cached on the Server because every sandbox RPC
-// hits this path; a COUNT(*) on each call would be wasteful.
+// when there is exactly one. Positive results are cached for a short period.
+// An empty database remains eligible for a later retry while more than one
+// organization disables the fallback.
 func (s *Server) singleTenantFallback(ctx context.Context) (string, bool) {
-	if cached := s.singleTenantCache.Load(); cached != nil {
-		return cached.tenantID, cached.ok
+	if enterprise.ManagedGateway() || s.singleTenantFallbackDisabled.Load() {
+		return "", false
+	}
+	if cached := s.singleTenantFallbackCached.Load(); cached != nil && time.Now().Before(cached.expiresAt) {
+		return cached.tenantID, true
 	}
 	lookupCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
-	var count int
-	if err := s.db.GetContext(lookupCtx, &count,
-		`SELECT COUNT(*) FROM organizations`); err != nil {
+	var orgIDs []string
+	if err := s.db.SelectContext(lookupCtx, &orgIDs,
+		`SELECT id::text FROM organizations LIMIT 2`); err != nil {
 		return "", false
 	}
-	if count != 1 {
-		s.singleTenantCache.Store(&singleTenantCacheEntry{ok: false})
+	if len(orgIDs) > 1 {
+		s.singleTenantFallbackDisabled.Store(true)
+		s.singleTenantFallbackCached.Store(nil)
 		return "", false
 	}
-	var orgID string
-	if err := s.db.GetContext(lookupCtx, &orgID,
-		`SELECT id::text FROM organizations LIMIT 1`); err != nil {
+	if len(orgIDs) != 1 {
 		return "", false
 	}
-	s.singleTenantCache.Store(&singleTenantCacheEntry{tenantID: orgID, ok: true})
-	return orgID, true
+	s.singleTenantFallbackCached.Store(&singleTenantFallbackResult{
+		tenantID:  orgIDs[0],
+		expiresAt: time.Now().Add(30 * time.Second),
+	})
+	return orgIDs[0], true
 }
 
 func protoAgentModeToString(mode agentspb.AgentMode) string {
@@ -421,6 +430,13 @@ func (s *Server) CreateAgent(ctx context.Context, req *connect.Request[agentspb.
 	if req.Msg.GetConfig() != nil {
 		config = req.Msg.GetConfig().AsMap()
 	}
+	sandboxConfig, err := sandbox.ParseSandboxConfig(config)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	if err := sandbox.ValidateSandboxName(sandboxConfig.Name); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
 
 	mode := protoAgentModeToString(req.Msg.GetMode())
 	if mode == "" {
@@ -495,14 +511,26 @@ func (s *Server) CreateAgent(ctx context.Context, req *connect.Request[agentspb.
 	// check -> command dispatch -> read-model confirmation, so concurrent
 	// CreateAgent calls cannot race past the cap through the async projection
 	// window (editions-and-billing.md, atomic enforcement).
-	slot, err := enterprise.ReserveResourceSlot(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
-		enterprise.UsageTypeAgents,
-		`SELECT COUNT(*) FROM agent_definitions WHERE tenant_id = $1 AND deleted_at IS NULL`,
-		[]interface{}{tenantID}, 1, "agent", tenantID)
+	// The cap is the organization's: every tenant id it owns counts, and two
+	// of its instances creating at once take the same lock.
+	slot, err := enterprise.ReserveLimitSlot(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
+		enterprise.AgentsLimit(tenantID))
 	if err != nil {
-		return nil, connect.NewError(connect.CodeResourceExhausted, err)
+		return nil, agentLimitError(err)
 	}
 	defer slot.Release()
+
+	// A persistent agent also takes a PERSISTENT_AGENTS slot. Locks are always
+	// taken AGENTS then PERSISTENT_AGENTS, so two creators cannot deadlock.
+	var persistentSlot *enterprise.ResourceSlot
+	if protoAgentLifecycleModeToString(req.Msg.GetLifecycleMode()) == "persistent" {
+		persistentSlot, err = enterprise.ReserveLimitSlot(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
+			enterprise.PersistentAgentsLimit(tenantID).Managed())
+		if err != nil {
+			return nil, planlimit.ConnectError(err, "persistent agent")
+		}
+		defer persistentSlot.Release()
+	}
 
 	// Check for duplicate agent name within tenant
 	if s.db != nil {
@@ -563,7 +591,7 @@ func (s *Server) CreateAgent(ctx context.Context, req *connect.Request[agentspb.
 	)
 
 	if err := sys.CommandBus.Dispatch(ctx, cmd); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, agentSaveError(err, req.Msg.GetName())
 	}
 
 	// If auto_provision is set and this is a persistent agent, provision the
@@ -629,7 +657,15 @@ func (s *Server) CreateAgent(ctx context.Context, req *connect.Request[agentspb.
 
 	// Hold the quota slot until the read model reflects this agent so the
 	// next serialized creator counts it (bounded wait; see ResourceSlot).
-	slot.Confirm(ctx)
+	// Return only once the agent can be read back, so a caller that attaches
+	// a trigger, revision, memory or link right away finds it. Plans without
+	// an agent cap get a no-op slot, whose Confirm does not wait for this.
+	if _, err := s.waitForCreatedAgent(ctx, sys, cmd.ID, tenantID); err != nil {
+		logger.WithFields("agent_id", cmd.ID, "error", err.Error()).Warn("agent not readable yet after create")
+	}
+	confirmCtx := context.WithoutCancel(ctx)
+	slot.Confirm(confirmCtx)
+	persistentSlot.Confirm(confirmCtx)
 
 	return connect.NewResponse(&agentspb.CreateAgentResponse{
 		Agent: &agentspb.AgentDefinition{
@@ -652,6 +688,33 @@ func (s *Server) CreateAgent(ctx context.Context, req *connect.Request[agentspb.
 			},
 		},
 	}), nil
+}
+
+func (s *Server) waitForCreatedAgent(ctx context.Context, sys *cqrs.System, agentID, tenantID string) (*agentsquery.AgentDefinitionReadModel, error) {
+	waitCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	queryDef := agentsquery.NewGetAgentByIDQuery(agentID, tenantID)
+	for {
+		queryCtx, queryCancel := context.WithTimeout(waitCtx, time.Second)
+		result, err := sys.QueryBus.Execute(queryCtx, queryDef)
+		queryCancel()
+		if err == nil {
+			if response, ok := result.(*query.Response); ok {
+				if agent, ok := response.Data.(*agentsquery.AgentDefinitionReadModel); ok {
+					return agent, nil
+				}
+			}
+		}
+		timer := time.NewTimer(100 * time.Millisecond)
+		select {
+		case <-waitCtx.Done():
+			if !timer.Stop() {
+				<-timer.C
+			}
+			return nil, waitCtx.Err()
+		case <-timer.C:
+		}
+	}
 }
 
 func (s *Server) GetAgent(ctx context.Context, req *connect.Request[agentspb.GetAgentRequest]) (*connect.Response[agentspb.GetAgentResponse], error) {
@@ -766,6 +829,33 @@ func (s *Server) ListAgents(ctx context.Context, req *connect.Request[agentspb.L
 	}), nil
 }
 
+func requireOwnedAgentFromBus(ctx context.Context, bus query.QueryBus, agentID, tenantID string) (*agentsquery.AgentDefinitionReadModel, error) {
+	res, err := bus.Execute(ctx, agentsquery.NewGetAgentByIDQuery(agentID, tenantID))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	var data interface{} = res
+	if resp, ok := res.(*query.Response); ok {
+		data = resp.Data
+	}
+	rm, ok := data.(*agentsquery.AgentDefinitionReadModel)
+	if !ok || rm == nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("agent not found"))
+	}
+	return rm, nil
+}
+
+func (s *Server) requireOwnedAgent(ctx context.Context, agentID, tenantID string) (*agentsquery.AgentDefinitionReadModel, error) {
+	sys, err := cqrs.GetSystemFromContext(ctx)
+	if err != nil && s.ctx != nil {
+		sys, err = cqrs.GetSystemFromContext(s.ctx)
+	}
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("CQRS system not available"))
+	}
+	return requireOwnedAgentFromBus(ctx, sys.QueryBus, agentID, tenantID)
+}
+
 func (s *Server) UpdateAgent(ctx context.Context, req *connect.Request[agentspb.UpdateAgentRequest]) (*connect.Response[agentspb.UpdateAgentResponse], error) {
 
 	sys, err := cqrs.GetSystemFromContext(ctx)
@@ -782,18 +872,9 @@ func (s *Server) UpdateAgent(ctx context.Context, req *connect.Request[agentspb.
 	}
 	userID := contextkeys.GetUserID(ctx)
 
-	// Load current agent state to detect changes for reprovision
-	var rm *agentsquery.AgentDefinitionReadModel
-	{
-		q := agentsquery.NewGetAgentByIDQuery(req.Msg.GetId(), tenantID)
-		res, qErr := sys.QueryBus.Execute(ctx, q)
-		if qErr == nil && res != nil {
-			var data interface{} = res
-			if resp, ok := res.(*query.Response); ok {
-				data = resp.Data
-			}
-			rm, _ = data.(*agentsquery.AgentDefinitionReadModel)
-		}
+	rm, err := requireOwnedAgentFromBus(ctx, sys.QueryBus, req.Msg.GetId(), tenantID)
+	if err != nil {
+		return nil, err
 	}
 
 	cmd := agentscmd.NewUpdateAgentCommand(req.Msg.GetId(), tenantID, userID, "")
@@ -819,6 +900,13 @@ func (s *Server) UpdateAgent(ctx context.Context, req *connect.Request[agentspb.
 		cmd.Config = req.Msg.GetConfig().AsMap()
 		// Validate HITL config if present
 		if err := agentrt.ValidateHITLConfig(cmd.Config); err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+		sandboxConfig, err := sandbox.ParseSandboxConfig(cmd.Config)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+		if err := sandbox.ValidateSandboxName(sandboxConfig.Name); err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		}
 	}
@@ -995,7 +1083,7 @@ func (s *Server) UpdateAgent(ctx context.Context, req *connect.Request[agentspb.
 	}
 
 	if err := sys.CommandBus.Dispatch(ctx, cmd); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, agentSaveError(err, req.Msg.GetName())
 	}
 
 	// Persistent agent reprovision check
@@ -1107,6 +1195,9 @@ func (s *Server) DeleteAgent(ctx context.Context, req *connect.Request[agentspb.
 
 	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
 	if err != nil {
+		return nil, err
+	}
+	if _, err := requireOwnedAgentFromBus(ctx, sys.QueryBus, req.Msg.GetId(), tenantID); err != nil {
 		return nil, err
 	}
 	userID := contextkeys.GetUserID(ctx)
@@ -1292,9 +1383,19 @@ func (s *Server) ImportAgentFromOpencode(ctx context.Context, req *connect.Reque
 		contextkeys.GetUserID(ctx),
 		"", // traceID
 	)
+	// An imported agent is a new agent: it takes an AGENTS slot like
+	// CreateAgent does (imports are always ephemeral). Managed gateways only,
+	// so self-hosted import behaviour is unchanged.
+	slot, err := enterprise.ReserveLimitSlot(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
+		enterprise.AgentsLimit(tenantID).Managed())
+	if err != nil {
+		return nil, agentLimitError(err)
+	}
+	defer slot.Release()
 	if err := sys.CommandBus.Dispatch(ctx, cmd); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	slot.Confirm(ctx)
 	preview.Id = cmd.ID
 
 	return connect.NewResponse(&agentspb.ImportAgentFromOpencodeResponse{
@@ -1506,6 +1607,14 @@ func (s *Server) ListSessions(ctx context.Context, req *connect.Request[agentspb
 	var agentID *string
 	if req.Msg.AgentId != nil {
 		agentID = req.Msg.AgentId
+		if _, err := s.requireOwnedAgent(ctx, *agentID, tenantID); err != nil {
+			return nil, err
+		}
+	}
+	if req.Msg.TrooperId != nil {
+		if err := s.requireOwnedTrooper(ctx, req.Msg.GetTrooperId()); err != nil {
+			return nil, err
+		}
 	}
 
 	var status *string
@@ -1930,6 +2039,39 @@ func (s *Server) RunTurn(ctx context.Context, req *connect.Request[agentspb.RunT
 	}), nil
 }
 
+func (s *Server) requireOwnedSession(ctx context.Context, sessionID, tenantID string) (*agentsquery.SessionWithTurns, error) {
+	sys, err := cqrs.GetSystemFromContext(ctx)
+	if err != nil && s.ctx != nil {
+		sys, err = cqrs.GetSystemFromContext(s.ctx)
+	}
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("CQRS system not available"))
+	}
+	res, err := sys.QueryBus.Execute(ctx, agentsquery.NewGetSessionByIDQuery(sessionID, tenantID))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	var data interface{} = res
+	if resp, ok := res.(*query.Response); ok {
+		data = resp.Data
+	}
+	swt, ok := data.(*agentsquery.SessionWithTurns)
+	if !ok || swt == nil || swt.Session.TenantID != tenantID {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("session not found"))
+	}
+	return swt, nil
+}
+
+func (s *Server) requireOwnedSandboxSession(ctx context.Context, sessionID, tenantID string) error {
+	if s.sandboxMgr == nil {
+		return connect.NewError(connect.CodeNotFound, errors.New("sandbox not found"))
+	}
+	if _, ok := s.resolveOwnedSandbox(ctx, map[string]string{"session_id": sessionID}, tenantID); !ok {
+		return connect.NewError(connect.CodeNotFound, errors.New("sandbox not found"))
+	}
+	return nil
+}
+
 func (s *Server) CancelSession(ctx context.Context, req *connect.Request[agentspb.CancelSessionRequest]) (*connect.Response[agentspb.CancelSessionResponse], error) {
 
 	sys, err := cqrs.GetSystemFromContext(ctx)
@@ -1945,14 +2087,7 @@ func (s *Server) CancelSession(ctx context.Context, req *connect.Request[agentsp
 		return nil, err
 	}
 
-	// Verify session exists and belongs to this tenant before cancelling
-	sessionQ := agentsquery.NewGetSessionByIDQuery(req.Msg.GetSessionId(), tenantID)
-	sessionRes, err := sys.QueryBus.Execute(ctx, sessionQ)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-	if sessionRes == nil {
-		err := connect.NewError(connect.CodeNotFound, errors.New("session not found"))
+	if _, err := s.requireOwnedSession(ctx, req.Msg.GetSessionId(), tenantID); err != nil {
 		return nil, err
 	}
 
@@ -1994,27 +2129,15 @@ func (s *Server) CompleteSession(ctx context.Context, req *connect.Request[agent
 		return nil, err
 	}
 
-	// Verify session exists and belongs to this tenant
-	sessionQ := agentsquery.NewGetSessionByIDQuery(req.Msg.GetSessionId(), tenantID)
-	sessionRes, err := sys.QueryBus.Execute(ctx, sessionQ)
+	swt, err := s.requireOwnedSession(ctx, req.Msg.GetSessionId(), tenantID)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-	if sessionRes == nil {
-		err := connect.NewError(connect.CodeNotFound, errors.New("session not found"))
 		return nil, err
 	}
 
 	// Check the session isn't already in a terminal state
-	var sessionData interface{} = sessionRes
-	if resp, ok := sessionRes.(*query.Response); ok {
-		sessionData = resp.Data
-	}
-	if swt, ok := sessionData.(*agentsquery.SessionWithTurns); ok {
-		if swt.Session.Status == "completed" || swt.Session.Status == "cancelled" || swt.Session.Status == "failed" {
-			err := connect.NewError(connect.CodeFailedPrecondition, errors.New("session is already "+swt.Session.Status))
-			return nil, err
-		}
+	if swt.Session.Status == "completed" || swt.Session.Status == "cancelled" || swt.Session.Status == "failed" {
+		err := connect.NewError(connect.CodeFailedPrecondition, errors.New("session is already "+swt.Session.Status))
+		return nil, err
 	}
 
 	userID := contextkeys.GetUserID(ctx)
@@ -2431,8 +2554,11 @@ func (s *Server) runTurnStreamInternal(ctx context.Context, req *connect.Request
 	loopInput.APIType = agentrt.ParseAPIType(agentConfig)
 
 	// Parse spawn config and sandbox config, wire tool interceptor if any synthetic tools are enabled
-	spawnConfig := agenttools.ParseSpawnConfig(agentConfig)
-	sandboxConfig := sandbox.ParseSandboxConfig(agentConfig)
+	spawnConfig := agenttools.PlanSpawnConfig(ctx, agenttools.ParseSpawnConfig(agentConfig))
+	sandboxConfig, err := sandbox.ParseSandboxConfig(agentConfig)
+	if err != nil {
+		return connect.NewError(connect.CodeInvalidArgument, err)
+	}
 	forkConfig := agentrt.ParseForkConfig(agentConfig)
 	monitorConfig := agentrt.ParseMonitorConfig(agentConfig)
 	digestConfig := agentrt.ParseDigestConfig(agentConfig)
@@ -2708,15 +2834,30 @@ func (s *Server) runTurnStreamInternal(ctx context.Context, req *connect.Request
 		// Register the A2A client tool. Opt-in via the agent's configured tools
 		// list (the interceptor only surfaces synthetic tools the agent lists),
 		// so registering it unconditionally is safe. Lets an agent call remote
-		// A2A agents — Google ADK agents and any A2A-compliant server. When the
+		// agents using the legacy A2A message/send subset. When the
 		// interop store is wired, the agent can reference saved remotes by name.
 		var a2aRemotes agenttools.RemoteResolver
 		if s.interopStore != nil {
 			a2aRemotes = interopRemoteResolver{store: s.interopStore, tenant: tenantID}
 		}
+		var externalRuns agenttools.ExternalRuns
+		if s.externalRuns != nil {
+			externalRuns = externalRunTools{service: s.externalRuns, tenant: tenantID}
+			// Opt-in like call_external_agent itself: only agents that list
+			// it may read or cancel runs.
+			if isRuntimeToolEnabled("call_external_agent") && slices.Contains(loopInput.Tools, "call_external_agent") {
+				for _, cancel := range []bool{false, true} {
+					handler := &agenttools.ExternalRunHandler{Runs: externalRuns, Cancel: cancel}
+					interceptor.RegisterHandler(handler)
+					loopInput.Tools = appendUnique(loopInput.Tools, handler.Name())
+				}
+			}
+		}
 		interceptor.RegisterHandler(&agenttools.A2ACallHandler{
-			HTTPClient: http.DefaultClient,
-			Remotes:    a2aRemotes,
+			Runs: externalRuns,
+			// Nil HTTPClient enforces the SSRF guard and bounded call timeout.
+			Remotes:          a2aRemotes,
+			PrivateEndpoints: strings.Split(os.Getenv("EVS_A2A_PRIVATE_ENDPOINTS"), ","),
 		})
 
 		// Register memory handlers (always-on when backend is configured)
@@ -3164,6 +3305,16 @@ func (s *Server) runTurnStreamInternal(ctx context.Context, req *connect.Request
 				UserID:     s.resolveUserID(ctx),
 				Emitter:    emitter,
 				SessionID:  swt.Session.ID,
+				// The platform meta-agent creates agents too; on a managed
+				// gateway they count against the same AGENTS cap.
+				ReserveAgentSlot: func(toolCtx context.Context) (func(context.Context), error) {
+					slot, err := enterprise.ReserveLimitSlot(toolCtx, s.db, enterprise.LicenseMonitorFromContext(toolCtx),
+						enterprise.AgentsLimit(tenantID).Managed())
+					if err != nil {
+						return nil, err
+					}
+					return func(done context.Context) { slot.Confirm(done); slot.Release() }, nil
+				},
 			}
 			for _, h := range agenttools.NewPlatformHandlers(platformCtx) {
 				if !isRuntimeToolEnabled(h.Name()) {
@@ -3207,13 +3358,16 @@ func (s *Server) runTurnStreamInternal(ctx context.Context, req *connect.Request
 	// the agent itself excluded from the count so another turn on an
 	// already-running agent is never blocked.
 	if isPersistent && s.db != nil {
-		if err := enterprise.CheckResourceLimit(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
-			enterprise.UsageTypeConcurrentRunning,
-			`SELECT COUNT(*) FROM agent_definitions WHERE tenant_id = $1 AND deleted_at IS NULL AND lifecycle_status = 'running' AND id <> $2`,
-			[]interface{}{tenantID, agent.ID}, 1, "concurrently running agent"); err != nil {
-			return connect.NewError(connect.CodeResourceExhausted, err)
+		// The per-organization lock is held across the status write, so two
+		// agents starting at once cannot both take the last running slot.
+		// (Release, not Confirm: the count excludes this agent itself.)
+		runSlot, err := enterprise.ReserveLimitSlot(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
+			enterprise.ConcurrentRunningLimit(tenantID, agent.ID))
+		if err != nil {
+			return planlimit.ConnectError(err, "concurrently running agent")
 		}
 		s.db.ExecContext(ctx, `UPDATE agent_definitions SET lifecycle_status = 'running', updated_at = NOW() WHERE id = $1 AND tenant_id = $2`, agent.ID, tenantID)
+		runSlot.Release()
 	}
 
 	// Now launch the session goroutine with sinks already wired
@@ -3410,24 +3564,7 @@ func (s *Server) SteerSession(ctx context.Context, req *connect.Request[agentspb
 		return nil, err
 	}
 
-	// Verify session belongs to this tenant before allowing steering.
-	// Without this check, any caller who knows a session ID could inject
-	// messages into another tenant's running session.
-	sys, err := cqrs.GetSystemFromContext(ctx)
-	if err != nil && s.ctx != nil {
-		sys, err = cqrs.GetSystemFromContext(s.ctx)
-	}
-	if err != nil {
-		err := connect.NewError(connect.CodeInternal, errors.New("CQRS system not available"))
-		return nil, err
-	}
-	sessionQ := agentsquery.NewGetSessionByIDQuery(req.Msg.GetSessionId(), tenantID)
-	sessionRes, err := sys.QueryBus.Execute(ctx, sessionQ)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-	if sessionRes == nil {
-		err := connect.NewError(connect.CodeNotFound, errors.New("session not found"))
+	if _, err := s.requireOwnedSession(ctx, req.Msg.GetSessionId(), tenantID); err != nil {
 		return nil, err
 	}
 
@@ -3443,7 +3580,11 @@ func (s *Server) SteerSession(ctx context.Context, req *connect.Request[agentspb
 		Content: req.Msg.GetContent(),
 	}
 
-	if err := s.sessionMgr.SteerSession(req.Msg.GetSessionId(), tenantID, msg); err != nil {
+	steer := s.steerSession
+	if steer == nil {
+		steer = s.sessionMgr.SteerSession
+	}
+	if err := steer(req.Msg.GetSessionId(), tenantID, msg); err != nil {
 		return connect.NewResponse(&agentspb.SteerSessionResponse{
 			Accepted: false,
 			Message:  err.Error(),
@@ -3467,6 +3608,9 @@ func (s *Server) SubmitReview(ctx context.Context, req *connect.Request[agentspb
 
 	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.requireOwnedReview(ctx, req.Msg.GetReviewId(), tenantID); err != nil {
 		return nil, err
 	}
 
@@ -3497,7 +3641,11 @@ func (s *Server) SubmitReview(ctx context.Context, req *connect.Request[agentspb
 		ResolvedBy: req.Msg.GetResolvedBy(),
 	}
 
-	if err := s.sessionMgr.SubmitReview(ctx, req.Msg.GetReviewId(), tenantID, decision); err != nil {
+	submitReview := s.submitReview
+	if submitReview == nil {
+		submitReview = s.sessionMgr.SubmitReview
+	}
+	if err := submitReview(ctx, req.Msg.GetReviewId(), tenantID, decision); err != nil {
 		return connect.NewResponse(&agentspb.SubmitReviewResponse{
 			Accepted: false,
 			Message:  err.Error(),
@@ -3508,6 +3656,32 @@ func (s *Server) SubmitReview(ctx context.Context, req *connect.Request[agentspb
 		Accepted: true,
 		Message:  "review " + action + "d",
 	}), nil
+}
+
+func (s *Server) requireOwnedReview(ctx context.Context, reviewID, tenantID string) (*agentsquery.ApprovalReviewReadModel, error) {
+	if reviewID == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("review_id is required"))
+	}
+	sys, err := cqrs.GetSystemFromContext(ctx)
+	if err != nil && s.ctx != nil {
+		sys, err = cqrs.GetSystemFromContext(s.ctx)
+	}
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("CQRS system not available"))
+	}
+	res, err := sys.QueryBus.Execute(ctx, agentsquery.NewGetApprovalReviewByIDQuery(reviewID, tenantID))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	var data interface{} = res
+	if resp, ok := res.(*query.Response); ok {
+		data = resp.Data
+	}
+	review, ok := data.(*agentsquery.ApprovalReviewReadModel)
+	if !ok || review == nil || review.TenantID != tenantID {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("review not found"))
+	}
+	return review, nil
 }
 
 func (s *Server) GetReview(ctx context.Context, req *connect.Request[agentspb.GetReviewRequest]) (*connect.Response[agentspb.GetReviewResponse], error) {
@@ -3568,6 +3742,9 @@ func (s *Server) ListReviews(ctx context.Context, req *connect.Request[agentspb.
 	var sessionID *string
 	if req.Msg.SessionId != nil {
 		sessionID = req.Msg.SessionId
+		if _, err := s.requireOwnedSession(ctx, *sessionID, tenantID); err != nil {
+			return nil, err
+		}
 	}
 
 	var status *string
@@ -4690,7 +4867,7 @@ func sandboxStatusFromString(s string) agentspb.SandboxStatus {
 }
 
 func (s *Server) GetSandboxInstance(ctx context.Context, req *connect.Request[agentspb.GetSandboxInstanceRequest]) (*connect.Response[agentspb.GetSandboxInstanceResponse], error) {
-	_, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
+	scope, err := s.resolveSandboxTenantInstanceScope(ctx, req.Msg.GetTenantId())
 	if err != nil {
 		return nil, err
 	}
@@ -4700,13 +4877,11 @@ func (s *Server) GetSandboxInstance(ctx context.Context, req *connect.Request[ag
 
 	id := req.Msg.GetSandboxId()
 
-	// Live in-memory cache first.
-	for _, inst := range s.sandboxMgr.ListInstances() {
-		if inst.ID == id {
-			return connect.NewResponse(&agentspb.GetSandboxInstanceResponse{
-				Instance: sandboxInstanceToProto(inst),
-			}), nil
-		}
+	// Live in-memory cache first, constrained to the authenticated scope.
+	if inst, ok := s.sandboxMgr.GetBySandboxIDOrNameInScope(id, scope); ok {
+		return connect.NewResponse(&agentspb.GetSandboxInstanceResponse{
+			Instance: sandboxInstanceToProto(inst),
+		}), nil
 	}
 
 	// Cache miss → DB fallback. Without this every existing sandbox
@@ -4715,7 +4890,7 @@ func (s *Server) GetSandboxInstance(ctx context.Context, req *connect.Request[ag
 	// short_code.
 	dbCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	if dbInst, dbErr := s.sandboxMgr.LookupInstanceByIDFromDB(dbCtx, id); dbErr == nil && dbInst != nil {
+	if dbInst, dbErr := s.sandboxMgr.LookupInstanceByIDFromDBInScope(dbCtx, id, scope); dbErr == nil && dbInst != nil {
 		return connect.NewResponse(&agentspb.GetSandboxInstanceResponse{
 			Instance: sandboxInstanceToProto(dbInst),
 		}), nil
@@ -4725,11 +4900,15 @@ func (s *Server) GetSandboxInstance(ctx context.Context, req *connect.Request[ag
 }
 
 func (s *Server) DestroySandbox(ctx context.Context, req *connect.Request[agentspb.DestroySandboxRequest]) (*connect.Response[agentspb.DestroySandboxResponse], error) {
-	if _, err := s.resolveTenantID(ctx, req.Msg.GetTenantId()); err != nil {
+	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
+	if err != nil {
+		return nil, err
+	}
+	if err := s.requireOwnedSandboxSession(ctx, req.Msg.GetSessionId(), tenantID); err != nil {
 		return nil, err
 	}
 
-	result, err := sandboxcp.NewLifecycleService(s.lifecycleRepo, s.sandboxMgr).Destroy(ctx, req.Msg.GetSessionId())
+	result, err := s.lifecycleService().Destroy(ctx, req.Msg.GetSessionId())
 	if err != nil {
 		if errors.Is(err, sandboxcp.ErrLifecycleSessionIDRequired) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
@@ -4781,13 +4960,16 @@ func (s *Server) ListSandboxExecutions(ctx context.Context, req *connect.Request
 }
 
 func (s *Server) GetSandboxStats(ctx context.Context, req *connect.Request[agentspb.GetSandboxStatsRequest]) (*connect.Response[agentspb.GetSandboxStatsResponse], error) {
-	_, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
+	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
 	if err != nil {
 		return nil, err
 	}
 
 	if s.sandboxMgr == nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("sandbox feature is not enabled"))
+	}
+	if err := s.requireOwnedSandboxSession(ctx, req.Msg.GetSessionId(), tenantID); err != nil {
+		return nil, err
 	}
 
 	stats, err := s.sandboxMgr.Stats(ctx, req.Msg.GetSessionId())
@@ -4880,8 +5062,11 @@ func (s *Server) ExposePort(ctx context.Context, req *connect.Request[agentspb.E
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("sandbox feature is not enabled"))
 	}
 
-	_, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
+	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
 	if err != nil {
+		return nil, err
+	}
+	if err := s.requireOwnedSandboxSession(ctx, req.Msg.GetSessionId(), tenantID); err != nil {
 		return nil, err
 	}
 
@@ -4909,8 +5094,11 @@ func (s *Server) UnexposePort(ctx context.Context, req *connect.Request[agentspb
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("sandbox feature is not enabled"))
 	}
 
-	_, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
+	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
 	if err != nil {
+		return nil, err
+	}
+	if err := s.requireOwnedSandboxSession(ctx, req.Msg.GetSessionId(), tenantID); err != nil {
 		return nil, err
 	}
 
@@ -4929,8 +5117,11 @@ func (s *Server) ListExposedPorts(ctx context.Context, req *connect.Request[agen
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("sandbox feature is not enabled"))
 	}
 
-	_, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
+	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
 	if err != nil {
+		return nil, err
+	}
+	if err := s.requireOwnedSandboxSession(ctx, req.Msg.GetSessionId(), tenantID); err != nil {
 		return nil, err
 	}
 
@@ -4961,12 +5152,15 @@ func (s *Server) DetectListeningPorts(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("sandbox feature is not enabled"))
 	}
 
-	_, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
+	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
 	if err != nil {
 		return nil, err
 	}
 
 	sessionID := req.Msg.GetSessionId()
+	if err := s.requireOwnedSandboxSession(ctx, sessionID, tenantID); err != nil {
+		return nil, err
+	}
 
 	detected, err := s.sandboxMgr.DetectListeningPorts(ctx, sessionID)
 	if err != nil {
@@ -5012,6 +5206,11 @@ func (s *Server) CreateCron(ctx context.Context, req *connect.Request[agentspb.C
 	db := s.sandboxMgr.DB()
 	if db == nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("database not available"))
+	}
+
+	// The job will run by this session id. It must not be another tenant's.
+	if err := s.sessionIDAvailableToTenant(ctx, req.Msg.GetSessionId(), tenantID); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
 	var sandboxConfig []byte
@@ -5099,16 +5298,27 @@ func sandboxCronToProto(c agentsquery.SandboxCronReadModel) *agentspb.SandboxCro
 	return pb
 }
 
+func (s *Server) sandboxTriggerDB() *sqlx.DB {
+	if s.db != nil {
+		return s.db
+	}
+	if s.sandboxMgr == nil {
+		return nil
+	}
+	return s.sandboxMgr.DB()
+}
+
 func (s *Server) UpdateCron(ctx context.Context, req *connect.Request[agentspb.UpdateCronRequest]) (*connect.Response[agentspb.UpdateCronResponse], error) {
 	if s.sandboxMgr == nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("sandbox feature is not enabled"))
 	}
 
-	if _, err := s.resolveTenantID(ctx, req.Msg.GetTenantId()); err != nil {
+	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
+	if err != nil {
 		return nil, err
 	}
 
-	db := s.sandboxMgr.DB()
+	db := s.sandboxTriggerDB()
 	if db == nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("database not available"))
 	}
@@ -5144,15 +5354,14 @@ func (s *Server) UpdateCron(ctx context.Context, req *connect.Request[agentspb.U
 		argIdx++
 	}
 
-	queryStr := fmt.Sprintf("UPDATE sandbox_crons SET %s WHERE id = $1", strings.Join(sets, ", "))
-	if _, err := db.ExecContext(ctx, queryStr, args...); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update cron: %w", err))
-	}
-
-	// Fetch updated row
+	queryStr := fmt.Sprintf("UPDATE sandbox_crons SET %s WHERE id = $1 AND tenant_id = $%d RETURNING *", strings.Join(sets, ", "), argIdx)
+	args = append(args, tenantID)
 	var c agentsquery.SandboxCronReadModel
-	if err := db.GetContext(ctx, &c, `SELECT * FROM sandbox_crons WHERE id = $1`, req.Msg.GetId()); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to fetch updated cron: %w", err))
+	if err := db.GetContext(ctx, &c, queryStr, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("cron not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update cron: %w", err))
 	}
 
 	return connect.NewResponse(&agentspb.UpdateCronResponse{
@@ -5165,17 +5374,22 @@ func (s *Server) DeleteCron(ctx context.Context, req *connect.Request[agentspb.D
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("sandbox feature is not enabled"))
 	}
 
-	if _, err := s.resolveTenantID(ctx, req.Msg.GetTenantId()); err != nil {
+	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
+	if err != nil {
 		return nil, err
 	}
 
-	db := s.sandboxMgr.DB()
+	db := s.sandboxTriggerDB()
 	if db == nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("database not available"))
 	}
 
-	if _, err := db.ExecContext(ctx, `DELETE FROM sandbox_crons WHERE id = $1`, req.Msg.GetId()); err != nil {
+	result, err := db.ExecContext(ctx, `DELETE FROM sandbox_crons WHERE id = $1 AND tenant_id = $2`, req.Msg.GetId(), tenantID)
+	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete cron: %w", err))
+	}
+	if rows, err := result.RowsAffected(); err != nil || rows == 0 {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("cron not found"))
 	}
 
 	return connect.NewResponse(&agentspb.DeleteCronResponse{Success: true, Message: "Cron deleted"}), nil
@@ -5186,18 +5400,19 @@ func (s *Server) ListCrons(ctx context.Context, req *connect.Request[agentspb.Li
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("sandbox feature is not enabled"))
 	}
 
-	if _, err := s.resolveTenantID(ctx, req.Msg.GetTenantId()); err != nil {
+	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
+	if err != nil {
 		return nil, err
 	}
 
-	db := s.sandboxMgr.DB()
+	db := s.sandboxTriggerDB()
 	if db == nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("database not available"))
 	}
 
-	whereClause := `WHERE 1=1`
-	countArgs := []interface{}{}
-	countArgIdx := 1
+	whereClause := `WHERE tenant_id = $1`
+	countArgs := []interface{}{tenantID}
+	countArgIdx := 2
 
 	if req.Msg.SandboxId != nil {
 		whereClause += fmt.Sprintf(" AND sandbox_id = $%d", countArgIdx)
@@ -5254,7 +5469,7 @@ func (s *Server) CreateWebhook(ctx context.Context, req *connect.Request[agentsp
 		return nil, err
 	}
 
-	db := s.sandboxMgr.DB()
+	db := s.sandboxTriggerDB()
 	if db == nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("database not available"))
 	}
@@ -5265,6 +5480,11 @@ func (s *Server) CreateWebhook(ctx context.Context, req *connect.Request[agentsp
 	path := req.Msg.GetPath()
 	if path == "" {
 		path = utils.GenerateRandomString(16)
+	}
+
+	// The job will run by this session id. It must not be another tenant's.
+	if err := s.sessionIDAvailableToTenant(ctx, req.Msg.GetSessionId(), tenantID); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
 	var sandboxConfig []byte
@@ -5331,17 +5551,22 @@ func (s *Server) DeleteWebhook(ctx context.Context, req *connect.Request[agentsp
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("sandbox feature is not enabled"))
 	}
 
-	if _, err := s.resolveTenantID(ctx, req.Msg.GetTenantId()); err != nil {
+	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
+	if err != nil {
 		return nil, err
 	}
 
-	db := s.sandboxMgr.DB()
+	db := s.sandboxTriggerDB()
 	if db == nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("database not available"))
 	}
 
-	if _, err := db.ExecContext(ctx, `DELETE FROM sandbox_webhooks WHERE id = $1`, req.Msg.GetId()); err != nil {
+	result, err := db.ExecContext(ctx, `DELETE FROM sandbox_webhooks WHERE id = $1 AND tenant_id = $2`, req.Msg.GetId(), tenantID)
+	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete webhook: %w", err))
+	}
+	if rows, err := result.RowsAffected(); err != nil || rows == 0 {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("webhook not found"))
 	}
 
 	return connect.NewResponse(&agentspb.DeleteWebhookResponse{Success: true, Message: "Webhook deleted"}), nil
@@ -5352,18 +5577,19 @@ func (s *Server) ListWebhooks(ctx context.Context, req *connect.Request[agentspb
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("sandbox feature is not enabled"))
 	}
 
-	if _, err := s.resolveTenantID(ctx, req.Msg.GetTenantId()); err != nil {
+	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
+	if err != nil {
 		return nil, err
 	}
 
-	db := s.sandboxMgr.DB()
+	db := s.sandboxTriggerDB()
 	if db == nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("database not available"))
 	}
 
-	whereClause := `WHERE 1=1`
-	countArgs := []interface{}{}
-	countArgIdx := 1
+	whereClause := `WHERE tenant_id = $1`
+	countArgs := []interface{}{tenantID}
+	countArgIdx := 2
 
 	if req.Msg.SandboxId != nil {
 		whereClause += fmt.Sprintf(" AND sandbox_id = $%d", countArgIdx)
@@ -5431,19 +5657,22 @@ func (s *Server) ListTriggers(ctx context.Context, req *connect.Request[agentspb
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("sandbox feature is not enabled"))
 	}
 
-	if _, err := s.resolveTenantID(ctx, req.Msg.GetTenantId()); err != nil {
+	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
+	if err != nil {
 		return nil, err
 	}
 
-	db := s.sandboxMgr.DB()
+	db := s.sandboxTriggerDB()
 	if db == nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("database not available"))
 	}
 
 	joinClause := `FROM sandbox_triggers st
-		WHERE 1=1`
-	countArgs := []interface{}{}
-	countArgIdx := 1
+		LEFT JOIN sandbox_crons sc ON st.trigger_type = 'cron' AND sc.id = st.trigger_id
+		LEFT JOIN sandbox_webhooks sw ON st.trigger_type = 'webhook' AND sw.id = st.trigger_id
+		WHERE COALESCE(sc.tenant_id, sw.tenant_id) = $1`
+	countArgs := []interface{}{tenantID}
+	countArgIdx := 2
 
 	if req.Msg.SandboxId != nil {
 		joinClause += fmt.Sprintf(" AND st.sandbox_id = $%d", countArgIdx)
@@ -5520,8 +5749,11 @@ func (s *Server) GetSpawnTree(ctx context.Context, req *connect.Request[agentspb
 	if err != nil {
 		return nil, err
 	}
+	if _, err := s.requireOwnedSession(ctx, req.Msg.GetTreeId(), tenantID); err != nil {
+		return nil, err
+	}
 
-	q := agentsquery.NewGetSpawnTreeQuery(tenantID, req.Msg.GetTreeId())
+	q := agentsquery.NewGetSpawnTreeQuery(req.Msg.GetTreeId(), tenantID)
 	res, err := sys.QueryBus.Execute(ctx, q)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -5557,8 +5789,11 @@ func (s *Server) ListSpawnNodes(ctx context.Context, req *connect.Request[agents
 	if err != nil {
 		return nil, err
 	}
+	if _, err := s.requireOwnedSession(ctx, req.Msg.GetSessionId(), tenantID); err != nil {
+		return nil, err
+	}
 
-	q := agentsquery.NewListSpawnNodesQuery(tenantID, req.Msg.GetSessionId(), int(req.Msg.GetLimit()), int(req.Msg.GetOffset()))
+	q := agentsquery.NewListSpawnNodesQuery(req.Msg.GetSessionId(), tenantID, int(req.Msg.GetLimit()), int(req.Msg.GetOffset()))
 	res, err := sys.QueryBus.Execute(ctx, q)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -5967,3 +6202,29 @@ func appendUnique(slice []string, items ...string) []string {
 	}
 	return slice
 }
+
+// agentSaveError maps a violation of the per-tenant agent name constraint to
+// AlreadyExists so clients can say why the save failed. CreateAgent's
+// pre-check only sees live agents while the constraint also covers deleted
+// ones, and UpdateAgent has no pre-check, so both can reach the database
+// with a taken name. Anything else stays Internal.
+func agentSaveError(err error, name string) error {
+	var pgErr *pgconn.PgError
+	if (errors.As(err, &pgErr) && pgErr.ConstraintName == agentNameConstraint) ||
+		strings.Contains(err.Error(), agentNameConstraint) {
+		return connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("agent with name %q already exists", name))
+	}
+	logger.WithError(err).Error("agents: failed to save agent")
+	return connect.NewError(connect.CodeInternal, errors.New("failed to save agent"))
+}
+
+// agentLimitError maps a ReserveResourceSlot failure. Only a genuine quota
+// refusal is ResourceExhausted, whose message is written for users and shown
+// by clients. Anything else (a failed count query during a DB outage wraps
+// the raw driver error, with DB user, database, and host) is logged and
+// returned as a generic Internal.
+func agentLimitError(err error) error {
+	return planlimit.ConnectError(err, "agent")
+}
+
+const agentNameConstraint = "uq_agent_definitions_tenant_name"

@@ -13,17 +13,32 @@ async function copyText(value: string): Promise<boolean> {
 }
 
 /** A single-line value with a copy button. */
-export function CopyField({ value, label }: { value: string; label?: string }) {
+export function CopyField({
+    value,
+    label,
+    onCopy,
+    ariaLabel,
+    wrap,
+}: {
+    value: string
+    label?: string
+    onCopy?: () => void
+    ariaLabel?: string
+    /** Show the whole value on several lines instead of truncating it. */
+    wrap?: boolean
+}) {
     const [copied, setCopied] = useState(false)
     return (
         <div className="flex items-center gap-2">
-            <code className="flex-1 truncate rounded bg-brand-main-800/40 px-3 py-1.5 text-xs border border-brand-main-600/40 text-brand-main-100">
+            <code className={`flex-1 ${wrap ? 'wrap-anywhere' : 'truncate'} rounded bg-brand-main-800/40 px-3 py-1.5 text-xs border border-brand-main-600/40 text-brand-main-100`}>
                 {value}
             </code>
             <Button
                 variant="outline"
+                aria-label={ariaLabel}
                 onClick={async () => {
                     if (await copyText(value)) {
+                        onCopy?.()
                         setCopied(true)
                         setTimeout(() => setCopied(false), 1500)
                     }
@@ -37,7 +52,15 @@ export function CopyField({ value, label }: { value: string; label?: string }) {
 
 /** A multi-line, Shiki-highlighted code block with a copy button - matches the
  *  deployment detail / onboarding code blocks. */
-export function CodeBox({ code, language = 'bash' }: { code: string; language?: string }) {
+export function CodeBox({
+    code,
+    language = 'bash',
+    onCopy,
+}: {
+    code: string
+    language?: string
+    onCopy?: () => void
+}) {
     const data = [{ language, filename: `snippet.${language === 'bash' ? 'sh' : language}`, code }]
     return (
         <CodeBlock data={data} defaultValue={language} className="rounded border border-brand-main-600/40 bg-brand-main-950">
@@ -51,7 +74,7 @@ export function CodeBox({ code, language = 'bash' }: { code: string; language?: 
                             {item.code}
                         </CodeBlockContent>
                         <div className="absolute right-2 top-2">
-                            <CodeBlockCopyButton size="sm" />
+                            <CodeBlockCopyButton size="sm" onCopy={onCopy} />
                         </div>
                     </CodeBlockItem>
                 )}

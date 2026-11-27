@@ -2,6 +2,7 @@ package model_discovery
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/domain/custom_models"
 	"github.com/everstacklabs/everstack/internal/domain/provider_api_keys"
 	"github.com/everstacklabs/everstack/internal/domain/provider_config"
+	"github.com/everstacklabs/everstack/internal/enterprise"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/services/model_discovery"
 	providerspb "github.com/everstacklabs/everstack/pkg/grpc/everstack/providers/model_discovery/v1"
@@ -16,6 +18,14 @@ import (
 	"github.com/jmoiron/sqlx"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
+
+func tenantIDFromContext(ctx context.Context) (string, error) {
+	tenantID := contextkeys.GetTenantID(ctx)
+	if tenantID == "" {
+		return "", connect.NewError(connect.CodePermissionDenied, errors.New("tenant context missing"))
+	}
+	return tenantID, nil
+}
 
 // Server implements the ModelDiscoveryService gRPC server
 type Server struct {
@@ -51,6 +61,10 @@ func NewServer(
 
 // SearchModels searches for available models from a meta-provider
 func (s *Server) SearchModels(ctx context.Context, req *connect.Request[providerspb.SearchModelsRequest]) (*connect.Response[providerspb.SearchModelsResponse], error) {
+	tenantID, err := tenantIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if req.Msg.ProviderName == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("provider_name is required"))
 	}
@@ -59,7 +73,7 @@ func (s *Server) SearchModels(ctx context.Context, req *connect.Request[provider
 	var apiKey string
 	if req.Msg.UseProviderApiKey {
 		// First try to get provider configuration
-		providerConfig, err := s.providerRepo.Get(ctx, req.Msg.ProviderName)
+		providerConfig, err := s.providerRepo.GetForOrg(ctx, tenantID, req.Msg.ProviderName)
 		if err == nil {
 			// Provider config exists, use its API key
 			apiKey = providerConfig.APIKeyEncrypted // TODO: Decrypt this
@@ -84,13 +98,13 @@ func (s *Server) SearchModels(ctx context.Context, req *connect.Request[provider
 
 	var discoveredModels []model_discovery.DiscoveredModel
 	var warning string
-	var err error
+	var searchErr error
 
 	switch req.Msg.ProviderName {
 	case "openrouter":
-		discoveredModels, err = s.discoveryService.SearchOpenRouterModels(ctx, apiKey, req.Msg.Query, int(req.Msg.Limit))
+		discoveredModels, searchErr = s.discoveryService.SearchOpenRouterModels(ctx, apiKey, req.Msg.Query, int(req.Msg.Limit))
 	case "huggingface":
-		discoveredModels, err = s.discoveryService.SearchHuggingFaceModels(ctx, apiKey, req.Msg.Query, int(req.Msg.Limit))
+		discoveredModels, searchErr = s.discoveryService.SearchHuggingFaceModels(ctx, apiKey, req.Msg.Query, int(req.Msg.Limit))
 	case "ollama":
 		// For Ollama, determine the base URL from multiple sources (priority order):
 		// 1. Custom base URL from request (highest priority - from UI form)
@@ -103,7 +117,7 @@ func (s *Server) SearchModels(ctx context.Context, req *connect.Request[provider
 			baseURL = req.Msg.CustomBaseUrl
 		} else {
 			// Fall back to saved provider configuration
-			providerConfig, configErr := s.providerRepo.Get(ctx, req.Msg.ProviderName)
+			providerConfig, configErr := s.providerRepo.GetForOrg(ctx, tenantID, req.Msg.ProviderName)
 			if configErr == nil && providerConfig != nil && providerConfig.CustomBaseURL != nil {
 				baseURL = *providerConfig.CustomBaseURL
 			}
@@ -121,8 +135,8 @@ func (s *Server) SearchModels(ctx context.Context, req *connect.Request[provider
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("provider %s does not support model discovery", req.Msg.ProviderName))
 	}
 
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to search models: %w", err))
+	if searchErr != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to search models: %w", searchErr))
 	}
 
 	// Convert to protobuf models
@@ -151,12 +165,16 @@ func (s *Server) SearchModels(ctx context.Context, req *connect.Request[provider
 
 // AddCustomModel adds a custom model to the database
 func (s *Server) AddCustomModel(ctx context.Context, req *connect.Request[providerspb.AddCustomModelRequest]) (*connect.Response[providerspb.AddCustomModelResponse], error) {
+	tenantID, err := tenantIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if req.Msg.ProviderName == "" || req.Msg.ModelName == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("provider_name and model_name are required"))
 	}
 
 	// Check if model already exists
-	exists, err := s.customModelsRepo.Exists(ctx, req.Msg.ProviderName, req.Msg.ModelName)
+	exists, err := s.customModelsRepo.Exists(ctx, tenantID, req.Msg.ProviderName, req.Msg.ModelName)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to check if model exists: %w", err))
 	}
@@ -174,9 +192,10 @@ func (s *Server) AddCustomModel(ctx context.Context, req *connect.Request[provid
 		IsActive:      true,
 	}
 
-	if err := s.customModelsRepo.Create(ctx, model); err != nil {
+	if err := s.customModelsRepo.Create(ctx, tenantID, model); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create custom model: %w", err))
 	}
+	model_discovery.InvalidateCustomModels(tenantID)
 
 	return connect.NewResponse(&providerspb.AddCustomModelResponse{
 		Model: convertToProtoModel(model),
@@ -185,17 +204,21 @@ func (s *Server) AddCustomModel(ctx context.Context, req *connect.Request[provid
 
 // ListCustomModels lists all custom models, optionally filtered by provider
 func (s *Server) ListCustomModels(ctx context.Context, req *connect.Request[providerspb.ListCustomModelsRequest]) (*connect.Response[providerspb.ListCustomModelsResponse], error) {
+	tenantID, tenantErr := tenantIDFromContext(ctx)
+	if tenantErr != nil {
+		return nil, tenantErr
+	}
 	var models []*custom_models.CustomModel
 	var err error
 
 	if req.Msg.ProviderName != "" {
 		if req.Msg.ActiveOnly {
-			models, err = s.customModelsRepo.ListActiveByProvider(ctx, req.Msg.ProviderName)
+			models, err = s.customModelsRepo.ListActiveByProvider(ctx, tenantID, req.Msg.ProviderName)
 		} else {
-			models, err = s.customModelsRepo.ListByProvider(ctx, req.Msg.ProviderName)
+			models, err = s.customModelsRepo.ListByProvider(ctx, tenantID, req.Msg.ProviderName)
 		}
 	} else {
-		models, err = s.customModelsRepo.List(ctx)
+		models, err = s.customModelsRepo.List(ctx, tenantID)
 		// Filter by active if requested
 		if req.Msg.ActiveOnly && err == nil {
 			activeModels := make([]*custom_models.CustomModel, 0, len(models))
@@ -226,13 +249,18 @@ func (s *Server) ListCustomModels(ctx context.Context, req *connect.Request[prov
 
 // DeleteCustomModel removes a custom model
 func (s *Server) DeleteCustomModel(ctx context.Context, req *connect.Request[providerspb.DeleteCustomModelRequest]) (*connect.Response[providerspb.DeleteCustomModelResponse], error) {
+	tenantID, err := tenantIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if req.Msg.Id == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("id is required"))
 	}
 
-	if err := s.customModelsRepo.Delete(ctx, req.Msg.Id); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete custom model: %w", err))
+	if err := s.customModelsRepo.Delete(ctx, tenantID, req.Msg.Id); err != nil {
+		return nil, customModelError("delete", err)
 	}
+	model_discovery.InvalidateCustomModels(tenantID)
 
 	return connect.NewResponse(&providerspb.DeleteCustomModelResponse{
 		Success: true,
@@ -242,14 +270,18 @@ func (s *Server) DeleteCustomModel(ctx context.Context, req *connect.Request[pro
 
 // UpdateCustomModel updates a custom model's metadata
 func (s *Server) UpdateCustomModel(ctx context.Context, req *connect.Request[providerspb.UpdateCustomModelRequest]) (*connect.Response[providerspb.UpdateCustomModelResponse], error) {
+	tenantID, err := tenantIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if req.Msg.Id == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("id is required"))
 	}
 
 	// Get existing model
-	model, err := s.customModelsRepo.GetByID(ctx, req.Msg.Id)
+	model, err := s.customModelsRepo.GetByID(ctx, tenantID, req.Msg.Id)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get custom model: %w", err))
+		return nil, customModelError("get", err)
 	}
 
 	// Update fields
@@ -261,9 +293,10 @@ func (s *Server) UpdateCustomModel(ctx context.Context, req *connect.Request[pro
 	}
 	model.IsActive = req.Msg.IsActive
 
-	if err := s.customModelsRepo.Update(ctx, model); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update custom model: %w", err))
+	if err := s.customModelsRepo.Update(ctx, tenantID, model); err != nil {
+		return nil, customModelError("update", err)
 	}
+	model_discovery.InvalidateCustomModels(tenantID)
 
 	return connect.NewResponse(&providerspb.UpdateCustomModelResponse{
 		Model: convertToProtoModel(model),
@@ -272,13 +305,17 @@ func (s *Server) UpdateCustomModel(ctx context.Context, req *connect.Request[pro
 
 // GetCustomModel retrieves a specific custom model
 func (s *Server) GetCustomModel(ctx context.Context, req *connect.Request[providerspb.GetCustomModelRequest]) (*connect.Response[providerspb.GetCustomModelResponse], error) {
+	tenantID, err := tenantIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if req.Msg.Id == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("id is required"))
 	}
 
-	model, err := s.customModelsRepo.GetByID(ctx, req.Msg.Id)
+	model, err := s.customModelsRepo.GetByID(ctx, tenantID, req.Msg.Id)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get custom model: %w", err))
+		return nil, customModelError("get", err)
 	}
 
 	return connect.NewResponse(&providerspb.GetCustomModelResponse{
@@ -331,7 +368,7 @@ func CreateServerWithContext(ctx context.Context) (*Server, error) {
 	}
 
 	// Initialize repositories
-	customModelsRepo := custom_models.NewRepository(db)
+	customModelsRepo := custom_models.NewRepository(db, enterprise.ManagedGateway())
 	providerRepo := provider_config.NewRepository(db)
 	apiKeyRepo := provider_api_keys.NewPostgresRepository(db)
 
@@ -361,4 +398,14 @@ func (s *Server) AppName() string {
 
 func (s *Server) MethodPrefix() string {
 	return "/" + modeldiscoveryconnect.ModelDiscoveryServiceName + "/"
+}
+
+// customModelError maps a repository error to a Connect error. A model that
+// is missing, or that belongs to another tenant, is NotFound with a fixed
+// message; anything else is Internal.
+func customModelError(action string, err error) error {
+	if errors.Is(err, custom_models.ErrNotFound) {
+		return connect.NewError(connect.CodeNotFound, errors.New("custom model not found"))
+	}
+	return connect.NewError(connect.CodeInternal, fmt.Errorf("failed to %s custom model: %w", action, err))
 }

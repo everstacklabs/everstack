@@ -8,6 +8,9 @@ import (
 	"github.com/everstacklabs/everstack/internal/lib/handlers/gateway/cache"
 )
 
+// benchPartition is a single tenant + context partition for the benchmarks.
+var benchPartition = cache.SemanticPartition("bench-tenant", []byte("bench-context"))
+
 func BenchmarkMinHashSignature(b *testing.B) {
 	hasher := cache.NewMinHasher(cache.DefaultMinHashConfig())
 	query := "What is the capital of France and what is its population?"
@@ -41,7 +44,7 @@ func BenchmarkSemanticCachePut(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		query := fmt.Sprintf("What is the capital of country %d?", i%1000)
-		c.Put(query, resp)
+		c.Put(benchPartition, query, resp)
 	}
 }
 
@@ -57,13 +60,13 @@ func BenchmarkSemanticCacheGet_Hit(b *testing.B) {
 
 	for i := 0; i < 100; i++ {
 		query := fmt.Sprintf("What is the capital of country %d?", i)
-		c.Put(query, resp)
+		c.Put(benchPartition, query, resp)
 	}
 
 	// Query for a similar query
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		c.Get("What is the capital of country 50?")
+		c.Get(benchPartition, "What is the capital of country 50?")
 	}
 }
 
@@ -79,13 +82,13 @@ func BenchmarkSemanticCacheGet_Miss(b *testing.B) {
 
 	for i := 0; i < 100; i++ {
 		query := fmt.Sprintf("What is the capital of country %d?", i)
-		c.Put(query, resp)
+		c.Put(benchPartition, query, resp)
 	}
 
 	// Query for a completely different topic
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		c.Get("How does quantum entanglement work?")
+		c.Get(benchPartition, "How does quantum entanglement work?")
 	}
 }
 
@@ -216,10 +219,10 @@ func TestSemanticCacheRoundTrip(t *testing.T) {
 		Model:        "gpt-4",
 		OutputTokens: 10,
 	}
-	c.Put(originalQuery, resp)
+	c.Put(benchPartition, originalQuery, resp)
 
 	// Retrieve with exact query
-	retrieved, found := c.Get(originalQuery)
+	retrieved, found := c.Get(benchPartition, originalQuery)
 	if !found {
 		t.Fatalf("Expected to find exact query in cache")
 	}
@@ -238,7 +241,7 @@ func TestSemanticCacheRoundTrip(t *testing.T) {
 	t.Logf("Similarity between original and similar query: %.3f (threshold: %.3f)", sim, cfg.MinHash.SimilarityThreshold)
 
 	// Try with similar query
-	retrieved2, found2 := c.Get(similarQuery)
+	retrieved2, found2 := c.Get(benchPartition, similarQuery)
 	t.Logf("Similar query lookup: found=%v", found2)
 	if found2 {
 		t.Logf("✅ Retrieved from similar query: %s", retrieved2.Response)
@@ -248,7 +251,7 @@ func TestSemanticCacheRoundTrip(t *testing.T) {
 
 	// Try with completely different query
 	differentQuery := "How does nuclear fusion work?"
-	_, found3 := c.Get(differentQuery)
+	_, found3 := c.Get(benchPartition, differentQuery)
 	if found3 {
 		t.Errorf("Expected different query NOT to match, but it did")
 	}

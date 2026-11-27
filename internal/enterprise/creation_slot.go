@@ -61,45 +61,44 @@ const slotLockTimeout = 10 * time.Second
 // stuck creator.
 const slotBarrierTimeout = 2 * time.Second
 
-// ReserveResourceSlot resolves entitlements, serializes against concurrent
-// creators of the same (tenant, limitType), and runs the quota check under
-// the lock. A nil error means the caller may proceed with creation and MUST
-// eventually call Release (defer) and SHOULD call Confirm on success.
+// ReserveResourceSlot is the legacy form of ReserveLimitSlot: countQuery
+// binds its own args and tenantKey scopes the lock. New callers use
+// ReserveLimitSlot, which counts and locks over the whole organization on a
+// managed gateway.
 //
-// countQuery must be tenant-scoped and return a single COUNT(*). delta is how
-// many resources the request creates (batch size, min 1). tenantKey scopes
-// the lock; pass the tenant ID.
+// A nil error means the caller may proceed with creation and MUST eventually
+// call Release (defer) and SHOULD call Confirm on success.
 func ReserveResourceSlot(ctx context.Context, db *sqlx.DB, monitor LicenseMonitor, limitType UsageType, countQuery string, args []interface{}, delta int64, resourceName, tenantKey string) (*ResourceSlot, error) {
 	ent := ResolveEntitlements(ctx, monitor)
 	limit, capped := ent.Limit(limitType)
 	if !capped {
 		return &ResourceSlot{}, nil // unlimited: nothing to serialize
 	}
+	c := LimitCheck{Type: limitType, Resource: resourceName, Delta: delta}
 	if limit == 0 {
-		if ent.Source == "ce" {
-			return nil, fmt.Errorf("%s is not available on the Community Edition — upgrade at https://everstack.ai/pricing", resourceName)
-		}
-		return nil, fmt.Errorf("%s is not available on your current plan — upgrade at https://everstack.ai/pricing", resourceName)
+		return nil, unavailableError(ent, c)
 	}
 	if db == nil {
 		return &ResourceSlot{}, nil // no read model to count against
 	}
-	if delta < 1 {
-		delta = 1
-	}
+	return reserveCountedSlot(ctx, db, ent, limit, c, countQuery, args, tenantKey)
+}
 
-	key := slotKey(tenantKey, limitType)
+// reserveCountedSlot takes the (lockKey, limit type) advisory lock on a
+// dedicated connection and runs the count under it.
+func reserveCountedSlot(ctx context.Context, db *sqlx.DB, ent Entitlements, limit int64, c LimitCheck, countQuery string, args []interface{}, lockKey string) (*ResourceSlot, error) {
+	key := slotKey(lockKey, c.Type)
 
 	lockCtx, cancel := context.WithTimeout(ctx, slotLockTimeout)
 	defer cancel()
 
 	conn, err := db.Conn(lockCtx)
 	if err != nil {
-		return degradedSlot(ctx, db, monitor, limitType, countQuery, args, delta, resourceName, err)
+		return degradedSlot(ctx, db, ent, limit, c, countQuery, args, err)
 	}
 	if _, err := conn.ExecContext(lockCtx, `SELECT pg_advisory_lock($1)`, key); err != nil {
 		_ = conn.Close()
-		return degradedSlot(ctx, db, monitor, limitType, countQuery, args, delta, resourceName, err)
+		return degradedSlot(ctx, db, ent, limit, c, countQuery, args, err)
 	}
 
 	slot := &ResourceSlot{
@@ -108,8 +107,8 @@ func ReserveResourceSlot(ctx context.Context, db *sqlx.DB, monitor LicenseMonito
 		db:         db,
 		countQuery: countQuery,
 		args:       args,
-		delta:      delta,
-		resource:   resourceName,
+		delta:      c.delta(),
+		resource:   c.Resource,
 	}
 
 	countCtx, cancelCount := context.WithTimeout(ctx, 5*time.Second)
@@ -117,11 +116,11 @@ func ReserveResourceSlot(ctx context.Context, db *sqlx.DB, monitor LicenseMonito
 	var count int64
 	if err := conn.QueryRowContext(countCtx, countQuery, args...).Scan(&count); err != nil {
 		slot.Release()
-		return nil, fmt.Errorf("failed to check %s limit: %w", resourceName, err)
+		return nil, fmt.Errorf("failed to check %s limit: %w", c.Resource, err)
 	}
-	if count+delta > limit {
+	if count+c.delta() > limit {
 		slot.Release()
-		return nil, fmt.Errorf("%s limit reached: %d/%d — upgrade your plan for higher limits (https://everstack.ai/pricing)", resourceName, count, limit)
+		return nil, capError(ent, c, limit, count)
 	}
 	slot.before = count
 	return slot, nil
@@ -130,9 +129,9 @@ func ReserveResourceSlot(ctx context.Context, db *sqlx.DB, monitor LicenseMonito
 // degradedSlot is the fallback when the advisory lock cannot be taken: run
 // the plain (unserialized) check so limits still apply, and return a no-op
 // slot.
-func degradedSlot(ctx context.Context, db *sqlx.DB, monitor LicenseMonitor, limitType UsageType, countQuery string, args []interface{}, delta int64, resourceName string, cause error) (*ResourceSlot, error) {
-	logger.WithError(cause).Warnf("resource_slot: could not serialize %s creation, falling back to unserialized check", resourceName)
-	if err := CheckResourceLimit(ctx, db, monitor, limitType, countQuery, args, delta, resourceName); err != nil {
+func degradedSlot(ctx context.Context, db *sqlx.DB, ent Entitlements, limit int64, c LimitCheck, countQuery string, args []interface{}, cause error) (*ResourceSlot, error) {
+	logger.WithError(cause).Warnf("resource_slot: could not serialize %s creation, falling back to unserialized check", c.Resource)
+	if err := countAgainstLimit(ctx, db, ent, limit, c, countQuery, args); err != nil {
 		return nil, err
 	}
 	return &ResourceSlot{}, nil

@@ -270,16 +270,11 @@ EOF
 # disable) because the generator would re-create it; masking silences the stall.
 RUN systemctl mask serial-getty@ttyS0.service
 
-# Docker is installed but NOT auto-started. dockerd in a Firecracker
-# microVM is the single biggest cause of the "VM dies ~5 minutes after
-# boot" failure: its boot unit has no start-timeout ("A start job is
-# running for Container Engine … / no limit"), so when dockerd +
-# containerd hang or exhaust the guest's RAM (the default sandbox is
-# 1024MB Ubuntu), they wedge the whole systemd boot and the guest
-# OOM-freezes mid-boot — observed directly in the captured guest
-# console. Mask the units so the VM boots clean and stays alive; a user
-# who needs Docker can `sudo systemctl unmask --now docker.service`
-# inside the sandbox (and should size the sandbox above 1GB first).
+# Docker is installed but not auto-started. dockerd and containerd can block
+# systemd startup or exhaust guest memory in the default 1024MB sandbox.
+# Masking the units keeps guest startup independent of those services. A user
+# who needs Docker can `sudo systemctl unmask --now docker.service` inside the
+# sandbox and should size the sandbox above 1GB first.
 RUN systemctl disable docker.service docker.socket containerd.service 2>/dev/null || true \
     && systemctl mask docker.service docker.socket
 
@@ -291,35 +286,26 @@ RUN systemctl mask \
     apt-daily-upgrade.service \
     systemd-timesyncd.service
 
-# Entropy. The Firecracker CI guest kernel (vmlinux-5.10.x) does NOT honour
-# random.trust_cpu, and a microVM exposes no hardware RNG, so the kernel CRNG
-# never seeds. Every getrandom() caller then blocks until init: boot wedges
-# for minutes on "A start job is running for Save Random Seed" (systemd-
-# random-seed) and the agent's shell server / sshd keygen stall too, until
-# the guest is reaped ~5 min in. The fcagent already passes random.trust_cpu
-# and attaches a virtio-rng device, but the CI kernel ignores both, so the
-# fix has to live in the guest: haveged feeds the pool from CPU timing
-# jitter, kernel-independent. A drop-in forces it ahead of sysinit/
-# random-seed so entropy exists before anything blocks on it.
+# Entropy. The Firecracker CI guest kernel (vmlinux-5.10.x) does not honour
+# random.trust_cpu, and a microVM exposes no hardware RNG, so getrandom()
+# callers can block before the kernel CRNG is seeded. The agent passes
+# random.trust_cpu and attaches a virtio-rng device, but this kernel ignores
+# both. haveged feeds the pool from CPU timing jitter, and the drop-in starts
+# it before sysinit and systemd-random-seed so entropy is available to early
+# services.
 RUN mkdir -p /etc/systemd/system/haveged.service.d \
  && printf '[Unit]\nDefaultDependencies=no\nBefore=sysinit.target systemd-random-seed.service\nAfter=systemd-tmpfiles-setup-dev.service\nConflicts=shutdown.target\n' \
       > /etc/systemd/system/haveged.service.d/10-early.conf \
  && systemctl enable haveged.service
 
 # Marker used both for human-readable provenance ("what version is this?")
-# and — more importantly — as the idempotency key for the rootfs-converter
+# and as the idempotency key for the rootfs-converter
 # init container that turns this tree into a Firecracker ext4. The
 # converter skips its rebuild when the marker matches the previous run.
 #
-# REVISION is required here because VERSION on its own resolves to the
-# contents of .github/version, which is bumped manually per release and
-# stays static across all the master commits in between. Two master
-# pushes without a version bump would both produce images stamped with
-# the same VERSION, the converter would see identical markers, skip the
-# ext4 rebuild, and every VM would keep booting whichever sandbox-agent
-# binary was first baked into the ext4. Symptom: code changes ship, the
-# image ships, the daemonset pulls it, but VMs still run the old binary.
-# Suffixing with the build SHA makes every commit produce a unique marker.
+# VERSION can remain unchanged across multiple commits. Suffixing it with
+# REVISION gives each build a unique marker so the converter rebuilds the
+# ext4 when the image contents change.
 ARG VERSION=dev
 ARG REVISION=unknown
 RUN echo "$VERSION-$REVISION" > /etc/everstack-rootfs-version

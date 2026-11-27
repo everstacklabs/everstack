@@ -13,6 +13,18 @@ const PLATFORM_AGENT_TOOLS = [
 ]
 
 /**
+ * The assistant cannot be created because the instance has no model to run it
+ * on. Its own class so the composer can offer the fix (add a provider key)
+ * instead of a dead send button.
+ */
+export class NoModelProviderError extends Error {
+  constructor() {
+    super('No model provider is connected, so the assistant has nothing to run on.')
+    this.name = 'NoModelProviderError'
+  }
+}
+
+/**
  * Returns all available model strings from the gateway (only active/configured providers).
  */
 async function getAvailableModels(): Promise<{ models: Set<string>; defaultModel: string }> {
@@ -76,10 +88,7 @@ export async function getOrCreatePlatformAgent(): Promise<AgentDefinition> {
 
   // No platform agent exists — create one
   if (!defaultModel) {
-    throw new Error(
-      `No LLM providers configured (gateway returned ${availableModels.size} models). ` +
-      `Open Vault and connect a provider, then refresh.`,
-    )
+    throw new NoModelProviderError()
   }
 
   const createRes = await createAgent({

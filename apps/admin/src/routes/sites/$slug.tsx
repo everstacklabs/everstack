@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { replayBlock } from '@/lib/replay-privacy'
 import { useState, type ReactNode } from 'react'
 import { z } from 'zod'
 import { ui } from '@everstack/ui'
@@ -82,14 +83,14 @@ function SectionCard({
   return (
     <section
       className={`rounded border bg-brand-main-900/50 p-4 ${
-        tone === 'danger' ? 'border-red-500/25' : 'border-brand-main-600'
+        tone === 'danger' ? 'border-danger-border' : 'border-brand-main-600'
       }`}
     >
       <div className="mb-4 flex items-start gap-3">
         <div
           className={`rounded border p-2 ${
             tone === 'danger'
-              ? 'border-red-500/25 bg-red-500/10 text-red-300 light:text-red-600'
+              ? 'border-danger-border bg-danger-surface text-danger'
               : 'border-brand-secondary-500/30 bg-brand-secondary-600/15 text-brand-secondary-300'
           }`}
         >
@@ -99,7 +100,7 @@ function SectionCard({
           <div
             className={`text-sm font-medium ${
               tone === 'danger'
-                ? 'text-red-300 light:text-red-600'
+                ? 'text-danger'
                 : 'text-white light:text-brand-main-50'
             }`}
           >
@@ -176,6 +177,7 @@ function SiteOverview({
               </div>
 
               <a
+                {...replayBlock}
                 href={site.url}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -235,6 +237,7 @@ function SiteOverview({
               </ConfigField>
               <ConfigField label="Domain">
                 <a
+                  {...replayBlock}
                   href={site.url}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -439,11 +442,11 @@ function SiteDetailPage() {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center">
         <div className="relative mb-6">
-          <div className="absolute inset-0 rounded-full bg-red-500/20 blur-xl" />
+          <div className="absolute inset-0 rounded-full bg-danger-surface-strong blur-xl" />
           <div className="relative rounded-xl border border-brand-main-600 bg-brand-main-800/80 p-4">
             <Iconify.Icon
               icon="lucide:triangle-alert"
-              className="size-8 text-red-400 light:text-red-600"
+              className="size-8 text-danger"
             />
           </div>
         </div>

@@ -144,7 +144,7 @@ export function LogColumnManager() {
                                     className='h-8 text-xs'
                                 />
                                 {key !== '' && !keyValid && (
-                                    <span className='text-[11px] text-red-400 light:text-red-600'>
+                                    <span className='text-[11px] text-danger'>
                                         Letters, numbers, underscore only.
                                     </span>
                                 )}

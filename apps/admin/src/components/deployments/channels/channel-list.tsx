@@ -94,12 +94,12 @@ export function ChannelList() {
             render: (channel: ChannelConfig) => {
                 const status = statusMap.get(channel.id) ?? ChannelStatus.DISCONNECTED
                 const statusColor = status === ChannelStatus.CONNECTED
-                    ? '#22c55e'
+                    ? 'var(--color-success-solid)'
                     : status === ChannelStatus.ERROR
-                        ? '#ef4444'
+                        ? 'var(--color-danger-solid)'
                         : status === ChannelStatus.CONNECTING
-                            ? '#eab308'
-                            : '#64748b'
+                            ? 'var(--color-warning-solid)'
+                            : 'var(--color-neutral-solid)'
 
                 return (
                     <div className="flex min-w-0 items-center gap-2">
@@ -137,7 +137,7 @@ export function ChannelList() {
             render: (channel: ChannelConfig) => {
                 if (!channel.agentId) {
                     return (
-                        <span className="inline-flex items-center gap-1 text-xs text-amber-400/80 light:text-amber-700/80">
+                        <span className="inline-flex items-center gap-1 text-xs text-warning/80">
                             <Iconify.Icon icon="lucide:route" className="h-3 w-3" />
                             Dispatcher
                         </span>
@@ -158,7 +158,7 @@ export function ChannelList() {
             render: (channel: ChannelConfig) => {
                 const label = sessionModeLabel(channel.sessionMode?.toString() ?? '')
                 return (
-                    <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-blue-500/15 text-blue-300 light:text-blue-600">
+                    <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-info-surface-strong text-info">
                         {label}
                     </span>
                 )
@@ -196,7 +196,7 @@ export function ChannelList() {
                 <div className="flex items-center gap-2 justify-center" data-row-actions>
                     <button
                         type="button"
-                        className="p-1 rounded hover:bg-blue-500/20 hover:text-blue-400 light:hover:text-blue-600 transition-colors"
+                        className="p-1 rounded hover:bg-info-surface-strong hover:text-info transition-colors"
                         onClick={() => setEditChannelId(channel.id)}
                         title="Edit channel"
                     >
@@ -204,7 +204,7 @@ export function ChannelList() {
                     </button>
                     <button
                         type="button"
-                        className="p-1 rounded hover:bg-red-500/20 hover:text-red-400 light:hover:text-red-600 transition-colors"
+                        className="p-1 rounded hover:bg-danger-surface-strong hover:text-danger transition-colors"
                         onClick={() => {
                             setDeleteConfirmId(channel.id)
                             setDeleteConfirmName(channel.name)
@@ -221,9 +221,9 @@ export function ChannelList() {
     return (
         <div className="flex-1 min-h-0 w-full h-full overflow-hidden flex flex-col">
             {showChannelLimitBanner && (
-                <div className="flex items-center gap-2 border-b border-amber-500/20 bg-amber-500/5 px-4 py-2.5 shrink-0">
-                    <Iconify.Icon icon="lucide:info" className="h-4 w-4 text-amber-400 light:text-amber-700 shrink-0" />
-                    <span className="text-xs text-amber-300 light:text-amber-700">
+                <div className="flex items-center gap-2 border-b border-warning-border bg-warning-surface/60 px-4 py-2.5 shrink-0">
+                    <Iconify.Icon icon="lucide:info" className="h-4 w-4 text-warning shrink-0" />
+                    <span className="text-xs text-warning">
                         Channel limit reached ({channelCount}/{channelLimit}).
                         Upgrade your plan to connect more channels.
                     </span>
@@ -231,7 +231,7 @@ export function ChannelList() {
                         href="https://everstack.ai/pricing"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="ml-auto text-xs text-amber-400 light:text-amber-700 hover:text-amber-300 light:hover:text-amber-700 underline shrink-0"
+                        className="ml-auto text-xs text-warning underline shrink-0"
                     >
                         View plans
                     </a>

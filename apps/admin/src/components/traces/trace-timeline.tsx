@@ -431,7 +431,7 @@ export function TraceTimeline({ traceId, onSpanHover, selectedSpanId }: TraceTim
 
     if (error) {
         return (
-            <div className="flex items-center justify-center h-64 text-rose-300 light:text-rose-600">
+            <div className="flex items-center justify-center h-64 text-danger">
                 Error loading trace timeline: {error instanceof Error ? error.message :'Unknown error'}
             </div>
         )

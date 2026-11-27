@@ -1,6 +1,7 @@
 package otlp
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -183,4 +184,9 @@ func TestNilResolverStillFallsBackToContextTenant(t *testing.T) {
 	if rec.Code != http.StatusOK || !got.called {
 		t.Fatalf("status=%d called=%v, want 200/true", rec.Code, got.called)
 	}
+}
+
+func (f fakeResolver) AuthenticateKeyContext(r *http.Request) (context.Context, string, string, bool) {
+	tenant, ok := f.Authenticate(r)
+	return r.Context(), tenant, "", ok
 }

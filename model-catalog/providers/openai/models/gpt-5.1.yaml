@@ -59,3 +59,4 @@ variants:
     description: "Deeper reasoning for complex analysis and coding."
     parameters:
       reasoning_effort: "high"
+notes: "Deprecated by OpenAI on 2026-10-01; shuts down 2027-04-01. Migrate to gpt-6-sol."

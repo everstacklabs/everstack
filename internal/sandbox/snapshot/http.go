@@ -3,9 +3,11 @@ package snapshot
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -21,14 +23,21 @@ var httpClient = &http.Client{
 	},
 }
 
-func defaultHTTPDo(ctx context.Context, url string) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+func defaultHTTPDo(ctx context.Context, signedURL string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, signedURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("snapshot: build request: %w", err)
+		// The parse error quotes the URL; never surface it.
+		return nil, fmt.Errorf("snapshot: build request failed")
 	}
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("snapshot: http get: %w", err)
+		// *url.Error embeds the full request URL, which is a presigned
+		// bearer credential. Keep only the underlying cause.
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) {
+			return nil, fmt.Errorf("snapshot: http get: %v", urlErr.Err)
+		}
+		return nil, fmt.Errorf("snapshot: http get failed")
 	}
 	return resp, nil
 }

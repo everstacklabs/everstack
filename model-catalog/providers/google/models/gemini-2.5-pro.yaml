@@ -52,3 +52,4 @@ parameters:
     type: "integer"
     min_value: 1
     has_min_value: true
+notes: "Deprecated by Google on 2026-11-02; from 2026-12-01 requests route to gemini-3.8-flash and bill at its rates. Migrate to gemini-3.8-flash."

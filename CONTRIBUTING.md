@@ -126,6 +126,7 @@ maintainer documents an exception.
 
 ## Licensing
 
-Unless stated otherwise, contributions are accepted under the repository's
-[Apache License 2.0](./LICENSE). You must have the right to submit the code and
+Contributions to the public repository are accepted under the
+[Apache License 2.0](./LICENSE), the licence of the Community Edition. See
+[LICENSING.md](./LICENSING.md). You must have the right to submit the code and
 other material in your contribution.

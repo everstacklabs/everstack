@@ -1,4 +1,5 @@
 import type { KeyboardEvent, ReactNode } from 'react'
+import { replayMask } from '@/lib/replay-privacy'
 import { ArrowUp, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ui } from '@everstack/ui'
@@ -7,13 +8,13 @@ const { Button, Textarea } = ui
 
 export function ChatTranscript({ children }: { children: ReactNode }) {
   return (
-    <div className="mx-auto max-w-3xl space-y-6 pl-6 pr-3 py-6">{children}</div>
+    <div {...replayMask} className="mx-auto max-w-3xl space-y-6 pl-6 pr-3 py-6">{children}</div>
   )
 }
 
 export function ChatUserMessage({ children }: { children: ReactNode }) {
   return (
-    <div className="flex justify-end">
+    <div {...replayMask} className="flex justify-end">
       <div className="max-w-[80%] rounded-md bg-brand-secondary-600/20 px-4 pb-2 pt-1.5 text-brand-secondary-200">
         {children}
       </div>
@@ -22,7 +23,7 @@ export function ChatUserMessage({ children }: { children: ReactNode }) {
 }
 
 export function ChatAssistantMessage({ children }: { children: ReactNode }) {
-  return <div className="min-w-0">{children}</div>
+  return <div {...replayMask} className="min-w-0">{children}</div>
 }
 
 export function ChatComposerFrame({

@@ -3,10 +3,15 @@ package v1
 import (
 	"context"
 	"errors"
+	"regexp"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/everstacklabs/everstack/internal/enterprise"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
+	"github.com/jmoiron/sqlx"
 )
 
 // TestResolveTenantID_FailClosedWithoutContext pins the post-P0
@@ -51,4 +56,96 @@ func TestResolveTenantID_PrefersContextTenant(t *testing.T) {
 	if tid != "ctx-tenant" {
 		t.Fatalf("expected context tenant id, got %q", tid)
 	}
+}
+
+func TestSingleTenantFallbackRechecksAFormerlySingleTenantDatabase(t *testing.T) {
+	withUnmanagedGateway(t)
+	rawDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = rawDB.Close() })
+	s := &Server{db: sqlx.NewDb(rawDB, "sqlmock")}
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id::text FROM organizations LIMIT 2")).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ownerTenant))
+	if tenantID, ok := s.singleTenantFallback(context.Background()); !ok || tenantID != ownerTenant {
+		t.Fatalf("first fallback = %q, %v", tenantID, ok)
+	}
+	if tenantID, ok := s.singleTenantFallback(context.Background()); !ok || tenantID != ownerTenant {
+		t.Fatalf("cached fallback = %q, %v", tenantID, ok)
+	}
+
+	s.singleTenantFallbackCached.Store(&singleTenantFallbackResult{
+		tenantID:  ownerTenant,
+		expiresAt: time.Now().Add(-time.Second),
+	})
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id::text FROM organizations LIMIT 2")).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ownerTenant).AddRow(otherTenant))
+	if tenantID, ok := s.singleTenantFallback(context.Background()); ok || tenantID != "" {
+		t.Fatalf("second fallback = %q, %v", tenantID, ok)
+	}
+
+	if tenantID, ok := s.singleTenantFallback(context.Background()); ok || tenantID != "" {
+		t.Fatalf("disabled fallback = %q, %v", tenantID, ok)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSingleTenantFallbackIsDisabledOnManagedGateway(t *testing.T) {
+	previous := enterprise.ManagedGateway()
+	enterprise.SetManagedGateway(true)
+	t.Cleanup(func() { enterprise.SetManagedGateway(previous) })
+
+	rawDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = rawDB.Close() })
+	s := &Server{db: sqlx.NewDb(rawDB, "sqlmock")}
+	s.singleTenantFallbackCached.Store(&singleTenantFallbackResult{
+		tenantID:  ownerTenant,
+		expiresAt: time.Now().Add(time.Minute),
+	})
+	if tenantID, ok := s.singleTenantFallback(context.Background()); ok || tenantID != "" {
+		t.Fatalf("managed fallback = %q, %v", tenantID, ok)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSingleTenantFallbackRetriesAfterAnEmptyDatabase(t *testing.T) {
+	withUnmanagedGateway(t)
+	rawDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = rawDB.Close() })
+	s := &Server{db: sqlx.NewDb(rawDB, "sqlmock")}
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id::text FROM organizations LIMIT 2")).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
+	if tenantID, ok := s.singleTenantFallback(context.Background()); ok || tenantID != "" {
+		t.Fatalf("empty fallback = %q, %v", tenantID, ok)
+	}
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id::text FROM organizations LIMIT 2")).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ownerTenant))
+	if tenantID, ok := s.singleTenantFallback(context.Background()); !ok || tenantID != ownerTenant {
+		t.Fatalf("populated fallback = %q, %v", tenantID, ok)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func withUnmanagedGateway(t *testing.T) {
+	t.Helper()
+	previous := enterprise.ManagedGateway()
+	enterprise.SetManagedGateway(false)
+	t.Cleanup(func() { enterprise.SetManagedGateway(previous) })
 }

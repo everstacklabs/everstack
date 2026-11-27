@@ -63,7 +63,7 @@ function EditWorkflowPage() {
 
     if (error) {
         return (
-            <div className="flex h-screen items-center justify-center bg-brand-main-950 text-red-400 light:text-red-600">
+            <div className="flex h-screen items-center justify-center bg-brand-main-950 text-danger">
                 Error loading workflow: {error.message}
             </div>
         )

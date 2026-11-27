@@ -219,12 +219,12 @@ function McpServerCard({
       </div>
 
       {staleAttached.length > 0 && (
-        <div className="flex items-center gap-2 border-t border-amber-500/15 bg-amber-500/5 px-3 py-1.5">
+        <div className="flex items-center gap-2 border-t border-warning-border bg-warning-surface/60 px-3 py-1.5">
           <Iconify.Icon
             icon="heroicons:exclamation-triangle"
-            className="h-3 w-3 text-amber-400/70 shrink-0"
+            className="h-3 w-3 text-warning/70 shrink-0"
           />
-          <span className="text-[11px] text-amber-300/70 flex-1">
+          <span className="text-[11px] text-warning/70 flex-1">
             {staleAttached.length} attached tool{staleAttached.length === 1 ? '' : 's'} no longer published by this server.
           </span>
           <Button
@@ -232,7 +232,7 @@ function McpServerCard({
             variant="ghost"
             size="sm"
             onClick={handlePruneStale}
-            className="h-6 px-2 text-[11px] text-amber-300 hover:text-amber-200"
+            className="h-6 px-2 text-[11px] text-warning"
           >
             Remove
           </Button>
@@ -276,9 +276,9 @@ function McpServerCard({
 function HealthDot({ status }: { status: McpServer['healthStatus'] }) {
   const cls =
     status === 'MCP_SERVER_HEALTH_STATUS_HEALTHY'
-      ? 'bg-emerald-400'
+      ? 'bg-success-solid'
       : status === 'MCP_SERVER_HEALTH_STATUS_UNHEALTHY'
-        ? 'bg-red-400'
+        ? 'bg-danger-solid'
         : 'bg-white/30 light:bg-black/30'
   const label =
     status === 'MCP_SERVER_HEALTH_STATUS_HEALTHY'

@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	GatewayService_SystemOne_FullMethodName                  = "/everstack.gateway.v1.GatewayService/SystemOne"
 	GatewayService_GetGateway_FullMethodName                 = "/everstack.gateway.v1.GatewayService/GetGateway"
 	GatewayService_ListModels_FullMethodName                 = "/everstack.gateway.v1.GatewayService/ListModels"
 	GatewayService_ChatCompletion_FullMethodName             = "/everstack.gateway.v1.GatewayService/ChatCompletion"
@@ -52,6 +53,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GatewayServiceClient interface {
+	// Structured decisions, using customer-owned keys or self-hosted endpoints.
+	SystemOne(ctx context.Context, in *SystemOneRequest, opts ...grpc.CallOption) (*SystemOneResponse, error)
 	GetGateway(ctx context.Context, in *GetGatewayRequest, opts ...grpc.CallOption) (*GetGatewayResponse, error)
 	ListModels(ctx context.Context, in *ListModelsRequest, opts ...grpc.CallOption) (*ListModelsResponse, error)
 	ChatCompletion(ctx context.Context, in *ChatCompletionRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ChatCompletionResponse], error)
@@ -106,6 +109,16 @@ type gatewayServiceClient struct {
 
 func NewGatewayServiceClient(cc grpc.ClientConnInterface) GatewayServiceClient {
 	return &gatewayServiceClient{cc}
+}
+
+func (c *gatewayServiceClient) SystemOne(ctx context.Context, in *SystemOneRequest, opts ...grpc.CallOption) (*SystemOneResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SystemOneResponse)
+	err := c.cc.Invoke(ctx, GatewayService_SystemOne_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *gatewayServiceClient) GetGateway(ctx context.Context, in *GetGatewayRequest, opts ...grpc.CallOption) (*GetGatewayResponse, error) {
@@ -409,6 +422,8 @@ func (c *gatewayServiceClient) ListResponses(ctx context.Context, in *ListRespon
 // All implementations must embed UnimplementedGatewayServiceServer
 // for forward compatibility.
 type GatewayServiceServer interface {
+	// Structured decisions, using customer-owned keys or self-hosted endpoints.
+	SystemOne(context.Context, *SystemOneRequest) (*SystemOneResponse, error)
 	GetGateway(context.Context, *GetGatewayRequest) (*GetGatewayResponse, error)
 	ListModels(context.Context, *ListModelsRequest) (*ListModelsResponse, error)
 	ChatCompletion(*ChatCompletionRequest, grpc.ServerStreamingServer[ChatCompletionResponse]) error
@@ -465,6 +480,9 @@ type GatewayServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedGatewayServiceServer struct{}
 
+func (UnimplementedGatewayServiceServer) SystemOne(context.Context, *SystemOneRequest) (*SystemOneResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SystemOne not implemented")
+}
 func (UnimplementedGatewayServiceServer) GetGateway(context.Context, *GetGatewayRequest) (*GetGatewayResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetGateway not implemented")
 }
@@ -565,6 +583,24 @@ func RegisterGatewayServiceServer(s grpc.ServiceRegistrar, srv GatewayServiceSer
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&GatewayService_ServiceDesc, srv)
+}
+
+func _GatewayService_SystemOne_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SystemOneRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayServiceServer).SystemOne(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GatewayService_SystemOne_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayServiceServer).SystemOne(ctx, req.(*SystemOneRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _GatewayService_GetGateway_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -1039,6 +1075,10 @@ var GatewayService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "everstack.gateway.v1.GatewayService",
 	HandlerType: (*GatewayServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "SystemOne",
+			Handler:    _GatewayService_SystemOne_Handler,
+		},
 		{
 			MethodName: "GetGateway",
 			Handler:    _GatewayService_GetGateway_Handler,

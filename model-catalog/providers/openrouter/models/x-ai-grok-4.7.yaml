@@ -1,0 +1,44 @@
+# Verified 2026-09-29.
+# Source: https://openrouter.ai/api/v1/models
+# Source: https://openrouter.ai/x-ai/grok-4.7
+name: "x-ai/grok-4.7"
+display_name: "SpaceXAI: Grok 4.7 (OpenRouter)"
+family: "x-ai"
+status: "stable"
+release_date: "2026-09-21"
+cost:
+  input_per_1k: 0.002
+  output_per_1k: 0.006
+  cache_read_per_1k: 0.0005
+  long_context:
+    threshold_tokens: 200000
+    input_multiplier: 2.0
+    output_multiplier: 2.0
+    cache_multiplier: 2.0
+limits:
+  max_tokens: 500000
+  max_completion_tokens: 450000
+capabilities:
+  - "chat"
+  - "function_calling"
+  - "vision"
+  - "reasoning"
+modalities:
+  input:
+    - "text"
+    - "image"
+    - "pdf"
+  output:
+    - "text"
+structured_output: true
+notes: "OpenRouter listing date, not necessarily the original model launch. Provider-route pricing and limits verified 2026-09-29; endpoint selection can change rates. Tool, audio, and other non-text charges are not represented by these text token rates."
+parameters:
+  -
+    key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 450000
+    has_max_value: true
+added_in_version: "2.9.0"

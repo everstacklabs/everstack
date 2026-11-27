@@ -20,7 +20,7 @@ export function CollectionDetail({ collectionName }: Props) {
 
     if (error) {
         return (
-            <div className="flex-1 flex items-center justify-center text-red-400 light:text-red-600">
+            <div className="flex-1 flex items-center justify-center text-danger">
                 Error: {error.message}
             </div>
         )

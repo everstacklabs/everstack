@@ -23,6 +23,13 @@ func NewTransport(cfg ServerConfig) (Transport, error) {
 	case TransportStreamableHTTP:
 		return newStreamableHTTPTransport(cfg)
 	case TransportStdio:
+		// Construction-time policy gate. Every stdio transport is built
+		// here (NewClient and Registry.Register both come through this
+		// switch), so a caller that skips the registry is still refused
+		// on a gateway that has stdio disabled.
+		if !StdioAllowed() {
+			return nil, fmt.Errorf("mcp: new transport for %q: %w", cfg.Name, ErrStdioNotAllowed)
+		}
 		if cfg.StdioConfig == nil {
 			return nil, fmt.Errorf("mcp: stdio_config required for stdio transport")
 		}

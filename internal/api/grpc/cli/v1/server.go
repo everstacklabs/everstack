@@ -7,8 +7,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/everstacklabs/everstack/internal/lib/tenantlive"
 	"net/http"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -22,6 +24,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/sandbox"
 	clipb "github.com/everstacklabs/everstack/pkg/grpc/everstack/cli/v1"
 	"github.com/everstacklabs/everstack/pkg/grpc/everstack/cli/v1/cliconnect"
+	"github.com/everstacklabs/everstack/pkg/tenant"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -31,6 +34,7 @@ type CLIServer struct {
 	db           *sqlx.DB
 	sandboxMgr   *sandbox.SandboxManager
 	deviceTokens *deviceauth.TokenManager
+	authDB       *sqlx.DB // platform DB owning organization_members; nil = no recheck
 }
 
 // NewCLIServer creates a new CLI service handler.
@@ -65,24 +69,29 @@ func (s *CLIServer) resolveAPIKeyContext(ctx context.Context, header http.Header
 		return s.resolveJWTContext(ctx, token)
 	}
 
+	// Check for API key (canonical x-evs-api-key, falling back to legacy
+	// x-mf-api-key / x-everstack-api-key).
+	apiKey := common.GetHeader(header.Get, common.EverstackApiKey, common.LegacyMFApiKey, common.LegacyEverstackApiKey)
+
+	// A device-flow JWT stored as the api key carries the organization
+	// explicitly. Decode it BEFORE consulting the middleware principal: on a
+	// managed gateway that principal's TenantID is the hostname-selected
+	// instance id, not the org (EVS-309 review).
+	if strings.HasPrefix(apiKey, "eyJ") {
+		return s.resolveJWTContext(ctx, apiKey)
+	}
+
+	if contextkeys.GetAPIKeySurfaces(ctx) != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid API key"))
+	}
 	// API-key authentication can use the principal installed by middleware.
 	userID := contextkeys.GetUserID(ctx)
 	orgID := contextkeys.GetTenantID(ctx)
 	if userID != "" && orgID != "" {
 		return &apiKeyContext{UserID: userID, OrgID: orgID}, nil
 	}
-
-	// Check for API key (canonical x-evs-api-key, falling back to legacy
-	// x-mf-api-key / x-everstack-api-key). The eyJ device-token branch below
-	// therefore also fires when the token arrives under the new header name.
-	apiKey := common.GetHeader(header.Get, common.EverstackApiKey, common.LegacyMFApiKey, common.LegacyEverstackApiKey)
 	if apiKey == "" {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("authentication required"))
-	}
-
-	// If it looks like a JWT (device flow token stored as api key), try JWT first
-	if strings.HasPrefix(apiKey, "eyJ") {
-		return s.resolveJWTContext(ctx, apiKey)
 	}
 
 	keyHash, ok := apikeylib.HashFromContext(ctx, apiKey)
@@ -92,7 +101,7 @@ func (s *CLIServer) resolveAPIKeyContext(ctx context.Context, header http.Header
 
 	var result apiKeyContext
 	err := s.db.QueryRowContext(ctx,
-		`SELECT COALESCE(user_id, ''), COALESCE(org_id, '') FROM api_keys WHERE hash = $1 AND NOT revoked`,
+		`SELECT COALESCE(user_id, ''), COALESCE(org_id, '') FROM api_keys WHERE hash = $1 AND NOT revoked AND surfaces IS NULL`,
 		keyHash,
 	).Scan(&result.UserID, &result.OrgID)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -100,6 +109,9 @@ func (s *CLIServer) resolveAPIKeyContext(ctx context.Context, header http.Header
 	}
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resolve API key: %w", err))
+	}
+	if tenantlive.Deleted(result.OrgID) {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid API key"))
 	}
 
 	if result.OrgID == "" {
@@ -149,7 +161,91 @@ func (s *CLIServer) resolveJWTContext(ctx context.Context, tokenStr string) (*ap
 			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("CLI token is not valid for this instance"))
 		}
 	}
+	// Mixed credentials: when the middleware already established the
+	// request's organization (session cookie on an instance host, or an
+	// API-key principal), the JWT must be for that same organization. A
+	// token for another org would otherwise become the acting principal and
+	// read that org's sandboxes (EVS-309 review).
+	if requestOrg := requestOrganizationID(ctx); requestOrg != "" && requestOrg != identity.OrganizationID {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("CLI token is not valid for this organization"))
+	}
+	// A JWT is only proof of a past membership; when the platform DB is
+	// available, require that the membership still exists.
+	if s.authDB != nil {
+		if err := s.requireCurrentMembership(ctx, identity); err != nil {
+			return nil, err
+		}
+	}
 	return &apiKeyContext{UserID: identity.UserID, OrgID: identity.OrganizationID}, nil
+}
+
+// requestOrganizationID returns the organization the middleware bound this
+// request to, or "" when no principal was established before the handler.
+func requestOrganizationID(ctx context.Context) string {
+	// Shared gateway: the tenant middleware installs the tenant config and
+	// the INSTANCE id as TenantID; the organization lives on the config.
+	if tc := tenant.ConfigFromContext(ctx); tc != nil && tc.OrganizationID != "" {
+		return tc.OrganizationID
+	}
+	// Direct managed gateway: the cookie middleware carries the host's
+	// organization in the verified instance scope.
+	if scope, ok := contextkeys.RequestInstanceScopeFromContext(ctx); ok {
+		return scope.OrganizationID
+	}
+	// Self-hosted: TenantID is the organization id.
+	if contextkeys.IsTenantAuthenticated(ctx) {
+		return contextkeys.GetTenantID(ctx)
+	}
+	return ""
+}
+
+// SetAuthorizationDB wires the platform database that owns
+// everstack.organization_members so device-JWT principals are checked for
+// current membership on every call.
+func (s *CLIServer) SetAuthorizationDB(db *sqlx.DB) {
+	s.authDB = db
+}
+
+func (s *CLIServer) requireCurrentMembership(ctx context.Context, identity *deviceauth.Identity) error {
+	queryCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	var membership struct {
+		Role   string `db:"role"`
+		UserID string `db:"user_id"`
+	}
+	err := s.authDB.GetContext(queryCtx, &membership,
+		`SELECT COALESCE(om.role, '') AS role, om.user_id::text AS user_id
+		 FROM everstack.organization_members om
+		 WHERE om.user_id::text = $1 AND om.organization_id::text = $2
+		 LIMIT 1`, identity.UserID, identity.OrganizationID)
+	if errors.Is(err, sql.ErrNoRows) && strings.TrimSpace(identity.Email) != "" {
+		// Older device tokens carry the identity-service user id; resolve
+		// through a verified identity link, as the API-key interceptor does.
+		err = s.authDB.GetContext(queryCtx, &membership,
+			`SELECT COALESCE(om.role, '') AS role, om.user_id::text AS user_id
+			 FROM everstack.organization_members om
+			 JOIN everstack.identity_links il ON il.user_id = om.user_id
+			 WHERE il.email_verified = TRUE AND lower(il.email_at_link) = lower($2::text)
+			   AND om.organization_id::text = $1
+			 LIMIT 1`, identity.OrganizationID, strings.TrimSpace(identity.Email))
+	}
+	if err != nil || strings.TrimSpace(membership.UserID) == "" {
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			logger.WithError(err).Warn("cli: membership lookup failed")
+		}
+		return connect.NewError(connect.CodeUnauthenticated, errors.New("CLI token user is no longer a member of this organization"))
+	}
+	// Refused once the account's credentials were revoked after the token
+	// was issued (an undone email change).
+	revoked, err := deviceauth.CredentialsRevoked(queryCtx, s.authDB, membership.UserID, identity.IssuedAt)
+	if err != nil {
+		logger.WithError(err).Warn("cli: credential revocation check failed")
+		return connect.NewError(connect.CodeUnauthenticated, errors.New("CLI token could not be checked"))
+	}
+	if revoked {
+		return connect.NewError(connect.CodeUnauthenticated, errors.New("invalid or expired device token"))
+	}
+	return nil
 }
 
 // ============================================
@@ -428,7 +524,7 @@ func (s *CLIServer) StopSandbox(ctx context.Context, req *connect.Request[clipb.
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("sandbox not found"))
 	}
 	if inst.Config.TenantID != akCtx.OrgID {
-		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("sandbox does not belong to your organization"))
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("sandbox not found"))
 	}
 
 	if err := s.sandboxMgr.StopSandbox(ctx, req.Msg.SandboxId); err != nil {

@@ -64,7 +64,7 @@ export function StudioEdgeComponent({
                 style={{
                     ...style,
                     stroke: isDiffHighlighted
-                        ? '#fbbf24'
+                        ? 'var(--color-warning-solid)'
                         : isHovered
                           ? isLight ? '#525252' : '#737373'
                           : isLight ? '#a3a3a3' : '#525252',
@@ -94,7 +94,7 @@ export function StudioEdgeComponent({
                             </button>
                             <button
                                 onClick={handleDelete}
-                                className="flex h-4 w-4 items-center justify-center rounded bg-brand-main-700 border border-brand-main-500 text-brand-main-200 hover:bg-red-600 hover:text-white hover:border-red-500 transition-colors"
+                                className="flex h-4 w-4 items-center justify-center rounded bg-brand-main-700 border border-brand-main-500 text-brand-main-200 hover:bg-danger-solid hover:text-white hover:border-danger-solid transition-colors"
                                 title="Delete edge"
                             >
                                 <X size={8} />

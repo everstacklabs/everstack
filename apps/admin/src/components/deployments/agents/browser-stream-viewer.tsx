@@ -253,8 +253,8 @@ export function BrowserStreamViewer({ sessionId, screenshotBase64 }: BrowserStre
         <div className="absolute inset-0 flex items-center justify-center z-10 bg-zinc-900">
           <div className="text-center px-4">
             {status === 'error' ? (
-              <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-2">
-                <span className="text-red-400 text-xs">!</span>
+              <div className="w-5 h-5 rounded-full bg-danger-surface-strong flex items-center justify-center mx-auto mb-2">
+                <span className="text-danger text-xs">!</span>
               </div>
             ) : (
               <div className="w-5 h-5 border-2 border-zinc-600 border-t-zinc-300 rounded-full animate-spin mx-auto mb-2" />

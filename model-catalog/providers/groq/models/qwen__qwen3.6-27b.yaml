@@ -1,7 +1,7 @@
 name: "qwen/qwen3.6-27b"
 display_name: "Qwen3.6 27B"
 family: "qwen"
-status: "stable"
+status: "deprecated"
 release_date: "2026-04-22"
 
 cost:
@@ -23,7 +23,7 @@ modalities:
   input: ["text","image"]
   output: ["text"]
 
-notes: "Qwen vision-language model for visual reasoning, documents, and agent tasks"
+notes: "Shut down by Groq on 2026-09-14. Migrate to qwen/qwen3.8-27b."
 
 parameters:
   - key: "max_output_tokens"

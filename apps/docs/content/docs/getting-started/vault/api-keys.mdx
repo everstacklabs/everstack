@@ -36,7 +36,7 @@ curl -X POST https://your-instance.example.com/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "x-evs-api-key: evs_your_api_key_here" \
   -d '{
-    "model": "gpt-4",
+    "model": "gpt-5.4",
     "messages": [{"role": "user", "content": "Hello"}]
   }'
 ```
@@ -53,7 +53,7 @@ response = requests.post(
         "x-evs-api-key": "evs_your_api_key_here",
     },
     json={
-        "model": "gpt-4",
+        "model": "gpt-5.4",
         "messages": [{"role": "user", "content": "Hello"}],
     },
 )
@@ -61,14 +61,14 @@ response = requests.post(
 
 ### OpenAI SDK
 
-Everstack is compatible with the OpenAI SDK. Point the base URL to your instance and use your API key:
+Everstack is compatible with the OpenAI SDK. Set the base URL to your instance's `/v1` and use your API key; the SDK appends paths such as `/chat/completions` itself and sends the key as `Authorization: Bearer`:
 
 ```python
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="https://{instance}.{region}.everstack.ai/openai/v1",
-    api_key="evs_your_api_key_here",  # passed via x-evs-api-key internally
+    base_url="https://{instance}.{region}.everstack.ai/v1",
+    api_key="YOUR_EVERSTACK_API_KEY",
 )
 ```
 

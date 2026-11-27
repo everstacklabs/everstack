@@ -8,11 +8,13 @@ import (
 	"github.com/everstacklabs/everstack/internal/domain/provider_api_keys"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 	"github.com/everstacklabs/everstack/internal/lib/handlers/gateway/compact"
+	"github.com/everstacklabs/everstack/internal/providers/billing"
 	"github.com/everstacklabs/everstack/internal/providers/factory"
 	"github.com/everstacklabs/everstack/internal/providers/logging"
 	"github.com/everstacklabs/everstack/internal/providers/ratelimit"
 	"github.com/everstacklabs/everstack/internal/providers/tracing"
 	"github.com/everstacklabs/everstack/internal/services/api_key_selector"
+	"github.com/everstacklabs/everstack/internal/services/catalog"
 )
 
 func init() {
@@ -65,9 +67,10 @@ func init() {
 			BaseURL:         baseURL,
 			APIVersion:      DefaultSpec().APIVersion,
 			SupportedModels: normalizeModels(in.Models),
+			APITypeForModel: catalogAPITypeLookup(in.CatalogCache),
 		})
 
-		tracedProvider := tracing.NewMiddlewareWithKey(baseProvider, in.CatalogCache, selectedKeyID, selectedKeyName, selectedKeySource)
+		tracedProvider := tracing.NewMiddlewareWithKey(billing.Wrap(baseProvider, in.BillingConfig(selectedKeyID)), in.CatalogCache, selectedKeyID, selectedKeyName, selectedKeySource)
 
 		// Wrap with compact middleware (between tracing and logging).
 		compacted := compact.NewMiddleware(tracedProvider, baseProvider.Name(), in.CompactConfig, compact.SummarizerResolver(in.SummarizerResolve))
@@ -77,6 +80,22 @@ func init() {
 			logging.SelectExtractor(baseProvider.Name()),
 		), nil
 	})
+}
+
+// catalogAPITypeLookup reads a model's api_type from this provider's own
+// catalog entries, so an Azure model routes by what Azure serves it on rather
+// than by the first-party OpenAI entry of the same name.
+func catalogAPITypeLookup(cache *catalog.Cache) func(string) string {
+	if cache == nil {
+		return nil
+	}
+	return func(model string) string {
+		definition, ok := cache.GetModel("azure-openai", model)
+		if !ok {
+			return ""
+		}
+		return definition.APIType
+	}
 }
 
 func normalizeModels(ms []string) []string {

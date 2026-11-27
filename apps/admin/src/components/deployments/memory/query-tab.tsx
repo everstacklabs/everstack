@@ -142,7 +142,7 @@ export function QueryTab() {
 
                     {/* Error */}
                     {queryMutation.isError && (
-                        <div className="flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-sm text-red-400 light:text-red-600">
+                        <div className="flex items-center gap-2 rounded-lg border border-danger-border bg-danger-surface/60 px-3 py-2 text-sm text-danger">
                             <Iconify.Icon icon="lucide:alert-triangle" className="size-4 shrink-0" />
                             {queryMutation.error.message}
                         </div>

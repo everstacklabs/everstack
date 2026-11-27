@@ -1,7 +1,7 @@
 package firecracker
 
 import (
-	"os"
+	"net"
 	"reflect"
 	"testing"
 
@@ -156,18 +156,39 @@ func TestReadNodeNameserversEnvOverride(t *testing.T) {
 	}
 }
 
-func TestReadNodeNameserversPublicFallback(t *testing.T) {
-	// When env is unset and neither resolv.conf path yields anything
-	// useful (filtered to empty or unreadable), we fall through to the
-	// public defaults so the proxy never starts with zero upstreams.
-	// We don't have a clean way to neutralize both /etc/resolv.conf and
-	// /host/etc/resolv.conf in CI, so this test asserts the function at
-	// least returns non-empty — the fallback case is exercised in the
-	// filter tests above for correctness.
-	os.Unsetenv("FCAGENT_DNS_UPSTREAMS")
+func TestReadNodeNameserversDefaultsToPublicResolvers(t *testing.T) {
+	// With no operator override the guest's upstreams are the public
+	// resolvers, whatever the node's or the pod's resolv.conf say. The
+	// pod's resolv.conf is the cluster CoreDNS ClusterIP; handing that
+	// to guests let them enumerate *.svc.cluster.local.
+	t.Setenv("FCAGENT_DNS_UPSTREAMS", "")
 	got := readNodeNameservers()
-	if len(got) == 0 {
-		t.Fatal("readNodeNameservers must never return empty (caller relies on fallbacks)")
+	if !reflect.DeepEqual(got, publicResolverFallbacks) {
+		t.Fatalf("default upstreams = %v, want %v", got, publicResolverFallbacks)
+	}
+	for _, s := range got {
+		if ip := net.ParseIP(s); ip == nil || ip.IsPrivate() || ip.IsLoopback() {
+			t.Fatalf("default upstream %q is not a public resolver", s)
+		}
+	}
+}
+
+func TestAntiSpoofRule(t *testing.T) {
+	cfg := &NetworkConfig{TapDevice: "tap-0123456789a", GuestIP: "10.0.7.2", Mode: sandbox.NetworkDeny}
+	install := antiSpoofRule(cfg, "-I")
+	want := []string{"-t", "raw", "-I", "PREROUTING", "1", "-i", "tap-0123456789a", "!", "-s", "10.0.7.2/32", "-j", "DROP"}
+	if !reflect.DeepEqual(install, want) {
+		t.Fatalf("install = %v, want %v", install, want)
+	}
+	remove := antiSpoofRule(cfg, "-D")
+	want = []string{"-t", "raw", "-D", "PREROUTING", "-i", "tap-0123456789a", "!", "-s", "10.0.7.2/32", "-j", "DROP"}
+	if !reflect.DeepEqual(remove, want) {
+		t.Fatalf("remove = %v, want %v", remove, want)
+	}
+	// The verify fragments must match what `iptables -t raw -S` prints.
+	dump := "-P PREROUTING ACCEPT\n-A PREROUTING ! -s 10.0.7.2/32 -i tap-0123456789a -j DROP\n"
+	if firstRulePosition(dump, "PREROUTING", antiSpoofFragments(cfg)) != 1 {
+		t.Fatalf("fragments %v do not match the canonical dump", antiSpoofFragments(cfg))
 	}
 }
 

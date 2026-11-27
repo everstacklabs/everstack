@@ -1,8 +1,11 @@
 package selfhosted
 
 import (
+	"context"
+	"github.com/everstacklabs/everstack/internal/auth/selfhosted/domain"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -15,6 +18,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/lib/authratelimit"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/everstacklabs/everstack/internal/lib/requesthost"
 	"github.com/everstacklabs/everstack/pkg/authz"
 	"github.com/everstacklabs/everstack/pkg/authz/authzhttp"
 	authpb "github.com/everstacklabs/everstack/pkg/grpc/everstack/auth/v1"
@@ -172,6 +176,10 @@ func (s *Server) OrgService() *OrgServer {
 // RegisterConnectServer returns the path and handler for Connect RPC.
 func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, http.Handler) {
 	path, handler := authconnect.NewAuthServiceHandler(s.handler, opts...)
+	// Login/Register set the session cookie from a Connect handler, which
+	// cannot see the request Host; this hands it over so plain-HTTP access on
+	// loopback, private and Tailscale addresses gets a cookie it can store.
+	handler = requesthost.Middleware(handler)
 	// The Connect surface carries the same credential operations as the HTTP
 	// routes, and on instance hosts it is the only way to reach some of them:
 	// RequestMagicLink has no HTTP route, so limiting the routes alone would
@@ -201,4 +209,54 @@ func (s *Server) RegisterHTTPRoutes(router *mux.Router) {
 		s.selfHostedHandler.RegisterHTTPRoutes(router)
 		logger.Info("auth: HTTP routes registered for self-hosted mode")
 	}
+}
+
+// RevokeOrglessSessions deletes the sessions of users who belong to no
+// organization. Sign-in now refuses such users, but sessions minted before
+// that (for example for a member removed before this release) would
+// otherwise stay valid credentials. Run once at self-hosted startup; it is
+// idempotent. Not for a managed gateway, whose memberships are the
+// platform's.
+func RevokeOrglessSessions(ctx context.Context, db *sqlx.DB) {
+	n, err := repository.NewOrganizationRepository(db).RevokeSessionsWithoutMembership(ctx)
+	if err != nil {
+		logger.WithError(err).Warn("auth: failed to revoke sessions of users without an organization")
+		return
+	}
+	if n > 0 {
+		logger.Infof("auth: revoked %d session(s) of users without an organization", n)
+	}
+}
+
+// BootstrapOwnerEnv names the account an operator wants as owner of a
+// self-hosted instance that has users but no organization. Sign-in only
+// bootstraps a fresh instance (one user, no organization), so this is the
+// way out of the other case. It is read at startup and acts at most once:
+// it does nothing once any organization exists.
+const BootstrapOwnerEnv = "EVS_SELFHOSTED_BOOTSTRAP_OWNER_EMAIL"
+
+// BootstrapOwnerFromEnv applies BootstrapOwnerEnv, if set: the named
+// existing account becomes owner of a new first organization when the
+// instance has none. Run at self-hosted startup, before
+// RevokeOrglessSessions.
+func BootstrapOwnerFromEnv(ctx context.Context, db *sqlx.DB) {
+	email := strings.TrimSpace(os.Getenv(BootstrapOwnerEnv))
+	if email == "" {
+		return
+	}
+	orgRepo := repository.NewOrganizationRepository(db)
+	org, err := orgRepo.BootstrapOwnerByEmail(ctx, email, "default", "Default Organization")
+	if err != nil {
+		logger.WithError(err).Warnf("auth: %s: bootstrap failed", BootstrapOwnerEnv)
+		return
+	}
+	if org == nil {
+		logger.Infof("auth: %s is set but did nothing (an organization exists, or no account has that email); unset it", BootstrapOwnerEnv)
+		return
+	}
+	ws := &domain.Workspace{OrganizationID: org.ID, Slug: "default", Name: "Default", Environment: domain.EnvProduction}
+	if err := orgRepo.CreateWorkspace(ctx, ws); err != nil {
+		logger.WithError(err).Warn("auth: failed to create default workspace")
+	}
+	logger.Infof("auth: %s made %s owner of a new organization; unset it", BootstrapOwnerEnv, email)
 }

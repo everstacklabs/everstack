@@ -10,12 +10,12 @@ interface NodeExecutionDetailsProps {
 }
 
 const VALUE_STYLE_MAP: Record<string, { color: string; bg: string }> = {
-    pass: { color: 'text-emerald-400 light:text-emerald-600', bg: 'bg-emerald-500/20' },
-    block: { color: 'text-red-400 light:text-red-600', bg: 'bg-red-500/20' },
-    hit: { color: 'text-emerald-400 light:text-emerald-600', bg: 'bg-emerald-500/20' },
-    miss: { color: 'text-amber-400 light:text-amber-700', bg: 'bg-amber-500/20' },
-    true: { color: 'text-emerald-400 light:text-emerald-600', bg: 'bg-emerald-500/20' },
-    false: { color: 'text-red-400 light:text-red-600', bg: 'bg-red-500/20' },
+    pass: { color: 'text-success', bg: 'bg-success-surface-strong' },
+    block: { color: 'text-danger', bg: 'bg-danger-surface-strong' },
+    hit: { color: 'text-success', bg: 'bg-success-surface-strong' },
+    miss: { color: 'text-warning', bg: 'bg-warning-surface-strong' },
+    true: { color: 'text-success', bg: 'bg-success-surface-strong' },
+    false: { color: 'text-danger', bg: 'bg-danger-surface-strong' },
 }
 
 function formatNumber(value: string): string {
@@ -51,7 +51,7 @@ function renderValue(key: string, value: string) {
     if (isBooleanField(value)) {
         const isTrue = value === 'true'
         return (
-            <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${isTrue ? 'bg-emerald-500/20 text-emerald-400 light:text-emerald-600' : 'bg-red-500/20 text-red-400 light:text-red-600'}`}>
+            <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${isTrue ? 'bg-success-surface-strong text-success' : 'bg-danger-surface-strong text-danger'}`}>
                 {value}
             </span>
         )
@@ -158,7 +158,7 @@ function AudioPlayback({ base64Audio, contentType }: { base64Audio: string; cont
                     step={0.1}
                     value={currentTime}
                     onChange={handleSeek}
-                    className="w-full h-1 rounded-full appearance-none cursor-pointer bg-brand-main-700 accent-emerald-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500"
+                    className="w-full h-1 rounded-full appearance-none cursor-pointer bg-brand-main-700 accent-success [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-success-solid"
                 />
                 <span className="text-[9px] text-white/40 light:text-black/40">
                     {fmt(currentTime)}{duration > 0 ? ` / ${fmt(duration)}` : ''}
@@ -273,17 +273,17 @@ export function NodeExecutionDetails({ staticEvents }: NodeExecutionDetailsProps
                                     </span>
                                 )}
                                 {isError ? (
-                                    <Icon icon="lucide:x-circle" className="h-3.5 w-3.5 text-red-400 light:text-red-600" />
+                                    <Icon icon="lucide:x-circle" className="h-3.5 w-3.5 text-danger" />
                                 ) : (
-                                    <Icon icon="lucide:check-circle" className="h-3.5 w-3.5 text-emerald-400 light:text-emerald-600" />
+                                    <Icon icon="lucide:check-circle" className="h-3.5 w-3.5 text-success" />
                                 )}
                             </div>
                         </div>
 
                         {/* Error message */}
                         {isError && event.error && (
-                            <div className="px-3 py-1.5 bg-red-500/10 border-b border-brand-main-700/50">
-                                <p className="text-[10px] text-red-400 light:text-red-600 break-all">{event.error}</p>
+                            <div className="px-3 py-1.5 bg-danger-surface border-b border-brand-main-700/50">
+                                <p className="text-[10px] text-danger break-all">{event.error}</p>
                             </div>
                         )}
 

@@ -1,0 +1,71 @@
+# Verified 2026-09-29.
+# Source: https://docs.x.ai/developers/release-notes
+name: "grok-4.7"
+display_name: "Grok 4.7"
+family: "grok"
+status: "stable"
+release_date: "2026-09-21"
+cost:
+  input_per_1k: 0.002
+  output_per_1k: 0.006
+  cache_read_per_1k: 0.0005
+  long_context:
+    threshold_tokens: 200000
+    input_multiplier: 2
+    cache_multiplier: 2
+    output_multiplier: 2
+limits:
+  max_tokens: 500000
+  max_completion_tokens: 500000
+capabilities:
+  - "chat"
+  - "function_calling"
+  - "vision"
+  - "reasoning"
+modalities:
+  input:
+    - "text"
+    - "image"
+  output:
+    - "text"
+notes: "No separate text output cap; catalog limit uses the 500K total context ceiling. Standard public API model; Grok 4.7 Fast is not publicly available on this API."
+parameters:
+  -
+    key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 500000
+    has_max_value: true
+  -
+    key: "reasoning_effort"
+    display_name: "Reasoning effort"
+    type: "enum"
+    options:
+      - "low"
+      - "medium"
+      - "high"
+      - "xhigh"
+variants:
+  -
+    id: "low"
+    display_name: "Low reasoning"
+    parameters:
+      reasoning_effort: "low"
+  -
+    id: "medium"
+    display_name: "Medium reasoning"
+    parameters:
+      reasoning_effort: "medium"
+  -
+    id: "high"
+    display_name: "High reasoning"
+    parameters:
+      reasoning_effort: "high"
+  -
+    id: "xhigh"
+    display_name: "Xhigh reasoning"
+    parameters:
+      reasoning_effort: "xhigh"
+added_in_version: "2.9.0"

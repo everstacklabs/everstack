@@ -30,17 +30,17 @@ func (s *Server) SandboxLSP(
 		return nil, connect.NewError(connect.CodeUnavailable, errSandboxNotEnabled)
 	}
 	msg := req.Msg
-	inst, ok := s.sandboxMgr.GetBySandboxIDOrName(msg.GetSandboxId())
-	if !ok {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("sandbox not found: %s", msg.GetSandboxId()))
+	// Tenant-scoped: an unscoped id-or-name lookup here could land on another
+	// tenant's sandbox after the ownership interceptor passed on a name.
+	_, sessionID, err := s.resolveSandbox(ctx, msg.GetSandboxId())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
-	sessionID := inst.Config.SessionID
 
 	execCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	var resultJSON string
-	var err error
 	switch msg.GetLang() {
 	case "python":
 		resultJSON, err = s.pythonLSP(execCtx, sessionID, msg.GetOp(), msg.GetPath(), msg.GetQuery())

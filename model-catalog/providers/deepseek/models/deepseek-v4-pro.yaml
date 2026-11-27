@@ -1,3 +1,5 @@
+# Verified 2026-11-24.
+# Source: https://api-docs.deepseek.com/quick_start/pricing
 name: "deepseek-v4-pro"
 display_name: "DeepSeek V4 Pro"
 family: "deepseek-v4"
@@ -5,9 +7,9 @@ status: "stable"
 release_date: "2026-08-12"
 
 cost:
-  input_per_1k: 0.000435
-  output_per_1k: 0.00087
-  cache_read_per_1k: 0.000003625
+  input_per_1k: 0.00132
+  output_per_1k: 0.00396
+  cache_read_per_1k: 4.4e-05
 
 limits:
   max_tokens: 1000000
@@ -21,6 +23,7 @@ capabilities:
 modalities:
   input: ["text"]
   output: ["text"]
+notes: "Serves DeepSeek-V4-Pro-0813. Peak rates. Off-peak rates are 50% lower. Peak UTC hours: 01:00-04:00 and 06:00-10:00 on weekdays excluding Chinese public holidays."
 parameters:
   - key: "max_output_tokens"
     display_name: "Max output tokens"

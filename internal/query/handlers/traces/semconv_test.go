@@ -134,6 +134,8 @@ func TestProviderFromAttrs_inferenceFallback(t *testing.T) {
 		{"deepseek-chat", "deepseek"},
 		{"qwen-2.5-coder", "alibaba"},
 		{"grok-3", "xai"},
+		{"muse-spark-1.3", "meta"},
+		{"hy4-flash", "tencent"},
 		{"some-unknown-model", ""},
 	}
 	for _, c := range cases {

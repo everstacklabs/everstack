@@ -138,7 +138,7 @@ export function SavedViews({ path, search, onApply, className }: SavedViewsProps
                         className="text-brand-main-50 h-8 w-8 hover:text-brand-main-50 light:text-black light:hover:text-brand-main-50"
                         onClick={copyLink}
                     >
-                        {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <LinkIcon className="h-3.5 w-3.5" />}
+                        {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <LinkIcon className="h-3.5 w-3.5" />}
                     </Button>
                 </Tooltip>
 
@@ -200,7 +200,6 @@ export function SavedViews({ path, search, onApply, className }: SavedViewsProps
                                                     type="button"
                                                     onClick={() => onApply(v.search)}
                                                     className="flex-1 min-w-0 text-left text-xs text-brand-main-50 hover:text-brand-main-50 truncate light:text-black light:hover:text-brand-main-50"
-                                                    title={v.name}
                                                 >
                                                     {v.name}
                                                 </button>
@@ -230,7 +229,7 @@ export function SavedViews({ path, search, onApply, className }: SavedViewsProps
                                                             e.stopPropagation()
                                                             remove.mutate(v.id)
                                                         }}
-                                                        className="opacity-0 group-hover/view:opacity-100 transition-opacity text-brand-main-50 hover:text-rose-400 light:text-black"
+                                                        className="opacity-0 group-hover/view:opacity-100 transition-opacity text-brand-main-50 hover:text-danger light:text-black"
                                                     >
                                                         <Trash2 className="h-3 w-3" />
                                                     </button>

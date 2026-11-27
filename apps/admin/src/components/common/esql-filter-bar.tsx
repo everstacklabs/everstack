@@ -232,7 +232,7 @@ export function EsqlFilterBar({
             <div
                 className={cn(
                     'flex min-h-8 min-w-0 flex-wrap items-center gap-1 rounded border bg-brand-main-950 px-1 py-0.5 text-sm transition-colors focus-within:border-brand-secondary-500/70 focus-within:shadow-[0_0_0_3px_rgba(118,126,255,0.13)] light:bg-white/90',
-                    error ? 'border-rose-500/60' : 'border-brand-main-500',
+                    error ? 'border-danger-border' : 'border-brand-main-500',
                 )}
                 onClick={() => inputRef.current?.focus()}
             >
@@ -257,7 +257,7 @@ export function EsqlFilterBar({
                         </button>
                         <button
                             type="button"
-                            aria-label={`Remove ${chip.token}`}
+                            aria-label="Remove filter"
                             className="text-white/35 hover:text-white/80 light:text-black/35 light:hover:text-black/70"
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={(e) => {
@@ -458,12 +458,12 @@ export function EsqlFilterBar({
             )}
 
             {error && (
-                <div className="absolute left-0 top-full z-20 mt-1 rounded border border-rose-500/30 bg-rose-950/95 px-2.5 py-1.5 text-[12px] text-rose-100 shadow-xl light:bg-rose-50 light:text-rose-700">
+                <div className="absolute left-0 top-full z-20 mt-1 rounded border border-danger-border bg-danger-surface px-2.5 py-1.5 text-[12px] text-danger shadow-xl">
                     {error}
                     {suggestion && (
                         <Button
                             variant="link"
-                            className="ml-2 h-auto p-0 text-rose-100 underline decoration-dotted underline-offset-2 hover:text-white"
+                            className="ml-2 h-auto p-0 text-danger underline decoration-dotted underline-offset-2 hover:text-white"
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => {
                                 setDraft((prev) => prev.replace(/(\S+)(\s*)$/, `${suggestion}:$2`))

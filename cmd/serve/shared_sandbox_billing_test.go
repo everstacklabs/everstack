@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/everstacklabs/everstack/internal/sandbox"
 	"github.com/everstacklabs/everstack/internal/sandbox/browserpool"
 	"github.com/jmoiron/sqlx"
 )
@@ -165,6 +166,66 @@ func TestSharedSandboxBillingReporterIncludesClosedAndLiveUsage(t *testing.T) {
 	}
 	if received.CumulativeBrowserRuntimeCostMicros != 10_000 {
 		t.Fatalf("browser cost micros = %d, want 10000", received.CumulativeBrowserRuntimeCostMicros)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet SQL expectations: %v", err)
+	}
+}
+
+// fakeSandboxLiveAccrualParts reports the live accrual with its CPU and
+// memory parts, as the sandbox manager does.
+type fakeSandboxLiveAccrualParts struct {
+	totalUSD, cpuUSD, memoryUSD float64
+	seconds                     int64
+}
+
+func (f fakeSandboxLiveAccrualParts) LiveAccruedCost(context.Context, string) (float64, int64) {
+	return f.totalUSD, f.seconds
+}
+
+func (f fakeSandboxLiveAccrualParts) LiveAccruedCostParts(context.Context, string) (float64, float64, float64, int64) {
+	return f.totalUSD, f.cpuUSD, f.memoryUSD, f.seconds
+}
+
+// The heartbeat carries the CPU and memory parts of the sandbox cost, from
+// closed rows' stored cost breakdown plus the live windows, so billing can
+// count the vCPU-hour and GiB-hour allowances separately.
+func TestSharedSandboxBillingReporterReportsResourceCostParts(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("create sqlmock: %v", err)
+	}
+	defer db.Close()
+	mock.ExpectQuery(`cost_breakdown'->>'cpu_usd'[\s\S]*cost_breakdown'->>'memory_usd'[\s\S]*FROM sandbox_usage_records`).
+		WithArgs(sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{"compute_seconds", "cost_usd", "cpu_usd", "memory_usd"}).AddRow(int64(40), 1.25, 0.9, 0.3))
+	mock.ExpectQuery(`SELECT COUNT\(\*\)[\s\S]*FROM sandbox_instances`).
+		WithArgs(sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(int64(1)))
+
+	var received sharedSandboxUsageSnapshot
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&received); err != nil {
+			t.Errorf("decode request: %v", err)
+		}
+		_, _ = w.Write([]byte(`{"success": true, "sandbox_allowed": true}`))
+	}))
+	defer server.Close()
+
+	reporter := &sharedSandboxBillingReporter{
+		db:         sqlx.NewDb(db, "sqlmock"),
+		live:       fakeSandboxLiveAccrualParts{totalUSD: 0.5, cpuUSD: 0.4, memoryUSD: 0.1, seconds: 5},
+		endpoint:   server.URL,
+		instanceID: "shared-sandbox-plane:test",
+		client:     server.Client(),
+	}
+	if _, err := reporter.ReportTenant(context.Background(), testSandboxBillingTenantID); err != nil {
+		t.Fatalf("report tenant: %v", err)
+	}
+	if received.CumulativeSandboxComputeCostMicros != 1_750_000 ||
+		received.CumulativeSandboxCPUCostMicros != 1_300_000 ||
+		received.CumulativeSandboxMemoryCostMicros != 400_000 {
+		t.Fatalf("snapshot = %+v, want cost 1750000 = cpu 1300000 + memory 400000 + disk", received)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("unmet SQL expectations: %v", err)
@@ -412,7 +473,9 @@ func TestResolveSharedSandboxBillingMetersEnterpriseContractWithoutStripe(t *tes
 	}
 }
 
-func TestResolveSharedBrowserBillingDoesNotSpendSandboxStarterCredit(t *testing.T) {
+// Browser runtime is debited from the same prepaid wallet as sandbox compute,
+// so central billing's browser decision admits the lease.
+func TestResolveSharedBrowserBillingAdmitsOnWalletCredit(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("create sqlmock: %v", err)
@@ -424,6 +487,7 @@ func TestResolveSharedBrowserBillingDoesNotSpendSandboxStarterCredit(t *testing.
 	reporter := &fakeTenantSandboxUsageReporter{
 		access: sharedSandboxBillingAccess{
 			SandboxAllowed:               true,
+			BrowserAllowed:               true,
 			StarterCreditMicros:          5_000_000,
 			StarterCreditRemainingMicros: 5_000_000,
 		},
@@ -434,11 +498,48 @@ func TestResolveSharedBrowserBillingDoesNotSpendSandboxStarterCredit(t *testing.
 		reporter: reporter,
 		meter:    meter,
 	}
-	err = recorder.Start(context.Background(), &browserpool.Lease{
+	if err := recorder.Start(context.Background(), &browserpool.Lease{
 		TenantID: testSandboxBillingTenantID,
-	}, time.Now())
-	if err == nil {
-		t.Fatal("sandbox starter credit must not enable hosted browser billing")
+	}, time.Now()); err != nil {
+		t.Fatalf("wallet credit must admit a hosted browser lease: %v", err)
+	}
+	if meter.started != 1 {
+		t.Fatalf("browser usage recorder started %d times, want 1", meter.started)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A live Stripe subscription does not admit a browser lease once the wallet is
+// spent: no free compute for subscribed organizations.
+func TestResolveSharedBrowserBillingRefusesOnEmptyWalletDespiteSubscription(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	expectManagedOrganization(mock, testSandboxBillingTenantID, "free")
+
+	reporter := &fakeTenantSandboxUsageReporter{
+		access: sharedSandboxBillingAccess{
+			SandboxAllowed:      false,
+			BillingConfigured:   true,
+			BillingActive:       true,
+			StarterCreditMicros: 5_000_000,
+		},
+	}
+	meter := &fakeBrowserUsageRecorder{}
+	recorder := &sharedBrowserUsageRecorder{
+		db:       sqlx.NewDb(db, "sqlmock"),
+		reporter: reporter,
+		meter:    meter,
+	}
+	if err := recorder.Start(context.Background(), &browserpool.Lease{
+		TenantID: testSandboxBillingTenantID,
+	}, time.Now()); err == nil {
+		t.Fatal("an active subscription must not admit a browser lease on an empty wallet")
 	}
 	if meter.started != 0 {
 		t.Fatalf("browser usage recorder started %d times, want 0", meter.started)
@@ -448,12 +549,85 @@ func TestResolveSharedBrowserBillingDoesNotSpendSandboxStarterCredit(t *testing.
 	}
 }
 
+// Browsers have their own plan allowance: a lease follows central billing's
+// browser decision, not the sandbox one, and a refusal tells the customer
+// why in plain words.
+func TestResolveSharedBrowserBillingFollowsBrowserAllowance(t *testing.T) {
+	for _, tc := range []struct {
+		name           string
+		sandbox, admit bool
+	}{
+		{"sandbox hours used up, browser hours left", false, true},
+		{"browser hours used up, sandbox hours left", true, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			db, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("create sqlmock: %v", err)
+			}
+			defer db.Close()
+			expectManagedOrganization(mock, testSandboxBillingTenantID, "free")
+			meter := &fakeBrowserUsageRecorder{}
+			recorder := &sharedBrowserUsageRecorder{
+				db: sqlx.NewDb(db, "sqlmock"),
+				reporter: &fakeTenantSandboxUsageReporter{access: sharedSandboxBillingAccess{
+					SandboxAllowed: tc.sandbox,
+					BrowserAllowed: tc.admit,
+				}},
+				meter: meter,
+			}
+			err = recorder.Start(context.Background(), &browserpool.Lease{TenantID: testSandboxBillingTenantID}, time.Now())
+			if tc.admit {
+				if err != nil || meter.started != 1 {
+					t.Fatalf("lease = %v (started %d), want admitted", err, meter.started)
+				}
+				return
+			}
+			if err == nil || meter.started != 0 {
+				t.Fatalf("lease = %v (started %d), want refused", err, meter.started)
+			}
+			if want := "You have used this month's included browser hours. Add credit to keep running."; err.Error() != want {
+				t.Fatalf("refusal = %q, want %q", err.Error(), want)
+			}
+		})
+	}
+}
+
+// A billing service from before per-resource allowances sends only
+// sandbox_allowed, which then decides browser leases too.
+func TestSharedBillingResponseBrowserDecisionFallsBackToSandbox(t *testing.T) {
+	yes, no := true, false
+	for _, tc := range []struct {
+		name             string
+		sandbox, browser *bool
+		want             bool
+	}{
+		{"old server admits", &yes, nil, true},
+		{"old server refuses", &no, nil, false},
+		{"new server refuses browsers only", &yes, &no, false},
+		{"new server admits browsers only", &no, &yes, true},
+	} {
+		access, err := sharedSandboxBillingResponse{SandboxAllowed: tc.sandbox, BrowserAllowed: tc.browser}.access()
+		if err != nil || access.BrowserAllowed != tc.want || access.SandboxAllowed != *tc.sandbox {
+			t.Errorf("%s: access = %+v, %v", tc.name, access, err)
+		}
+	}
+	if _, err := (sharedSandboxBillingResponse{}).access(); err == nil {
+		t.Error("a response without sandbox_allowed must fail closed")
+	}
+}
+
+// The sandbox refusal is customer copy.
+func TestSandboxBillingRefusalCopy(t *testing.T) {
+	if want := "You have used this month's included sandbox hours. Add credit to keep running."; sandbox.ErrSandboxBillingRequired.Error() != want {
+		t.Fatalf("sandbox refusal = %q, want %q", sandbox.ErrSandboxBillingRequired.Error(), want)
+	}
+}
+
 // TestSandboxStopReasonNamesTheRefusingBranch pins the operator-facing reason.
-// billingcredit.Resolve refuses compute from three different branches, and the
-// old line reported all of them as starter-credit exhaustion. On eu-gra-1-prod
-// that meant an organization with a canceled Stripe subscription logged
-// "starter credit exhaustion ... micros=0 used_micros=0" 8,640 times a day:
-// a credit that was never granted, described as spent.
+// Admission is wallet-only, so a lapsed subscription is not a reason: the line
+// must say whether the credit was spent or never granted, and the subscription
+// fields must not change it.
 func TestSandboxStopReasonNamesTheRefusingBranch(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
@@ -461,19 +635,24 @@ func TestSandboxStopReasonNamesTheRefusingBranch(t *testing.T) {
 		want   string
 	}{
 		{
-			name:   "lapsed subscription",
-			access: sharedSandboxBillingAccess{BillingConfigured: true, BillingActive: false},
-			want:   "subscription inactive",
-		},
-		{
 			name:   "credit spent",
 			access: sharedSandboxBillingAccess{StarterCreditMicros: 5000000, StarterCreditUsedMicros: 5000000},
-			want:   "starter credit exhausted",
+			want:   "credit exhausted",
+		},
+		{
+			name:   "credit spent with a lapsed subscription",
+			access: sharedSandboxBillingAccess{BillingConfigured: true, BillingActive: false, StarterCreditMicros: 5000000, StarterCreditUsedMicros: 5000000},
+			want:   "credit exhausted",
+		},
+		{
+			name:   "credit spent with a live subscription",
+			access: sharedSandboxBillingAccess{BillingConfigured: true, BillingActive: true, StarterCreditMicros: 5000000, StarterCreditUsedMicros: 5000000},
+			want:   "credit exhausted",
 		},
 		{
 			name:   "never granted",
-			access: sharedSandboxBillingAccess{},
-			want:   "no active subscription or starter credit",
+			access: sharedSandboxBillingAccess{BillingConfigured: true},
+			want:   "no credit granted",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -493,7 +672,10 @@ func TestGroupTenantsByOrganizationCollapsesAliases(t *testing.T) {
 	// own organization — the documented degraded path. Grouping must then
 	// behave exactly as the old per-tenant loop did.
 	reporter := &sharedSandboxBillingReporter{}
-	groups := reporter.groupTenantsByOrganization(context.Background(), []string{"a", "b", "a"})
+	groups, unresolved, failed := reporter.groupTenantsByOrganization(context.Background(), []string{"a", "b", "a"})
+	if unresolved != 0 || len(failed) != 0 {
+		t.Fatalf("unresolved=%d failed=%v, want none when resolution is unavailable", unresolved, failed)
+	}
 	if len(groups) != 2 {
 		t.Fatalf("groups = %#v, want one per distinct tenant when resolution is unavailable", groups)
 	}

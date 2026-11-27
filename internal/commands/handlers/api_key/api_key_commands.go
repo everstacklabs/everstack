@@ -2,20 +2,22 @@ package api_key
 
 import (
 	"fmt"
+	apikeylib "github.com/everstacklabs/everstack/internal/lib/apikey"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/everstacklabs/everstack/internal/commands"
+	"github.com/google/uuid"
 )
 
 // CreateApiKeyCommand requests creation of an API key record.
 type CreateApiKeyCommand struct {
 	commands.BaseCommand
-	Name       string `json:"name"`
-	Type       string `json:"type"`
-	Plaintext  string `json:"plaintext"`
-	OrgID      string `json:"org_id"`
-	InstanceID string `json:"instance_id"`
+	Name       string   `json:"name"`
+	Type       string   `json:"type"`
+	Plaintext  string   `json:"plaintext"`
+	OrgID      string   `json:"org_id"`
+	InstanceID string   `json:"instance_id"`
+	Surfaces   []string `json:"surfaces"`
 }
 
 func NewCreateApiKeyCommand(name, keyType, plaintext, userID, orgID, instanceID string) *CreateApiKeyCommand {
@@ -36,6 +38,11 @@ func NewCreateApiKeyCommand(name, keyType, plaintext, userID, orgID, instanceID 
 func (c CreateApiKeyCommand) AggregateID() string { return c.ID }
 func (c CreateApiKeyCommand) CommandType() string { return "CreateApiKey" }
 func (c CreateApiKeyCommand) Validate() error {
+	for _, surface := range c.Surfaces {
+		if !apikeylib.ValidSurface(apikeylib.Surface(surface)) {
+			return fmt.Errorf("invalid surface")
+		}
+	}
 	if c.Name == "" {
 		return fmt.Errorf("name cannot be empty")
 	}

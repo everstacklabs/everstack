@@ -81,7 +81,7 @@ function TagInput({
             <button
               type="button"
               onClick={() => removeValue(value)}
-              className="hover:text-red-400 light:hover:text-red-600 transition-colors"
+              className="hover:text-danger transition-colors"
             >
               <Iconify.Icon icon="mdi:close" className="h-3 w-3" />
             </button>

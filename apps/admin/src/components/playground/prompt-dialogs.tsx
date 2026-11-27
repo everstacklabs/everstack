@@ -113,7 +113,7 @@ export function LoadPromptDialog({ open, onOpenChange }: DialogProps) {
                                             <Badge
                                                 key={label}
                                                 variant="outline"
-                                                className="text-[10px] border-emerald-400/30 text-emerald-300"
+                                                className="text-[10px] border-success-border text-success"
                                             >
                                                 {label}
                                             </Badge>

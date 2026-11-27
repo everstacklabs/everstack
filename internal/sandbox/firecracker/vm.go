@@ -513,12 +513,9 @@ func (vm *MicroVM) Destroy(ctx context.Context) error {
 // Tag identity stays on the row regardless of which file boots, so a
 // later `node.ext4` drop on the host is a zero-code change.
 func createRootfsOverlay(rootfsDir, vmWorkDir, imageName string, diskMB int64) (string, error) {
-	requestedTag := "base"
-	if imageName != "" {
-		if parts := strings.Split(imageName, ":"); len(parts) > 1 {
-			requestedTag = parts[len(parts)-1]
-		}
-	}
+	// RootfsTag is shared with the rootfs GC: the GC keeps exactly the
+	// files this resolves to, so the two must never diverge.
+	requestedTag := RootfsTag(imageName)
 
 	srcPath := filepath.Join(rootfsDir, requestedTag+".ext4")
 	if _, err := os.Stat(srcPath); err != nil {
@@ -637,7 +634,52 @@ func allocateCID() uint32 {
 // can't reach a thing, their app surfaces the error directly. Gating
 // every provision on a public-internet check turned the platform into
 // "the internet is up" rather than "the agent is up."
-func configureGuestNetwork(ctx context.Context, sandboxID string, vsockClient *VsockClient, netCfg *NetworkConfig, agentToken string) error {
+// guestAgentClient is the slice of the vsock guest-agent client that guest
+// network setup needs. *VsockClient implements it; tests substitute a fake.
+type guestAgentClient interface {
+	WaitReady(ctx context.Context, timeout time.Duration) error
+	WriteFile(ctx context.Context, path string, content []byte) error
+	SetAgentToken(ctx context.Context, token string) error
+	Exec(ctx context.Context, cmd ExecCommand) (*sandbox.ExecResult, error)
+}
+
+// waitForAgentReadyFn is WaitForAgentReady, swappable in tests: the real
+// one makes HTTP requests to the guest IP over the TAP.
+var waitForAgentReadyFn = WaitForAgentReady
+
+// guestNetSetupCommand returns the shell command that addresses the guest's
+// eth0. A fresh guest has no address, so create adds one. A guest resumed
+// from a snapshot still has its old address and default route, so readdress
+// flushes eth0 first and replaces the route: "ip addr add" alone would leave
+// the old address (and its route) in place, and the guest would keep
+// sourcing traffic from an IP the new TAP's anti-spoof rule drops.
+func guestNetSetupCommand(netCfg *NetworkConfig, readdress bool) string {
+	mtu := netCfg.MTU
+	if mtu <= 0 {
+		mtu = 1400
+	}
+	if readdress {
+		return fmt.Sprintf(
+			"ip addr flush dev eth0 && ip addr add %s/30 dev eth0 && ip link set eth0 mtu %d && ip link set eth0 up && ip route replace default via %s",
+			netCfg.GuestIP, mtu, netCfg.HostIP,
+		)
+	}
+	return fmt.Sprintf(
+		"ip addr add %s/30 dev eth0 && ip link set eth0 mtu %d && ip link set eth0 up && ip route add default via %s",
+		netCfg.GuestIP, mtu, netCfg.HostIP,
+	)
+}
+
+// configureGuestNetwork is configureGuestNetworkMode for a freshly booted
+// guest.
+func configureGuestNetwork(ctx context.Context, sandboxID string, vsockClient guestAgentClient, netCfg *NetworkConfig, agentToken string) error {
+	return configureGuestNetworkMode(ctx, sandboxID, vsockClient, netCfg, agentToken, false)
+}
+
+// configureGuestNetworkMode does the work of configureGuestNetwork.
+// readdress is true for a guest resumed from a snapshot, whose eth0 still
+// carries the addresses it had at capture: see guestNetSetupCommand.
+func configureGuestNetworkMode(ctx context.Context, sandboxID string, vsockClient guestAgentClient, netCfg *NetworkConfig, agentToken string, readdress bool) error {
 	// /etc/resolv.conf — vsock-only because eth0 isn't routable yet.
 	var resolv strings.Builder
 	for _, ns := range netCfg.GuestResolvers() {
@@ -663,14 +705,7 @@ func configureGuestNetwork(ctx context.Context, sandboxID string, vsockClient *V
 	// path that can only carry ~1450. Without this, TCP handshakes succeed
 	// (small packets) but data transfer stalls (TLS cert response gets
 	// black-holed). Curl reports this as "SSL connection timeout".
-	mtu := netCfg.MTU
-	if mtu <= 0 {
-		mtu = 1400
-	}
-	netCmd := fmt.Sprintf(
-		"ip addr add %s/30 dev eth0 && ip link set eth0 mtu %d && ip link set eth0 up && ip route add default via %s",
-		netCfg.GuestIP, mtu, netCfg.HostIP,
-	)
+	netCmd := guestNetSetupCommand(netCfg, readdress)
 	if res, err := vsockClient.Exec(ctx, ExecCommand{
 		ID:        "net-setup",
 		Command:   []string{"sh", "-c", netCmd},
@@ -682,7 +717,9 @@ func configureGuestNetwork(ctx context.Context, sandboxID string, vsockClient *V
 		// retry — the iface is already configured from the previous
 		// attempt and the second ip-addr-add reports nonzero. As long
 		// as the agent probe below passes, we're fine.
-		if !strings.Contains(res.Stderr, "File exists") {
+		// Readdress never tolerates it: there, "File exists" would mean the
+		// old route survived and the guest is still misaddressed.
+		if readdress || !strings.Contains(res.Stderr, "File exists") {
 			return fmt.Errorf("configure eth0 nonzero exit %d: %s", res.ExitCode, strings.TrimSpace(res.Stderr))
 		}
 	}
@@ -692,7 +729,7 @@ func configureGuestNetwork(ctx context.Context, sandboxID string, vsockClient *V
 	// means: the agent didn't start, eth0 isn't routable from the host,
 	// or the host's per-VM forward rules are misconfigured. All three
 	// are real failures we want to surface.
-	if err := WaitForAgentReady(ctx, netCfg.GuestIP); err != nil {
+	if err := waitForAgentReadyFn(ctx, netCfg.GuestIP); err != nil {
 		logger.WithFields(
 			"sandbox_id", sandboxID,
 			"guest_ip", netCfg.GuestIP,

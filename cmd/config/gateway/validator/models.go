@@ -48,6 +48,7 @@ type DefaultModel struct {
 	StructuredOutput            bool             `mapstructure:"structured_output"`
 	Parameters                  []ModelParameter `mapstructure:"parameters"`
 	Variants                    []ModelVariant   `mapstructure:"variants"`
+	UnsupportedParameters       []string         `mapstructure:"unsupported_parameters"`
 }
 
 // ParseModelsDefaults parses defaults/models.yaml bytes into a ModelsConfig.
@@ -159,8 +160,9 @@ func LoadModelsConfig(userConfig *Config, defaults *DefaultConfigs) (*ModelsConf
 					for _, defaultModel := range defaultProvider.Models {
 						if defaultModel.Name == userModel.Name {
 							modelFound = true
-							// Validate max_tokens against default
-							if userModel.MaxTokens > defaultModel.MaxTokens {
+							// A zero catalog limit is unknown (self-hosted checkpoint), not a zero-token cap.
+							// Enforce the limit only when the catalog specifies it.
+							if defaultModel.MaxTokens > 0 && userModel.MaxTokens > defaultModel.MaxTokens {
 								return nil, fmt.Errorf("max_tokens %d exceeds maximum allowed %d for model %s",
 									userModel.MaxTokens, defaultModel.MaxTokens, userModel.Name)
 							}
@@ -225,8 +227,9 @@ func validateModelAgainstDefaults(model ModelConfig, defaultModelsConfig ModelsC
 			if defaultModel.Name == modelName {
 				modelFound = true
 
-				// Validate max_tokens against default
-				if model.MaxTokens > defaultModel.MaxTokens {
+				// A zero catalog limit is unknown (self-hosted checkpoint), not a zero-token cap.
+				// Enforce the limit only when the catalog specifies it.
+				if defaultModel.MaxTokens > 0 && model.MaxTokens > defaultModel.MaxTokens {
 					errors = append(errors, fmt.Sprintf("max_tokens %d exceeds maximum allowed %d for model %s",
 						model.MaxTokens, defaultModel.MaxTokens, modelName))
 				}

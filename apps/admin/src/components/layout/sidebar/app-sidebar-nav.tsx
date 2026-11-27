@@ -160,6 +160,11 @@ const NAV_AREAS: SidebarNavAreas<SidebarNavData> = {
             href: '/gateway/a2a',
             icon: 'lucide:waypoints',
           },
+          {
+            name: 'Bots',
+            href: '/gateway/bots',
+            icon: 'lucide:bot',
+          },
           ...(featureSet?.has(FeatureKey.GUARDRAILS)
             ? [
                 {

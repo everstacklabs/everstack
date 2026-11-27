@@ -47,6 +47,9 @@ func ShouldEnforceCELimits(ctx context.Context, monitor LicenseMonitor) bool {
 	// never populated, so an identified cloud tenant fell through to the CE
 	// fallback below and paying customers were held to free-plan caps. This is
 	// purely a loosening, so it applies in shadow mode too.
+	// Deliberately the verified principal only: a server-resolved tenant on a
+	// detached path kept CE limits before plan enforcement, and must not get
+	// looser now.
 	if ManagedGateway() && contextkeys.HasVerifiedTenantPrincipal(ctx) {
 		return false
 	}

@@ -20,10 +20,10 @@ const {
 } = ui
 
 const MEMORY_TYPE_COLORS: Record<string, string> = {
-    fact: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    fact: 'bg-info-surface-strong text-info border-info-border',
     instruction: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-    session_summary: 'bg-green-500/20 text-green-300 border-green-500/30',
-    document: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+    session_summary: 'bg-success-surface-strong text-success border-success-border',
+    document: 'bg-warning-surface-strong text-warning border-warning-border',
 }
 
 const MEMORY_TYPE_LABELS: Record<string, string> = {
@@ -34,8 +34,8 @@ const MEMORY_TYPE_LABELS: Record<string, string> = {
 }
 
 const SCOPE_COLORS: Record<string, string> = {
-    agent: 'bg-blue-500/15 text-blue-400 border-blue-500/25',
-    user: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
+    agent: 'bg-info-surface-strong text-info border-info-border',
+    user: 'bg-success-surface-strong text-success border-success-border',
     global: 'bg-violet-500/15 text-violet-400 border-violet-500/25',
 }
 
@@ -152,7 +152,7 @@ export function AgentMemoryTab({ agentId, memoryEnabled }: AgentMemoryTabProps) 
                         <button
                             onClick={() => setShowInactive(!showInactive)}
                             className={`flex items-center gap-1 px-2 py-1 rounded text-xs border transition-colors ${showInactive
-                                ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                                ? 'bg-warning-surface-strong text-warning border-warning-border'
                                 : 'text-zinc-500 border-brand-main-700/50 hover:text-zinc-300'
                                 }`}
                         >
@@ -169,8 +169,8 @@ export function AgentMemoryTab({ agentId, memoryEnabled }: AgentMemoryTabProps) 
 
                     <div className="flex items-center gap-2">
                         {memoryEnabled !== undefined && (
-                            <span className={`flex items-center gap-1 text-[10px] ${memoryEnabled ? 'text-emerald-400' : 'text-zinc-600'}`}>
-                                <span className={`w-1.5 h-1.5 rounded-full ${memoryEnabled ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+                            <span className={`flex items-center gap-1 text-[10px] ${memoryEnabled ? 'text-success' : 'text-zinc-600'}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${memoryEnabled ? 'bg-success-solid' : 'bg-zinc-600'}`} />
                                 {memoryEnabled ? 'Auto-extract on' : 'Auto-extract off'}
                             </span>
                         )}
@@ -387,7 +387,7 @@ function MemoryRow({
                         <span className="text-[10px] text-zinc-500 font-mono">{memory.factKey}</span>
                     )}
                     {isSuperseded && (
-                        <span className="text-[10px] text-amber-500/70 italic">superseded</span>
+                        <span className="text-[10px] text-warning/70 italic">superseded</span>
                     )}
                     {isInactive && !isSuperseded && (
                         <span className="text-[10px] text-zinc-600 italic">inactive</span>
@@ -460,8 +460,8 @@ function MemoryRow({
                             <div className="flex items-center gap-1">
                                 <div className="w-12 h-1 rounded-full bg-brand-main-700/50 overflow-hidden">
                                     <div
-                                        className={`h-full rounded-full ${confidencePercent >= 80 ? 'bg-emerald-500/70' :
-                                            confidencePercent >= 50 ? 'bg-amber-500/70' : 'bg-red-500/70'
+                                        className={`h-full rounded-full ${confidencePercent >= 80 ? 'bg-success-solid/70' :
+                                            confidencePercent >= 50 ? 'bg-warning-solid/70' : 'bg-danger-solid/70'
                                             }`}
                                         style={{ width: `${confidencePercent}%` }}
                                     />
@@ -494,7 +494,7 @@ function MemoryRow({
                     {memory.isActive && (
                         <button
                             onClick={() => onDeactivate(memory.id)}
-                            className="text-zinc-500 hover:text-amber-400 p-1"
+                            className="text-zinc-500 hover:text-warning p-1"
                             title="Deactivate"
                         >
                             <EyeOff className="w-3 h-3" />
@@ -502,7 +502,7 @@ function MemoryRow({
                     )}
                     <button
                         onClick={() => onDelete(memory.id)}
-                        className="text-zinc-500 hover:text-red-400 p-1"
+                        className="text-zinc-500 hover:text-danger p-1"
                         title="Delete"
                     >
                         <Trash2 className="w-3 h-3" />

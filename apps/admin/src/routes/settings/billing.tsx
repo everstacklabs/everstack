@@ -58,7 +58,7 @@ function CommunityEditionBillingPage() {
             <Button onClick={handleConnect} disabled={isConnecting}>
                 {isConnecting ? 'Connecting...' : 'Connect to Cloud'}
             </Button>
-            {error ? <p className="mt-3 text-sm text-red-300 light:text-red-600">{error}</p> : null}
+            {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
         </div>
     )
 }

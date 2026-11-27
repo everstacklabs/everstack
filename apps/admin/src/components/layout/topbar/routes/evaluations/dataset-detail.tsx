@@ -237,7 +237,7 @@ function AddItemButton() {
                 isDragging
                   ? 'border-brand-secondary-500 bg-brand-secondary-500/10'
                   : fileItems.length > 0
-                    ? 'border-emerald-500/50 bg-emerald-500/5'
+                    ? 'border-success-border bg-success-surface/60'
                     : 'border-brand-main-600 bg-brand-main-950/60 hover:border-brand-main-500'
               }`}
             >
@@ -255,9 +255,9 @@ function AddItemButton() {
                 <div className="space-y-1">
                   <Icon
                     icon="lucide:check-circle"
-                    className="h-8 w-8 mx-auto text-emerald-400 light:text-emerald-600"
+                    className="h-8 w-8 mx-auto text-success"
                   />
-                  <p className="text-sm text-emerald-400 light:text-emerald-600 font-medium">
+                  <p className="text-sm text-success font-medium">
                     {fileItems.length} items parsed
                   </p>
                   <p className="text-xs text-white/30 light:text-black/30">
@@ -673,10 +673,10 @@ function ImportFromTracesButton() {
                           variant="secondary"
                           className={`text-[10px] px-1.5 py-0 ${
                             trace.status === 'success'
-                              ? 'bg-emerald-500/20 text-emerald-400 light:text-emerald-600'
+                              ? 'bg-success-surface-strong text-success'
                               : trace.status === 'error'
-                                ? 'bg-red-500/20 text-red-400 light:text-red-600'
-                                : 'bg-yellow-500/20 text-yellow-400 light:text-yellow-700'
+                                ? 'bg-danger-surface-strong text-danger'
+                                : 'bg-warning-surface-strong text-warning'
                           }`}
                         >
                           {trace.status || 'unknown'}
@@ -832,10 +832,10 @@ function ImportFromTracesButton() {
                       variant="secondary"
                       className={`text-[10px] ${
                         previewTrace.status === 'success'
-                          ? 'bg-emerald-500/20 text-emerald-400 light:text-emerald-600'
+                          ? 'bg-success-surface-strong text-success'
                           : previewTrace.status === 'error'
-                            ? 'bg-red-500/20 text-red-400 light:text-red-600'
-                            : 'bg-yellow-500/20 text-yellow-400 light:text-yellow-700'
+                            ? 'bg-danger-surface-strong text-danger'
+                            : 'bg-warning-surface-strong text-warning'
                       }`}
                     >
                       {previewTrace.status || 'unknown'}

@@ -129,7 +129,7 @@ export function TaskTestPanel({ variant }: { variant: PlaygroundVariant }) {
                     <button
                         type="button"
                         onClick={() => ctrlRef.current?.abort()}
-                        className="inline-flex items-center gap-1 rounded border border-brand-main-600 px-2 py-0.5 text-[11px] text-rose-300 hover:border-rose-400/50"
+                        className="inline-flex items-center gap-1 rounded border border-brand-main-600 px-2 py-0.5 text-[11px] text-danger hover:border-danger-border"
                     >
                         <Square className="h-2.5 w-2.5" /> Stop
                     </button>
@@ -179,7 +179,7 @@ export function TaskTestPanel({ variant }: { variant: PlaygroundVariant }) {
                 <div className="flex flex-col gap-1.5">
                     <span className="text-[10px] text-white/35 light:text-black/35">Output</span>
                     {status === 'error' ? (
-                        <div className="rounded border border-rose-500/40 bg-rose-500/10 px-2.5 py-2 text-[11px] text-rose-300">
+                        <div className="rounded border border-danger-border bg-danger-surface px-2.5 py-2 text-[11px] text-danger">
                             {error}
                         </div>
                     ) : (
@@ -216,9 +216,9 @@ export function TaskTestPanel({ variant }: { variant: PlaygroundVariant }) {
                                         variant="outline"
                                         className={
                                             pass
-                                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300 text-[10px]'
+                                                ? 'border-success-border bg-success-surface text-success text-[10px]'
                                                 : fail
-                                                  ? 'border-red-500/40 bg-red-500/10 text-red-300 text-[10px]'
+                                                  ? 'border-danger-border bg-danger-surface text-danger text-[10px]'
                                                   : 'border-brand-secondary-500/40 bg-brand-secondary-500/10 text-brand-secondary-200 text-[10px]'
                                         }
                                     >

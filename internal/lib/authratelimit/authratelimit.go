@@ -31,9 +31,9 @@ import (
 // attacks across many IPs are not addressed here — that's a CDN / WAF
 // concern and out of scope for the in-memory limiter.
 //
-// Single-pod assumption: counters live in process memory. Multi-replica
-// auth service would need a Redis-backed implementation; for v1 the auth
-// service is single-replica.
+// Single-process: counters live in this process's memory. The gateway's
+// self-hosted server and billing still use it; the multi-replica cloud auth
+// service uses Limiter (limiter.go), which counts in a shared Store.
 type AuthRateLimiter struct {
 	mu       sync.Mutex
 	limiters map[string]*ipEntry
@@ -200,7 +200,13 @@ func clientIP(r *http.Request) string {
 }
 
 func clientIPFrom(r *http.Request, proxies []*net.IPNet) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" && len(proxies) > 0 {
+	return clientIPFromParts(r.Header.Get("X-Forwarded-For"), r.RemoteAddr, proxies)
+}
+
+// clientIPFromParts is clientIPFrom for callers that hold the header and peer
+// address rather than an *http.Request, such as a Connect interceptor.
+func clientIPFromParts(xff, remoteAddr string, proxies []*net.IPNet) string {
+	if xff != "" && len(proxies) > 0 {
 		parts := strings.Split(xff, ",")
 		for i := len(parts) - 1; i >= 0; i-- {
 			candidate := strings.TrimSpace(parts[i])
@@ -214,10 +220,10 @@ func clientIPFrom(r *http.Request, proxies []*net.IPNet) string {
 			return candidate
 		}
 	}
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+	if host, _, err := net.SplitHostPort(remoteAddr); err == nil {
 		return host
 	}
-	return r.RemoteAddr
+	return remoteAddr
 }
 
 // SensitiveProcedure reports whether a Connect RPC path names a procedure that

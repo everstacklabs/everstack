@@ -1,7 +1,7 @@
 name: "grok-build-0.1"
 display_name: "Grok Build 0.1"
 family: "grok-build"
-status: "stable"
+status: "deprecated"
 release_date: "2026-04-16"
 
 cost:
@@ -23,7 +23,7 @@ modalities:
   input: ["text","image","pdf"]
   output: ["text"]
 
-notes: "Fast Grok coding model tuned for agentic engineering and iterative edits"
+notes: "Reached end of life on 2026-11-19 and is no longer served on the xAI API."
 parameters:
   - key: "max_output_tokens"
     display_name: "Max output tokens"

@@ -76,18 +76,18 @@ export const Route = createFileRoute('/observability/alerts')({
 function severityBadge(severity: number) {
     const label = severityLabel(severity)
     const colors: Record<string, string> = {
-        critical: 'bg-red-500/15 text-red-300 light:text-red-600',
-        warning: 'bg-yellow-500/15 text-yellow-300 light:text-yellow-700',
-        info: 'bg-blue-500/15 text-blue-300 light:text-blue-600',
+        critical: 'bg-danger-surface-strong text-danger',
+        warning: 'bg-warning-surface-strong text-warning',
+        info: 'bg-info-surface-strong text-info',
     }
     return colors[label] ?? 'bg-brand-main-700/50 text-brand-main-200'
 }
 
 function statusBadge(status: string) {
     const colors: Record<string, string> = {
-        firing: 'bg-red-500/15 text-red-300 light:text-red-600',
-        acknowledged: 'bg-yellow-500/15 text-yellow-300 light:text-yellow-700',
-        resolved: 'bg-green-500/15 text-green-300 light:text-green-600',
+        firing: 'bg-danger-surface-strong text-danger',
+        acknowledged: 'bg-warning-surface-strong text-warning',
+        resolved: 'bg-success-surface-strong text-success',
     }
     return colors[status] ?? 'bg-brand-main-700/50 text-brand-main-200'
 }
@@ -201,7 +201,7 @@ function AlertsPageContent() {
                         <TabsTrigger className={TAB_TRIGGER_CLASS} value="history">
                             History
                             {summary && summary.firingCount > 0 && (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/15 text-red-300 light:text-red-600">
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-danger-surface-strong text-danger">
                                     {summary.firingCount}
                                 </span>
                             )}
@@ -299,7 +299,7 @@ function RulesTab() {
             render: (rule) => (
                 <div className="flex min-w-0 items-center gap-2">
                     {firingRuleIds.has(rule.id) && (
-                        <BellRing className="h-3.5 w-3.5 shrink-0 text-red-400 light:text-red-600 animate-pulse" />
+                        <BellRing className="h-3.5 w-3.5 shrink-0 text-danger animate-pulse" />
                     )}
                     <span className="truncate font-medium text-brand-secondary-100 text-xs">
                         {rule.name}
@@ -370,7 +370,7 @@ function RulesTab() {
                 <div className="flex items-center gap-2 justify-center" data-row-actions>
                     <button
                         type="button"
-                        className="p-1 rounded hover:bg-blue-500/20 hover:text-blue-400 light:hover:text-blue-600 transition-colors text-brand-main-200"
+                        className="p-1 rounded hover:bg-info-surface-strong hover:text-info transition-colors text-brand-main-200"
                         onClick={() => setEditRule(rule)}
                         title="Edit rule"
                     >
@@ -378,7 +378,7 @@ function RulesTab() {
                     </button>
                     <button
                         type="button"
-                        className="p-1 rounded hover:bg-red-500/20 hover:text-red-400 light:hover:text-red-600 transition-colors"
+                        className="p-1 rounded hover:bg-danger-surface-strong hover:text-danger transition-colors"
                         onClick={() => {
                             setDeleteConfirmId(rule.id)
                             setDeleteConfirmName(rule.name)
@@ -483,15 +483,15 @@ function RulesTab() {
 // ─── History Tab ─────────────────────────────────────────────────────
 
 const STATUS_INDICATOR: Record<string, string> = {
-    firing: 'bg-red-500 shadow-red-500/40 shadow-[0_0_6px]',
-    acknowledged: 'bg-yellow-500 shadow-yellow-500/40 shadow-[0_0_6px]',
-    resolved: 'bg-green-500/60',
+    firing: 'bg-danger-solid shadow-danger-solid/40 shadow-[0_0_6px]',
+    acknowledged: 'bg-warning-solid shadow-warning-solid/40 shadow-[0_0_6px]',
+    resolved: 'bg-success-solid/60',
 }
 
 const SEVERITY_ICON_COLOR: Record<string, string> = {
-    critical: 'text-red-400 light:text-red-600',
-    warning: 'text-yellow-400 light:text-yellow-700',
-    info: 'text-blue-400 light:text-blue-600',
+    critical: 'text-danger',
+    warning: 'text-warning',
+    info: 'text-info',
 }
 
 function HistoryTab() {
@@ -637,7 +637,7 @@ function HistoryLogRow({ event, onAcknowledge, onResolve }: {
                         >
                             <button
                                 type="button"
-                                className="p-1.5 rounded hover:bg-yellow-500/20 hover:text-yellow-400 light:hover:text-yellow-700 transition-colors text-brand-main-300"
+                                className="p-1.5 rounded hover:bg-warning-surface-strong hover:text-warning transition-colors text-brand-main-300"
                                 onClick={onAcknowledge}
                             >
                                 <Eye size={14} />
@@ -651,7 +651,7 @@ function HistoryLogRow({ event, onAcknowledge, onResolve }: {
                         >
                             <button
                                 type="button"
-                                className="p-1.5 rounded hover:bg-green-500/20 hover:text-green-400 light:hover:text-green-600 transition-colors text-brand-main-300"
+                                className="p-1.5 rounded hover:bg-success-surface-strong hover:text-success transition-colors text-brand-main-300"
                                 onClick={onResolve}
                             >
                                 <CheckCircle size={14} />
@@ -668,7 +668,7 @@ function HistoryLogRow({ event, onAcknowledge, onResolve }: {
                     >
                         <button
                             type="button"
-                            className="p-1.5 rounded hover:bg-green-500/20 hover:text-green-400 light:hover:text-green-600 transition-colors text-brand-main-300"
+                            className="p-1.5 rounded hover:bg-success-surface-strong hover:text-success transition-colors text-brand-main-300"
                             onClick={onResolve}
                         >
                             <CheckCircle size={14} />
@@ -772,24 +772,24 @@ function TargetsTab() {
                         {plat ? (
                             <Iconify.Icon icon={plat.icon} className="h-4 w-4 shrink-0 text-white/60 light:text-black/60" />
                         ) : target.targetType === NotificationTargetType.WEBHOOK ? (
-                            <Globe className="h-4 w-4 shrink-0 text-amber-400/70 light:text-amber-700/70" />
+                            <Globe className="h-4 w-4 shrink-0 text-warning/70" />
                         ) : target.targetType === NotificationTargetType.EMAIL ? (
-                            <Mail className="h-4 w-4 shrink-0 text-blue-400/70 light:text-blue-600/70" />
+                            <Mail className="h-4 w-4 shrink-0 text-info/70" />
                         ) : null}
                         <span className="truncate font-medium text-brand-secondary-100 text-xs">
                             {target.name}
                         </span>
                         {plat && (
-                            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-emerald-500/15 text-emerald-300 light:text-emerald-600">
+                            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-success-surface-strong text-success">
                                 {plat.label}
                             </span>
                         )}
                         {!plat && (
                             <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${target.targetType === NotificationTargetType.CHANNEL
-                                ? 'bg-emerald-500/15 text-emerald-300 light:text-emerald-600'
+                                ? 'bg-success-surface-strong text-success'
                                 : target.targetType === NotificationTargetType.WEBHOOK
-                                    ? 'bg-amber-500/15 text-amber-300 light:text-amber-700'
-                                    : 'bg-blue-500/15 text-blue-300 light:text-blue-600'
+                                    ? 'bg-warning-surface-strong text-warning'
+                                    : 'bg-info-surface-strong text-info'
                                 }`}>
                                 {targetTypeLabel(target.targetType)}
                             </span>
@@ -858,7 +858,7 @@ function TargetsTab() {
                 <div className="flex items-center gap-2 justify-center" data-row-actions>
                     <button
                         type="button"
-                        className="p-1 rounded hover:bg-blue-500/20 hover:text-blue-400 light:hover:text-blue-600 transition-colors text-brand-main-200"
+                        className="p-1 rounded hover:bg-info-surface-strong hover:text-info transition-colors text-brand-main-200"
                         onClick={() => setEditTarget(target)}
                         title="Edit target"
                     >
@@ -866,7 +866,7 @@ function TargetsTab() {
                     </button>
                     <button
                         type="button"
-                        className="p-1 rounded hover:bg-blue-500/20 hover:text-blue-400 light:hover:text-blue-600 transition-colors text-brand-main-200"
+                        className="p-1 rounded hover:bg-info-surface-strong hover:text-info transition-colors text-brand-main-200"
                         onClick={() => handleTest(target.id)}
                         title="Test target"
                     >
@@ -874,7 +874,7 @@ function TargetsTab() {
                     </button>
                     <button
                         type="button"
-                        className="p-1 rounded hover:bg-red-500/20 hover:text-red-400 light:hover:text-red-600 transition-colors text-brand-main-200"
+                        className="p-1 rounded hover:bg-danger-surface-strong hover:text-danger transition-colors text-brand-main-200"
                         onClick={() => {
                             setDeleteConfirmId(target.id)
                             setDeleteConfirmName(target.name)

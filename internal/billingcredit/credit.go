@@ -1,8 +1,26 @@
-// Package billingcredit owns the managed-cloud starter-credit policy. The $5
-// signup credit is a grant into the fungible usage-credit wallet (billing.credit_ledger),
-// NOT a sandbox-only credit: it is spendable across sandbox compute, ingested
-// data, and (later) inference. This package grants it and gates sandbox on the
-// wallet balance; sandbox compute cost is debited against the same wallet here.
+// Package billingcredit owns the managed-cloud signup-credit policy and the
+// compute admission gate. The $5 signup credit is a grant into the fungible
+// usage-credit wallet (billing.credit_ledger), NOT a sandbox-only credit: it is
+// spendable on sandbox compute, browser runtime and ingested data. It never
+// pays for inference (founder decision, docs/design/free-trial-onboarding.md
+// section 0 item 3 and 3.4): the platform key pool is closed today, so no
+// organization is served on an Everstack key, and the free model trial
+// (internal/billingtrial) has its own request allowance and never debits the
+// wallet. When prepaid-credits-v2 S5 opens the pool, it must make signup
+// grant entries unspendable on inference. This package grants the signup
+// credit (idempotently, once per user, to the first organization that user
+// owns), expires its unspent remainder 30 days after the grant, and gates
+// compute on the wallet balance.
+//
+// It does NOT debit. Every wallet debit for background meters is produced by
+// one place, the billing service's usage-debit loop
+// (services/billing/internal/service/usage_debit.go), so there is a single
+// charging mechanism with one watermark scheme. A subscription does not
+// bypass the wallet: Cloud plans include their limits and a monthly compute
+// allowance (internal/billingallowance), and credit pays only for usage beyond
+// them (see Resolve). The plan allowance, the wallet, an Enterprise contract
+// or the internal organization flag are the only things that decide whether
+// compute may be allocated.
 package billingcredit
 
 import (
@@ -12,44 +30,64 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
 
+	"github.com/everstacklabs/everstack/internal/billingallowance"
+	"github.com/everstacklabs/everstack/internal/billingidentity"
+	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/everstacklabs/everstack/pkg/plans"
 	"github.com/jmoiron/sqlx"
 )
 
 const (
-	// sandboxCostMetric is the cumulative sandbox compute cost (micro-dollars)
-	// recorded in billing.usage_meter_watermarks; billingcredit debits its delta
-	// into the wallet.
-	sandboxCostMetric = "sandbox_compute_cost_micros"
 	// SignupGrantResourceType tags the one-time fungible signup credit in the
-	// ledger. Exported so the usage-debit backstop grants it identically.
+	// ledger. Exported so every grant site grants it identically.
 	SignupGrantResourceType = "signup"
-	sandboxResource         = "sandbox"
 )
 
-// SignupGrantIdempotencyKey is the ledger idempotency key for an org's one-time
-// fungible signup grant. Shared so every grant site (the sandbox gate here and
-// the usage-debit backstop) de-duplicates against the same key.
+// SignupGrantIdempotencyKey is the ledger key of a signup grant made under the
+// old per-organization rule. New grants are keyed per user
+// (SignupGrantUserIdempotencyKey); this remains so existing rows stay
+// recognizable. Those grants keep their credit and never expire.
 func SignupGrantIdempotencyKey(organizationID string) string {
 	return "signup-grant:" + organizationID
 }
 
-// Status describes an organization's fungible signup credit (wallet), surfaced
-// to the UI. Remaining is the spendable wallet balance (grants minus every
-// debit and hold), not a sandbox-specific figure.
+// Status describes an organization's wallet, surfaced to the UI. Remaining is
+// the spendable wallet balance (grants and purchases minus every debit and
+// hold), not a sandbox-specific figure.
 type Status struct {
 	AmountMicros    int64
 	UsedMicros      int64
 	RemainingMicros int64
 }
 
-// Access describes whether managed sandbox compute may be allocated.
+// Access describes whether managed compute (sandboxes, hosted browsers) may be
+// allocated. Allowed is the sandbox decision and BrowserAllowed the hosted
+// browser decision; each resource has its own plan allowance. BillingConfigured
+// and BillingActive describe the legacy subscription row for display only;
+// they never decide admission. Exempt marks an internal organization
+// (billingidentity.OrganizationExempt), admitted whatever its wallet holds.
+// Allowances is the current period's compute allowance per resource, empty
+// when it could not be read or for Enterprise.
 type Access struct {
 	Allowed           bool
+	BrowserAllowed    bool
 	BillingConfigured bool
 	BillingActive     bool
 	Credit            Status
+	Exempt            bool
+	Allowances        []billingallowance.Status
+}
+
+// Allowance returns the access's allowance status for one counter.
+func (a Access) Allowance(c billingallowance.Counter) (billingallowance.Status, bool) {
+	for _, s := range a.Allowances {
+		if s.Metric == c.Metric {
+			return s, true
+		}
+	}
+	return billingallowance.Status{}, false
 }
 
 // StarterCreditMicros reads the public signup-credit amount from the canonical
@@ -67,66 +105,135 @@ func StarterCreditMicros() int64 {
 	return int64(math.Round(usd * 1_000_000))
 }
 
-// Resolve returns the managed sandbox access policy for one organization.
-// Enterprise contracts bypass public billing. A public subscription must be
-// active; an organization without one instead spends its fungible signup
-// credit, and sandbox is gated on the wallet balance.
+// Resolve returns the managed compute access policy for one organization.
+// Enterprise contracts bypass public billing. Everyone else is gated on the
+// plan allowance first and the wallet second: a due signup grant is expired
+// and the user's one-time signup grant is ensured (so a user's first
+// organization is never refused on an empty wallet it was owed; a later org of
+// the same user starts empty), then each resource is admitted while its plan
+// allowance for the period has room or the spendable balance is positive.
+// Compute cost is debited by the billing service's usage-debit loop, never
+// here; that loop charges only usage beyond the allowance, reading the
+// allowance through the same package (internal/billingallowance) and the same
+// columns, so an organization admitted on its allowance is not charged for it.
+// Hard caps such as CONCURRENT_SANDBOXES and SANDBOX_MEMORY_MB are enforced
+// elsewhere and credit cannot buy past them.
+//
+// When the allowance runs out mid-run and there is no credit, the next
+// decision refuses, and the shared reporter stops running compute exactly as
+// it does when credit runs out. A failed allowance read is logged and treated
+// as no allowance, so an outage falls back to the wallet decision.
+//
+// Internal organizations (the organization's internal flag, settable only by
+// migration or ops tooling) are admitted without credit. Their wallet is
+// still read and reported, and their compute is still debited from it.
 func Resolve(ctx context.Context, db *sqlx.DB, organizationID, tier string) (Access, error) {
+	return ResolveAt(ctx, db, organizationID, tier, time.Now())
+}
+
+// ResolveAt is Resolve with the instant that places the organization in an
+// allowance period.
+func ResolveAt(ctx context.Context, db *sqlx.DB, organizationID, tier string, now time.Time) (Access, error) {
 	if db == nil || strings.TrimSpace(organizationID) == "" {
 		return Access{}, fmt.Errorf("sandbox billing database and organization are required")
 	}
 	if strings.EqualFold(strings.TrimSpace(tier), "enterprise") {
-		return Access{Allowed: true}, nil
+		return Access{Allowed: true, BrowserAllowed: true}, nil
 	}
 
+	// The subscription row is display-only here (the Cloud UI shows whether
+	// Stripe billing is configured and live). It does not gate compute
+	// directly: a paid plan's included credit is granted into the wallet for
+	// each period once that period's invoice is paid (by the billing
+	// service's invoice.paid handler, with the hourly grant loop as the
+	// backstop; never on a subscription status alone), and top-ups add
+	// to the same wallet, so the balance already reflects what a subscriber
+	// paid for. A subscribed organization's compute is debited from that
+	// wallet like everyone else's.
 	var subscription struct {
 		Status               string `db:"status"`
 		StripeCustomerID     string `db:"stripe_customer_id"`
 		StripeSubscriptionID string `db:"stripe_subscription_id"`
 	}
+	access := Access{}
 	err := db.GetContext(ctx, &subscription, `
 		SELECT status, stripe_customer_id, stripe_subscription_id
 		FROM billing.subscriptions
 		WHERE organization_id = $1`, organizationID)
-	if err == nil {
-		active := (strings.EqualFold(subscription.Status, "active") ||
+	switch {
+	case err == nil:
+		access.BillingConfigured = true
+		access.BillingActive = (strings.EqualFold(subscription.Status, "active") ||
 			strings.EqualFold(subscription.Status, "trialing")) &&
 			strings.TrimSpace(subscription.StripeCustomerID) != "" &&
 			strings.TrimSpace(subscription.StripeSubscriptionID) != ""
-		return Access{
-			Allowed:           active,
-			BillingConfigured: true,
-			BillingActive:     active,
-		}, nil
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
+	case errors.Is(err, sql.ErrNoRows):
+		// No subscription row: nothing to display.
+	default:
 		return Access{}, fmt.Errorf("resolve sandbox billing subscription: %w", err)
 	}
 
-	// No subscription: the free tier spends its fungible signup credit, with
-	// sandbox cost debited against it below. Known bounded limitation: this
-	// subscription check is outside the per-org wallet lock, and subscription
-	// creation does not take that lock, so sandbox cost accrued during a
-	// free->active upgrade window can be left unreconciled on the wallet (once
-	// active, Resolve early-returns above and sandbox bills via Stripe instead).
-	// The gap is capped at the signup grant and closes when activation-time
-	// wallet reconciliation is wired with the Stripe activation flow.
-	credit, err := resolveWalletCredit(ctx, db, organizationID, StarterCreditMicros())
+	credit, err := ensureWalletCredit(ctx, db, organizationID, StarterCreditMicros())
 	if err != nil {
 		return Access{}, err
 	}
-	return Access{
-		Allowed: credit.RemainingMicros > 0,
-		Credit:  credit,
-	}, nil
+	access.Credit = credit
+	access.Exempt = organizationExempt(ctx, db, organizationID)
+	access.Allowances = allowanceStatus(ctx, db, organizationID, now)
+	hasCredit := credit.RemainingMicros > 0
+	access.Allowed = access.Exempt || hasCredit || allowanceLeft(access, billingallowance.Sandbox)
+	access.BrowserAllowed = access.Exempt || hasCredit || allowanceLeft(access, billingallowance.Browser)
+	return access, nil
 }
 
-// resolveWalletCredit ensures the one-time fungible signup grant exists, debits
-// the sandbox compute cost consumed since it was last billed, and returns the
-// wallet status — all in one transaction under the org advisory lock (the same
-// lock the billing service's wallet writes take), so a concurrent debit/grant
-// can't race the balance.
-func resolveWalletCredit(ctx context.Context, db *sqlx.DB, organizationID string, grantMicros int64) (Status, error) {
+// allowanceStatus reads the current period's compute allowances. A failed
+// read is logged and yields none, so admission falls back to the wallet.
+func allowanceStatus(ctx context.Context, db *sqlx.DB, organizationID string, now time.Time) []billingallowance.Status {
+	statuses, err := billingallowance.ReadStatus(ctx, db, organizationID, now)
+	if err != nil {
+		logger.WithFields("organization_id", organizationID, "error", err.Error()).
+			Warn("billingcredit: compute allowance lookup failed; deciding compute admission on the wallet")
+		return nil
+	}
+	return statuses
+}
+
+// allowanceLeft reports whether every allowance that resource draws on has
+// room: a sandbox draws on both its vCPU-hour and GiB-hour allowances, so it
+// is admitted on allowance only while neither is used up.
+func allowanceLeft(access Access, r billingallowance.Resource) bool {
+	found := false
+	for _, c := range billingallowance.Counters {
+		if c.Resource != r {
+			continue
+		}
+		s, ok := access.Allowance(c)
+		if !ok || s.Exhausted() {
+			return false
+		}
+		found = true
+	}
+	return found
+}
+
+// organizationExempt reads the internal-organization flag. A failed read is
+// logged and treated as not exempt, so an outage falls back to the wallet
+// decision rather than admitting or refusing anyone on its own.
+func organizationExempt(ctx context.Context, db *sqlx.DB, organizationID string) bool {
+	exempt, err := billingidentity.OrganizationExempt(ctx, db, organizationID)
+	if err != nil {
+		logger.WithFields("organization_id", organizationID, "error", err.Error()).
+			Warn("billingcredit: internal organization lookup failed; deciding compute admission on the wallet")
+		return false
+	}
+	return exempt
+}
+
+// ensureWalletCredit expires a due signup grant, ensures the one-time signup
+// grant (per user, see grantSignupSQL), and returns the wallet status, in one transaction under the org advisory lock
+// (the same lock the billing service's wallet writes take), so a concurrent
+// debit or grant cannot race the balance. It never debits.
+func ensureWalletCredit(ctx context.Context, db *sqlx.DB, organizationID string, grantMicros int64) (Status, error) {
 	if grantMicros <= 0 {
 		return Status{}, fmt.Errorf("signup credit is not configured")
 	}
@@ -144,74 +251,20 @@ func resolveWalletCredit(ctx context.Context, db *sqlx.DB, organizationID string
 		return Status{}, err
 	}
 
-	// 1) One-time fungible signup grant (idempotent).
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO billing.credit_ledger (organization_id, entry_type, amount_micros, resource_type, idempotency_key)
-		VALUES ($1::uuid, 'grant', $2, $3, $4)
-		ON CONFLICT (idempotency_key) DO NOTHING`, organizationID, grantMicros, SignupGrantResourceType, SignupGrantIdempotencyKey(organizationID)); err != nil {
-		return Status{}, fmt.Errorf("grant signup credit: %w", err)
+	// 1) Expire a due signup grant, then ensure the one-time signup grant
+	// (once per user, to that user's first owned org). The balance cache is
+	// recomputed absolutely below, so the returned delta is not needed.
+	if _, _, err := syncSignupCreditTx(ctx, tx, organizationID, grantMicros, time.Now()); err != nil {
+		return Status{}, err
 	}
 
-	// 2) Debit the sandbox compute cost consumed since the last billed cumulative.
-	var cumulativeSandboxCost int64
-	if err := tx.GetContext(ctx, &cumulativeSandboxCost, `
-		SELECT COALESCE(SUM(total_value), 0)::BIGINT
-		FROM billing.usage_meter_watermarks
-		WHERE organization_id = $1::uuid AND metric_type = $2`, organizationID, sandboxCostMetric); err != nil {
-		return Status{}, fmt.Errorf("read sandbox lifetime cost: %w", err)
-	}
-	var billed int64
-	err = tx.GetContext(ctx, &billed, `
-		SELECT billed_quantity::BIGINT FROM billing.usage_debit_watermark
-		WHERE organization_id = $1::uuid AND metric_type = $2 FOR UPDATE`, organizationID, sandboxCostMetric)
-	if errors.Is(err, sql.ErrNoRows) {
-		// First debit for this org: seed the watermark at the enrollment baseline
-		// so sandbox cost accrued BEFORE the credit existed is never retroactively
-		// charged (bill-from-zero-at-enrollment). Orgs migrating off the legacy
-		// sandbox-only credit carry that baseline in billing.sandbox_starter_credits;
-		// brand-new orgs bill from the current cumulative (~0 at signup, since the
-		// gate runs before a VM is allocated). The legacy table is guaranteed
-		// present here (its migration precedes the wallet migrations) — a future
-		// migration that drops it must update this baseline seed.
-		if err := tx.GetContext(ctx, &billed, `
-			SELECT COALESCE(
-				(SELECT baseline_cost_micros FROM billing.sandbox_starter_credits WHERE organization_id = $1::uuid),
-				$2
-			)::BIGINT`, organizationID, cumulativeSandboxCost); err != nil {
-			return Status{}, fmt.Errorf("seed sandbox debit baseline: %w", err)
-		}
-		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO billing.usage_debit_watermark (organization_id, metric_type, billed_quantity)
-			VALUES ($1::uuid, $2, $3)
-			ON CONFLICT (organization_id, metric_type) DO NOTHING`,
-			organizationID, sandboxCostMetric, billed); err != nil {
-			return Status{}, fmt.Errorf("persist sandbox debit baseline: %w", err)
-		}
-	} else if err != nil {
-		return Status{}, fmt.Errorf("read sandbox debit watermark: %w", err)
-	}
-	if delta := cumulativeSandboxCost - billed; delta > 0 {
-		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO billing.credit_ledger (organization_id, entry_type, amount_micros, resource_type, metric_type, idempotency_key)
-			VALUES ($1::uuid, 'debit', $2, $3, $4, 'sandbox-debit:' || $1 || ':' || $5::text)
-			ON CONFLICT (idempotency_key) DO NOTHING`,
-			organizationID, -delta, sandboxResource, sandboxCostMetric, cumulativeSandboxCost); err != nil {
-			return Status{}, fmt.Errorf("debit sandbox cost: %w", err)
-		}
-		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO billing.usage_debit_watermark (organization_id, metric_type, billed_quantity)
-			VALUES ($1::uuid, $2, $3)
-			ON CONFLICT (organization_id, metric_type) DO UPDATE SET billed_quantity = EXCLUDED.billed_quantity, updated_at = NOW()`,
-			organizationID, sandboxCostMetric, cumulativeSandboxCost); err != nil {
-			return Status{}, fmt.Errorf("advance sandbox debit watermark: %w", err)
-		}
-	}
-
-	// 3) Recompute the balance cache from the ledger (absolute, under the lock).
+	// 2) Recompute the balance cache from the ledger (absolute, under the lock).
+	// "granted" is the signup credit alone: expired subscription grants must
+	// not inflate the starter-credit figure the UI shows.
 	var granted, balance int64
 	if err := tx.GetContext(ctx, &granted, `
-		SELECT COALESCE(SUM(amount_micros) FILTER (WHERE entry_type = 'grant'), 0)::BIGINT
-		FROM billing.credit_ledger WHERE organization_id = $1::uuid`, organizationID); err != nil {
+		SELECT COALESCE(SUM(amount_micros) FILTER (WHERE entry_type = 'grant' AND resource_type = $2), 0)::BIGINT
+		FROM billing.credit_ledger WHERE organization_id = $1::uuid`, organizationID, SignupGrantResourceType); err != nil {
 		return Status{}, err
 	}
 	if err := tx.GetContext(ctx, &balance, `
@@ -227,7 +280,7 @@ func resolveWalletCredit(ctx context.Context, db *sqlx.DB, organizationID string
 		return Status{}, err
 	}
 
-	// 4) Available = balance minus credit currently held.
+	// 3) Available = balance minus credit currently held.
 	var held int64
 	if err := tx.GetContext(ctx, &held, `
 		SELECT COALESCE(SUM(amount_micros), 0)::BIGINT FROM billing.credit_holds

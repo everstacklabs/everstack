@@ -25,6 +25,7 @@ type AuthCode struct {
 	Name          string
 	OrgID         string
 	OrgSlug       string
+	OrgRole       string
 	InstanceID    string
 	AuthTime      time.Time
 

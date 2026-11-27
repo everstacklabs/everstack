@@ -620,7 +620,7 @@ function MemoryPolicyPanel({ agent }: { agent: AgentDefinition }) {
               size="sm"
               disabled={memories.length === 0 || deactivateMemory.isPending}
               onClick={handleDeactivateMemories}
-              className={`${brandActionButtonClass} border-red-500/25 text-red-300 light:text-red-600 hover:bg-red-500/10`}
+              className={`${brandActionButtonClass} border-danger-border text-danger hover:bg-danger-surface`}
             >
               {deactivateMemory.isPending ? 'Clearing...' : 'Deactivate active'}
             </Button>
@@ -1016,7 +1016,7 @@ function EnvironmentPanel({
         className={`${panelClass} mt-3 flex flex-wrap items-center justify-between gap-3 p-3`}
       >
         <div className="flex items-start gap-2">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400/80 light:text-amber-700/80" />
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning/80" />
           <div>
             <p className="text-sm font-medium text-white light:text-brand-main-50">
               Changes restart the sandbox
@@ -1063,8 +1063,8 @@ function EnvironmentPanel({
         <AlertDialogContent className="bg-brand-main-900 border border-brand-main-700 text-brand-main-100 p-0 gap-0 sm:max-w-md shadow-2xl shadow-black/60">
           <AlertDialogHeader className="p-5 pb-4 sm:text-left">
             <div className="flex items-start gap-3">
-              <div className="shrink-0 size-9 rounded-md bg-amber-500/10 border border-amber-500/25 flex items-center justify-center">
-                <AlertTriangle size={18} className="text-amber-400 light:text-amber-700" />
+              <div className="shrink-0 size-9 rounded-md bg-warning-surface border border-warning-border flex items-center justify-center">
+                <AlertTriangle size={18} className="text-warning" />
               </div>
               <div className="flex-1 min-w-0">
                 <AlertDialogTitle className="text-white light:text-brand-main-50 text-[15px] font-semibold leading-tight">
@@ -1092,7 +1092,7 @@ function EnvironmentPanel({
                 event.preventDefault()
                 handleConfirm()
               }}
-              className="h-8 px-3.5 text-sm bg-amber-500/90 hover:bg-amber-500 text-white border-0 inline-flex items-center gap-1.5 shadow-sm shadow-amber-900/30"
+              className="h-8 px-3.5 text-sm bg-warning-solid/90 hover:bg-warning-solid text-warning-solid-foreground border-0 inline-flex items-center gap-1.5 shadow-sm shadow-warning-solid/30"
             >
               <RotateCcw size={14} />
               {updateMutation.isPending ? 'Applying…' : 'Apply & restart'}
@@ -1628,9 +1628,9 @@ function PostureCard({
 }) {
   const toneClass =
     tone === 'good'
-      ? 'border-green-500/25 bg-green-500/10 text-green-300 light:text-green-600'
+      ? 'border-success-border bg-success-surface text-success'
       : tone === 'warn'
-        ? 'border-yellow-500/25 bg-yellow-500/10 text-yellow-300 light:text-yellow-700'
+        ? 'border-warning-border bg-warning-surface text-warning'
         : 'border-brand-main-600 bg-brand-main-900/60 text-white/60 light:text-black/60'
   return (
     <div className={`${panelClass} p-4`}>
@@ -1648,7 +1648,7 @@ function PostureCard({
 function CheckItem({ label }: { label: string }) {
   return (
     <div className="flex items-start gap-2 rounded border border-brand-main-600 bg-brand-main-900/50 px-3 py-2">
-      <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-green-400/80 light:text-green-600/80" />
+      <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-success/80" />
       <span className="text-xs leading-relaxed text-white/60 light:text-black/60">{label}</span>
     </div>
   )
@@ -1681,7 +1681,7 @@ function LinkedAgentRow({
         size="sm"
         disabled={isDeleting}
         onClick={onDelete}
-        className="h-8 px-2 text-white/45 light:text-black/45 hover:text-red-300 light:hover:text-red-600"
+        className="h-8 px-2 text-white/45 light:text-black/45 hover:text-danger"
       >
         <Trash2 className="size-3.5" />
       </Button>

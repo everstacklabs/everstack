@@ -108,7 +108,7 @@ export function AccountSettingsPage() {
                             variant="destructive"
                             onClick={handleSignOut}
                             disabled={signOutMutation.isPending}
-                            className="bg-red-500/20 text-red-400 light:text-red-600 hover:bg-red-500/30 border-red-500/30"
+                            className="bg-danger-surface-strong text-danger hover:bg-danger-solid/25 border-danger-border"
                         >
                             <Iconify.Icon icon="lucide:log-out" className="mr-2 size-4" />
                             {signOutMutation.isPending ? 'Signing out...' : 'Sign Out'}

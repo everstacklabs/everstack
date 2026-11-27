@@ -1,7 +1,7 @@
 name: "open-mistral-7b"
 display_name: "Mistral 7B"
 family: "mistral"
-status: "stable"
+status: "deprecated"
 release_date: "2023-09-27"
 
 cost:
@@ -21,7 +21,7 @@ modalities:
   output: ["text"]
 
 knowledge_cutoff: "2023-12"
-notes: "Mistral model for multilingual chat, reasoning, and tool-assisted workflows"
+notes: "Retired by Mistral on 2025-03-30. Replacement: Ministral 3 8B."
 parameters:
   - key: "max_output_tokens"
     display_name: "Max output tokens"

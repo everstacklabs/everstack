@@ -1,0 +1,65 @@
+# Verified 2026-09-29.
+# Source: https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash
+# Source: https://ai.google.dev/gemini-api/docs/pricing
+name: "gemini-3.8-flash"
+display_name: "Gemini 3.8 Flash"
+family: "gemini-flash"
+status: "stable"
+release_date: "2026-09-02"
+cost:
+  input_per_1k: 0.00075
+  output_per_1k: 0.00375
+  cache_read_per_1k: 7.5e-05
+limits:
+  max_tokens: 1048576
+  max_completion_tokens: 65536
+capabilities:
+  - "chat"
+  - "function_calling"
+  - "vision"
+  - "reasoning"
+modalities:
+  input:
+    - "text"
+    - "image"
+    - "video"
+    - "audio"
+    - "pdf"
+  output:
+    - "text"
+notes: "Introductory standard token rates through 2026-12-31; input/output/cache-read rates double on 2027-01-01. Cache storage and grounding fees are separate. Minimal thinking is unsupported."
+parameters:
+  -
+    key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 65536
+    has_max_value: true
+  -
+    key: "reasoning_effort"
+    display_name: "Reasoning effort"
+    type: "enum"
+    options:
+      - "low"
+      - "medium"
+      - "high"
+structured_output: true
+variants:
+  -
+    id: "low"
+    display_name: "Low reasoning"
+    parameters:
+      reasoning_effort: "low"
+  -
+    id: "medium"
+    display_name: "Medium reasoning"
+    parameters:
+      reasoning_effort: "medium"
+  -
+    id: "high"
+    display_name: "High reasoning"
+    parameters:
+      reasoning_effort: "high"
+added_in_version: "2.9.0"

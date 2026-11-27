@@ -4,6 +4,7 @@ export {
     useLogin,
     useRegister,
     useRequestMagicLink,
+    useVerifyMagicLink,
     useSignOut,
     type AuthMode,
     type User,

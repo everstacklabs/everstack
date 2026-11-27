@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { AuthReplayBoundary } from '@/components/layout/auth-replay-boundary'
 import { Outlet, createRootRouteWithContext, useLocation } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanstackDevtools } from '@tanstack/react-devtools'
@@ -14,6 +15,7 @@ import {
   POST_AUTH_RETURN_URL_KEY,
   safeLocalReturnURL,
 } from '@/lib/local-return-url'
+import { isPublicAuthRoute } from '@/lib/auth-routes'
 
 interface MyRouterContext {
   queryClient: QueryClient
@@ -22,9 +24,6 @@ interface MyRouterContext {
 export const Route = createRootRouteWithContext<MyRouterContext>()({
   component: RootComponent,
 })
-
-// Auth routes that should render outside the dashboard layout
-const AUTH_ROUTES = ['/login', '/register', '/invite', '/device']
 
 function RootComponent() {
   const location = useLocation()
@@ -48,14 +47,16 @@ function RootComponent() {
   }, [])
 
   // Check if current route is an auth route
-  const isAuthRoute = AUTH_ROUTES.some(route => location.pathname.startsWith(route))
+  const isAuthRoute = isPublicAuthRoute(location.pathname)
 
   // Auth routes render with minimal wrapper - no dashboard layout
   if (isAuthRoute) {
     return (
       <>
         <ApiProvider baseUrl={apiBaseUrl}>
-          <Outlet />
+          <AuthReplayBoundary pathname={location.pathname}>
+            <Outlet />
+          </AuthReplayBoundary>
           <Toaster richColors />
         </ApiProvider>
 

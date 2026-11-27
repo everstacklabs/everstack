@@ -14,7 +14,8 @@ option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/gatew
 
 // Input type for responses - can be text, file, or existing input item
 message ResponseInput {
-  // Type of input: "message", "item_reference"
+  // Type of input: "message", "item_reference", "function_call",
+  // "function_call_output"
   string type = 1;
 
   // For message type: the role of the message
@@ -25,6 +26,19 @@ message ResponseInput {
 
   // For item_reference type: reference to a previous output item
   string item_id = 4;
+
+  // For function_call and function_call_output types: the tool call the
+  // item belongs to
+  string call_id = 5;
+
+  // For function_call_output type: the tool's result
+  string output = 6;
+
+  // For function_call type: the function the model called
+  string name = 7;
+
+  // For function_call type: the call's arguments, as a JSON string
+  string arguments = 8;
 }
 
 // Built-in tool configuration
@@ -219,8 +233,11 @@ message CreateResponseRequest {
   // Truncation strategy for long contexts
   TruncationStrategy truncation = 13;
 
-  // Whether to store the response for retrieval
-  bool store = 14;
+  // Whether to store the response for retrieval and previous_response_id
+  // chaining. Unset means true, as in OpenAI's API. Declared optional so an
+  // explicit false is distinguishable from unset; the wire format is
+  // unchanged.
+  optional bool store = 14;
 
   // Optional previous response ID to continue from
   string previous_response_id = 15;
@@ -402,6 +419,14 @@ message CreateResponseResponse {
 
   // Truncation configuration used
   TruncationStrategy truncation = 16;
+
+  // Set only on incremental frames of a streamed response (stream: true):
+  // the text or arguments one output item grew by since the previous frame.
+  // A delta frame is not a snapshot: it carries id and object, and its other
+  // fields are empty. Every other frame, including the final one, is a full
+  // snapshot of the response and leaves delta unset. An item or content part
+  // always appears in a snapshot before the first delta that names it.
+  ResponseDelta delta = 17;
 }
 
 // Streaming chunk for response events
@@ -425,6 +450,12 @@ message ResponseDelta {
 
   // Arguments delta (for function calls)
   string arguments_delta = 3;
+
+  // Index of the item in the response output
+  int32 output_index = 4;
+
+  // Index of the content part within a message item (content_delta only)
+  int32 content_index = 5;
 }
 
 message GetResponseRequest {

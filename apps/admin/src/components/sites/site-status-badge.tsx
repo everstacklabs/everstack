@@ -1,9 +1,9 @@
 import type { SiteStatus } from '@/server/sites'
 
 const STATUS_DISPLAY: Record<SiteStatus, { label: string; className: string }> = {
-    active: { label: 'Active', className: 'bg-green-500/20 text-green-300 light:text-green-600' },
-    expired: { label: 'Expired', className: 'bg-yellow-500/20 text-yellow-300 light:text-yellow-700' },
-    disabled: { label: 'Disabled', className: 'bg-red-500/20 text-red-300 light:text-red-600' },
+    active: { label: 'Active', className: 'bg-success-surface-strong text-success' },
+    expired: { label: 'Expired', className: 'bg-warning-surface-strong text-warning' },
+    disabled: { label: 'Disabled', className: 'bg-danger-surface-strong text-danger' },
     unknown: { label: 'Unknown', className: 'bg-gray-500/20 text-gray-400 light:text-gray-600' },
 }
 

@@ -1,3 +1,6 @@
+# Verified 2026-11-24.
+# Source: https://www.alibabacloud.com/help/en/model-studio/model-pricing
+# Source: https://www.alibabacloud.com/help/en/model-studio/context-cache
 name: "qwen3.7-plus"
 display_name: "Qwen3.7 Plus"
 family: "qwen"
@@ -5,10 +8,15 @@ status: "stable"
 release_date: "2026-06-02"
 
 cost:
-  input_per_1k: 0.0005
-  output_per_1k: 0.003
-  cache_read_per_1k: 0.00005
-  cache_write_per_1k: 0.000625
+  input_per_1k: 0.0004
+  output_per_1k: 0.0016
+  cache_read_per_1k: 8.0e-05
+  cache_write_per_1k: 0.0005
+  long_context:
+    threshold_tokens: 256000
+    input_multiplier: 3
+    cache_multiplier: 3
+    output_multiplier: 3
 
 limits:
   max_tokens: 1000000
@@ -25,7 +33,7 @@ modalities:
   output: ["text"]
 
 knowledge_cutoff: "2025-04"
-notes: "Multimodal Qwen workhorse for long-context agents, visual inputs, and coding"
+notes: "Multimodal Qwen workhorse for long-context agents, visual inputs, and coding. International (Singapore) list prices; inputs over 256K tokens bill at 3x. Alibaba advertises a limited-time 20% discount that is not reflected here. Cache read uses the documented implicit hit ratio (20% of input; explicit hits are 10%); cache write uses the 125% explicit creation ratio."
 parameters:
   - key: "max_output_tokens"
     display_name: "Max output tokens"

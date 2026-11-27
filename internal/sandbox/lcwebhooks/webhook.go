@@ -14,8 +14,10 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -26,6 +28,8 @@ import (
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	sandboxlc "github.com/everstacklabs/everstack/internal/orchestrator/sandbox"
 )
+
+var ErrEndpointNotFound = errors.New("webhook endpoint not found")
 
 // Endpoint is a customer webhook destination.
 type Endpoint struct {
@@ -128,6 +132,19 @@ func (r *Repository) ListEndpoints(ctx context.Context, tenantID string) ([]Endp
 	return eps, nil
 }
 
+// GetEndpoint returns one endpoint in the tenant scope.
+func (r *Repository) GetEndpoint(ctx context.Context, tenantID, id string) (*Endpoint, error) {
+	var ep Endpoint
+	if err := r.db.GetContext(ctx, &ep, `SELECT * FROM sandbox_lifecycle_webhook_endpoints WHERE id = $1 AND tenant_id = $2`, id, tenantID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrEndpointNotFound
+		}
+		return nil, err
+	}
+	_ = json.Unmarshal(ep.Events, &ep.EventList)
+	return &ep, nil
+}
+
 // DeleteEndpoint removes a webhook endpoint.
 func (r *Repository) DeleteEndpoint(ctx context.Context, tenantID, id string) error {
 	const q = `DELETE FROM sandbox_lifecycle_webhook_endpoints WHERE id = $1 AND tenant_id = $2`
@@ -137,7 +154,7 @@ func (r *Repository) DeleteEndpoint(ctx context.Context, tenantID, id string) er
 	}
 	n, _ := res.RowsAffected()
 	if n == 0 {
-		return fmt.Errorf("endpoint not found")
+		return ErrEndpointNotFound
 	}
 	return nil
 }

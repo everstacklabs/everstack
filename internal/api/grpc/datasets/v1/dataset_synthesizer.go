@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+
+	"github.com/everstacklabs/everstack/internal/api/grpc/planlimit"
+	"github.com/everstacklabs/everstack/internal/enterprise"
 	datasetspb "github.com/everstacklabs/everstack/pkg/grpc/everstack/datasets/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -42,6 +45,12 @@ func (s *DatasetServer) GenerateDatasetItems(
 	db, err := s.getPrimaryDB(ctx)
 	if err != nil {
 		return nil, err
+	}
+	// Generated items are dataset items: refuse before spending a model call
+	// when the requested batch would not fit the plan's DATASET_ITEMS cap.
+	if err := enterprise.PrecheckLimit(ctx, db, enterprise.LicenseMonitorFromContext(ctx),
+		enterprise.DatasetItemsLimit(tenantID, int64(count)).Managed()); err != nil {
+		return nil, planlimit.ConnectError(err, "dataset item")
 	}
 	var exists bool
 	if err := db.GetContext(ctx, &exists, `
@@ -76,6 +85,16 @@ func (s *DatasetServer) GenerateDatasetItems(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("parse model output: %w", err))
 	}
+
+	// The precheck above refused early, before the model call. The insert
+	// itself takes the per-organization lock so racing creates cannot both
+	// pass the last slot.
+	limitSlot, limitErr := enterprise.ReserveLimitSlot(ctx, db, enterprise.LicenseMonitorFromContext(ctx),
+		enterprise.DatasetItemsLimit(tenantID, int64(len(generated))).Managed())
+	if limitErr != nil {
+		return nil, planlimit.ConnectError(limitErr, "dataset item")
+	}
+	defer limitSlot.Release()
 
 	tx, err := db.BeginTxx(ctx, nil)
 	if err != nil {
@@ -113,6 +132,7 @@ func (s *DatasetServer) GenerateDatasetItems(
 	if err := tx.Commit(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	limitSlot.Confirm(ctx)
 
 	return connect.NewResponse(&datasetspb.GenerateDatasetItemsResponse{
 		ItemsCreated: int32(len(items)),

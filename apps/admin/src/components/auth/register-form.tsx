@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { replayMask } from '@/lib/replay-privacy'
 import { useRegister } from '../../hooks/auth/use-auth'
 import { ui } from '@everstack/ui'
 import { Icon } from '@iconify/react'
@@ -65,17 +66,17 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
             </CardHeader>
             <CardContent className="space-y-4">
                 {error && (
-                    <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400 light:text-red-600">
+                    <div {...replayMask} className="rounded-lg border border-danger-border bg-danger-surface p-3 text-sm text-danger">
                         {typeof error === 'string' ? error : (error as Error).message || 'An error occurred'}
                     </div>
                 )}
 
-                <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-400 light:text-amber-700">
+                <div className="rounded-lg border border-warning-border bg-warning-surface p-3 text-sm text-warning">
                     <div className="flex items-start gap-2">
                         <Icon icon="lucide:info" className="h-4 w-4 mt-0.5 flex-shrink-0" />
                         <div>
                             <p className="font-medium">First user registration</p>
-                            <p className="text-amber-400/80 light:text-amber-700/80 text-xs mt-1">
+                            <p className="text-warning/80 text-xs mt-1">
                                 This account will become the instance owner with full admin access.
                             </p>
                         </div>

@@ -82,8 +82,8 @@ export function formatDelta(delta: number | undefined): string {
 // which does not resolve var(). Brand purple primary + semantic hues.
 export const BOARD_COLORS = {
   requests: '#826cf5',
-  errors: '#fb7185',
-  errorRate: '#fbbf24',
+  errors: '#f69b98', // --color-danger (dark)
+  errorRate: '#f4c170', // --color-warning (dark)
   cost: '#34d399',
   ttftP50: '#38bdf8',
   ttftP95: '#a78bfa',
@@ -95,8 +95,8 @@ export const BOARD_COLORS = {
  */
 const BOARD_COLORS_LIGHT: Record<keyof typeof BOARD_COLORS, string> = {
   requests: '#6d55e8',
-  errors: '#e11d48',
-  errorRate: '#d97706',
+  errors: '#c33939', // --color-danger-solid (light)
+  errorRate: '#ba6900', // --color-warning-solid (light)
   cost: '#059669',
   ttftP50: '#0284c7',
   ttftP95: '#7c3aed',

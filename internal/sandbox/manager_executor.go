@@ -23,9 +23,9 @@ package sandbox
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -40,6 +40,7 @@ import (
 // and registers it in the manager's routing caches. The reconciler owns
 // the row; this owns the VM.
 func (m *SandboxManager) ExecuteCreate(ctx context.Context, sandboxID string, cfg InstanceConfig) (*Instance, error) {
+	m.shadowAdmitCompute(cfg.TenantID, ComputeSurfaceSandboxCreate)
 	if err := m.RequireSandboxBilling(cfg.TenantID); err != nil {
 		return nil, err
 	}
@@ -70,10 +71,15 @@ func (m *SandboxManager) ExecuteCreate(ctx context.Context, sandboxID string, cf
 	return inst, nil
 }
 
-// ExecuteStop snapshots /workspace, uploads the optional R2 VM snapshot,
-// destroys the backend resource, and returns the host path of the
-// workspace tarball ("" when no snapshot could be taken). The caller
-// persists the returned ref on the row.
+// ExecuteStop snapshots /workspace, persists the tarball to object
+// storage and verifies it, destroys the backend resource, and returns the
+// workspace ref to store on the row: an object-storage ref (see
+// snapshot.WorkspaceRef), the local tarball path when object storage is
+// not configured, or "" when no snapshot could be taken from a dead guest.
+//
+// The VM is destroyed only after the workspace is durable. An upload
+// failure returns an error with the VM still running (the reconciler
+// retries); a workspace over the size cap returns ErrWorkspaceTooLarge.
 func (m *SandboxManager) ExecuteStop(ctx context.Context, sandboxID string) (string, error) {
 	inst, err := m.findInstanceBySandboxIDWithDBFallback(ctx, sandboxID)
 	if err != nil {
@@ -124,6 +130,9 @@ func (m *SandboxManager) ExecuteStop(ctx context.Context, sandboxID string) (str
 	if snapshotErr != nil {
 		_ = os.Remove(snapshotPath)
 		snapshotPath = ""
+		if isTransportSizeCapError(snapshotErr) {
+			return "", m.refuseSleep(sandboxID, NewWorkspaceTooLarge(0, m.WorkspaceMaxBytes()))
+		}
 		// A dead VM cannot be snapshotted; that is not a reason to
 		// wedge the stop. Degrade to "stop without snapshot" when EITHER:
 		//   - the backend reports the VM gone, OR
@@ -141,6 +150,39 @@ func (m *SandboxManager) ExecuteStop(ctx context.Context, sandboxID string) (str
 		}
 		logger.WithFields("sandbox_id", sandboxID, "error", snapshotErr.Error()).
 			Warn("sandbox_executor: snapshot failed and guest is gone; stopping without snapshot")
+	}
+
+	// Make the workspace durable BEFORE the VM is destroyed. Nothing below
+	// this block may run unless the tarball is safely stored (or object
+	// storage is unconfigured and the legacy local copy is all we have).
+	workspaceRef := ""
+	if snapshotPath == "" {
+		// Guest already gone. A previous attempt of this stop may have
+		// uploaded and verified the workspace and destroyed the VM before
+		// its row write was lost; adopt that copy instead of reporting
+		// "nothing saved".
+		ref, err := m.adoptLatestWorkspaceRef(ctx, sandboxID)
+		if err != nil {
+			return "", err
+		}
+		workspaceRef = ref
+	}
+	if snapshotPath != "" {
+		if err := m.checkWorkspaceSize(snapshotPath); err != nil {
+			_ = os.Remove(snapshotPath)
+			if errors.Is(err, ErrWorkspaceTooLarge) {
+				return "", m.refuseSleep(sandboxID, err)
+			}
+			return "", err
+		}
+		ref, err := m.persistWorkspace(ctx, sandboxID, snapshotPath)
+		if err != nil {
+			_ = os.Remove(snapshotPath)
+			logger.WithFields("sandbox_id", sandboxID, "tenant_id", tenantID, "error", err.Error()).
+				Error("sandbox_executor: workspace upload failed; keeping the VM running and retrying")
+			return "", err
+		}
+		workspaceRef = ref
 	}
 
 	// Best-effort full-VM snapshot for host-loss survival.
@@ -176,7 +218,7 @@ func (m *SandboxManager) ExecuteStop(ctx context.Context, sandboxID string) (str
 	if cached, ok := m.instances[sessionID]; ok && cached.ID == sandboxID {
 		cached.Status = StatusStopped
 		cached.LifecycleState = LifecycleStopped
-		cached.TrooperSnapshotRef = snapshotPath
+		cached.TrooperSnapshotRef = workspaceRef
 		cached.StoppedAt = stoppedAt
 		if cached.Persistent && cached.AgentID != "" {
 			m.troopers[cached.AgentID] = cached
@@ -185,7 +227,8 @@ func (m *SandboxManager) ExecuteStop(ctx context.Context, sandboxID string) (str
 	m.mu.Unlock()
 
 	m.recordEvent(sandboxID, sessionID, tenantID, EventSandboxStopped, "Sandbox stopped", map[string]interface{}{
-		"snapshot": snapshotPath,
+		"workspace_saved":   workspaceRef != "",
+		"workspace_durable": snapshot.IsWorkspaceObjectRef(workspaceRef),
 	}, nil, "")
 	// Trooper read-model alignment (agent_definitions is derived by the
 	// reconciler's ApplyTransition in the same tx as the row write).
@@ -195,39 +238,45 @@ func (m *SandboxManager) ExecuteStop(ctx context.Context, sandboxID string) (str
 			WHERE sandbox_id = $1 AND deleted_at IS NULL`, sandboxID)
 	}
 
-	logger.WithFields("sandbox_id", sandboxID, "snapshot", snapshotPath).
+	logger.WithFields("sandbox_id", sandboxID, "workspace_durable", snapshot.IsWorkspaceObjectRef(workspaceRef)).
 		Info("sandbox_executor: stop executed")
-	return snapshotPath, nil
+	return workspaceRef, nil
 }
 
 // ExecuteRevive recreates the backend resource for a sleeping or
-// archived sandbox and restores the workspace. snapshotRef is the local
-// tarball path recorded at stop time (may be empty); archiveRef is the
-// object-storage marker set by ExecuteArchive (may be empty). When the
-// local tar is missing but an archive exists, it is downloaded first.
+// archived sandbox and restores the workspace. snapshotRef and archiveRef
+// are the row's workspace refs (object-storage ref, legacy local path, or
+// legacy archive marker; either may be empty). The saved workspace is
+// fetched and verified BEFORE any VM is created; if a workspace was saved
+// but cannot be restored, the revive fails with ErrWorkspaceRestoreFailed
+// instead of booting an empty workspace.
 func (m *SandboxManager) ExecuteRevive(ctx context.Context, sandboxID, snapshotRef, archiveRef string) (*Instance, error) {
 	savedConfig, sessionID, err := m.GetInstanceConfig(ctx, sandboxID)
 	if err != nil {
 		return nil, fmt.Errorf("load saved config: %w", err)
 	}
+	m.shadowAdmitCompute(savedConfig.TenantID, ComputeSurfaceSandboxRevive)
 	if err := m.RequireSandboxBilling(savedConfig.TenantID); err != nil {
 		return nil, err
 	}
 	if err := m.RequireConcurrentSandboxSlot(ctx, savedConfig.TenantID, sandboxID); err != nil {
 		return nil, err
 	}
-	if err := m.validateInstanceMachineProfile(*savedConfig); err != nil {
+	fittedConfig, err := m.fitExistingInstanceMachineProfile(*savedConfig)
+	if err != nil {
 		return nil, err
 	}
+	sizeChanged := fittedConfig.CPULimit != savedConfig.CPULimit || fittedConfig.MemoryMB != savedConfig.MemoryMB
+	savedConfig = &fittedConfig
 	prevInst := m.findInstanceBySandboxID(sandboxID)
 
-	snapshotPath := strings.TrimSpace(snapshotRef)
-	if archiveRef != "" {
-		if restored, err := m.materializeArchivedWorkspace(ctx, sandboxID, savedConfig.TenantID, snapshotPath); err != nil {
-			return nil, fmt.Errorf("download archived workspace: %w", err)
-		} else if restored != "" {
-			snapshotPath = restored
-		}
+	owner := m.resolveTenantID(ctx, sandboxID, savedConfig.TenantID)
+	snapshotPath, downloaded, err := m.materializeWorkspace(ctx, owner, sandboxID, snapshotRef, archiveRef)
+	if err != nil {
+		return nil, err
+	}
+	if downloaded {
+		defer func() { _ = os.Remove(snapshotPath) }()
 	}
 
 	inst, err := m.backend.Create(ctx, sandboxID, *savedConfig)
@@ -255,31 +304,29 @@ func (m *SandboxManager) ExecuteRevive(ctx context.Context, sandboxID, snapshotR
 	inst.BillingEndedAt = time.Time{}
 	m.seedRouteFromInstance(inst)
 
-	// Restore /workspace. A missing tarball degrades to a fresh
-	// workspace with a loud log (matches legacy revive semantics).
+	// Restore /workspace from the verified tarball. "" means no workspace
+	// was ever saved (first boot after a dead-guest stop), not a lost one.
 	if snapshotPath != "" {
-		if _, statErr := os.Stat(snapshotPath); statErr != nil {
-			logger.WithFields("sandbox_id", sandboxID, "snapshot", snapshotPath).
-				Warn("sandbox_executor: snapshot file missing, reviving without workspace restore")
-		} else {
-			restoreCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-			defer cancel()
-			var restoreErr error
-			switch {
-			case backendImplementsSnapshotter(m.backend):
-				restoreErr = m.backend.(Snapshotter).Restore(restoreCtx, sandboxID, snapshotPath, "/workspace")
-			case m.backend.Name() == "docker":
-				restoreErr = m.dockerRestore(restoreCtx, inst.ContainerID, snapshotPath)
-			default:
-				restoreErr = m.execRestore(restoreCtx, sandboxID, snapshotPath)
-			}
-			if restoreErr != nil {
-				// Self-clean the half-created VM; the reconciler retries
-				// the whole revive from scratch.
-				_ = m.backend.Destroy(ctx, sandboxID)
-				return nil, fmt.Errorf("workspace restore failed: %w", restoreErr)
-			}
+		restoreCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		defer cancel()
+		var restoreErr error
+		switch {
+		case backendImplementsSnapshotter(m.backend):
+			restoreErr = m.backend.(Snapshotter).Restore(restoreCtx, sandboxID, snapshotPath, "/workspace")
+		case m.backend.Name() == "docker":
+			restoreErr = m.dockerRestore(restoreCtx, inst.ContainerID, snapshotPath)
+		default:
+			restoreErr = m.execRestore(restoreCtx, sandboxID, snapshotPath)
 		}
+		if restoreErr != nil {
+			// Self-clean the half-created VM; the reconciler retries
+			// the whole revive from scratch.
+			_ = m.backend.Destroy(ctx, sandboxID)
+			return nil, fmt.Errorf("workspace restore failed: %w", restoreErr)
+		}
+	} else {
+		logger.WithFields("sandbox_id", sandboxID).
+			Info("sandbox_executor: no saved workspace on the row; reviving with a fresh /workspace")
 	}
 
 	// Git-imported sandboxes: verify the host-side repo still matches.
@@ -312,113 +359,62 @@ func (m *SandboxManager) ExecuteRevive(ctx context.Context, sandboxID, snapshotR
 		_, _ = m.db.ExecContext(ctx, `
 			UPDATE troopers SET status = 'running', updated_at = NOW()
 			WHERE sandbox_id = $1 AND deleted_at IS NULL`, sandboxID)
+		// The reconciler never rewrites the config column, and the usage
+		// meter prices open windows from it, so record the size the VM
+		// actually got when the plan clamped it.
+		if sizeChanged {
+			if configJSON, err := json.Marshal(*savedConfig); err == nil {
+				if _, err := m.db.ExecContext(ctx,
+					`UPDATE sandbox_instances SET config = $2 WHERE id = $1`,
+					sandboxID, configJSON); err != nil {
+					logger.WithFields("sandbox_id", sandboxID, "error", err.Error()).
+						Warn("sandbox_executor: failed to persist plan-clamped revive size")
+				}
+			}
+		}
 	}
 
 	logger.WithFields("sandbox_id", sandboxID).Info("sandbox_executor: revive executed")
 	return inst, nil
 }
 
-// ExecuteArchive moves the stopped sandbox's workspace tarball to
-// object storage and deletes the local copy. Returns the archive ref
-// to persist on the row ("" when archiving degraded to label-only:
-// no snapshot exists or R2 is not configured).
+// ExecuteArchive makes sure the stopped sandbox's workspace lives in
+// object storage. Returns the archive ref to persist on the row ("" when
+// archiving degraded to label-only: no local tarball to move, or object
+// storage is not configured). A workspace already persisted at sleep has
+// no local tarball, so archiving it is a label change.
 func (m *SandboxManager) ExecuteArchive(ctx context.Context, sandboxID, snapshotRef string) (string, error) {
 	snapshotPath := strings.TrimSpace(snapshotRef)
-	if snapshotPath == "" {
+	if snapshotPath == "" || snapshot.IsWorkspaceObjectRef(snapshotPath) || snapshotPath == string(snapshot.KindWorkspace) {
 		return "", nil
 	}
-	store := m.snapshotStore()
-	if _, disabled := store.(*snapshot.Disabled); disabled {
+	if !m.WorkspacePersistenceConfigured() {
 		logger.WithFields("sandbox_id", sandboxID).
-			Info("sandbox_executor: R2 not configured; archive is label-only (local tar kept)")
+			Warn("sandbox_executor: object storage not configured; archive is label-only and the workspace stays on local gateway disk")
 		return "", nil
+	}
+	if _, err := os.Stat(snapshotPath); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			// Nothing to upload; the revive path will report the loss.
+			logger.WithFields("sandbox_id", sandboxID).
+				Warn("sandbox_executor: workspace tar missing at archive time")
+			return "", nil
+		}
+		return "", fmt.Errorf("stat workspace tar: %w", err)
 	}
 	inst, err := m.findInstanceBySandboxIDWithDBFallback(ctx, sandboxID)
 	if err != nil {
 		return "", err
 	}
-	f, err := os.Open(snapshotPath)
+	ref, err := m.persistWorkspace(ctx, sandboxID, snapshotPath)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			// Nothing to upload; archive proceeds label-only.
-			logger.WithFields("sandbox_id", sandboxID, "snapshot", snapshotPath).
-				Warn("sandbox_executor: workspace tar missing at archive time")
-			return "", nil
-		}
-		return "", fmt.Errorf("open workspace tar: %w", err)
+		return "", fmt.Errorf("archive workspace: %w", err)
 	}
-	defer f.Close()
 
-	upCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-	rec, err := store.PutStream(upCtx, inst.Config.TenantID, sandboxID, snapshot.KindWorkspace, "application/gzip", f)
-	if err != nil {
-		return "", fmt.Errorf("upload workspace tar: %w", err)
-	}
-	// Local copy is now redundant; deleting it is the point of
-	// archiving (free host disk). Best-effort: a leftover file is
-	// re-deleted by the next archive or terminate.
-	_ = os.Remove(snapshotPath)
-
-	m.recordEvent(sandboxID, inst.Config.SessionID, inst.Config.TenantID, EventSandboxArchived, "Sandbox archived to object storage", map[string]interface{}{
-		"size_bytes": rec.SizeBytes,
-	}, nil, "")
-	logger.WithFields("sandbox_id", sandboxID, "size_bytes", rec.SizeBytes).
+	m.recordEvent(sandboxID, inst.Config.SessionID, inst.Config.TenantID, EventSandboxArchived, "Sandbox archived to object storage", nil, nil, "")
+	logger.WithFields("sandbox_id", sandboxID).
 		Info("sandbox_executor: workspace archived to object storage")
-	return string(snapshot.KindWorkspace), nil
-}
-
-// materializeArchivedWorkspace downloads the archived workspace tar
-// back to the local snapshot path so the normal restore dispatch can
-// run. Returns the local path, or "" when the archive stream is not
-// available (revive proceeds with a fresh workspace).
-func (m *SandboxManager) materializeArchivedWorkspace(ctx context.Context, sandboxID, tenantID, existingLocal string) (string, error) {
-	if existingLocal != "" {
-		if _, err := os.Stat(existingLocal); err == nil {
-			return existingLocal, nil // local tar survived; no download needed
-		}
-	}
-	store := m.snapshotStore()
-	if _, disabled := store.(*snapshot.Disabled); disabled {
-		return "", nil
-	}
-	rc, err := store.GetStream(ctx, tenantID, sandboxID, snapshot.KindWorkspace)
-	if err != nil {
-		if errors.Is(err, snapshot.ErrSnapshotMissing) {
-			return "", nil
-		}
-		return "", err
-	}
-	defer rc.Close()
-
-	if err := m.ensureDataDirWritable(); err != nil {
-		return "", err
-	}
-	localPath := filepath.Join(m.dataDir(), sandboxID, "trooper.tar.gz")
-	if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
-		return "", err
-	}
-	tmp := localPath + ".partial"
-	out, err := os.Create(tmp)
-	if err != nil {
-		return "", err
-	}
-	if _, err := io.Copy(out, rc); err != nil {
-		_ = out.Close()
-		_ = os.Remove(tmp)
-		return "", err
-	}
-	if err := out.Close(); err != nil {
-		_ = os.Remove(tmp)
-		return "", err
-	}
-	if err := os.Rename(tmp, localPath); err != nil {
-		_ = os.Remove(tmp)
-		return "", err
-	}
-	logger.WithFields("sandbox_id", sandboxID, "path", localPath).
-		Info("sandbox_executor: archived workspace downloaded for revive")
-	return localPath, nil
+	return ref, nil
 }
 
 // ExecuteTerminate destroys the backend resource and all host-side
@@ -461,9 +457,18 @@ func (m *SandboxManager) ExecuteTerminate(ctx context.Context, sandboxID string)
 	// copy in object storage.
 	m.cleanupSandboxData(sandboxID)
 	if store := m.snapshotStore(); store != nil {
-		if inst != nil && inst.Config.TenantID != "" {
+		owner := ""
+		if inst != nil {
+			owner = inst.Config.TenantID
+		}
+		if owner = m.resolveTenantID(ctx, sandboxID, owner); owner != "" {
 			delCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-			_ = store.Delete(delCtx, inst.Config.TenantID, sandboxID)
+			if err := store.Delete(delCtx, owner, sandboxID); err != nil {
+				// The hourly snapshot GC deletes the same prefix for
+				// terminated rows, so a failure here is retried there.
+				logger.WithFields("sandbox_id", sandboxID, "tenant_id", owner, "error", err.Error()).
+					Warn("sandbox_executor: deleting stored workspace and snapshots failed; snapshot GC will retry")
+			}
 			cancel()
 		}
 	}

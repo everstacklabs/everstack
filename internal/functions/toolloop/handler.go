@@ -3,10 +3,13 @@ package toolloop
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	usagecmd "github.com/everstacklabs/everstack/internal/commands/handlers/usage"
@@ -46,27 +49,66 @@ func NewDBFunctionLookup(db *sqlx.DB) *DBFunctionLookup {
 	return &DBFunctionLookup{db: db}
 }
 
+// singleTenant is set once at startup for a self-hosted gateway that serves a
+// single organization. It is false, the strict setting, everywhere else.
+var singleTenant atomic.Bool
+
+// SetSingleTenant tells the function lookup that this gateway serves exactly one
+// organization (a self-hosted gateway, never a managed or shared one). Only
+// then may a function registered under an older tenant id of the same
+// deployment still be found by name. On a managed gateway a lookup never
+// leaves the request's tenant.
+func SetSingleTenant(single bool) { singleTenant.Store(single) }
+
 // GetFunctionByName retrieves a function by name from the database.
 func (l *DBFunctionLookup) GetFunctionByName(ctx context.Context, name, tenantID string) (*functionsquery.FunctionReadModel, error) {
+	if tenantID == "" {
+		return nil, fmt.Errorf("function lookup requires a tenant")
+	}
 	var fn functionsquery.FunctionReadModel
 	err := l.db.GetContext(ctx, &fn, `
 		SELECT * FROM functions
-		WHERE name = $1 AND enabled = true
-	`, name)
+		WHERE name = $1 AND tenant_id = $2 AND enabled = true
+	`, name, tenantID)
+	if errors.Is(err, sql.ErrNoRows) && singleTenant.Load() {
+		// Self-hosted, one organization: functions registered before requests
+		// carried this tenant id (for example under the license organization)
+		// keep working. Ambiguous names are refused rather than guessed.
+		var rows []functionsquery.FunctionReadModel
+		if err = l.db.SelectContext(ctx, &rows, `
+			SELECT * FROM functions WHERE name = $1 AND enabled = true LIMIT 2
+		`, name); err != nil {
+			return nil, err
+		}
+		if len(rows) != 1 {
+			return nil, sql.ErrNoRows
+		}
+		return &rows[0], nil
+	}
 	if err != nil {
 		return nil, err
 	}
 	return &fn, nil
 }
 
-// ListEnabledFunctionNames returns the names of all enabled functions for a tenant.
+// ListEnabledFunctionNames returns the names of all enabled functions for a
+// tenant. Only a single-tenant gateway may list without a tenant filter.
 func (l *DBFunctionLookup) ListEnabledFunctionNames(ctx context.Context, tenantID string) ([]string, error) {
 	var names []string
+	if singleTenant.Load() {
+		err := l.db.SelectContext(ctx, &names, `
+			SELECT DISTINCT name FROM functions WHERE enabled = true ORDER BY name
+		`)
+		return names, err
+	}
+	if tenantID == "" {
+		return nil, fmt.Errorf("function listing requires a tenant")
+	}
 	err := l.db.SelectContext(ctx, &names, `
 		SELECT name FROM functions
-		WHERE enabled = true
+		WHERE enabled = true AND tenant_id = $1
 		ORDER BY name
-	`)
+	`, tenantID)
 	if err != nil {
 		return nil, err
 	}

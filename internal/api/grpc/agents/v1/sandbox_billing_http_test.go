@@ -1,12 +1,10 @@
 package v1
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/sandbox"
 )
 
@@ -16,7 +14,7 @@ func TestRequireSandboxBillingHTTPRejectsUnpaidTenant(t *testing.T) {
 	manager := &sandbox.SandboxManager{}
 	manager.SetSandboxBillingResolver(func(string) bool { return false })
 	server := &Server{sandboxMgr: manager}
-	ctx := contextkeys.WithTenantID(context.Background(), "tenant-free")
+	ctx := verifiedTenantCtx("tenant-free")
 	req := httptest.NewRequest(http.MethodPost, "/v1/sandbox/instances/sbx/start", nil).WithContext(ctx)
 	recorder := httptest.NewRecorder()
 
@@ -34,7 +32,7 @@ func TestRequireSandboxBillingHTTPAllowsPaidTenant(t *testing.T) {
 	manager := &sandbox.SandboxManager{}
 	manager.SetSandboxBillingResolver(func(tenantID string) bool { return tenantID == "tenant-paid" })
 	server := &Server{sandboxMgr: manager}
-	ctx := contextkeys.WithTenantID(context.Background(), "tenant-paid")
+	ctx := verifiedTenantCtx("tenant-paid")
 	req := httptest.NewRequest(http.MethodPost, "/v1/sandbox/instances/sbx/start", nil).WithContext(ctx)
 	recorder := httptest.NewRecorder()
 

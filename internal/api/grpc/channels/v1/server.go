@@ -11,6 +11,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/jmoiron/sqlx"
 
+	"github.com/everstacklabs/everstack/internal/api/grpc/planlimit"
 	"github.com/everstacklabs/everstack/internal/channels"
 	"github.com/everstacklabs/everstack/internal/enterprise"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
@@ -90,15 +91,12 @@ func (s *Server) CreateChannel(ctx context.Context, req *connect.Request[channel
 	platform := platformToString(msg.Platform)
 	monitor := enterprise.LicenseMonitorFromContext(ctx)
 
-	slot, err := enterprise.ReserveResourceSlot(ctx, s.db, monitor,
-		enterprise.UsageTypeChannels,
-		`SELECT COUNT(*) FROM channel_configs WHERE tenant_id = $1`,
-		[]interface{}{tenantID}, 1, "channel", tenantID)
+	slot, err := enterprise.ReserveLimitSlot(ctx, s.db, monitor, enterprise.ChannelsLimit(tenantID))
 	if err != nil {
 		ent := enterprise.ResolveEntitlements(ctx, monitor)
 		logger.WithFields("tier", ent.Tier, "source", ent.Source, "platform", platform).
 			WithError(err).Info("channels: create blocked by channel limit")
-		return nil, connect.NewError(connect.CodeResourceExhausted, err)
+		return nil, planlimit.ConnectError(err, "channel")
 	}
 	defer slot.Release()
 

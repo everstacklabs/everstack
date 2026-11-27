@@ -466,6 +466,44 @@ export async function acceptInvitation(token: string, baseUrl?: string): Promise
 }
 
 /**
+ * Decline an invitation. Requires a valid cloud session (cookie) for the
+ * invited email, like accept. On "declined" the invitation is deleted and its
+ * link stops working. Other statuses reuse accept's vocabulary.
+ */
+export type InvitationDeclineStatus = 'declined' | 'email_mismatch' | 'invalid' | 'expired' | 'unauthenticated'
+
+export interface InvitationDeclineResult {
+    status: InvitationDeclineStatus
+    reason?: string
+}
+
+export async function declineInvitation(token: string, baseUrl?: string): Promise<InvitationDeclineResult> {
+    const origin = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '')
+    // The token goes in a JSON body, not the query string: the server
+    // requires application/json on this cookie-authenticated POST as a
+    // cross-site request guard.
+    const res = await fetch(`${origin}/api/auth/invite-decline`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+    })
+    let json: { status?: InvitationDeclineStatus; reason?: string } | null = null
+    try {
+        json = await res.json()
+    } catch {
+        // A proxy error page or empty body, handled below.
+    }
+    if (!json?.status) {
+        // Throw rather than return "invalid": the invitation may be fine and
+        // the route simply unreachable (for example a frontend deployed
+        // before the auth service), so callers should offer a retry.
+        throw new Error(`decline request failed (${res.status})`)
+    }
+    return { status: json.status, reason: json.reason }
+}
+
+/**
  * List workspaces in an organization
  */
 export async function listWorkspaces(

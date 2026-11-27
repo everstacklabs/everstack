@@ -26,10 +26,21 @@ import (
 )
 
 // ErrSandboxBillingRequired is returned before compute allocation when a
-// managed tenant has exhausted its starter credit without active billing. A
-// nil resolver keeps Community Edition and local development independent of
-// central billing.
-var ErrSandboxBillingRequired = errors.New("sandbox starter credit is exhausted; add or restore billing to continue compute")
+// managed tenant's organization has used this period's included sandbox hours
+// (its plan's compute allowance) and has no credit available to pay for more.
+// An Enterprise contract or an internal organization is never refused. The
+// message is shown to the customer. A nil resolver keeps Community Edition
+// and local development independent of central billing.
+var ErrSandboxBillingRequired = errors.New("You have used this month's included sandbox hours. Add credit to keep running.")
+
+// ErrTenantPaused is returned before compute allocation when the tenant's
+// managed instance is paused (over its plan's instance limit, or stopped by
+// the user). A paused instance must not run any compute until it is resumed.
+var ErrTenantPaused = errors.New("instance is paused: over plan instance limit or stopped; resume it to run sandboxes")
+
+// tenantActiveCheckTimeout bounds the paused-tenant lookup on paths that have
+// no request context of their own.
+const tenantActiveCheckTimeout = 2 * time.Second
 
 // ErrConcurrentSandboxLimit is returned before allocating compute when the
 // current instance has used every concurrent sandbox slot in its plan.
@@ -61,6 +72,9 @@ type SandboxManager struct {
 
 	// GitHub App client for git operations (clone repos). Set via SetGitHubApp().
 	githubApp *github.App
+	// githubTenantKey maps a sandbox tenant id to the key GitHub rows are
+	// stored under (see SetGitHubTenantKeyResolver).
+	githubTenantKey github.TenantKeyResolver
 
 	// createSem limits concurrent sandbox creations to prevent system overload.
 	createSem *semaphore.Weighted
@@ -95,10 +109,24 @@ type SandboxManager struct {
 	// concept.
 	tenantTierResolver atomic.Pointer[func(tenantID string) string]
 
+	// tenantScopeResolver widens the CONCURRENT_SANDBOXES count from one
+	// tenant id to its whole organization on a managed gateway. Nil counts
+	// the tenant alone (self-hosted).
+	tenantScopeResolver atomic.Pointer[scopeResolverHolder]
+
 	// sandboxBillingResolver reports whether a managed tenant may allocate
 	// paid sandbox compute. Nil means this is a self-hosted/local manager where
 	// central Everstack billing does not apply.
 	sandboxBillingResolver atomic.Pointer[func(tenantID string) bool]
+
+	// computeAdmissionShadow is the G1 dry-run compute admission hook
+	// (admission_shadow.go). Nil on self-hosted.
+	computeAdmissionShadow atomic.Pointer[func(tenantID, surface string)]
+
+	// tenantActiveFn reports whether a tenant's managed instance may run
+	// compute (false = paused). Nil means every tenant is active, which is
+	// the self-hosted default.
+	tenantActiveFn atomic.Pointer[func(ctx context.Context, tenantID string) bool]
 
 	// managedMachineProfiles requires every newly allocated managed sandbox to
 	// match the fixed, publicly priced resource tuples. It remains false for
@@ -125,6 +153,10 @@ type SandboxManager struct {
 	// Backend discovery runs before SetDB. Legacy collision cleanup is deferred
 	// until the DB is attached so an open billing window can be closed first.
 	pendingLegacyCleanup []string
+
+	// workspaceMaxBytes caps the /workspace tarball a sandbox may sleep
+	// with (see manager_workspace.go). Zero means the default.
+	workspaceMaxBytes atomic.Int64
 }
 
 // NewManager creates a new SandboxManager with the given backend and global config.
@@ -319,12 +351,17 @@ func (m *SandboxManager) warmInstanceCache() {
 	toRoute := make([]*Instance, 0)
 	m.mu.Lock()
 	for _, r := range rows {
-		if _, exists := m.instances[r.SessionID]; exists {
-			continue
-		}
 		var cfg InstanceConfig
 		if len(r.Config) > 0 {
 			_ = json.Unmarshal(r.Config, &cfg)
+		}
+		if existing, exists := m.instances[r.SessionID]; exists {
+			// restoreInstances rebuilds config from the backend, which does
+			// not carry the billing ceiling; the DB row does.
+			if existing.ID == r.ID && existing.Config.Metered == nil && cfg.Metered != nil {
+				existing.Config.Metered = cfg.Metered
+			}
+			continue
 		}
 		if cfg.Image == "" {
 			cfg.Image = r.Image
@@ -782,7 +819,9 @@ func (m *SandboxManager) GetOrCreateTrooper(ctx context.Context, agentID, sessio
 	}
 
 	requestedSandboxID := fmt.Sprintf("wks_%s", agentID)
-	if err := m.RequireConcurrentSandboxSlot(ctx, tenantID, requestedSandboxID); err != nil {
+	// Resolved before m.mu: the resolver may query the platform database.
+	scope := m.ConcurrencyScope(ctx, tenantID)
+	if err := m.requireConcurrentSandboxSlotIn(ctx, tenantID, scope, requestedSandboxID); err != nil {
 		return nil, err
 	}
 
@@ -892,7 +931,7 @@ func (m *SandboxManager) GetOrCreateTrooper(ctx context.Context, agentID, sessio
 	if limit := m.ConcurrentSandboxLimit(tenantID); limit != UnlimitedSandboxLimit {
 		used := 0
 		for _, candidate := range m.instancesBySandbox {
-			if sandboxReservesConcurrentSlot(candidate, tenantID, sandboxID) {
+			if sandboxReservesConcurrentSlot(candidate, scope.Enforced(tenantID), sandboxID) {
 				used++
 			}
 		}
@@ -907,9 +946,28 @@ func (m *SandboxManager) GetOrCreateTrooper(ctx context.Context, agentID, sessio
 		}
 	}
 
+	config = DropReservedAgentSandboxName(config, agentID)
 	// Clamp config to trooper tier limits, then to global+tenant caps.
 	config = m.ClampToTrooperLimits(config, tenantID)
 	config = m.clampToGlobalLimitsForTenant(config, tenantID)
+	// Agents persist their size, and rows written before managed profiles
+	// existed (or clamped field by field above) can match no profile. Map
+	// them onto the nearest one rather than failing every provision.
+	normalized, meteredCeiling, changed := m.normalizeStoredAgentSize(config)
+	if changed {
+		logger.WithFields(
+			"agent_id", agentID,
+			"tenant_id", tenantID,
+			"stored_cpu", config.CPULimit,
+			"stored_memory_mb", config.MemoryMB,
+			"stored_disk_mb", config.DiskMB,
+			"cpu", normalized.CPULimit,
+			"memory_mb", normalized.MemoryMB,
+			"disk_mb", normalized.DiskMB,
+			"metered_ceiling", meteredCeiling != nil,
+		).Warn("sandbox: agent size matches no managed profile; using nearest profile")
+		config = normalized
+	}
 	if err := m.ValidateSandboxMachineProfile(config, tenantID); err != nil {
 		m.mu.Unlock()
 		return nil, err
@@ -942,6 +1000,7 @@ func (m *SandboxManager) GetOrCreateTrooper(ctx context.Context, agentID, sessio
 		SSHEnabled:     config.SSHEnabled,
 		AgentID:        agentID,
 		BrowserSidecar: config.BrowserSidecar,
+		Metered:        meteredCeiling,
 	}
 
 	// Reserve slot
@@ -973,6 +1032,7 @@ func (m *SandboxManager) GetOrCreateTrooper(ctx context.Context, agentID, sessio
 	}
 	defer m.createSem.Release(1)
 
+	m.shadowAdmitCompute(tenantID, ComputeSurfaceSandboxCreate)
 	inst, err := m.backend.Create(ctx, sandboxID, instanceConfig)
 	if err != nil {
 		m.mu.Lock()
@@ -1439,6 +1499,9 @@ func (m *SandboxManager) GetOrCreateAsync(ctx context.Context, sessionID, tenant
 }
 
 func (m *SandboxManager) getOrCreateImpl(ctx context.Context, sessionID, tenantID, instanceID string, config SandboxConfig, async bool) (*Instance, error) {
+	if err := ValidateSandboxName(config.Name); err != nil {
+		return nil, err
+	}
 	if err := m.RequireSandboxBilling(tenantID); err != nil {
 		return nil, err
 	}
@@ -1494,7 +1557,10 @@ func (m *SandboxManager) getOrCreateImpl(ctx context.Context, sessionID, tenantI
 		// Fall through to acquire write lock and recreate
 	}
 
-	if err := m.RequireConcurrentSandboxSlot(ctx, tenantID, requestedSandboxID); err != nil {
+	m.shadowAdmitCompute(tenantID, ComputeSurfaceSandboxCreate)
+	// Resolved before m.mu: the resolver may query the platform database.
+	scope := m.ConcurrencyScope(ctx, tenantID)
+	if err := m.requireConcurrentSandboxSlotIn(ctx, tenantID, scope, requestedSandboxID); err != nil {
 		return nil, err
 	}
 
@@ -1561,7 +1627,7 @@ func (m *SandboxManager) getOrCreateImpl(ctx context.Context, sessionID, tenantI
 	if limit := m.ConcurrentSandboxLimit(tenantID); limit != UnlimitedSandboxLimit {
 		used := 0
 		for _, candidate := range m.instancesBySandbox {
-			if sandboxReservesConcurrentSlot(candidate, tenantID, requestedSandboxID) {
+			if sandboxReservesConcurrentSlot(candidate, scope.Enforced(tenantID), requestedSandboxID) {
 				used++
 			}
 		}
@@ -1899,7 +1965,9 @@ func (m *SandboxManager) EnsureRepoReady(ctx context.Context, sessionID string) 
 	if err := m.RequireSandboxBilling(inst.Config.TenantID); err != nil {
 		return nil, nil, err
 	}
-	if err := m.validateInstanceMachineProfile(inst.Config); err != nil {
+	// The recreate below provisions a new VM, so it must fit the current plan.
+	fittedConfig, err := m.fitExistingInstanceMachineProfile(inst.Config)
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -1954,6 +2022,8 @@ func (m *SandboxManager) EnsureRepoReady(ctx context.Context, sessionID string) 
 	m.closeAllPortMappings(oldInst.ID)
 
 	recreateConfig := oldInst.Config
+	recreateConfig.CPULimit = fittedConfig.CPULimit
+	recreateConfig.MemoryMB = fittedConfig.MemoryMB
 	recreateConfig.RepoHostPath = repoHostPath
 	recreateConfig.GitCommitSHA = commitSHA
 
@@ -2855,9 +2925,44 @@ func (m *SandboxManager) ValidateSandboxMachineProfile(config SandboxConfig, ten
 	return ValidateManagedMachineProfile(config, m.resolveTenantTier(tenantID))
 }
 
-// RequireSandboxBilling rejects allocation/revival when the managed tenant has
-// neither starter credit nor an active usage billing arrangement.
+// SetTenantActiveFn installs the paused-instance gate. fn returns false when
+// the tenant's instance is paused and must not run compute. Passing nil treats
+// every tenant as active. Safe for concurrent use.
+func (m *SandboxManager) SetTenantActiveFn(fn func(ctx context.Context, tenantID string) bool) {
+	if fn == nil {
+		m.tenantActiveFn.Store(nil)
+		return
+	}
+	m.tenantActiveFn.Store(&fn)
+}
+
+// TenantActive reports whether the tenant may run compute. Blank tenants and
+// managers without a gate are active.
+func (m *SandboxManager) TenantActive(ctx context.Context, tenantID string) bool {
+	if m == nil || strings.TrimSpace(tenantID) == "" {
+		return true
+	}
+	ptr := m.tenantActiveFn.Load()
+	if ptr == nil {
+		return true
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(ctx, tenantActiveCheckTimeout)
+	defer cancel()
+	return (*ptr)(ctx, tenantID)
+}
+
+// RequireSandboxBilling rejects allocation/revival when the managed tenant's
+// instance is paused (ErrTenantPaused), or when it has neither starter credit
+// nor an active usage billing arrangement (ErrSandboxBillingRequired).
 func (m *SandboxManager) RequireSandboxBilling(tenantID string) error {
+	if !m.TenantActive(context.Background(), tenantID) {
+		logger.WithFields("tenant_id", tenantID).
+			Info("sandbox_manager: compute refused; instance is paused")
+		return ErrTenantPaused
+	}
 	ptr := m.sandboxBillingResolver.Load()
 	if ptr == nil {
 		return nil
@@ -2879,21 +2984,31 @@ func (m *SandboxManager) ConcurrentSandboxLimit(tenantID string) int {
 }
 
 // ConcurrentSandboxCount reports sandboxes that currently reserve compute
-// capacity. Pending creates count immediately; sleeping, stopped, archived,
-// failed, and terminated rows do not. The DB and in-memory IDs are unioned so
-// a just-created placeholder cannot slip through the short persistence gap.
+// capacity across the tenant's concurrency scope (its whole organization on a
+// managed gateway). Pending creates count immediately; sleeping, stopped,
+// archived, failed, and terminated rows do not. The DB and in-memory IDs are
+// unioned so a just-created placeholder cannot slip through the short
+// persistence gap.
 func (m *SandboxManager) ConcurrentSandboxCount(
 	ctx context.Context,
 	tenantID string,
 	excludeSandboxID string,
 ) (int, error) {
+	return m.concurrentSandboxCountIn(ctx, m.ConcurrencyScope(ctx, tenantID).Enforced(tenantID), excludeSandboxID)
+}
+
+func (m *SandboxManager) concurrentSandboxCountIn(
+	ctx context.Context,
+	scope TenantScope,
+	excludeSandboxID string,
+) (int, error) {
 	ids := make(map[string]struct{})
-	if m != nil && m.db != nil && strings.TrimSpace(tenantID) != "" {
+	if m != nil && m.db != nil && scope.Key != "" {
 		var persisted []string
 		if err := m.db.SelectContext(ctx, &persisted, `
 			SELECT id
 			FROM sandbox_instances
-			WHERE tenant_id = $1
+			WHERE tenant_id = ANY($1::text[])
 			  AND id <> $2
 			  AND (
 			    lifecycle_state IN (
@@ -2902,7 +3017,7 @@ func (m *SandboxManager) ConcurrentSandboxCount(
 			    )
 			    OR (billing_started_at IS NOT NULL AND billing_ended_at IS NULL)
 			  )`,
-			tenantID, excludeSandboxID,
+			scope.AliasArray(), excludeSandboxID,
 		); err != nil {
 			return 0, fmt.Errorf("count concurrent sandboxes: %w", err)
 		}
@@ -2914,7 +3029,7 @@ func (m *SandboxManager) ConcurrentSandboxCount(
 	if m != nil {
 		m.mu.RLock()
 		for _, inst := range m.instancesBySandbox {
-			if sandboxReservesConcurrentSlot(inst, tenantID, excludeSandboxID) {
+			if sandboxReservesConcurrentSlot(inst, scope, excludeSandboxID) {
 				ids[inst.ID] = struct{}{}
 			}
 		}
@@ -2924,17 +3039,34 @@ func (m *SandboxManager) ConcurrentSandboxCount(
 }
 
 // RequireConcurrentSandboxSlot fails before any backend allocation when the
-// tenant has exhausted its per-instance plan quota.
+// tenant's organization has exhausted its plan quota.
 func (m *SandboxManager) RequireConcurrentSandboxSlot(
 	ctx context.Context,
 	tenantID string,
+	excludeSandboxID string,
+) error {
+	return m.requireConcurrentSandboxSlotIn(ctx, tenantID, m.ConcurrencyScope(ctx, tenantID), excludeSandboxID)
+}
+
+func (m *SandboxManager) requireConcurrentSandboxSlotIn(
+	ctx context.Context,
+	tenantID string,
+	scope TenantScope,
 	excludeSandboxID string,
 ) error {
 	limit := m.ConcurrentSandboxLimit(tenantID)
 	if limit == UnlimitedSandboxLimit {
 		return nil
 	}
-	used, err := m.ConcurrentSandboxCount(ctx, tenantID, excludeSandboxID)
+	if scope.ShadowOnly {
+		// Report what organization-wide counting would decide; never refuse
+		// on it while the activity class is in shadow.
+		if orgUsed, err := m.concurrentSandboxCountIn(ctx, scope, excludeSandboxID); err == nil && orgUsed >= limit {
+			logger.WithFields("tenant", tenantID, "scope", scope.Key, "used", orgUsed, "limit", limit).
+				Info("sandbox concurrency shadow: organization-wide count would refuse this sandbox (not enforced)")
+		}
+	}
+	used, err := m.concurrentSandboxCountIn(ctx, scope.Enforced(tenantID), excludeSandboxID)
 	if err != nil {
 		return err
 	}
@@ -2951,13 +3083,13 @@ func (m *SandboxManager) RequireConcurrentSandboxSlot(
 
 func sandboxReservesConcurrentSlot(
 	inst *Instance,
-	tenantID string,
+	scope TenantScope,
 	excludeSandboxID string,
 ) bool {
 	if inst == nil || inst.ID == excludeSandboxID {
 		return false
 	}
-	if strings.TrimSpace(tenantID) != "" && inst.Config.TenantID != tenantID {
+	if !scope.Contains(inst.Config.TenantID) {
 		return false
 	}
 	if !inst.BillingStartedAt.IsZero() && inst.BillingEndedAt.IsZero() {
@@ -3261,8 +3393,16 @@ func (m *SandboxManager) SuspendTenantAgents(ctx context.Context, tenantID strin
 // status, the reconciler skips it by design, and neither wake path will accept
 // it. Recovery therefore has to come from the same loop that suspended them,
 // which re-evaluates access every tick.
+//
+// A paused instance is left parked: the billing loop calls this for every
+// billing-allowed tenant, and un-parking here would undo the pause sweep.
 func (m *SandboxManager) ResumeTenantAgents(ctx context.Context, tenantID string) (int, error) {
 	if m == nil || m.db == nil || strings.TrimSpace(tenantID) == "" {
+		return 0, nil
+	}
+	if !m.TenantActive(ctx, tenantID) {
+		logger.WithFields("tenant_id", tenantID).
+			Debug("sandbox_manager: not resuming agents; instance is paused")
 		return 0, nil
 	}
 	result, err := m.db.ExecContext(ctx, `
@@ -3512,7 +3652,20 @@ func (m *SandboxManager) persistInstance(inst *Instance) {
 		instanceID = strings.TrimSpace(inst.Config.TenantID)
 	}
 
+	// A running instance written over a terminated, failed or destroyed
+	// row is a new sandbox reusing the id (persistent agents always use
+	// wks_<agent_id>). It gets a new workspace incarnation and run, loses
+	// the old workspace refs, and the old incarnation's tarballs are queued
+	// for deletion, so nothing from the previous sandbox can be restored
+	// into it.
 	const q = `
+		WITH purge_previous AS (
+			INSERT INTO sandbox_workspace_purges (sandbox_id, incarnation, tenant_id)
+			SELECT id, workspace_incarnation, tenant_id FROM sandbox_instances
+			WHERE id = $1 AND $25::boolean
+			  AND (lifecycle_state IN ('terminated', 'failed') OR destroyed_at IS NOT NULL)
+			ON CONFLICT (sandbox_id, incarnation) DO NOTHING
+		)
 		INSERT INTO sandbox_instances
 			(id, session_id, tenant_id, instance_id, backend, container_id, image, status, config, created_at, expires_at, last_used_at, idle_retention_secs, name,
 			 git_repo_url, git_branch, git_commit_sha, git_installation_id, keep_warm,
@@ -3585,6 +3738,27 @@ func (m *SandboxManager) persistInstance(inst *Instance) {
 					WHEN EXCLUDED.billing_started_at IS NOT NULL THEN NULL
 					WHEN EXCLUDED.status IN ('stopped', 'sleeping', 'terminated', 'failed') THEN NULL
 					ELSE sandbox_instances.billing_ended_at
+				END,
+				workspace_incarnation = CASE
+					WHEN $25::boolean AND (sandbox_instances.lifecycle_state IN ('terminated', 'failed') OR sandbox_instances.destroyed_at IS NOT NULL)
+					THEN gen_random_uuid()::text
+					ELSE sandbox_instances.workspace_incarnation
+				END,
+				workspace_run_id = CASE
+					WHEN $25::boolean AND sandbox_instances.lifecycle_state IS DISTINCT FROM 'running'
+					 AND sandbox_instances.lifecycle_state NOT IN ('stopping', 'reviving', 'terminating')
+					THEN gen_random_uuid()::text
+					ELSE sandbox_instances.workspace_run_id
+				END,
+				workspace_snapshot_ref = CASE
+					WHEN $25::boolean AND (sandbox_instances.lifecycle_state IN ('terminated', 'failed') OR sandbox_instances.destroyed_at IS NOT NULL)
+					THEN NULL
+					ELSE sandbox_instances.workspace_snapshot_ref
+				END,
+				workspace_archive_ref = CASE
+					WHEN $25::boolean AND (sandbox_instances.lifecycle_state IN ('terminated', 'failed') OR sandbox_instances.destroyed_at IS NOT NULL)
+					THEN NULL
+					ELSE sandbox_instances.workspace_archive_ref
 				END`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -3615,6 +3789,7 @@ func (m *SandboxManager) persistInstance(inst *Instance) {
 		lifecycleState,
 		nullableString(strings.TrimSpace(inst.AgentTarget)),
 		billingStartedAt,
+		inst.Status == StatusRunning,
 	); err != nil {
 		logger.WithFields("sandbox_id", inst.ID, "error", err.Error()).
 			Warn("sandbox_manager: failed to persist instance to DB")
@@ -3910,41 +4085,101 @@ func (m *SandboxManager) LookupInstanceByIDFromDBScoped(ctx context.Context, san
 	if m.db == nil {
 		return nil, fmt.Errorf("database not available")
 	}
-	var row struct {
-		ID             string         `db:"id"`
-		InstanceID     sql.NullString `db:"instance_id"`
-		ContainerID    sql.NullString `db:"container_id"`
-		Backend        string         `db:"backend"`
-		Status         string         `db:"status"`
-		LifecycleState sql.NullString `db:"lifecycle_state"`
-		CreatedAt      time.Time      `db:"created_at"`
-		BillingStarted sql.NullTime   `db:"billing_started_at"`
-		BillingEnded   sql.NullTime   `db:"billing_ended_at"`
-		Name           string         `db:"name"`
-		AgentID        sql.NullString `db:"agent_id"`
-		Persistent     sql.NullBool   `db:"persistent"`
-		Config         []byte         `db:"config"`
-		Image          string         `db:"image"`
-		ShortCode      sql.NullString `db:"short_code"`
-		AgentTarget    sql.NullString `db:"agent_target"`
-	}
-	var err error
 	if tenantID != "" {
 		const qScoped = `
 			SELECT id, instance_id, container_id, backend, status, lifecycle_state, created_at, billing_started_at, billing_ended_at, name, agent_id, persistent, config, image, short_code, agent_target
 			FROM sandbox_instances
 			WHERE (id = $1 OR name = $1 OR short_code = $1) AND tenant_id = $2
+			ORDER BY
+				CASE WHEN id = $1 THEN 0 WHEN short_code = $1 THEN 1 ELSE 2 END,
+				CASE WHEN COALESCE(lifecycle_state, '') NOT IN ('terminated', 'failed') AND destroyed_at IS NULL THEN 0 ELSE 1 END,
+				created_at DESC,
+				id DESC
 			LIMIT 1`
-		err = m.db.GetContext(ctx, &row, qScoped, sandboxID, tenantID)
-	} else {
-		const q = `
-			SELECT id, instance_id, container_id, backend, status, lifecycle_state, created_at, billing_started_at, billing_ended_at, name, agent_id, persistent, config, image, short_code, agent_target
-			FROM sandbox_instances
-			WHERE id = $1 OR name = $1 OR short_code = $1
-			LIMIT 1`
-		err = m.db.GetContext(ctx, &row, q, sandboxID)
+		return m.lookupSandboxInstanceRow(ctx, qScoped, sandboxID, tenantID)
 	}
-	if err != nil {
+	const q = `
+		SELECT id, instance_id, container_id, backend, status, lifecycle_state, created_at, billing_started_at, billing_ended_at, name, agent_id, persistent, config, image, short_code, agent_target
+		FROM sandbox_instances
+		WHERE id = $1 OR name = $1 OR short_code = $1
+		ORDER BY
+			CASE WHEN id = $1 THEN 0 WHEN short_code = $1 THEN 1 ELSE 2 END,
+			CASE WHEN COALESCE(lifecycle_state, '') NOT IN ('terminated', 'failed') AND destroyed_at IS NULL THEN 0 ELSE 1 END,
+			created_at DESC,
+			id DESC
+		LIMIT 1`
+	return m.lookupSandboxInstanceRow(ctx, q, sandboxID)
+}
+
+// LookupInstanceByIDOrShortCodeFromDBInScope resolves only an exact sandbox
+// id or short code inside the supplied tenant scope.
+func (m *SandboxManager) LookupInstanceByIDOrShortCodeFromDBInScope(ctx context.Context, identifier string, scope TenantInstanceScope) (*Instance, error) {
+	owner := scope.SandboxTenantID()
+	if owner == "" {
+		return nil, fmt.Errorf("sandbox lookup requires tenant or instance scope")
+	}
+	if m.db == nil {
+		return nil, fmt.Errorf("database not available")
+	}
+	const q = `
+		SELECT id, instance_id, container_id, backend, status, lifecycle_state, created_at, billing_started_at, billing_ended_at, name, agent_id, persistent, config, image, short_code, agent_target
+		FROM sandbox_instances
+		WHERE (id = $1 OR short_code = $1) AND tenant_id = $2
+		ORDER BY
+			CASE WHEN id = $1 THEN 0 ELSE 1 END,
+			CASE WHEN COALESCE(lifecycle_state, '') NOT IN ('terminated', 'failed') AND destroyed_at IS NULL THEN 0 ELSE 1 END,
+			created_at DESC,
+			id DESC
+		LIMIT 1`
+	return m.lookupSandboxInstanceRow(ctx, q, identifier, owner)
+}
+
+// LookupInstanceByNameFromDBInScope resolves a running sandbox by exact
+// display name inside the supplied tenant scope.
+func (m *SandboxManager) LookupInstanceByNameFromDBInScope(ctx context.Context, name string, scope TenantInstanceScope) (*Instance, error) {
+	owner := scope.SandboxTenantID()
+	if owner == "" {
+		return nil, fmt.Errorf("sandbox lookup requires tenant or instance scope")
+	}
+	if m.db == nil {
+		return nil, fmt.Errorf("database not available")
+	}
+	const q = `
+		SELECT id, instance_id, container_id, backend, status, lifecycle_state, created_at, billing_started_at, billing_ended_at, name, agent_id, persistent, config, image, short_code, agent_target
+		FROM sandbox_instances
+		WHERE name = $1 AND tenant_id = $2
+		  AND (
+		    lifecycle_state = 'running'
+		    OR (COALESCE(lifecycle_state, '') = '' AND status = 'running')
+		  )
+		  AND destroyed_at IS NULL
+		ORDER BY created_at DESC, id DESC
+		LIMIT 1`
+	return m.lookupSandboxInstanceRow(ctx, q, name, owner)
+}
+
+type sandboxInstanceLookupRow struct {
+	ID             string         `db:"id"`
+	InstanceID     sql.NullString `db:"instance_id"`
+	ContainerID    sql.NullString `db:"container_id"`
+	Backend        string         `db:"backend"`
+	Status         string         `db:"status"`
+	LifecycleState sql.NullString `db:"lifecycle_state"`
+	CreatedAt      time.Time      `db:"created_at"`
+	BillingStarted sql.NullTime   `db:"billing_started_at"`
+	BillingEnded   sql.NullTime   `db:"billing_ended_at"`
+	Name           string         `db:"name"`
+	AgentID        sql.NullString `db:"agent_id"`
+	Persistent     sql.NullBool   `db:"persistent"`
+	Config         []byte         `db:"config"`
+	Image          string         `db:"image"`
+	ShortCode      sql.NullString `db:"short_code"`
+	AgentTarget    sql.NullString `db:"agent_target"`
+}
+
+func (m *SandboxManager) lookupSandboxInstanceRow(ctx context.Context, query string, args ...interface{}) (*Instance, error) {
+	var row sandboxInstanceLookupRow
+	if err := m.db.GetContext(ctx, &row, query, args...); err != nil {
 		return nil, fmt.Errorf("sandbox lookup failed: %w", err)
 	}
 	var cfg InstanceConfig
@@ -4948,6 +5183,11 @@ func (m *SandboxManager) GetOrRecreate(ctx context.Context, sessionID, tenantID 
 // to query trigger-related tables.
 func (m *SandboxManager) DB() *sqlx.DB {
 	return m.db
+}
+
+// SetDBForTest attaches a database without running startup restoration.
+func (m *SandboxManager) SetDBForTest(db *sqlx.DB) {
+	m.db = db
 }
 
 // SetMaxPortsPerSandbox sets the maximum number of exposed ports per sandbox.

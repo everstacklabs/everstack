@@ -1,6 +1,7 @@
 package compact
 
 import (
+	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"context"
 	"fmt"
 	"strings"
@@ -80,6 +81,10 @@ Summary:`, transcript)
 		},
 	}
 
+	// Compaction is platform machinery the customer did not invoke and cannot
+	// switch off mid-request: one of the two internal calls the billing seam
+	// debits but never denies (docs/design/prepaid-credits-v2.md 6.1b).
+	ctx = contextkeys.WithInternalCall(ctx)
 	resp, err := s.provider.Chat(ctx, req)
 	if err != nil {
 		return "", fmt.Errorf("compact: summarisation LLM call failed: %w", err)

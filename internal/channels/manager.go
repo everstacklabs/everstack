@@ -116,6 +116,13 @@ type ChannelManager struct {
 	// does not run a COUNT over the tenant's month on every inbound message.
 	messageCountMu sync.Mutex
 	messageCounts  map[string]*cachedMessageCount
+
+	// tenantActive reports whether a tenant (in managed Cloud, its instance)
+	// may run work. Connectors dial out (Slack socket mode, Telegram long
+	// polling, Discord gateway) and never pass the HTTP pause guard, so the
+	// manager checks it itself. Nil means every tenant is active.
+	tenantActiveMu sync.RWMutex
+	tenantActiveFn func(ctx context.Context, tenantID string) bool
 }
 
 // cachedMessageCount is one tenant's month-to-date message count. month is the
@@ -169,6 +176,97 @@ func NewChannelManager(store ChannelStore, sessionCreator SessionCreator, db *sq
 // Without it the manager meters messages but enforces no ceiling.
 func (m *ChannelManager) SetLicenseMonitor(monitor enterprise.LicenseMonitor) {
 	m.licenseMonitor = monitor
+}
+
+// SetTenantActiveFn installs the check that decides whether a tenant may run
+// channel connectors. fn returns true when the tenant may run; nil treats
+// every tenant as active.
+func (m *ChannelManager) SetTenantActiveFn(fn func(ctx context.Context, tenantID string) bool) {
+	m.tenantActiveMu.Lock()
+	m.tenantActiveFn = fn
+	m.tenantActiveMu.Unlock()
+}
+
+func (m *ChannelManager) tenantActive(ctx context.Context, tenantID string) bool {
+	m.tenantActiveMu.RLock()
+	fn := m.tenantActiveFn
+	m.tenantActiveMu.RUnlock()
+	if fn == nil {
+		return true
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return fn(ctx, tenantID)
+}
+
+// StopTenantConnectors stops every running connector owned by tenantID and
+// returns how many it stopped. The gateway's pause sweep calls it for paused
+// tenants; configs are untouched, so StartTenantConnectors brings them back.
+func (m *ChannelManager) StopTenantConnectors(ctx context.Context, tenantID string) int {
+	if tenantID == "" {
+		return 0
+	}
+	m.mu.RLock()
+	var ids []string
+	for id, ac := range m.connectors {
+		if ac.config.TenantID == tenantID {
+			ids = append(ids, id)
+		}
+	}
+	m.mu.RUnlock()
+
+	for _, id := range ids {
+		m.stopConnector(id)
+		logger.WithFields("tenant_id", tenantID, "channel_config_id", id).
+			Info("channels: connector stopped (tenant paused)")
+	}
+	return len(ids)
+}
+
+// StartTenantConnectors starts every enabled, not-yet-running connector owned
+// by tenantID (respecting instance affinity) and returns how many it started.
+// Nothing else re-reads channel configs after Start, so this is how a
+// resumed tenant's connectors come back; it is idempotent and a no-op while
+// the tenant is still paused.
+func (m *ChannelManager) StartTenantConnectors(ctx context.Context, tenantID string) int {
+	if tenantID == "" || !m.tenantActive(ctx, tenantID) {
+		return 0
+	}
+	configs, err := m.store.ListEnabledChannelConfigs(ctx)
+	if err != nil {
+		logger.WithFields("tenant_id", tenantID).WithError(err).
+			Warn("channels: failed to load channel configs for tenant restart")
+		return 0
+	}
+
+	started := 0
+	for _, cfg := range configs {
+		if cfg == nil || cfg.TenantID != tenantID || !cfg.Enabled {
+			continue
+		}
+		if cfg.InstanceAffinity != "" && cfg.InstanceAffinity != m.instanceID {
+			continue
+		}
+		m.mu.RLock()
+		_, running := m.connectors[cfg.ID]
+		m.mu.RUnlock()
+		if running {
+			continue
+		}
+		if err := m.startConnector(cfg); err != nil {
+			logger.WithFields("tenant_id", tenantID, "channel", cfg.Name, "platform", cfg.Platform).WithError(err).
+				Warn("channels: failed to restart connector")
+			continue
+		}
+		m.mu.RLock()
+		_, running = m.connectors[cfg.ID]
+		m.mu.RUnlock()
+		if running {
+			started++
+		}
+	}
+	return started
 }
 
 // RegisterFactory registers a connector factory for a platform.
@@ -281,6 +379,15 @@ func (m *ChannelManager) GetAllStatuses() map[string]ConnectorStatus {
 }
 
 func (m *ChannelManager) startConnector(cfg *ChannelConfigRecord) error {
+	// A paused tenant gets no connector. Not an error: the config is valid
+	// and saves normally (ReloadConfig), and StartTenantConnectors starts it
+	// on resume.
+	if !m.tenantActive(m.ctx, cfg.TenantID) {
+		logger.WithFields("tenant_id", cfg.TenantID, "channel_config_id", cfg.ID, "channel", cfg.Name).
+			Info("channels: connector not started (tenant paused)")
+		return nil
+	}
+
 	platform := Platform(cfg.Platform)
 	factory, ok := m.factories[platform]
 	if !ok {
@@ -414,7 +521,24 @@ func (m *ChannelManager) handleMessage(ctx context.Context, msg InboundMessage) 
 		return fmt.Errorf("connector not found for channel: %s", msg.ChannelConfigID)
 	}
 
-	if !m.meterMessage(ctx, msg) {
+	// Running connectors do not re-check the pause, so drop inbound traffic
+	// for a paused tenant here, before metering or any agent/LLM work. The
+	// stored config is the trusted tenant identity.
+	tenantID := ac.config.TenantID
+	if tenantID == "" {
+		tenantID = msg.TenantID
+	}
+	if !m.tenantActive(ctx, tenantID) {
+		logger.WithFields("tenant_id", tenantID, "channel_config_id", msg.ChannelConfigID).
+			Debug("channels: dropped inbound message (tenant paused)")
+		return nil
+	}
+
+	// Meter the trusted tenant (the stored channel config), not the one the
+	// inbound message carries.
+	metered := msg
+	metered.TenantID = tenantID
+	if !m.meterMessage(ctx, metered) {
 		return nil
 	}
 
@@ -858,6 +982,10 @@ func (m *ChannelManager) meterMessage(ctx context.Context, msg InboundMessage) b
 		return true // nothing to meter against
 	}
 
+	// This runs on the connector's background context. The tenant comes from
+	// stored channel config, so mark it server-resolved: on a managed gateway
+	// it then resolves the organization's plan instead of CE limits.
+	ctx = enterprise.WithServerResolvedTenant(ctx, msg.TenantID)
 	ent := enterprise.ResolveEntitlements(ctx, m.licenseMonitor)
 	limit, onExceeded := messageCeiling(ent)
 	if onExceeded != meterOff {
@@ -891,7 +1019,7 @@ func (m *ChannelManager) meterMessage(ctx context.Context, msg InboundMessage) b
 			Warn("channels: failed to record message for metering")
 		return true
 	}
-	m.bumpMessageCount(msg.TenantID)
+	m.bumpMessageCount(enterprise.ResolveCountScope(ctx, msg.TenantID).Key)
 	return true
 }
 
@@ -913,9 +1041,15 @@ func messageCeiling(ent enterprise.Entitlements) (limit int64, onExceeded overag
 	if ent.Source == "ce" {
 		return limit, meterOff
 	}
-	// Paid tiers keep delivering. Messages have no overage rate, so there is
-	// nothing to bill and nothing the customer could buy in the moment;
-	// blocking would only mute a paying customer's bot mid-conversation.
+	// Cloud plans block at the cap on every tier (owner decision 2026-10-06:
+	// count limits block, credit does not buy more). The channel is told once
+	// per notice interval and messages resume when the month rolls over.
+	if ent.Source == "managed-plan" {
+		return limit, meterBlock
+	}
+	// Self-hosted licences keep their behaviour: paid tiers keep delivering.
+	// Messages have no overage rate, so there is nothing to bill and nothing
+	// the customer could buy in the moment.
 	if ent.Tier != "free" {
 		return limit, meterWarn
 	}
@@ -931,35 +1065,42 @@ func messageCeiling(ent enterprise.Entitlements) (limit int64, onExceeded overag
 // chose for limits: a tenant can cross the allowance by up to a TTL's worth of
 // traffic before the meter notices. That matters for a notice, not for
 // billing, which counts rows rather than this number.
+//
+// The count covers the tenant's whole organization on a managed gateway (every
+// tenant id it owns) and is cached per organization.
 func (m *ChannelManager) monthlyMessageCount(ctx context.Context, tenantID string) (int64, error) {
-	month := time.Now().UTC().Format("2006-01")
+	now := time.Now().UTC()
+	month := now.Format("2006-01")
+	scope := enterprise.ResolveCountScope(ctx, tenantID)
+	key := scope.Key
 
 	m.messageCountMu.Lock()
-	if c, ok := m.messageCounts[tenantID]; ok && c.month == month && time.Since(c.fetchedAt) < messageCountTTL {
+	if c, ok := m.messageCounts[key]; ok && c.month == month && time.Since(c.fetchedAt) < messageCountTTL {
 		count := c.count
 		m.messageCountMu.Unlock()
 		return count, nil
 	}
 	m.messageCountMu.Unlock()
 
-	count, err := m.store.CountChannelMessagesThisMonth(ctx, tenantID)
+	count, err := m.store.CountChannelMessagesSince(ctx, scope.Aliases, enterprise.MonthStartUTC(now))
 	if err != nil {
 		return 0, err
 	}
 
 	m.messageCountMu.Lock()
-	m.messageCounts[tenantID] = &cachedMessageCount{count: count, month: month, fetchedAt: time.Now()}
+	m.messageCounts[key] = &cachedMessageCount{count: count, month: month, fetchedAt: time.Now()}
 	m.messageCountMu.Unlock()
 	return count, nil
 }
 
 // bumpMessageCount keeps the cached count moving between refreshes so a burst
-// inside one TTL window still trips the allowance.
-func (m *ChannelManager) bumpMessageCount(tenantID string) {
+// inside one TTL window still trips the allowance. key is the count scope key
+// (the organization on a managed gateway).
+func (m *ChannelManager) bumpMessageCount(key string) {
 	month := time.Now().UTC().Format("2006-01")
 	m.messageCountMu.Lock()
 	defer m.messageCountMu.Unlock()
-	if c, ok := m.messageCounts[tenantID]; ok && c.month == month {
+	if c, ok := m.messageCounts[key]; ok && c.month == month {
 		c.count++
 	}
 }

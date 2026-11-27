@@ -509,6 +509,12 @@ type SandboxFirecrackerAgentConfig struct {
 	TLSClientKey  string `mapstructure:"tls_client_key"`
 	TLSServerCA   string `mapstructure:"tls_server_ca"`
 	TLSServerName string `mapstructure:"tls_server_name"`
+
+	// AuthToken is the shared secret presented to agents as a bearer
+	// token on every RPC. Prefer the
+	// EVS_SANDBOX_FIRECRACKER_AGENT_AUTH_TOKEN env var (from a Secret)
+	// over putting it in a config file.
+	AuthToken string `mapstructure:"auth_token"`
 }
 
 // SandboxSSHConfig configures the SSH proxy for sandbox access.

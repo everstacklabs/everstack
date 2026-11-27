@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/everstacklabs/everstack/internal/api/grpc/planlimit"
 	"github.com/everstacklabs/everstack/internal/authzresource"
 	datasetscmd "github.com/everstacklabs/everstack/internal/commands/handlers/datasets"
 	"github.com/everstacklabs/everstack/internal/cqrs"
@@ -473,12 +474,15 @@ func (s *DatasetServer) CreateDatasetItem(ctx context.Context, req *connect.Requ
 	}
 	userID := contextkeys.GetUserID(ctx)
 
-	if err := enterprise.CheckResourceLimit(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
-		enterprise.UsageTypeDatasetItems,
-		`SELECT COUNT(*) FROM dataset_items WHERE tenant_id = $1`,
-		[]interface{}{tenantID}, 1, "dataset item"); err != nil {
-		return nil, connect.NewError(connect.CodeResourceExhausted, err)
+	// Serialized per organization: two creators racing for the last slot
+	// take the same advisory lock, and the slot is held until the read
+	// model shows this create.
+	limitSlot, limitErr := enterprise.ReserveLimitSlot(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
+		enterprise.DatasetItemsLimit(tenantID, 1))
+	if limitErr != nil {
+		return nil, planlimit.ConnectError(limitErr, "dataset item")
 	}
+	defer limitSlot.Release()
 
 	var input, expectedOutput, metadata map[string]interface{}
 	if req.Msg.GetInput() != nil {
@@ -506,6 +510,7 @@ func (s *DatasetServer) CreateDatasetItem(ctx context.Context, req *connect.Requ
 	if err := sys.CommandBus.Dispatch(ctx, cmd); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	limitSlot.Confirm(ctx)
 
 	return connect.NewResponse(&datasetspb.CreateDatasetItemResponse{
 		Item: &datasetspb.DatasetItem{
@@ -532,12 +537,15 @@ func (s *DatasetServer) CreateDatasetItemBatch(ctx context.Context, req *connect
 	// Batch creation counts against DATASET_ITEMS with the full batch size as
 	// the delta — previously this RPC bypassed the limit entirely
 	// (editions-and-billing.md, resolver/check API).
-	if err := enterprise.CheckResourceLimit(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
-		enterprise.UsageTypeDatasetItems,
-		`SELECT COUNT(*) FROM dataset_items WHERE tenant_id = $1`,
-		[]interface{}{tenantID}, int64(len(req.Msg.GetItems())), "dataset item"); err != nil {
-		return nil, connect.NewError(connect.CodeResourceExhausted, err)
+	// Serialized per organization: two creators racing for the last slot
+	// take the same advisory lock, and the slot is held until the read
+	// model shows this create.
+	limitSlot, limitErr := enterprise.ReserveLimitSlot(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
+		enterprise.DatasetItemsLimit(tenantID, int64(len(req.Msg.GetItems()))))
+	if limitErr != nil {
+		return nil, planlimit.ConnectError(limitErr, "dataset item")
 	}
+	defer limitSlot.Release()
 
 	var items []datasetscmd.CreateDatasetItemCommand
 	for _, item := range req.Msg.GetItems() {
@@ -570,6 +578,7 @@ func (s *DatasetServer) CreateDatasetItemBatch(ctx context.Context, req *connect
 	if err := sys.CommandBus.Dispatch(ctx, cmd); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	limitSlot.Confirm(ctx)
 
 	var responseItems []*datasetspb.DatasetItem
 	for _, item := range items {
@@ -1013,12 +1022,15 @@ func (s *EvalServer) CreateEvalRun(ctx context.Context, req *connect.Request[dat
 	}
 	userID := contextkeys.GetUserID(ctx)
 
-	if err := enterprise.CheckResourceLimit(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
-		enterprise.UsageTypeEvalRunsMonthly,
-		`SELECT COUNT(*) FROM eval_runs WHERE tenant_id = $1 AND created_at >= date_trunc('month', NOW())`,
-		[]interface{}{tenantID}, 1, "eval run"); err != nil {
-		return nil, connect.NewError(connect.CodeResourceExhausted, err)
+	// Serialized per organization: two creators racing for the last slot
+	// take the same advisory lock, and the slot is held until the read
+	// model shows this create.
+	limitSlot, limitErr := enterprise.ReserveLimitSlot(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
+		enterprise.EvalRunsMonthlyLimit(tenantID, time.Now()))
+	if limitErr != nil {
+		return nil, planlimit.ConnectError(limitErr, "eval run")
 	}
+	defer limitSlot.Release()
 
 	var evalConfig map[string]interface{}
 	if req.Msg.GetEvalConfig() != nil {
@@ -1042,6 +1054,7 @@ func (s *EvalServer) CreateEvalRun(ctx context.Context, req *connect.Request[dat
 	if err := sys.CommandBus.Dispatch(ctx, cmd); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	limitSlot.Confirm(ctx)
 
 	return connect.NewResponse(&datasetspb.CreateEvalRunResponse{
 		EvalRun: &datasetspb.EvalRun{

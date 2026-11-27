@@ -43,7 +43,7 @@ function VariableRow({
             />
             <button
                 onClick={onRemove}
-                className="rounded p-1 text-brand-main-400 hover:bg-brand-main-800 hover:text-red-400 light:hover:text-red-600 transition-colors flex-shrink-0"
+                className="rounded p-1 text-brand-main-400 hover:bg-brand-main-800 hover:text-danger transition-colors flex-shrink-0"
                 title="Remove variable"
             >
                 <Icon icon="lucide:x" className="h-4 w-4" />
@@ -192,7 +192,7 @@ export function VariablesSheet({ open, onOpenChange }: VariablesSheetProps) {
                             {sessionEntries.length > 0 && (
                                 <button
                                     onClick={clearSessionVariables}
-                                    className="text-xs text-brand-main-400 hover:text-red-400 light:hover:text-red-600 transition-colors"
+                                    className="text-xs text-brand-main-400 hover:text-danger transition-colors"
                                 >
                                     Clear all
                                 </button>

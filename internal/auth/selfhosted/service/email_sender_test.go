@@ -3,12 +3,13 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 )
 
 type fakeEmailSender struct{}
 
 func (fakeEmailSender) SendMagicLink(context.Context, string, string, string) error { return nil }
-func (fakeEmailSender) SendInvitation(context.Context, string, string, string, string, string) error {
+func (fakeEmailSender) SendInvitation(context.Context, string, string, string, string, string, string, time.Time) error {
 	return nil
 }
 

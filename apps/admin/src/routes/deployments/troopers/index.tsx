@@ -36,14 +36,14 @@ const STATUS_STYLES: Record<string, string> = {
   created:
     'bg-gray-500/20 text-gray-300 light:text-gray-700 border-gray-500/30',
   provisioning:
-    'bg-blue-500/20 text-blue-400 light:text-blue-600 border-blue-500/30',
+    'bg-info-surface-strong text-info border-info-border',
   running:
-    'bg-green-500/20 text-green-400 light:text-green-600 border-green-500/30',
+    'bg-success-surface-strong text-success border-success-border',
   sleeping:
-    'bg-yellow-500/20 text-yellow-400 light:text-yellow-700 border-yellow-500/30',
-  waking: 'bg-blue-500/20 text-blue-400 light:text-blue-600 border-blue-500/30',
-  failed: 'bg-red-500/20 text-red-400 light:text-red-600 border-red-500/30',
-  terminated: 'bg-red-500/20 text-red-300 light:text-red-600 border-red-500/30',
+    'bg-warning-surface-strong text-warning border-warning-border',
+  waking: 'bg-info-surface-strong text-info border-info-border',
+  failed: 'bg-danger-surface-strong text-danger border-danger-border',
+  terminated: 'bg-danger-surface-strong text-danger border-danger-border',
 }
 
 function formatTrooperStatus(status: string): string {
@@ -82,7 +82,7 @@ function TroopersPage() {
 
   if (error) {
     return (
-      <div className="flex-1 flex items-center justify-center text-red-400 light:text-red-600">
+      <div className="flex-1 flex items-center justify-center text-danger">
         Error loading instances: {error.message}
       </div>
     )
@@ -195,7 +195,7 @@ function TroopersPage() {
                   })
                 }
                 disabled={provisionMutation.isPending}
-                className="p-1 rounded hover:bg-blue-500/20 hover:text-blue-400 light:hover:text-blue-600 transition-colors"
+                className="p-1 rounded hover:bg-info-surface-strong hover:text-info transition-colors"
                 title="Provision"
               >
                 <Iconify.Icon
@@ -214,7 +214,7 @@ function TroopersPage() {
                   })
                 }
                 disabled={sleepMutation.isPending}
-                className="p-1 rounded hover:bg-yellow-500/20 hover:text-yellow-400 light:hover:text-yellow-700 transition-colors"
+                className="p-1 rounded hover:bg-warning-surface-strong hover:text-warning transition-colors"
                 title="Sleep"
               >
                 <Iconify.Icon icon="heroicons:pause" className="size-3.5" />
@@ -230,7 +230,7 @@ function TroopersPage() {
                   })
                 }
                 disabled={wakeMutation.isPending}
-                className="p-1 rounded hover:bg-green-500/20 hover:text-green-400 light:hover:text-green-600 transition-colors"
+                className="p-1 rounded hover:bg-success-surface-strong hover:text-success transition-colors"
                 title="Wake"
               >
                 <Iconify.Icon icon="heroicons:play" className="size-3.5" />
@@ -243,7 +243,7 @@ function TroopersPage() {
                   setDeleteConfirmId(ws.id)
                   setDeleteConfirmName(ws.name)
                 }}
-                className="p-1 rounded hover:bg-red-500/20 hover:text-red-400 light:hover:text-red-600 transition-colors"
+                className="p-1 rounded hover:bg-danger-surface-strong hover:text-danger transition-colors"
                 title="Delete instance"
               >
                 <Trash2 size={14} />

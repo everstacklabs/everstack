@@ -34,3 +34,11 @@ type GatewayRegistrar func(ctx context.Context, mux *runtime.ServeMux, endpoint 
 type GatewayRegistrable interface {
 	RegisterGateway(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) error
 }
+
+// GatewayClientRegistrable can be implemented by services whose grpc-gateway
+// handlers can call them through a given client connection rather than one
+// dialled from an endpoint. Implementations call the generated
+// Register<Service>HandlerClient.
+type GatewayClientRegistrable interface {
+	RegisterGatewayClient(ctx context.Context, mux *runtime.ServeMux, cc grpc.ClientConnInterface) error
+}

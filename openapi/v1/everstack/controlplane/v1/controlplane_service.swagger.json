@@ -126,9 +126,51 @@
         "region": {
           "type": "string",
           "description": "\"eu\", \"americas\", ..."
+        },
+        "pauseReason": {
+          "type": "string",
+          "description": "Instance-limit flow (docs/design/instance-over-limit.md).\n\n\"over_limit_choice\" | \"over_limit_auto\" | \"extra_billing_unpaid\" | \"\""
+        },
+        "pausedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastUsedAt": {
+          "type": "string",
+          "format": "date-time",
+          "title": "last accepted API request (throttled); unset = never"
+        },
+        "extraBilling": {
+          "type": "boolean",
+          "title": "owner/admin opted to pay the monthly extra-instance fee"
+        },
+        "extraBillingPaidThrough": {
+          "type": "string",
+          "format": "date-time",
+          "title": "fee covers until here; unset = unpaid"
+        },
+        "overLimit": {
+          "type": "boolean",
+          "description": "The instance holds a slot the plan does not have: it is paused when the\nover-limit grace period ends unless the org frees a slot or pays for it.\nSet on GetInstanceLimitStatus, from the limit engine's own selection\n(instance_limits.go, billing ledger included); false elsewhere."
         }
       },
       "description": "GatewayInstance represents a managed gateway instance."
+    },
+    "v1GetInstanceLimitStatusResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/v1InstanceLimitStatus"
+        },
+        "instances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1GatewayInstance"
+          },
+          "title": "most recently used first"
+        }
+      }
     },
     "v1GetInstanceLogsResponse": {
       "type": "object",
@@ -146,6 +188,73 @@
       "properties": {
         "instance": {
           "$ref": "#/definitions/v1GatewayInstance"
+        }
+      }
+    },
+    "v1GetOrgActivityResponse": {
+      "type": "object",
+      "properties": {
+        "windowStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "windowEnd": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "bucketSeconds": {
+          "type": "string",
+          "format": "int64",
+          "description": "Bucket width. Buckets are sparse (only non-empty (start, instance)\npairs); bucket starts are UTC multiples of bucket_seconds, the first one\nat or before window_start. Clients fill the gaps with zeros."
+        },
+        "buckets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrgActivityBucket"
+          }
+        },
+        "current": {
+          "$ref": "#/definitions/v1OrgActivityTotals"
+        },
+        "previous": {
+          "$ref": "#/definitions/v1OrgActivityTotals"
+        },
+        "previousAvailable": {
+          "type": "boolean",
+          "description": "False when the previous window reaches past raw telemetry retention, so\na delta would compare against data that has already expired."
+        },
+        "requestsDelta": {
+          "$ref": "#/definitions/v1OrgActivityDelta"
+        },
+        "tokensDelta": {
+          "$ref": "#/definitions/v1OrgActivityDelta"
+        },
+        "errorRateDelta": {
+          "$ref": "#/definitions/v1OrgActivityDelta"
+        },
+        "p95LatencyDelta": {
+          "$ref": "#/definitions/v1OrgActivityDelta"
+        },
+        "topModels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrgActivityModel"
+          },
+          "title": "by requests, at most 5"
+        },
+        "available": {
+          "type": "boolean",
+          "description": "False when this deployment has no telemetry store; every number is then\nzero because it was not measured, not because nothing happened."
+        },
+        "latencyBuckets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrgActivityLatencyBucket"
+          },
+          "description": "Per-bucket p95 over the current window, same bucket starts as buckets.\nSparse: a bucket with no timed calls is absent."
         }
       }
     },
@@ -172,6 +281,57 @@
         }
       },
       "description": "InstanceHealth describes the health status of an instance."
+    },
+    "v1InstanceLimitStatus": {
+      "type": "object",
+      "properties": {
+        "instanceLimit": {
+          "type": "integer",
+          "format": "int32",
+          "title": "0 = unlimited"
+        },
+        "slotsUsed": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "overLimit": {
+          "type": "boolean",
+          "title": "an over-limit episode is open"
+        },
+        "overLimitSince": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "graceEndsAt": {
+          "type": "string",
+          "format": "date-time",
+          "title": "auto-pause happens after this"
+        },
+        "extraBillingAvailable": {
+          "type": "boolean",
+          "title": "the pay-per-extra-instance option can be offered"
+        },
+        "extraInstanceUsdPerMonth": {
+          "type": "number",
+          "format": "double",
+          "title": "its monthly price"
+        },
+        "planTier": {
+          "type": "string"
+        },
+        "availableCreditUsd": {
+          "type": "number",
+          "format": "double",
+          "description": "Spendable wallet balance (balance minus holds) in USD, valid when\navailable_credit_known. Lets the UI disable the pay option up front."
+        },
+        "availableCreditKnown": {
+          "type": "boolean"
+        },
+        "creditPurchaseAvailable": {
+          "type": "boolean",
+          "description": "Customers can buy credit (prepaid v2 slice S3 is live)."
+        }
+      }
     },
     "v1InstanceResources": {
       "type": "object",
@@ -214,10 +374,11 @@
         "INSTANCE_STATUS_STOPPED",
         "INSTANCE_STATUS_DEGRADED",
         "INSTANCE_STATUS_FAILED",
-        "INSTANCE_STATUS_DELETING"
+        "INSTANCE_STATUS_DELETING",
+        "INSTANCE_STATUS_PAUSED"
       ],
       "default": "INSTANCE_STATUS_UNSPECIFIED",
-      "description": "InstanceStatus represents the lifecycle state of a managed gateway instance."
+      "description": "InstanceStatus represents the lifecycle state of a managed gateway instance.\n\n - INSTANCE_STATUS_PAUSED: Paused by the instance-limit flow: traffic refused, everything kept.\nOnly ResumeInstance leaves it. See docs/design/instance-over-limit.md."
     },
     "v1ListInstancesResponse": {
       "type": "object",
@@ -232,7 +393,7 @@
         "instanceCount": {
           "type": "integer",
           "format": "int32",
-          "title": "Number of active instances"
+          "title": "Instances occupying a plan slot (running; not stopped, paused or paid extra)"
         },
         "instanceLimit": {
           "type": "integer",
@@ -253,6 +414,121 @@
         },
         "defaultRegion": {
           "type": "string"
+        }
+      }
+    },
+    "v1OrgActivityBucket": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "instanceId": {
+          "type": "string",
+          "title": "mapped to a name client-side, never displayed"
+        },
+        "requests": {
+          "type": "string",
+          "format": "int64"
+        },
+        "tokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "errors": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "One model call is one generation span: a provider call made by the\ngateway (each retry or fallback attempt counts), or an LLM span the\ncustomer's app sent over OTLP. An app span whose trace also holds a\ngateway generation span is the same call seen twice and is not counted."
+    },
+    "v1OrgActivityDelta": {
+      "type": "object",
+      "properties": {
+        "hasValue": {
+          "type": "boolean"
+        },
+        "change": {
+          "type": "number",
+          "format": "double",
+          "description": "Relative change (0.12 = +12%) for requests, tokens and p95; for the\nerror rate it is the difference of the two rates (0.004 = +0.4 points)."
+        }
+      },
+      "description": "Change versus the previous equal-length window. has_value is false when\nthe previous window is not available or its value is zero."
+    },
+    "v1OrgActivityLatencyBucket": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "p95LatencyMs": {
+          "type": "number",
+          "format": "double"
+        },
+        "samples": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "p95 latency of one bucket across all of the org's instances (quantiles\ndo not add up across instances, so this is not per instance). Only\nbuckets with at least one timed call are sent."
+    },
+    "v1OrgActivityModel": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "requests": {
+          "type": "string",
+          "format": "int64"
+        },
+        "tokens": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1OrgActivityTotals": {
+      "type": "object",
+      "properties": {
+        "requests": {
+          "type": "string",
+          "format": "int64"
+        },
+        "tokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "errors": {
+          "type": "string",
+          "format": "int64"
+        },
+        "errorRate": {
+          "type": "number",
+          "format": "double",
+          "title": "errors / requests, 0..1; 0 when there are no requests"
+        },
+        "p95LatencyMs": {
+          "type": "number",
+          "format": "double",
+          "title": "valid when p95_available"
+        },
+        "p95Available": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1PauseInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "instance": {
+          "$ref": "#/definitions/v1GatewayInstance"
+        },
+        "status": {
+          "$ref": "#/definitions/v1InstanceLimitStatus"
         }
       }
     },
@@ -309,6 +585,17 @@
         }
       }
     },
+    "v1ResumeInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "instance": {
+          "$ref": "#/definitions/v1GatewayInstance"
+        },
+        "status": {
+          "$ref": "#/definitions/v1InstanceLimitStatus"
+        }
+      }
+    },
     "v1SetCustomDomainResponse": {
       "type": "object",
       "properties": {
@@ -330,6 +617,17 @@
         "cnameTarget": {
           "type": "string",
           "title": "where the tenant should point CNAME"
+        }
+      }
+    },
+    "v1SetInstanceExtraBillingResponse": {
+      "type": "object",
+      "properties": {
+        "instance": {
+          "$ref": "#/definitions/v1GatewayInstance"
+        },
+        "status": {
+          "$ref": "#/definitions/v1InstanceLimitStatus"
         }
       }
     },

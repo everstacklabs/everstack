@@ -22,9 +22,9 @@ type SpawnTreeGraphProps = {
 }
 
 const STATUS_STYLES: Record<string, { bg: string; border: string; dot: string }> = {
-    running: { bg: 'bg-blue-50', border: 'border-blue-300', dot: 'bg-blue-500 animate-pulse' },
-    completed: { bg: 'bg-emerald-50', border: 'border-emerald-300', dot: 'bg-emerald-500' },
-    failed: { bg: 'bg-red-50', border: 'border-red-300', dot: 'bg-red-500' },
+    running: { bg: 'bg-info-surface', border: 'border-info-border', dot: 'bg-info-solid animate-pulse' },
+    completed: { bg: 'bg-success-surface', border: 'border-success-border', dot: 'bg-success-solid' },
+    failed: { bg: 'bg-danger-surface', border: 'border-danger-border', dot: 'bg-danger-solid' },
 }
 
 type TreeNode = SpawnNode & { children: TreeNode[] }

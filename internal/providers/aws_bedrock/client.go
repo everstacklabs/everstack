@@ -15,6 +15,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/lib/correlation"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/everstacklabs/everstack/internal/providers/httpclient"
 	"github.com/everstacklabs/everstack/internal/providers/ratelimit"
 )
 
@@ -36,6 +37,11 @@ func NewProvider(cfg Config) (*Provider, error) {
 	client := bedrockruntime.NewFromConfig(awsCfg, func(o *bedrockruntime.Options) {
 		if strings.TrimSpace(cfg.BaseURL) != "" {
 			o.BaseEndpoint = aws.String(strings.TrimRight(cfg.BaseURL, "/"))
+		}
+		// The AWS SDK brings its own HTTP client, which would skip the guard
+		// on a tenant-chosen endpoint.
+		if httpclient.PublicEndpointsRequired() {
+			o.HTTPClient = httpclient.Unary()
 		}
 	})
 

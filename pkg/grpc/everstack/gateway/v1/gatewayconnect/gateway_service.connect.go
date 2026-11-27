@@ -33,6 +33,9 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// GatewayServiceSystemOneProcedure is the fully-qualified name of the GatewayService's SystemOne
+	// RPC.
+	GatewayServiceSystemOneProcedure = "/everstack.gateway.v1.GatewayService/SystemOne"
 	// GatewayServiceGetGatewayProcedure is the fully-qualified name of the GatewayService's GetGateway
 	// RPC.
 	GatewayServiceGetGatewayProcedure = "/everstack.gateway.v1.GatewayService/GetGateway"
@@ -115,6 +118,8 @@ const (
 
 // GatewayServiceClient is a client for the everstack.gateway.v1.GatewayService service.
 type GatewayServiceClient interface {
+	// Structured decisions, using customer-owned keys or self-hosted endpoints.
+	SystemOne(context.Context, *connect.Request[v1.SystemOneRequest]) (*connect.Response[v1.SystemOneResponse], error)
 	GetGateway(context.Context, *connect.Request[v1.GetGatewayRequest]) (*connect.Response[v1.GetGatewayResponse], error)
 	ListModels(context.Context, *connect.Request[v1.ListModelsRequest]) (*connect.Response[v1.ListModelsResponse], error)
 	ChatCompletion(context.Context, *connect.Request[v1.ChatCompletionRequest]) (*connect.ServerStreamForClient[v1.ChatCompletionResponse], error)
@@ -174,6 +179,12 @@ func NewGatewayServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 	baseURL = strings.TrimRight(baseURL, "/")
 	gatewayServiceMethods := v1.File_everstack_gateway_v1_gateway_service_proto.Services().ByName("GatewayService").Methods()
 	return &gatewayServiceClient{
+		systemOne: connect.NewClient[v1.SystemOneRequest, v1.SystemOneResponse](
+			httpClient,
+			baseURL+GatewayServiceSystemOneProcedure,
+			connect.WithSchema(gatewayServiceMethods.ByName("SystemOne")),
+			connect.WithClientOptions(opts...),
+		),
 		getGateway: connect.NewClient[v1.GetGatewayRequest, v1.GetGatewayResponse](
 			httpClient,
 			baseURL+GatewayServiceGetGatewayProcedure,
@@ -341,6 +352,7 @@ func NewGatewayServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 
 // gatewayServiceClient implements GatewayServiceClient.
 type gatewayServiceClient struct {
+	systemOne                  *connect.Client[v1.SystemOneRequest, v1.SystemOneResponse]
 	getGateway                 *connect.Client[v1.GetGatewayRequest, v1.GetGatewayResponse]
 	listModels                 *connect.Client[v1.ListModelsRequest, v1.ListModelsResponse]
 	chatCompletion             *connect.Client[v1.ChatCompletionRequest, v1.ChatCompletionResponse]
@@ -368,6 +380,11 @@ type gatewayServiceClient struct {
 	cancelResponse             *connect.Client[v1.CancelResponseRequest, v1.CancelResponseResponse]
 	deleteResponse             *connect.Client[v1.DeleteResponseRequest, v1.DeleteResponseResponse]
 	listResponses              *connect.Client[v1.ListResponsesRequest, v1.ListResponsesResponse]
+}
+
+// SystemOne calls everstack.gateway.v1.GatewayService.SystemOne.
+func (c *gatewayServiceClient) SystemOne(ctx context.Context, req *connect.Request[v1.SystemOneRequest]) (*connect.Response[v1.SystemOneResponse], error) {
+	return c.systemOne.CallUnary(ctx, req)
 }
 
 // GetGateway calls everstack.gateway.v1.GatewayService.GetGateway.
@@ -507,6 +524,8 @@ func (c *gatewayServiceClient) ListResponses(ctx context.Context, req *connect.R
 
 // GatewayServiceHandler is an implementation of the everstack.gateway.v1.GatewayService service.
 type GatewayServiceHandler interface {
+	// Structured decisions, using customer-owned keys or self-hosted endpoints.
+	SystemOne(context.Context, *connect.Request[v1.SystemOneRequest]) (*connect.Response[v1.SystemOneResponse], error)
 	GetGateway(context.Context, *connect.Request[v1.GetGatewayRequest]) (*connect.Response[v1.GetGatewayResponse], error)
 	ListModels(context.Context, *connect.Request[v1.ListModelsRequest]) (*connect.Response[v1.ListModelsResponse], error)
 	ChatCompletion(context.Context, *connect.Request[v1.ChatCompletionRequest], *connect.ServerStream[v1.ChatCompletionResponse]) error
@@ -562,6 +581,12 @@ type GatewayServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewGatewayServiceHandler(svc GatewayServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	gatewayServiceMethods := v1.File_everstack_gateway_v1_gateway_service_proto.Services().ByName("GatewayService").Methods()
+	gatewayServiceSystemOneHandler := connect.NewUnaryHandler(
+		GatewayServiceSystemOneProcedure,
+		svc.SystemOne,
+		connect.WithSchema(gatewayServiceMethods.ByName("SystemOne")),
+		connect.WithHandlerOptions(opts...),
+	)
 	gatewayServiceGetGatewayHandler := connect.NewUnaryHandler(
 		GatewayServiceGetGatewayProcedure,
 		svc.GetGateway,
@@ -726,6 +751,8 @@ func NewGatewayServiceHandler(svc GatewayServiceHandler, opts ...connect.Handler
 	)
 	return "/everstack.gateway.v1.GatewayService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case GatewayServiceSystemOneProcedure:
+			gatewayServiceSystemOneHandler.ServeHTTP(w, r)
 		case GatewayServiceGetGatewayProcedure:
 			gatewayServiceGetGatewayHandler.ServeHTTP(w, r)
 		case GatewayServiceListModelsProcedure:
@@ -788,6 +815,10 @@ func NewGatewayServiceHandler(svc GatewayServiceHandler, opts ...connect.Handler
 
 // UnimplementedGatewayServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedGatewayServiceHandler struct{}
+
+func (UnimplementedGatewayServiceHandler) SystemOne(context.Context, *connect.Request[v1.SystemOneRequest]) (*connect.Response[v1.SystemOneResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.gateway.v1.GatewayService.SystemOne is not implemented"))
+}
 
 func (UnimplementedGatewayServiceHandler) GetGateway(context.Context, *connect.Request[v1.GetGatewayRequest]) (*connect.Response[v1.GetGatewayResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.gateway.v1.GatewayService.GetGateway is not implemented"))

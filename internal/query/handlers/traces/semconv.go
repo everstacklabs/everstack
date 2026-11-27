@@ -484,8 +484,10 @@ func InferProviderFromModel(model string) string {
 		return "deepseek"
 	case strings.HasPrefix(m, "mistral"), strings.HasPrefix(m, "mixtral"), strings.HasPrefix(m, "magistral"), strings.HasPrefix(m, "codestral"):
 		return "mistral"
-	case strings.HasPrefix(m, "llama"):
+	case strings.HasPrefix(m, "llama"), strings.HasPrefix(m, "muse-"):
 		return "meta"
+	case strings.HasPrefix(m, "hy3"), strings.HasPrefix(m, "hy4"):
+		return "tencent"
 	case strings.HasPrefix(m, "grok"):
 		return "xai"
 	case strings.HasPrefix(m, "qwen"):

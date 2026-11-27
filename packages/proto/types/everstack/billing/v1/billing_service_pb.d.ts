@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 import type { GenFile, GenService } from "@bufbuild/protobuf/codegenv1";
-import type { AdjustSeatsRequestSchema, AdjustSeatsResponseSchema, CancelSubscriptionRequestSchema, CancelSubscriptionResponseSchema, CreateBillingPortalSessionRequestSchema, CreateBillingPortalSessionResponseSchema, CreateCheckoutSessionRequestSchema, CreateCheckoutSessionResponseSchema, CreateInstanceMappingRequestSchema, CreateInstanceMappingResponseSchema, DeleteSpendLimitRequestSchema, DeleteSpendLimitResponseSchema, GetActivationStatusRequestSchema, GetActivationStatusResponseSchema, GetInstanceOrganizationRequestSchema, GetInstanceOrganizationResponseSchema, GetPendingActivationRequestSchema, GetPendingActivationResponseSchema, GetPlansRequestSchema, GetPlansResponseSchema, GetSpendLimitsRequestSchema, GetSpendLimitsResponseSchema, GetSubscriptionRequestSchema, GetSubscriptionResponseSchema, GetUsageHistoryRequestSchema, GetUsageHistoryResponseSchema, GetUsageRequestSchema, GetUsageResponseSchema, ListInvoicesRequestSchema, ListInvoicesResponseSchema, MigrateSubscriptionRequestSchema, MigrateSubscriptionResponseSchema, RegenerateActivationRequestSchema, RegenerateActivationResponseSchema, ReportInstanceSnapshotRequestSchema, ReportInstanceSnapshotResponseSchema, ReportOverageUsageRequestSchema, ReportOverageUsageResponseSchema, ReportUsageRequestSchema, ReportUsageResponseSchema, ResumeSubscriptionRequestSchema, ResumeSubscriptionResponseSchema, RetryActivationRequestSchema, RetryActivationResponseSchema, SetSpendLimitRequestSchema, SetSpendLimitResponseSchema, SyncPlansRequestSchema, SyncPlansResponseSchema } from "./billing_pb.js";
+import type { AdjustSeatsRequestSchema, AdjustSeatsResponseSchema, CancelSubscriptionRequestSchema, CancelSubscriptionResponseSchema, ChangePlanRequestSchema, ChangePlanResponseSchema, CreateBillingPortalSessionRequestSchema, CreateBillingPortalSessionResponseSchema, CreateCheckoutSessionRequestSchema, CreateCheckoutSessionResponseSchema, CreateInstanceMappingRequestSchema, CreateInstanceMappingResponseSchema, CreateSetupIntentRequestSchema, CreateSetupIntentResponseSchema, DeleteSpendLimitRequestSchema, DeleteSpendLimitResponseSchema, GetActivationStatusRequestSchema, GetActivationStatusResponseSchema, GetAutoTopUpPolicyRequestSchema, GetAutoTopUpPolicyResponseSchema, GetCreditBalanceRequestSchema, GetCreditBalanceResponseSchema, GetCreditPurchaseOptionsRequestSchema, GetCreditPurchaseOptionsResponseSchema, GetCreditPurchaseRequestSchema, GetCreditPurchaseResponseSchema, GetInstanceOrganizationRequestSchema, GetInstanceOrganizationResponseSchema, GetModelTrialRequestSchema, GetModelTrialResponseSchema, GetPendingActivationRequestSchema, GetPendingActivationResponseSchema, GetPlansRequestSchema, GetPlansResponseSchema, GetSpendLimitsRequestSchema, GetSpendLimitsResponseSchema, GetSpendStatusRequestSchema, GetSpendStatusResponseSchema, GetSubscriptionRequestSchema, GetSubscriptionResponseSchema, GetUsageHistoryRequestSchema, GetUsageHistoryResponseSchema, GetUsageRequestSchema, GetUsageResponseSchema, ListCreditLedgerRequestSchema, ListCreditLedgerResponseSchema, ListCreditPurchasesRequestSchema, ListCreditPurchasesResponseSchema, ListInferenceAttemptsRequestSchema, ListInferenceAttemptsResponseSchema, ListInvoicesRequestSchema, ListInvoicesResponseSchema, ListPaymentMethodsRequestSchema, ListPaymentMethodsResponseSchema, MigrateSubscriptionRequestSchema, MigrateSubscriptionResponseSchema, PreviewPlanChangeRequestSchema, PreviewPlanChangeResponseSchema, PurchaseCreditsRequestSchema, PurchaseCreditsResponseSchema, RegenerateActivationRequestSchema, RegenerateActivationResponseSchema, RegisterApiKeyRequestSchema, RegisterApiKeyResponseSchema, RemovePaymentMethodRequestSchema, RemovePaymentMethodResponseSchema, ReportInstanceSnapshotRequestSchema, ReportInstanceSnapshotResponseSchema, ReportOverageUsageRequestSchema, ReportOverageUsageResponseSchema, ReportUsageRequestSchema, ReportUsageResponseSchema, ResumeSubscriptionRequestSchema, ResumeSubscriptionResponseSchema, RetryActivationRequestSchema, RetryActivationResponseSchema, SetAutoTopUpPolicyRequestSchema, SetAutoTopUpPolicyResponseSchema, SetDefaultPaymentMethodRequestSchema, SetDefaultPaymentMethodResponseSchema, SetSpendLimitRequestSchema, SetSpendLimitResponseSchema, SyncPlansRequestSchema, SyncPlansResponseSchema, UnregisterApiKeyRequestSchema, UnregisterApiKeyResponseSchema, UpdatePaymentMethodRequestSchema, UpdatePaymentMethodResponseSchema } from "./billing_pb.js";
 
 /**
  * Describes the file everstack/billing/v1/billing_service.proto.
@@ -47,7 +47,10 @@ export declare const BillingService: GenService<{
     output: typeof CreateBillingPortalSessionResponseSchema;
   },
   /**
-   * CancelSubscription cancels a subscription at period end
+   * CancelSubscription schedules cancellation at the period end (no
+   * refund). When the organization runs more instances than Starter allows,
+   * keep_instance_ids is required; the others pause at the period end.
+   * Idempotent. Owner or admin only.
    *
    * @generated from rpc everstack.billing.v1.BillingService.CancelSubscription
    */
@@ -57,7 +60,9 @@ export declare const BillingService: GenService<{
     output: typeof CancelSubscriptionResponseSchema;
   },
   /**
-   * ResumeSubscription resumes a cancelled subscription
+   * ResumeSubscription withdraws a scheduled cancellation or scheduled
+   * downgrade before it takes effect, and the instance pauses that came
+   * with it. Idempotent. Owner or admin only.
    *
    * @generated from rpc everstack.billing.v1.BillingService.ResumeSubscription
    */
@@ -219,7 +224,11 @@ export declare const BillingService: GenService<{
     output: typeof GetSpendLimitsResponseSchema;
   },
   /**
-   * SetSpendLimit creates or updates a spend limit
+   * SetSpendLimit creates or updates a spend limit. Owners and admins only.
+   * Creating, enabling or raising a limit needs a plan with the spend_limits
+   * feature, otherwise FAILED_PRECONDITION with ErrorInfo reason
+   * spend_limits_not_in_plan. Lowering, disabling and deleting are always
+   * allowed. Every change is audited.
    *
    * @generated from rpc everstack.billing.v1.BillingService.SetSpendLimit
    */
@@ -229,7 +238,7 @@ export declare const BillingService: GenService<{
     output: typeof SetSpendLimitResponseSchema;
   },
   /**
-   * DeleteSpendLimit removes a spend limit
+   * DeleteSpendLimit removes a spend limit. Owners and admins only; audited.
    *
    * @generated from rpc everstack.billing.v1.BillingService.DeleteSpendLimit
    */
@@ -260,6 +269,252 @@ export declare const BillingService: GenService<{
     methodKind: "unary";
     input: typeof AdjustSeatsRequestSchema;
     output: typeof AdjustSeatsResponseSchema;
+  },
+  /**
+   * GetCreditBalance returns the organization's prepaid credit wallet:
+   * ledger balance, credit reserved by in-flight requests, what is spendable
+   * now, and lifetime totals. Read by any organization member. A read that
+   * cannot reach the ledger fails with Unavailable, never a zero balance.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.GetCreditBalance
+   */
+  getCreditBalance: {
+    methodKind: "unary";
+    input: typeof GetCreditBalanceRequestSchema;
+    output: typeof GetCreditBalanceResponseSchema;
+  },
+  /**
+   * ListCreditLedger pages the organization's credit history, newest first,
+   * with optional entry type, resource type and time filters. Read by any
+   * organization member. Internal deduplication keys are never returned.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.ListCreditLedger
+   */
+  listCreditLedger: {
+    methodKind: "unary";
+    input: typeof ListCreditLedgerRequestSchema;
+    output: typeof ListCreditLedgerResponseSchema;
+  },
+  /**
+   * ListInferenceAttempts pages the organization's inference requests,
+   * newest first, each with every provider attempt it made: what was served,
+   * what lost a race or failed before a fallback, and what each attempt was
+   * charged. Read by any organization member. Internal identifiers (request,
+   * key and ledger ids) are never returned.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.ListInferenceAttempts
+   */
+  listInferenceAttempts: {
+    methodKind: "unary";
+    input: typeof ListInferenceAttemptsRequestSchema;
+    output: typeof ListInferenceAttemptsResponseSchema;
+  },
+  /**
+   * GetSpendStatus returns the organization's estimated inference spend for
+   * the current UTC day and UTC month: Everstack credit charged plus
+   * traffic on the organization's own provider keys at list price, in total
+   * and per gateway API key, with the count of attempts on models that have
+   * no list price (not priced, not counted). Read-only, from hourly rollups
+   * that trail live traffic by about a minute (see as_of). Read by any
+   * organization member.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.GetSpendStatus
+   */
+  getSpendStatus: {
+    methodKind: "unary";
+    input: typeof GetSpendStatusRequestSchema;
+    output: typeof GetSpendStatusResponseSchema;
+  },
+  /**
+   * PurchaseCredits starts a prepaid credit top-up: it records a pending
+   * purchase and returns a Stripe Checkout URL. Owner or admin only.
+   * FailedPrecondition while purchases are switched off.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.PurchaseCredits
+   */
+  purchaseCredits: {
+    methodKind: "unary";
+    input: typeof PurchaseCreditsRequestSchema;
+    output: typeof PurchaseCreditsResponseSchema;
+  },
+  /**
+   * GetCreditPurchase returns one purchase of the organization. The return
+   * page polls it; only state PAID means the credit is available.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.GetCreditPurchase
+   */
+  getCreditPurchase: {
+    methodKind: "unary";
+    input: typeof GetCreditPurchaseRequestSchema;
+    output: typeof GetCreditPurchaseResponseSchema;
+  },
+  /**
+   * ListCreditPurchases lists the organization's purchases, newest first.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.ListCreditPurchases
+   */
+  listCreditPurchases: {
+    methodKind: "unary";
+    input: typeof ListCreditPurchasesRequestSchema;
+    output: typeof ListCreditPurchasesResponseSchema;
+  },
+  /**
+   * GetCreditPurchaseOptions returns whether self-serve purchase is on and
+   * the top-up presets and limits.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.GetCreditPurchaseOptions
+   */
+  getCreditPurchaseOptions: {
+    methodKind: "unary";
+    input: typeof GetCreditPurchaseOptionsRequestSchema;
+    output: typeof GetCreditPurchaseOptionsResponseSchema;
+  },
+  /**
+   * GetAutoTopUpPolicy returns the organization's auto top-up settings,
+   * this month's usage of the cap and the last attempt. Any organization
+   * member (docs/design/auto-top-up.md).
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.GetAutoTopUpPolicy
+   */
+  getAutoTopUpPolicy: {
+    methodKind: "unary";
+    input: typeof GetAutoTopUpPolicyRequestSchema;
+    output: typeof GetAutoTopUpPolicyResponseSchema;
+  },
+  /**
+   * SetAutoTopUpPolicy turns auto top-up on or off or changes its terms.
+   * Turning it on or editing records consent to the exact terms shown.
+   * A charge already in progress is not affected. Owner or admin only.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.SetAutoTopUpPolicy
+   */
+  setAutoTopUpPolicy: {
+    methodKind: "unary";
+    input: typeof SetAutoTopUpPolicyRequestSchema;
+    output: typeof SetAutoTopUpPolicyResponseSchema;
+  },
+  /**
+   * CreateSetupIntent starts saving a card for the organization's Stripe
+   * customer (created if missing) and returns the SetupIntent client secret
+   * for Stripe Elements. Owner or admin only.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.CreateSetupIntent
+   */
+  createSetupIntent: {
+    methodKind: "unary";
+    input: typeof CreateSetupIntentRequestSchema;
+    output: typeof CreateSetupIntentResponseSchema;
+  },
+  /**
+   * ListPaymentMethods lists the organization's active saved payment
+   * methods, default first. Any organization member.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.ListPaymentMethods
+   */
+  listPaymentMethods: {
+    methodKind: "unary";
+    input: typeof ListPaymentMethodsRequestSchema;
+    output: typeof ListPaymentMethodsResponseSchema;
+  },
+  /**
+   * SetDefaultPaymentMethod makes one saved payment method the default for
+   * future charges. Owner or admin only.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.SetDefaultPaymentMethod
+   */
+  setDefaultPaymentMethod: {
+    methodKind: "unary";
+    input: typeof SetDefaultPaymentMethodRequestSchema;
+    output: typeof SetDefaultPaymentMethodResponseSchema;
+  },
+  /**
+   * RemovePaymentMethod detaches a saved payment method in Stripe. Removing
+   * the default promotes the most recently added remaining card. Owner or
+   * admin only.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.RemovePaymentMethod
+   */
+  removePaymentMethod: {
+    methodKind: "unary";
+    input: typeof RemovePaymentMethodRequestSchema;
+    output: typeof RemovePaymentMethodResponseSchema;
+  },
+  /**
+   * UpdatePaymentMethod changes a saved card's expiry and billing details
+   * in Stripe, then re-syncs it. Cards only (a Link method is replaced, not
+   * edited). Owner or admin only.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.UpdatePaymentMethod
+   */
+  updatePaymentMethod: {
+    methodKind: "unary";
+    input: typeof UpdatePaymentMethodRequestSchema;
+    output: typeof UpdatePaymentMethodResponseSchema;
+  },
+  /**
+   * PreviewPlanChange prices and explains a plan or interval change before
+   * it is made: timing, new limits, instances over the new limit, the
+   * prorated charge for an upgrade. Owner or admin only.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.PreviewPlanChange
+   */
+  previewPlanChange: {
+    methodKind: "unary";
+    input: typeof PreviewPlanChangeRequestSchema;
+    output: typeof PreviewPlanChangeResponseSchema;
+  },
+  /**
+   * ChangePlan upgrades now with proration (charging the default card) or
+   * schedules a downgrade for the period end. Owner or admin only. Refused
+   * while the organization is past due.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.ChangePlan
+   */
+  changePlan: {
+    methodKind: "unary";
+    input: typeof ChangePlanRequestSchema;
+    output: typeof ChangePlanResponseSchema;
+  },
+  /**
+   * RegisterApiKey records which organization a gateway API key belongs to,
+   * so SetSpendLimit can accept a limit for a key that has made no request
+   * yet. Internal only: callable by the managed gateway's M2M client right
+   * after it creates the key, never by a customer session. The tenant is
+   * the one the gateway stored on the key; billing resolves it to the
+   * organization. Idempotent.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.RegisterApiKey
+   */
+  registerApiKey: {
+    methodKind: "unary";
+    input: typeof RegisterApiKeyRequestSchema;
+    output: typeof RegisterApiKeyResponseSchema;
+  },
+  /**
+   * UnregisterApiKey removes the ownership record of a gateway API key the
+   * gateway deleted. Internal only, same caller as RegisterApiKey. Removes
+   * only the row for that key id owned by the organization the tenant
+   * resolves to; a key of another organization is never touched. Idempotent.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.UnregisterApiKey
+   */
+  unregisterApiKey: {
+    methodKind: "unary";
+    input: typeof UnregisterApiKeyRequestSchema;
+    output: typeof UnregisterApiKeyResponseSchema;
+  },
+  /**
+   * GetModelTrial returns the organization's free model requests: how many
+   * it has, how many it used, and whether it can use them now
+   * (docs/design/free-trial-onboarding.md 4.2). Read-only; never grants.
+   * Read by any organization member.
+   *
+   * @generated from rpc everstack.billing.v1.BillingService.GetModelTrial
+   */
+  getModelTrial: {
+    methodKind: "unary";
+    input: typeof GetModelTrialRequestSchema;
+    output: typeof GetModelTrialResponseSchema;
   },
 }>;
 

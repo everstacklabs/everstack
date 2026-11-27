@@ -75,7 +75,7 @@ export function AgentRunSummary({ spans }: { spans: Span[] }) {
                   <Icon className="h-3 w-3" />
                   {s.label}
                 </div>
-                <div className="text-sm text-brand-main-50 mt-0.5 truncate light:text-black" title={s.value}>
+                <div className="text-sm text-brand-main-50 mt-0.5 truncate light:text-black">
                   {s.value}
                 </div>
               </div>
@@ -85,7 +85,7 @@ export function AgentRunSummary({ spans }: { spans: Span[] }) {
       )}
 
       {looping && (
-        <div className="flex items-center gap-1.5 rounded border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-300">
+        <div className="flex items-center gap-1.5 rounded border border-warning-border bg-warning-surface px-2.5 py-1.5 text-[11px] text-warning">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           High iteration count — check for a tool-call loop or a non-terminating plan.
         </div>

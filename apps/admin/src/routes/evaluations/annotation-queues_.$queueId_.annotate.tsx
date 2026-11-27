@@ -408,7 +408,7 @@ function AnnotateTrooperPageContent() {
                           }
                           className={
                             scores[config.id] === 1
-                              ? 'bg-emerald-600 hover:bg-emerald-500'
+                              ? 'bg-success-solid hover:bg-success-solid/90'
                               : 'border-brand-main-600 text-brand-main-100 hover:text-white light:hover:text-brand-main-50'
                           }
                           onClick={() => handleScoreChange(config.id, 1)}
@@ -422,7 +422,7 @@ function AnnotateTrooperPageContent() {
                           }
                           className={
                             scores[config.id] === 0
-                              ? 'bg-red-600 hover:bg-red-500'
+                              ? 'bg-danger-solid hover:bg-danger-solid/90'
                               : 'border-brand-main-600 text-brand-main-100 hover:text-white light:hover:text-brand-main-50'
                           }
                           onClick={() => handleScoreChange(config.id, 0)}
@@ -483,7 +483,7 @@ function AnnotateTrooperPageContent() {
               </div>
 
               {submitMutation.error && (
-                <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400 light:text-red-600">
+                <div className="rounded-lg border border-danger-border bg-danger-surface p-3 text-sm text-danger">
                   {(submitMutation.error as Error).message}
                 </div>
               )}

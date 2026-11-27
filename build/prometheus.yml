@@ -1,0 +1,50 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+  external_labels:
+    cluster: "everstack-local"
+    environment: "development"
+
+scrape_configs:
+  # Everstack Gateway Fast-Path Metrics
+  - job_name: "everstack-fastpath"
+    static_configs:
+      - targets: ["localhost:8089"]
+        labels:
+          service: "everstack-gateway"
+          component: "fast-path"
+    metrics_path: "/metrics/fastpath"
+    scrape_interval: 5s
+
+  # Everstack Gateway Stats (JSON endpoint)
+  - job_name: "everstack-stats"
+    static_configs:
+      - targets: ["localhost:8089"]
+        labels:
+          service: "everstack-gateway"
+          component: "stats"
+    metrics_path: "/debug/fastpath/stats"
+    scrape_interval: 10s
+
+  # Prometheus self-monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          service: "prometheus"
+
+  # Optional: ClickHouse metrics (requires clickhouse-exporter)
+  # - job_name: "clickhouse"
+  #   static_configs:
+  #     - targets: ["clickhouse-exporter:9363"]
+  #       labels:
+  #         service: "clickhouse"
+  #   scrape_interval: 30s
+
+  # Optional: PostgreSQL metrics (requires postgres_exporter)
+  # - job_name: "postgres"
+  #   static_configs:
+  #     - targets: ["postgres-exporter:9187"]
+  #       labels:
+  #         service: "postgres"
+  #   scrape_interval: 30s

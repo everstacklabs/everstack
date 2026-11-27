@@ -22,23 +22,23 @@ type SessionTileProps = {
 const STATUS_COLORS: Record<string, string> = {
   running: 'border-brand-secondary-500/35 bg-brand-secondary-600/10',
   created: 'border-brand-main-600 bg-brand-main-900/50',
-  completed: 'border-emerald-500/25 bg-emerald-500/5',
-  failed: 'border-red-500/30 bg-red-500/5',
+  completed: 'border-success-border bg-success-surface/60',
+  failed: 'border-danger-border bg-danger-surface/60',
   cancelled: 'border-brand-main-700 bg-brand-main-900/40',
   hibernated: 'border-brand-main-600 bg-brand-main-900/50',
-  waiting_for_input: 'border-amber-500/30 bg-amber-500/5',
-  waiting_for_approval: 'border-orange-500/30 bg-orange-500/5',
+  waiting_for_input: 'border-warning-border bg-warning-surface/60',
+  waiting_for_approval: 'border-warning-border bg-warning-surface/60',
 }
 
 const STATUS_DOT: Record<string, string> = {
   running: 'bg-brand-secondary-300 animate-pulse',
   created: 'bg-brand-main-300',
-  completed: 'bg-emerald-500',
-  failed: 'bg-red-500',
+  completed: 'bg-success-solid',
+  failed: 'bg-danger-solid',
   cancelled: 'bg-brand-main-400',
   hibernated: 'bg-violet-400',
-  waiting_for_input: 'bg-amber-500 animate-pulse',
-  waiting_for_approval: 'bg-orange-400 animate-pulse',
+  waiting_for_input: 'bg-warning-solid animate-pulse',
+  waiting_for_approval: 'bg-warning-solid animate-pulse',
 }
 
 const STATUS_LABELS: Record<string, string> = {

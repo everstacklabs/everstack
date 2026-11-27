@@ -46,9 +46,37 @@ func NewRegistry(logger *slog.Logger) *Registry {
 	}
 }
 
+// DisallowStdio makes Register refuse any server whose transport is stdio,
+// regardless of where its config came from. Intended for gateways that
+// serve more than one tenant, where a tenant-supplied command would run
+// inside the shared gateway process. It flips the process-wide switch (see
+// the package-level DisallowStdio), so the transport constructors below
+// this registry refuse too; the switch is one-way for the life of the
+// process.
+func (r *Registry) DisallowStdio() {
+	DisallowStdio()
+	r.logger.Info("mcp registry: stdio transport disabled for this process")
+}
+
+// StdioAllowed reports whether stdio-transport servers may be registered.
+func (r *Registry) StdioAllowed() bool {
+	return StdioAllowed()
+}
+
 // Register adds a server to the registry, establishes a connection,
 // initializes the MCP protocol, and discovers tools.
 func (r *Registry) Register(ctx context.Context, cfg ServerConfig) (*ServerEntry, error) {
+	// Policy gate first: NewClient would otherwise build a stdio transport
+	// and Initialize would exec the configured command.
+	if cfg.TransportType == TransportStdio && !r.StdioAllowed() {
+		r.logger.Warn("mcp registry: refusing stdio server",
+			"server_id", cfg.ID,
+			"tenant_id", cfg.TenantID,
+			"name", cfg.Name,
+		)
+		return nil, fmt.Errorf("mcp registry: register %q: %w", cfg.Name, ErrStdioNotAllowed)
+	}
+
 	client, err := NewClient(cfg, r.logger)
 	if err != nil {
 		return nil, fmt.Errorf("mcp registry: create client for %q: %w", cfg.Name, err)
@@ -204,13 +232,18 @@ func (r *Registry) CallToolForTenant(ctx context.Context, tenantID, serverID, to
 	return entry.Client.CallTool(ctx, toolName, args)
 }
 
-// FindServerForTool looks up which server owns a tool by name.
-// Returns the server ID and true if found.
-func (r *Registry) FindServerForTool(toolName string) (string, bool) {
+// FindServerForToolForTenant looks up which of the tenant's servers owns a
+// tool by name. The registry holds every tenant's servers on a shared
+// gateway, so an unscoped lookup would route one tenant's call to another
+// tenant's server. Empty tenantID finds nothing (fail closed).
+func (r *Registry) FindServerForToolForTenant(tenantID, toolName string) (string, bool) {
+	if tenantID == "" {
+		return "", false
+	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	for _, entry := range r.servers {
-		if !entry.Enabled {
+		if !entry.Enabled || entry.Config.TenantID != tenantID {
 			continue
 		}
 		for _, t := range entry.Tools {
@@ -220,6 +253,16 @@ func (r *Registry) FindServerForTool(toolName string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// OwnedBy reports whether serverID is registered and owned by tenantID.
+// Empty tenantID owns nothing (fail closed).
+func (r *Registry) OwnedBy(tenantID, serverID string) bool {
+	if tenantID == "" {
+		return false
+	}
+	entry, ok := r.Get(serverID)
+	return ok && entry.Config.TenantID == tenantID
 }
 
 // RefreshTools re-discovers tools for a given server.

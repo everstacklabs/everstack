@@ -4,10 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"connectrpc.com/connect"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 
+	"github.com/everstacklabs/everstack/internal/enterprise"
 	"github.com/everstacklabs/everstack/internal/hosting"
 )
 
@@ -18,6 +22,11 @@ func (s *Server) resolveTenantQuota(ctx context.Context, tenantID string) (hosti
 		return hosting.TenantQuota{}, false, nil
 	}
 	quota, err := s.quotaResolver.Resolve(ctx, tenantID)
+	if errors.Is(err, enterprise.ErrLimitCheckUnavailable) {
+		// The organization-wide quota cannot be checked right now: refuse
+		// the publish with a retryable error rather than a partial count.
+		return hosting.TenantQuota{}, false, connect.NewError(connect.CodeUnavailable, enterprise.ErrLimitCheckUnavailable)
+	}
 	if err != nil {
 		return hosting.TenantQuota{}, false, fmt.Errorf("resolve hosting plan quota: %w", err)
 	}
@@ -36,9 +45,15 @@ func enforceTenantQuotaTx(
 	quota hosting.TenantQuota,
 	requested hosting.TenantUsage,
 ) error {
+	// On a managed gateway the quota is the organization's: lock on the
+	// organization and count every tenant id it owns.
+	lockKey, tenantIDs := tenantID, []string{tenantID}
+	if quota.ScopeKey != "" && len(quota.ScopeTenantIDs) > 0 {
+		lockKey, tenantIDs = quota.ScopeKey, quota.ScopeTenantIDs
+	}
 	if _, err := tx.ExecContext(ctx,
 		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
-		tenantQuotaLockPrefix+tenantID,
+		tenantQuotaLockPrefix+lockKey,
 	); err != nil {
 		return fmt.Errorf("lock hosting quota: %w", err)
 	}
@@ -52,8 +67,8 @@ func enforceTenantQuotaTx(
 			), 0)::bigint AS storage_bytes
 		FROM sites s
 		LEFT JOIN site_versions v ON v.site_id = s.id
-		WHERE s.tenant_id = $1`,
-		tenantID,
+		WHERE s.tenant_id::text = ANY($1::text[])`,
+		pq.Array(tenantIDs),
 	).Scan(&current.Sites, &current.StorageBytes); err != nil {
 		return fmt.Errorf("read hosting quota usage: %w", err)
 	}
@@ -76,7 +91,24 @@ func retainedSiteStorageTx(ctx context.Context, tx *sqlx.Tx, siteID string) (int
 func quotaConnectError(err error) error {
 	var exceeded *hosting.QuotaExceededError
 	if errors.As(err, &exceeded) {
-		return connect.NewError(connect.CodeResourceExhausted, exceeded)
+		cErr := connect.NewError(connect.CodeResourceExhausted, exceeded)
+		// Same structured detail as every other plan cap, so the UI renders
+		// one upgrade path for all of them.
+		if detail, dErr := connect.NewErrorDetail(&errdetails.ErrorInfo{
+			Reason: "plan_limit_reached",
+			Domain: "everstack.ai",
+			Metadata: map[string]string{
+				"limit_type":  exceeded.UsageType(),
+				"limit":       strconv.FormatInt(exceeded.Limit, 10),
+				"used":        strconv.FormatInt(exceeded.Current, 10),
+				"requested":   strconv.FormatInt(exceeded.Added, 10),
+				"tier":        exceeded.Tier,
+				"upgrade_url": hosting.UpgradeURL,
+			},
+		}); dErr == nil {
+			cErr.AddDetail(detail)
+		}
+		return cErr
 	}
 	return err
 }

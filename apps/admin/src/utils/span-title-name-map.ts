@@ -81,6 +81,14 @@ const mappings: Record<string, string> = {
   'provider.perplexity.chat': 'Perplexity API Call',
   'provider.cerebras.chat': 'Cerebras API Call',
   'provider.nvidia-nim.chat': 'NVIDIA NIM API Call',
+  'provider.deepinfra.chat': 'DeepInfra API Call',
+  'provider.novita.chat': 'Novita AI API Call',
+  'provider.nebius.chat': 'Nebius API Call',
+  'provider.baseten.chat': 'Baseten API Call',
+  'provider.sambanova.chat': 'SambaNova API Call',
+  'provider.chutes.chat': 'Chutes API Call',
+  'provider.meta.chat': 'Meta API Call',
+  'provider.tencent.chat': 'Tencent TokenHub API Call',
 
   // Function execution
   'function.execution': 'Function Execution',

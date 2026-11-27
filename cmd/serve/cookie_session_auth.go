@@ -3,16 +3,21 @@ package serve
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
 
 	authdomain "github.com/everstacklabs/everstack/internal/auth/selfhosted/domain"
+	"github.com/everstacklabs/everstack/internal/auth/sessionlive"
 	"github.com/everstacklabs/everstack/internal/database"
+	"github.com/everstacklabs/everstack/internal/enterprise"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/everstacklabs/everstack/internal/lib/tenantstatus"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -21,6 +26,16 @@ import (
 // `ExtractTenantID` already reads from gRPC metadata so the contract
 // is symmetric between cookie auth and API-key auth.
 const activeOrgHeader = "x-org-id"
+
+// instanceTokenExchangePath is where the cloud sends the browser with a
+// short-lived instance-exchange token (internal/auth/selfhosted/transport
+// handleTokenExchange).
+const instanceTokenExchangePath = "/api/auth/exchange"
+
+// cloudCallbackPath is where the cloud relay sends the browser with a
+// single-use launch code (handleCloudCallback). Like the token exchange it
+// authenticates a credential against the host-selected instance.
+const cloudCallbackPath = "/auth/cloud-callback"
 
 // cookieSessionCookieAliases mirrors tenant_middleware.tenantSessionCookieAliases
 // in the services binary. The gateway accepts the same set so a session
@@ -66,10 +81,10 @@ type cookieOrganizationMembership struct {
 // cookies, NOT touch shadow sessions — those belong to the full
 // TenantMiddleware. We just stop the "cookie present but ignored" leak.
 //
-// db lookup query mirrors tenant_middleware.validateCloudSession:
-//
-//	SELECT user_id FROM everstack.sessions
-//	WHERE token = $1 AND expires_at > NOW()
+// Session validation is sessionlive.Lookup, the same check
+// tenant_middleware.validateCloudSession uses: the mirror row must be
+// unexpired and, when linked to a Better Auth session, that session must
+// still exist and be unexpired.
 //
 // db is resolved through the supplied accessor closure so the middleware
 // can be installed before the DB pool is opened — the closure returns
@@ -78,6 +93,21 @@ type cookieOrganizationMembership struct {
 func cookieSessionAuthMiddleware(dbFn func() *sqlx.DB) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// The cloud instance-token exchange and the launch-code callback
+			// authenticate the presented credential against the host-selected
+			// instance, so it needs that
+			// instance regardless of which cookies the browser carries: a
+			// user arriving from the cloud login holds the parent-domain
+			// cloud cookie, one re-entering after sign-out holds the
+			// signed-out marker, and one whose session expired holds a dead
+			// cookie. Every cookie branch below would drop the host scope,
+			// so resolve it here and skip cookie enrichment entirely: the
+			// handler never reads cookie identity, and host resolution alone
+			// does not mark the request authenticated.
+			if r.URL.Path == instanceTokenExchangePath || r.URL.Path == cloudCallbackPath {
+				next.ServeHTTP(w, withResolvedRequestInstance(r, dbFn()))
+				return
+			}
 			// Cheap short-circuits first so we never call dbFn() (or
 			// hit the DB) on requests that don't need enrichment.
 			if uid := contextkeys.CloudUserIDFromContext(r.Context()); uid != "" {
@@ -92,11 +122,18 @@ func cookieSessionAuthMiddleware(dbFn func() *sqlx.DB) func(http.Handler) http.H
 			// the RPCs behind it still succeed — a sign-out that is only
 			// skin deep.
 			if _, err := r.Cookie(authdomain.InstanceSignedOutCookie); err == nil {
-				next.ServeHTTP(w, r)
+				// The marker is caller-controlled, so it must never be a
+				// way to skip host rejection: a signed-out browser gets no
+				// identity from ANY cookie, including the API-key
+				// interceptor's own (cached) cookie branch (EVS-309 review).
+				if len(readSessionTokens(r)) > 0 {
+					r = r.WithContext(contextkeys.WithTenantAuthRejected(r.Context()))
+				}
+				next.ServeHTTP(w, withShellInstanceScope(r, dbFn))
 				return
 			}
-			token := readSessionToken(r)
-			if token == "" {
+			tokens := readSessionTokens(r)
+			if len(tokens) == 0 {
 				if requestNeedsInstanceScope(r) {
 					next.ServeHTTP(w, withResolvedRequestInstance(r, dbFn()))
 					return
@@ -116,19 +153,37 @@ func cookieSessionAuthMiddleware(dbFn func() *sqlx.DB) func(http.Handler) http.H
 			lookupCtx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 			defer cancel()
 
+			// Try every alias: an invalid (stale) cookie under one name
+			// must neither shadow a valid one under another nor leave the
+			// request for a downstream cookie branch to re-authenticate.
+			// sessionlive.Lookup also rejects a mirror row whose Better
+			// Auth session is gone (sign-out, revocation, user deletion).
 			var userID string
-			err := db.GetContext(lookupCtx, &userID,
-				`SELECT user_id::text FROM everstack.sessions
-				 WHERE token = $1 AND expires_at > NOW() LIMIT 1`, token)
-			if err != nil {
-				if err != sql.ErrNoRows {
-					logger.WithError(err).Debug("cookie_session_auth: lookup failed (non-row)")
+			var storeUnavailable bool
+			for _, token := range tokens {
+				session, err := sessionlive.Lookup(lookupCtx, db, token)
+				if err != nil {
+					if !sessionlive.IsRejected(err) {
+						storeUnavailable = true
+						logger.WithError(err).Warn("cookie_session_auth: session verification failed")
+					}
+					continue
 				}
-				next.ServeHTTP(w, r)
-				return
+				userID = session.UserID
+				break
 			}
 			if userID == "" {
-				next.ServeHTTP(w, r)
+				// A session cookie was presented and none validated. Mark
+				// the request so the API-key interceptors do not honour a
+				// cached answer for the same cookie. When the store could
+				// not be reached, also say so: the request is still denied
+				// cookie identity, but an authenticated route answers 503
+				// rather than 401 (public routes are unaffected).
+				ctx := contextkeys.WithTenantAuthRejected(r.Context())
+				if storeUnavailable {
+					ctx = contextkeys.WithSessionUnavailable(ctx)
+				}
+				next.ServeHTTP(w, withShellInstanceScope(r.WithContext(ctx), func() *sqlx.DB { return db }))
 				return
 			}
 
@@ -142,10 +197,13 @@ func cookieSessionAuthMiddleware(dbFn func() *sqlx.DB) func(http.Handler) http.H
 			var tenantOK bool
 			var requestInstance contextkeys.RequestInstanceScope
 
+			hostResolved := false
+			var hostInstance contextkeys.RequestInstanceScope
 			if host := r.Host; host != "" {
 				resolvedInstance, err := resolveInstanceFromHost(lookupCtx, db, host)
 				if err == nil && resolvedInstance.InstanceID != "" {
-					requestInstance = resolvedInstance
+					hostResolved = true
+					hostInstance = resolvedInstance
 					// Verify the authenticated user belongs to this
 					// instance's org before trusting the hostname.
 					var role string
@@ -154,11 +212,61 @@ func cookieSessionAuthMiddleware(dbFn func() *sqlx.DB) func(http.Handler) http.H
 						 WHERE user_id = $1 AND organization_id = $2::uuid
 						 LIMIT 1`, userID, resolvedInstance.OrganizationID)
 					if membershipErr == nil {
+						// Only a verified member gets the host's instance
+						// scope. Stamping it before this check handed a
+						// non-member the victim's org/instance ids, which
+						// GetSession synthesis and GetLicenseMonitorStatus
+						// then echoed back (EVS-309).
+						requestInstance = resolvedInstance
 						tenantID = resolvedInstance.InstanceID
 						userRole = strings.TrimSpace(role)
 						tenantOK = true
 					}
 				}
+			}
+
+			if hostResolved && !tenantOK {
+				// The Host selected a real instance and this user is not a
+				// member of its organization (or the check failed). Fail
+				// closed: no identity, no tenant, no scope. Falling back to
+				// the user's own org would let them operate under a
+				// hostname they are not authorized for. The rejection marker
+				// stops the API-key interceptor's own cookie branch from
+				// re-authenticating the same cookie as the user's first
+				// tenant.
+				logger.WithFields(
+					"audit_event", true,
+					"event_type", "session.tenant.rejected",
+					"cloud_user_id", userID,
+					"host", r.Host,
+					"reason", "not a member of the host instance's organization",
+				).Info("cookie_session_auth: host membership rejected")
+				ctx := contextkeys.WithTenantAuthRejected(r.Context())
+				// The shell still learns the host is a managed instance (from
+				// the row resolved above), so the visit is recorded anonymously.
+				if isAnonymousShellLoad(r) && hostInstance.OrganizationID != "" {
+					ctx = contextkeys.WithRequestInstanceScope(ctx, hostInstance)
+				}
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+
+			if !hostResolved && enterprise.ManagedGateway() {
+				// On a managed gateway every request belongs to a
+				// hostname-selected tenant. A Host that resolves to nothing
+				// must not drop into the self-hosted membership fallback:
+				// that path marked the request authenticated even with no
+				// tenant, which alone skips API-key and license validation
+				// on handlers that do no tenant check (EVS-309 review).
+				logger.WithFields(
+					"audit_event", true,
+					"event_type", "session.tenant.rejected",
+					"cloud_user_id", userID,
+					"host", r.Host,
+					"reason", "host does not resolve to a managed instance",
+				).Info("cookie_session_auth: unresolved host on managed gateway")
+				next.ServeHTTP(w, r.WithContext(contextkeys.WithTenantAuthRejected(r.Context())))
+				return
 			}
 
 			if !tenantOK {
@@ -188,11 +296,18 @@ func cookieSessionAuthMiddleware(dbFn func() *sqlx.DB) func(http.Handler) http.H
 					}
 				}
 				if !tenantOK {
+					// No verified tenant: do not mark the request
+					// authenticated. The self-hosted API-key interceptor
+					// still recognises the cookie for pre-onboarding screens;
+					// this middleware only ever vouches for a verified
+					// membership.
 					logger.WithFields(
 						"cloud_user_id", userID,
 						"membership_count", len(memberships),
 						"header_org_present", headerOrg != "",
-					).Warn("cookie_session_auth: tenant unresolved — handler will return PermissionDenied")
+					).Warn("cookie_session_auth: tenant unresolved — request continues unauthenticated")
+					next.ServeHTTP(w, r)
+					return
 				}
 			}
 
@@ -224,21 +339,28 @@ func requestNeedsInstanceScope(r *http.Request) bool {
 	if strings.HasPrefix(strings.TrimSpace(r.Header.Get("Authorization")), "Bearer ") {
 		return true
 	}
+	// Token exchanges: the handler authenticates the presented code/token
+	// against the host-selected instance. The pre-auth status RPCs
+	// (GetLicenseMonitorStatus, GetGatewayInstanceStatus, GetTrialStatus)
+	// deliberately are NOT here: they have no legitimate consumer of an
+	// unauthenticated instance scope, and carrying one let a Host sweep
+	// read every tenant's ids and sandbox billing flag (EVS-309).
 	switch r.URL.Path {
 	case "/oauth/token", "/oauth/revoke",
-		"/everstack.auth.v1.AuthService/ExchangeDeviceCode",
-		"/everstack.gateway.v1.GatewayService/GetLicenseMonitorStatus",
-		"/everstack.gateway.v1.GatewayService/GetGatewayInstanceStatus",
-		"/everstack.gateway.v1.GatewayService/GetTrialStatus",
-		"/everstack.gateway.v1.GatewayService/GetGateway",
-		"/everstack.config.v1.ConfigService/GetRuntimeConfigSection":
+		"/everstack.auth.v1.AuthService/ExchangeDeviceCode":
 		return true
 	}
 
-	// The SPA handler injects instance-specific runtime configuration into HTML.
-	// Resolve extensionless browser routes, including the root shell, while
-	// keeping static assets and health probes on the no-DB fast path.
-	if r.Method != http.MethodGet {
+	return isSPAShellRequest(r)
+}
+
+// isSPAShellRequest identifies browser loads of the SPA shell. The SPA
+// handler injects instance-specific runtime configuration into that HTML, so
+// it needs the host-selected instance. Resolve extensionless browser routes,
+// including the root shell, while keeping static assets and health probes on
+// the no-DB fast path.
+func isSPAShellRequest(r *http.Request) bool {
+	if r == nil || r.Method != http.MethodGet {
 		return false
 	}
 	path := strings.TrimSpace(r.URL.Path)
@@ -254,6 +376,28 @@ func requestNeedsInstanceScope(r *http.Request) bool {
 		return false
 	}
 	return filepath.Ext(path) == ""
+}
+
+// withShellInstanceScope resolves the host-selected instance onto a request
+// that is being served without identity (no session, a rejected or foreign
+// session, or a browser signed out of this instance), but only for a load
+// of the SPA shell. The scope is the resolved tenant_config row, never the
+// Host string, and resolution alone grants nothing: the shell uses it only
+// to decide that this is a managed instance (the runtime env then serves
+// the analytics key, with no tenant ids, so signed-out visits are recorded
+// anonymously). API, RPC and asset requests are unchanged.
+func withShellInstanceScope(r *http.Request, dbFn func() *sqlx.DB) *http.Request {
+	if !isAnonymousShellLoad(r) {
+		return r
+	}
+	if _, ok := contextkeys.RequestInstanceScopeFromContext(r.Context()); ok {
+		return r
+	}
+	return withResolvedRequestInstance(r, dbFn())
+}
+
+func isAnonymousShellLoad(r *http.Request) bool {
+	return isSPAShellRequest(r) && strings.TrimSpace(r.Header.Get("Authorization")) == ""
 }
 
 func withResolvedRequestInstance(r *http.Request, db *sqlx.DB) *http.Request {
@@ -321,12 +465,9 @@ func pickActiveOrg(memberships []string, headerOrg string) (string, bool) {
 // Returns an error when the host doesn't match a known instance. The caller
 // falls back to org-membership resolution for self-hosted compatibility.
 func resolveInstanceFromHost(ctx context.Context, db *sqlx.DB, host string) (contextkeys.RequestInstanceScope, error) {
-	// Strip port if present.
-	if idx := strings.IndexByte(host, ':'); idx >= 0 {
-		host = host[:idx]
-	}
-	// Extract the first DNS label (e.g. "stage-a668c8" from
-	// "stage-a668c8.dev.eu-gra-1.everstack.ai").
+	host = normalizeRequestHost(host)
+	// Extract the first DNS label (e.g. "stage-d4e5f6" from
+	// "stage-d4e5f6.dev.eu-gra-1.everstack.ai").
 	label := host
 	if idx := strings.IndexByte(host, '.'); idx >= 0 {
 		label = host[:idx]
@@ -334,32 +475,80 @@ func resolveInstanceFromHost(ctx context.Context, db *sqlx.DB, host string) (con
 	if label == "" {
 		return contextkeys.RequestInstanceScope{}, fmt.Errorf("empty host label")
 	}
+	// A database with no tenant_config table (any self-hosted gateway)
+	// resolves no host at all. Answer as the failing query did, without
+	// paying for it on every request.
+	if missingTenantConfigTable.known(db, "") {
+		return contextkeys.RequestInstanceScope{}, errNoTenantConfigTable
+	}
+	// A recently confirmed unknown host answers exactly like the first miss
+	// without another unindexed scan (EVS-324 item 7). Label misses are
+	// keyed by label; a label that exists under a different full host is
+	// keyed by that full host, which never collides with a label (it has a
+	// dot) and so never hides the canonical spelling.
+	if unknownHostCache.known(db, label) || unknownHostCache.known(db, host) {
+		return contextkeys.RequestInstanceScope{}, sql.ErrNoRows
+	}
 
-	var scope contextkeys.RequestInstanceScope
-	err := db.GetContext(ctx, &scope,
+	var row struct {
+		contextkeys.RequestInstanceScope
+		GatewayURL string `db:"gateway_url"`
+	}
+	err := db.GetContext(ctx, &row,
 		`SELECT
 			tc.instance_id::text AS instance_id,
 			tc.organization_id::text AS organization_id,
-			COALESCE(o.slug, '') AS organization_slug
+			COALESCE(o.slug, '') AS organization_slug,
+			COALESCE(tc.gateway_url, '') AS gateway_url
 		 FROM everstack.tenant_config AS tc
 		 LEFT JOIN everstack.organizations AS o ON o.id = tc.organization_id
 		 WHERE tc.slug || '-' || RIGHT(REPLACE(tc.instance_id::text, '-', ''), 6) = $1`,
 		label)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			unknownHostCache.remember(db, label)
+		} else if isUndefinedRelation(err) {
+			missingTenantConfigTable.remember(db, "")
+		}
 		return contextkeys.RequestInstanceScope{}, err
 	}
-	return scope, nil
+	// The label is only the first DNS label: the full host must be the
+	// tenant's canonical host, or "acme-a1b2c3.attacker.example" would name
+	// the acme tenant.
+	if !tenantstatus.HostMatchesCanonical(host, row.GatewayURL) {
+		// Only a dotted host can be remembered: a dotless host IS the
+		// label, and caching it would lock the real tenant out.
+		if host != label {
+			unknownHostCache.remember(db, host)
+		}
+		return contextkeys.RequestInstanceScope{}, sql.ErrNoRows
+	}
+	return row.RequestInstanceScope, nil
 }
 
-// readSessionToken returns the first session-cookie value found, trying
-// each alias in priority order. Browsers may send multiple cookies with
-// the same name when a domain migration is in progress — we don't try to
-// disambiguate, the first valid one is enough for user_id resolution.
-func readSessionToken(r *http.Request) string {
+// normalizeRequestHost canonicalises a Host header before tenant lookup:
+// lowercase (DNS is case-insensitive, the DB compare is not), no port, no
+// trailing dot. Every host comparison must go through the same
+// normalization or an uppercased spelling of a real tenant misses the lookup
+// and lands in a different code path than the canonical spelling.
+func normalizeRequestHost(host string) string {
+	host = strings.TrimSpace(host)
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	host = strings.TrimSuffix(host, ".")
+	return strings.ToLower(host)
+}
+
+// readSessionTokens returns every session-cookie value presented, in alias
+// priority order. Callers validate each in turn: a stale cookie under one
+// alias must not shadow a valid one under another.
+func readSessionTokens(r *http.Request) []string {
+	var tokens []string
 	for _, name := range cookieSessionCookieAliases {
 		if c, err := r.Cookie(name); err == nil && c.Value != "" {
-			return c.Value
+			tokens = append(tokens, c.Value)
 		}
 	}
-	return ""
+	return tokens
 }

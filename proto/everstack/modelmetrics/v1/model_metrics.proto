@@ -22,8 +22,16 @@ message PublicMetricValues {
   uint64 total_tokens = 10;
   double cost_usd = 11;
   double avg_latency_ms = 12;
-  double avg_ttft_ms = 13;
-  double avg_throughput_tps = 14;
+  // avg_ttft_ms and avg_throughput_tps are streaming-only measures: they are
+  // derived from the subset of requests that actually streamed. They are
+  // `optional` so that "no publishable sample" is a distinct state from a
+  // genuine zero -- an unset field is omitted from the JSON entirely, while a
+  // real 0 ms TTFT (a first chunk inside the same millisecond) is emitted as
+  // 0. The server leaves them unset when the streaming sample is too thin to
+  // mean anything; see MinimumStreamSamples / MinimumStreamCoverage in
+  // internal/modelmetrics/service.go.
+  optional double avg_ttft_ms = 13;
+  optional double avg_throughput_tps = 14;
   double success_rate = 15;
 }
 

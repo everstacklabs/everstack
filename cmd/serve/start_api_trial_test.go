@@ -80,3 +80,38 @@ func TestShouldStartSelfHostedCloudLicensingMatchesBuildEdition(t *testing.T) {
 		t.Fatalf("shouldStartSelfHostedCloudLicensing(false) = %t, want %t for %s edition", got, want, enterprise.Edition())
 	}
 }
+
+// The inference usage reporter must post request/token totals to billing's
+// usage snapshot endpoint, not the sandbox heartbeat endpoint the sandbox
+// reporter is configured with: the sandbox handler decodes no token fields,
+// so totals posted there are silently dropped (it returns 200).
+func TestManagedInferenceUsageURLTargetsUsageSnapshot(t *testing.T) {
+	t.Setenv("EVS_INFERENCE_USAGE_URL", "")
+	t.Setenv("EVS_BILLING_USAGE_URL", "http://billing.internal:8092/api/billing/usage/sandbox-snapshot")
+	if got, want := managedInferenceUsageURL(nil), "http://billing.internal:8092/api/billing/usage/snapshot"; got != want {
+		t.Fatalf("inference usage URL from env = %q, want %q", got, want)
+	}
+
+	defaults := &EmbeddedDefaults{SharedBillingUsageURL: "http://127.0.0.1:8092/api/billing/usage/sandbox-snapshot"}
+	if got, want := managedInferenceUsageURL(defaults), "http://127.0.0.1:8092/api/billing/usage/snapshot"; got != want {
+		t.Fatalf("inference usage URL from embedded defaults = %q, want %q", got, want)
+	}
+
+	// An endpoint that is not the sandbox heartbeat cannot be rewritten
+	// safely; report nothing rather than post totals somewhere they are lost.
+	t.Setenv("EVS_BILLING_USAGE_URL", "http://billing.internal:8092/internal")
+	if got := managedInferenceUsageURL(nil); got != "" {
+		t.Fatalf("inference usage URL for unknown endpoint shape = %q, want empty", got)
+	}
+
+	t.Setenv("EVS_INFERENCE_USAGE_URL", "http://override:8092/api/billing/usage/snapshot")
+	if got, want := managedInferenceUsageURL(nil), "http://override:8092/api/billing/usage/snapshot"; got != want {
+		t.Fatalf("explicit inference usage URL = %q, want %q", got, want)
+	}
+
+	t.Setenv("EVS_INFERENCE_USAGE_URL", "")
+	t.Setenv("EVS_BILLING_USAGE_URL", "")
+	if got := managedInferenceUsageURL(nil); got != "" {
+		t.Fatalf("inference usage URL with no billing endpoint = %q, want empty", got)
+	}
+}

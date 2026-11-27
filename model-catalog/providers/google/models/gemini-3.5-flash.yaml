@@ -24,7 +24,7 @@ modalities:
   output: ["text"]
 
 knowledge_cutoff: "2025-01"
-notes: "Fast Gemini model balancing multimodal reasoning, tool use, and cost"
+notes: "Deprecated by Google on 2026-10-08; requests are automatically routed to gemini-3.6-flash. Migrate to gemini-3.6-flash."
 parameters:
   - key: "max_output_tokens"
     display_name: "Max output tokens"

@@ -73,7 +73,7 @@ export function PaletteItem({ meta }: PaletteItemProps) {
             </div>
             <span className="text-sm text-brand-main-200 truncate flex-1">{meta.label}</span>
             {meta.requiredTier && isGated && (
-                <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-amber-500/15 text-amber-400 light:text-amber-700 border border-amber-500/30">
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-warning-surface-strong text-warning border border-warning-border">
                     {meta.requiredTier}
                 </span>
             )}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/everstacklabs/everstack/internal/sandbox"
@@ -38,45 +40,59 @@ type sandboxIDCarrier interface {
 func (s *Server) sandboxOwnershipInterceptor() connect.Interceptor {
 	return connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-			carrier, ok := req.Any().(sandboxIDCarrier)
-			if !ok {
-				return next(ctx, req)
-			}
-			sandboxID := carrier.GetSandboxId()
-			if sandboxID == "" || s.sandboxMgr == nil {
-				return next(ctx, req)
-			}
-
-			procedure := req.Spec().Procedure
-			scope, err := s.resolveSandboxTenantInstanceScope(ctx, "")
-			if err != nil {
-				if s.sandboxOwnershipEnforce {
-					return nil, err
-				}
-				logger.WithFields("procedure", procedure, "sandbox_id", sandboxID, "error", err.Error()).
-					Warn("sandbox_ownership(audit): no tenant context; would reject")
-				return next(ctx, req)
-			}
-
-			if !s.sandboxOwnedByScope(ctx, sandboxID, scope) {
-				if s.sandboxOwnershipEnforce {
-					// 404 (not 403) so we do not confirm the existence of
-					// another tenant/instance's sandbox.
-					return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("sandbox not found"))
-				}
-				logger.WithFields(
-					"procedure", procedure,
-					"sandbox_id", sandboxID,
-					"organization_id", scope.OrganizationID,
-					"tenant_id", scope.TenantID,
-					"instance_id", scope.InstanceID,
-					"sandbox_tenant_id", scope.SandboxTenantID(),
-				).
-					Warn("sandbox_ownership(audit): caller does not own sandbox; would reject")
+			if err := s.checkSandboxOwnership(ctx, req.Any()); err != nil {
+				return nil, err
 			}
 			return next(ctx, req)
 		}
 	})
+}
+
+// checkSandboxOwnership verifies ownership for any request that addresses a
+// sandbox. Requests without a sandbox id and servers without a sandbox manager
+// do not require an ownership decision.
+func (s *Server) checkSandboxOwnership(ctx context.Context, msg any) error {
+	carrier, ok := msg.(sandboxIDCarrier)
+	if !ok {
+		return nil
+	}
+	sandboxID := carrier.GetSandboxId()
+	if sandboxID == "" || s.sandboxMgr == nil {
+		return nil
+	}
+
+	requestType := fmt.Sprintf("%T", msg)
+	scope, err := s.resolveSandboxTenantInstanceScope(ctx, "")
+	if err != nil {
+		if s.sandboxOwnershipEnforce {
+			return err
+		}
+		logger.WithFields("request_type", requestType, "sandbox_id", sandboxID, "error", err.Error()).
+			Warn("sandbox_ownership(audit): no tenant context; would reject")
+		return nil
+	}
+
+	if inst := s.resolveSandboxByScope(ctx, sandboxID, scope); inst != nil {
+		if err := rewriteSandboxID(msg, inst.ID); err != nil {
+			return connect.NewError(connect.CodeInternal, err)
+		}
+		return nil
+	}
+	if s.sandboxOwnershipEnforce {
+		// Return 404 so the response does not confirm whether a sandbox exists
+		// outside the caller's tenant and instance scope.
+		return connect.NewError(connect.CodeNotFound, fmt.Errorf("sandbox not found"))
+	}
+	logger.WithFields(
+		"request_type", requestType,
+		"sandbox_id", sandboxID,
+		"organization_id", scope.OrganizationID,
+		"tenant_id", scope.TenantID,
+		"instance_id", scope.InstanceID,
+		"sandbox_tenant_id", scope.SandboxTenantID(),
+	).
+		Warn("sandbox_ownership(audit): caller does not own sandbox; would reject")
+	return nil
 }
 
 // resolveSandboxTenantInstanceScope converts the authenticated tenant context
@@ -123,18 +139,36 @@ func (s *Server) sandboxOwnedByTenant(ctx context.Context, sandboxID, tenantID s
 	return s.sandboxOwnedByScope(ctx, sandboxID, sandbox.TenantInstanceScope{TenantID: tenantID})
 }
 
+func rewriteSandboxID(msg any, sandboxID string) error {
+	message, ok := msg.(proto.Message)
+	if !ok {
+		return fmt.Errorf("sandbox request is not a protobuf message")
+	}
+	reflected := message.ProtoReflect()
+	field := reflected.Descriptor().Fields().ByName(protoreflect.Name("sandbox_id"))
+	if field == nil || field.Kind() != protoreflect.StringKind {
+		return fmt.Errorf("sandbox request has no writable sandbox_id field")
+	}
+	reflected.Set(field, protoreflect.ValueOfString(sandboxID))
+	return nil
+}
+
 // sandboxOwnedByScope reports whether a sandbox addressed by id/name/short_code
 // is owned by the canonical caller scope, checking the in-memory map first then
 // the DB. Both lookups are scoped and fail closed when scope is incomplete.
 func (s *Server) sandboxOwnedByScope(ctx context.Context, sandboxID string, scope sandbox.TenantInstanceScope) bool {
+	return s.resolveSandboxByScope(ctx, sandboxID, scope) != nil
+}
+
+func (s *Server) resolveSandboxByScope(ctx context.Context, sandboxID string, scope sandbox.TenantInstanceScope) *sandbox.Instance {
 	if !scope.HasSandboxTenant() {
-		return false
+		return nil
 	}
-	if _, ok := s.sandboxMgr.GetBySandboxIDOrNameInScope(sandboxID, scope); ok {
-		return true
+	if inst, ok := s.sandboxMgr.GetBySandboxIDOrNameInScope(sandboxID, scope); ok {
+		return inst
 	}
 	if inst, err := s.sandboxMgr.LookupInstanceByIDFromDBInScope(ctx, sandboxID, scope); err == nil && inst != nil {
-		return true
+		return inst
 	}
-	return false
+	return nil
 }

@@ -1,0 +1,14 @@
+default:
+  name: "Default"
+  description: "Standard Novita AI gateway settings"
+  settings:
+    timeout: 60s
+    retry_attempts: 2
+
+cost_optimized:
+  name: "Cost Optimized"
+  description: "Low-cost open-weight models on Novita AI"
+  recommended_models:
+    - tencent/hy4-flash
+    - openai/gpt-oss-120b
+    - xiaomimimo/mimo-v2.6-flash

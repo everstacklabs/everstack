@@ -62,7 +62,7 @@ func (s *Server) handleCreateCollection(w http.ResponseWriter, r *http.Request, 
 		DistanceMetric     string            `json:"distance_metric"`
 		Metadata           map[string]string `json:"metadata"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxMemoryRequestBytes)).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
@@ -186,8 +186,17 @@ func (s *Server) handleAddDocuments(w http.ResponseWriter, r *http.Request, path
 		} `json:"documents"`
 		ChunkSize int `json:"chunk_size"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxMemoryRequestBytes)).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	contents := make([]string, len(body.Documents))
+	for i, doc := range body.Documents {
+		contents[i] = doc.Content
+	}
+	plan, err := planAddDocuments(contents, body.ChunkSize)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -199,11 +208,6 @@ func (s *Server) handleAddDocuments(w http.ResponseWriter, r *http.Request, path
 		return
 	}
 
-	chunkSize := body.ChunkSize
-	if chunkSize <= 0 {
-		chunkSize = 512
-	}
-
 	embModel := coll.EmbeddingModel
 	if embModel == "" {
 		embModel = s.defaultModel
@@ -212,7 +216,7 @@ func (s *Server) handleAddDocuments(w http.ResponseWriter, r *http.Request, path
 	var allDocIDs []string
 	totalChunks := 0
 
-	for _, doc := range body.Documents {
+	for docIndex, doc := range body.Documents {
 		// Add document
 		docs := []memory.Document{{
 			Content:  doc.Content,
@@ -228,7 +232,7 @@ func (s *Server) handleAddDocuments(w http.ResponseWriter, r *http.Request, path
 		allDocIDs = append(allDocIDs, docIDs...)
 
 		// Chunk and embed
-		chunks := memory.ChunkText(doc.Content, chunkSize)
+		chunks := plan.chunks[docIndex]
 		embeddings, err := s.embedder.EmbedBatch(r.Context(), embModel, chunks)
 		if err != nil {
 			s.logRequest(tenantID, coll.ID, collectionName, "add_documents", "api", start, nil, nil, err.Error())
@@ -305,7 +309,7 @@ func (s *Server) handleQueryCollection(w http.ResponseWriter, r *http.Request, p
 		MinScore       float32           `json:"min_score"`
 		MetadataFilter map[string]string `json:"metadata_filter"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxMemoryRequestBytes)).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
@@ -336,10 +340,7 @@ func (s *Server) handleQueryCollection(w http.ResponseWriter, r *http.Request, p
 		return
 	}
 
-	topK := body.TopK
-	if topK <= 0 {
-		topK = 5
-	}
+	topK := clampTopK(body.TopK)
 
 	results, err := s.store.Query(r.Context(), coll.ID, embedding, memory.QueryOptions{
 		TopK:           topK,
@@ -385,7 +386,7 @@ func (s *Server) handleGetMemoryAnalytics(w http.ResponseWriter, r *http.Request
 		From string `json:"from"`
 		To   string `json:"to"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxMemoryRequestBytes)).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
@@ -436,6 +437,13 @@ func (s *Server) handleGetMemoryAnalytics(w http.ResponseWriter, r *http.Request
 
 // handleSetupPgVector handles POST /v1/memory/setup.
 func (s *Server) handleSetupPgVector(w http.ResponseWriter, r *http.Request, _ map[string]string) {
+	// Shared DDL. The Connect route is role gated in the auth interceptor;
+	// this REST route does not pass through it, so apply the same rule here:
+	// a signed-in person must be an organization owner or admin.
+	if contextkeys.IsDashboardUser(r.Context()) && !contextkeys.IsVerifiedOrgAdmin(r.Context()) {
+		writeError(w, http.StatusForbidden, "this action needs an organization owner or admin")
+		return
+	}
 	if s.DB == nil {
 		writeError(w, http.StatusServiceUnavailable, "database not configured")
 		return

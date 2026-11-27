@@ -37,22 +37,22 @@ export const TrialModeBanner = () => {
 
     if (isExpired) {
         return (
-            <div className="mx-2 mb-2 rounded-sm bg-amber-500/10 border border-amber-500/20 p-3">
+            <div className="mx-2 mb-2 rounded-sm bg-warning-surface border border-warning-border p-3">
                 <div className="flex items-center gap-2 mb-2">
-                    <div className="flex size-6 items-center justify-center rounded-md bg-amber-500/20 text-amber-500">
+                    <div className="flex size-6 items-center justify-center rounded-md bg-warning-surface-strong text-warning">
                         <Clock className="size-3.5" />
                     </div>
-                    <span className="text-sm font-medium text-amber-500">
+                    <span className="text-sm font-medium text-warning">
                         Free Plan Limit Reached
                     </span>
                 </div>
-                <p className="text-xs text-amber-400/90 light:text-amber-700/90 mb-3 leading-relaxed">
+                <p className="text-xs text-warning/90 mb-3 leading-relaxed">
                     You've reached your free plan limits. Upgrade to continue using all features.
                 </p>
                 <Link
                     to="/settings/billing"
                     search={{ upgrade_success: false, plan: undefined }}
-                    className="flex w-full items-center justify-center rounded bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600 transition-colors"
+                    className="flex w-full items-center justify-center rounded bg-warning-solid px-3 py-1.5 text-xs font-medium text-warning-solid-foreground hover:bg-warning-solid/90 transition-colors"
                 >
                     Upgrade Plan
                 </Link>
@@ -78,13 +78,13 @@ export const TrialModeBanner = () => {
             <div className="mb-2">
                 <div className="flex justify-between text-xs text-brand-secondary-400/70 mb-1">
                     <span>Token usage</span>
-                    <span className={isNearTokenLimit ? 'text-amber-400 light:text-amber-700' : ''}>
+                    <span className={isNearTokenLimit ? 'text-warning' : ''}>
                         {formatNumber(tokensUsed)}/{formatNumber(tokenLimit)}
                     </span>
                 </div>
                 <div className="h-1.5 bg-brand-secondary-500/20 rounded-full overflow-hidden">
                     <div
-                        className={`h-full rounded-full transition-all ${isNearTokenLimit ? 'bg-amber-500' : 'bg-brand-secondary-500'
+                        className={`h-full rounded-full transition-all ${isNearTokenLimit ? 'bg-warning-solid' : 'bg-brand-secondary-500'
                             }`}
                         style={{ width: `${tokenUsagePercent}%` }}
                     />

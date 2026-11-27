@@ -3,12 +3,16 @@ package apikey
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"strings"
 
-	"github.com/jmoiron/sqlx"
+	apikeylib "github.com/everstacklabs/everstack/internal/lib/apikey"
 	"github.com/everstacklabs/everstack/internal/lib/correlation"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/everstacklabs/everstack/internal/query"
+	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 // GetApiKeyByIDQuery retrieves an API key by its ID. Scoping to the caller's
@@ -44,15 +48,17 @@ func (q GetApiKeyByIDQuery) Validate() error {
 
 // APIKeyReadModel maps to api_keys
 type APIKeyReadModel struct {
-	ID          string  `db:"id" json:"id"`
-	Name        string  `db:"name" json:"name"`
-	Hash        string  `db:"hash" json:"hash"`
-	Type        string  `db:"type" json:"type"`
-	SensitiveID string  `db:"sensitive_id" json:"sensitive_id"`
-	OrgID       *string `db:"org_id" json:"org_id,omitempty"`
-	InstanceID  *string `db:"instance_id" json:"instance_id,omitempty"`
-	CreatedAt   string  `db:"created_at" json:"created_at"`
-	UpdatedAt   string  `db:"updated_at" json:"updated_at"`
+	RateLimitRPM *int           `db:"rate_limit_rpm" json:"rate_limit_rpm"`
+	Surfaces     pq.StringArray `db:"surfaces" json:"surfaces"`
+	ID           string         `db:"id" json:"id"`
+	Name         string         `db:"name" json:"name"`
+	Hash         string         `db:"hash" json:"hash"`
+	Type         string         `db:"type" json:"type"`
+	SensitiveID  string         `db:"sensitive_id" json:"sensitive_id"`
+	OrgID        *string        `db:"org_id" json:"org_id,omitempty"`
+	InstanceID   *string        `db:"instance_id" json:"instance_id,omitempty"`
+	CreatedAt    string         `db:"created_at" json:"created_at"`
+	UpdatedAt    string         `db:"updated_at" json:"updated_at"`
 }
 
 // ApiKeyQueryHandler handles GetApiKeyByID queries.
@@ -78,7 +84,7 @@ func (h *ApiKeyQueryHandler) Handle(ctx context.Context, q query.Query) (interfa
 	).Debug("executing get api key by id query")
 
 	var out APIKeyReadModel
-	err := h.db.GetContext(ctx, &out, `SELECT id, name, hash, type, sensitive_id, org_id, instance_id, created_at, updated_at FROM api_keys WHERE id = $1 AND org_id = $2`, qry.ID, qry.OrgID)
+	err := h.db.GetContext(ctx, &out, `SELECT id, name, hash, type, sensitive_id, org_id, instance_id, surfaces, rate_limit_rpm, created_at, updated_at FROM api_keys WHERE id = $1 AND org_id = $2`, qry.ID, qry.OrgID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -97,7 +103,10 @@ func (h *ApiKeyQueryHandler) Handle(ctx context.Context, q query.Query) (interfa
 // GetApiKeyByHashQuery retrieves an API key by its hash (not revoked).
 type GetApiKeyByHashQuery struct {
 	query.BaseQuery
-	Hash string `json:"hash"`
+	Hash    string            `json:"hash"`
+	Surface apikeylib.Surface `json:"-"`
+	// CallerEnforces permits lookup only when the resolver checks every request.
+	CallerEnforces bool `json:"-"`
 }
 
 func NewGetApiKeyByHashQuery(hash, userID, traceID string) *GetApiKeyByHashQuery {
@@ -134,9 +143,9 @@ func (h *ApiKeyByHashQueryHandler) Handle(ctx context.Context, q query.Query) (i
 	).Debug("executing get api key by hash query")
 
 	var out APIKeyReadModel
-	err := h.db.GetContext(ctx, &out, `SELECT id, name, hash, type, sensitive_id, org_id, instance_id, created_at, updated_at FROM api_keys WHERE hash = $1 AND COALESCE(revoked, FALSE) = FALSE`, qry.Hash)
+	err := h.db.GetContext(ctx, &out, `SELECT id, name, hash, type, sensitive_id, org_id, instance_id, surfaces, rate_limit_rpm, created_at, updated_at FROM api_keys WHERE hash IN ($1, $2) AND COALESCE(revoked, FALSE) = FALSE`, qry.Hash, apikeylib.StoredHashPrefix+qry.Hash)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		logger.WithFields(
@@ -146,16 +155,28 @@ func (h *ApiKeyByHashQueryHandler) Handle(ctx context.Context, q query.Query) (i
 		).Error("failed to execute get api key by hash query")
 		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}
+	// A surface-limited key is stored under a prefixed hash and an ordinary key
+	// under the bare one (see apikeylib.StoredHashPrefix). A row where the two
+	// disagree was not written by this code: refuse it rather than guess.
+	prefixed := strings.HasPrefix(out.Hash, apikeylib.StoredHashPrefix)
+	if prefixed != (out.Surfaces != nil) {
+		return nil, nil
+	}
+	out.Hash = strings.TrimPrefix(out.Hash, apikeylib.StoredHashPrefix)
+	if !qry.CallerEnforces && !apikeylib.Allowed(out.Surfaces, qry.Surface) {
+		return nil, nil
+	}
 	return out, nil
 }
 
 // ListApiKeysQuery retrieves all API keys (not revoked).
 type ListApiKeysQuery struct {
 	query.BaseQuery
-	UserID     string `json:"user_id"`
-	OrgID      string `json:"org_id"`
-	InstanceID string `json:"instance_id"`
-	Type       string `json:"type"`
+	UserID                string `json:"user_id"`
+	OrgID                 string `json:"org_id"`
+	InstanceID            string `json:"instance_id"`
+	Type                  string `json:"type"`
+	ExcludeSurfaceLimited bool   `json:"-"`
 }
 
 func NewListApiKeysQuery(userID, orgID, instanceID, type_, traceID string) *ListApiKeysQuery {
@@ -202,7 +223,10 @@ func (h *ListApiKeysQueryHandler) Handle(ctx context.Context, q query.Query) (in
 	).Debug("executing list api keys query")
 
 	// Build the query with optional filters
-	query := `SELECT id, name, hash, type, sensitive_id, org_id, instance_id, created_at, updated_at FROM api_keys WHERE COALESCE(revoked, FALSE) = FALSE`
+	query := `SELECT id, name, hash, type, sensitive_id, org_id, instance_id, surfaces, rate_limit_rpm, created_at, updated_at FROM api_keys WHERE COALESCE(revoked, FALSE) = FALSE`
+	if qry.ExcludeSurfaceLimited {
+		query += " AND surfaces IS NULL"
+	}
 	args := []interface{}{}
 	argIndex := 1
 

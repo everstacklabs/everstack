@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/robfig/cron/v3"
 
+	"github.com/everstacklabs/everstack/internal/enterprise"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 )
 
@@ -22,6 +24,16 @@ type Scheduler struct {
 	pollInterval time.Duration
 	parser       cron.Parser
 	leaderKey    string
+	tenantGate   tenantGate
+}
+
+// SetTenantActiveFn installs the check that skips paused tenants. A paused
+// tenant's due schedules create no eval run; their next_run_at is advanced to
+// the next future slot exactly as a normal run would, so they neither stay
+// due forever nor fire a backlog burst on resume. nil treats every tenant as
+// active. Safe for concurrent use.
+func (s *Scheduler) SetTenantActiveFn(fn func(ctx context.Context, tenantID string) bool) {
+	s.tenantGate.set(fn)
 }
 
 // StartScheduler creates and starts the eval scheduler polling loop.
@@ -136,6 +148,43 @@ func (s *Scheduler) executeSchedule(ctx context.Context, sched scheduleRow, now 
 		return nil
 	}
 
+	if !s.tenantGate.active(ctx, sched.TenantID) {
+		logger.WithFields("tenant_id", sched.TenantID, "schedule_id", sched.ID).
+			Info("scheduler: tenant paused, skipping eval schedule")
+		if _, err := s.db.ExecContext(ctx, `
+		UPDATE eval_schedules
+		SET next_run_at = $2, updated_at = NOW()
+		WHERE id = $1
+	`, sched.ID, nextRun); err != nil {
+			return fmt.Errorf("advance paused eval schedule: %w", err)
+		}
+		return nil
+	}
+
+	// A scheduled run is an eval run. On a managed gateway, an organization
+	// at its monthly EVAL_RUNS_MONTHLY cap skips this occurrence: the schedule
+	// stays enabled and fires again at its next time. Self-hosted schedules
+	// are unchanged.
+	limitCtx := enterprise.WithServerResolvedTenant(ctx, sched.TenantID)
+	limitSlot, err := enterprise.ReserveLimitSlot(limitCtx, s.db, enterprise.LicenseMonitorFromContext(limitCtx),
+		enterprise.EvalRunsMonthlyLimit(sched.TenantID, now).Managed())
+	if err != nil {
+		if !errors.Is(err, enterprise.ErrResourceLimit) {
+			return fmt.Errorf("check eval run limit: %w", err)
+		}
+		logger.WithFields("tenant_id", sched.TenantID, "schedule_id", sched.ID).
+			Info("scheduler: monthly eval run limit reached, skipping this occurrence")
+		if _, updateErr := s.db.ExecContext(ctx, `
+		UPDATE eval_schedules
+		SET next_run_at = $2, updated_at = NOW()
+		WHERE id = $1
+	`, sched.ID, nextRun); updateErr != nil {
+			return fmt.Errorf("advance capped eval schedule: %w", updateErr)
+		}
+		return nil
+	}
+	defer limitSlot.Release()
+
 	// Create an eval run
 	runID := uuid.New().String()
 	runName := fmt.Sprintf("%s — %s", sched.Name, now.Format("2006-01-02 15:04"))
@@ -156,6 +205,7 @@ func (s *Scheduler) executeSchedule(ctx context.Context, sched scheduleRow, now 
 	if err != nil {
 		return fmt.Errorf("create eval run: %w", err)
 	}
+	limitSlot.Confirm(ctx)
 
 	_, err = s.db.ExecContext(ctx, `
 		UPDATE eval_schedules

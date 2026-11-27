@@ -81,6 +81,10 @@ func (h *Handler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusConflict, "a snapshot with this name already exists")
 			return
 		}
+		if errors.Is(err, ErrSourceSandboxNotFound) {
+			writeErr(w, http.StatusNotFound, "sandbox not found")
+			return
+		}
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}

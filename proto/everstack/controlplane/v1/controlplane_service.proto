@@ -49,4 +49,22 @@ service ControlPlaneService {
 
   // ListRegions returns the regions this controlplane can provision into.
   rpc ListRegions(ListRegionsRequest) returns (ListRegionsResponse);
+
+  // Instance limit (docs/design/instance-over-limit.md). Reads need org
+  // membership; the three mutations need the owner or admin role.
+  rpc GetInstanceLimitStatus(GetInstanceLimitStatusRequest) returns (GetInstanceLimitStatusResponse);
+  // PauseInstance stops serving an instance and keeps everything else.
+  rpc PauseInstance(PauseInstanceRequest) returns (PauseInstanceResponse);
+  // ResumeInstance brings a paused instance back; ResourceExhausted when
+  // the org has no free slot.
+  rpc ResumeInstance(ResumeInstanceRequest) returns (ResumeInstanceResponse);
+  // SetInstanceExtraBilling opts an instance into (or out of) the monthly
+  // extra-instance fee debited from the prepaid wallet.
+  rpc SetInstanceExtraBilling(SetInstanceExtraBillingRequest) returns (SetInstanceExtraBillingResponse);
+
+  // GetOrgActivity summarises model-call activity across the organization's
+  // own instances (docs/design/org-overview-redesign.md, section 4.3). Any
+  // member may read it. The instance set is resolved server-side from the
+  // organization; the request carries no instance or tenant identifiers.
+  rpc GetOrgActivity(GetOrgActivityRequest) returns (GetOrgActivityResponse);
 }

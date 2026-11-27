@@ -109,8 +109,7 @@ export function MentionText({ children, className, variant = 'default' }: Mentio
                         return (
                             <Tooltip key={i} content={seg.value}>
                                 <span
-                                    aria-label={seg.value}
-                                    title={seg.value}
+                                    data-mention=""
                                     className="relative text-sm inline-flex items-center gap-1 align-baseline z-0 px-0.5 text-brand-secondary-200 leading-[inherit]"
                                 >
                                     {isDir ? (
@@ -134,8 +133,7 @@ export function MentionText({ children, className, variant = 'default' }: Mentio
                     return (
                         <Tooltip key={i} content={seg.value}>
                             <span
-                                aria-label={seg.value}
-                                title={seg.value}
+                                data-mention=""
                                 className="inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded-md bg-brand-secondary-500/15 border border-brand-secondary-500/20 text-brand-secondary-300 text-xs font-mono leading-tight align-baseline"
                             >
                                 {isDir ? (

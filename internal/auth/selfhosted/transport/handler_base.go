@@ -9,6 +9,8 @@ import (
 	"connectrpc.com/connect"
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/domain"
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/service"
+	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/everstacklabs/everstack/internal/lib/requesthost"
 	authv1 "github.com/everstacklabs/everstack/pkg/grpc/everstack/auth/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -58,18 +60,13 @@ func instanceSignedOut(header http.Header) bool {
 	return err == nil && cookie.Value != ""
 }
 
-// buildSessionCookie builds a Set-Cookie header value for the session
-func (h *AuthHandler) buildSessionCookie(session *domain.Session) string {
-	cookie := &http.Cookie{
-		Name:     h.cfg.Session.CookieName,
-		Value:    session.Token,
-		Path:     "/",
-		Expires:  session.ExpiresAt,
-		HttpOnly: h.cfg.Session.HTTPOnly,
-		Secure:   h.cfg.Session.Secure,
-		SameSite: parseSameSite(h.cfg.Session.SameSite),
-	}
-	return cookie.String()
+// buildSessionCookie builds a Set-Cookie header value for the session on the
+// Connect Login/Register path. It is the same cookie the HTTP routes set
+// (AuthService.SessionCookie), Domain included, so sign-out clears it; the
+// Host it needs is carried in ctx by requesthost.Middleware on the Connect
+// registration.
+func (h *AuthHandler) buildSessionCookie(ctx context.Context, header http.Header, session *domain.Session) string {
+	return h.svc.SessionCookie(requesthost.Request(ctx, header), session).String()
 }
 
 // ============================================
@@ -131,9 +128,25 @@ func (h *AuthHandler) GetDeviceAuthorizationStatus(ctx context.Context, req *con
 	return nil, errNotAvailableInSelfHostedMode
 }
 
-// SignOut invalidates the current session
+// SignOut ends this browser's session: the session row is deleted
+// server-side, then the session cookie is expired. A failed delete is an
+// error, never a success: the admin app keeps the user signed in and says
+// so, rather than reporting a sign-out that left the session usable.
+//
+// It deliberately does not set the instance signed-out marker that
+// /auth/instance-signout sets for cloud-managed instances: the marker makes
+// the gateway ignore every session cookie, and the Connect Login path does
+// not clear it, so a self-hosted user could not sign back in.
 func (h *AuthHandler) SignOut(ctx context.Context, req *connect.Request[authv1.SignOutRequest]) (*connect.Response[authv1.SignOutResponse], error) {
-	return nil, errNotAvailableInSelfHostedMode
+	if token := h.getSessionToken(req.Header()); token != "" {
+		if err := h.svc.SignOut(ctx, token); err != nil {
+			logger.WithError(err).Error("auth: sign out failed to delete session")
+			return nil, connect.NewError(connect.CodeInternal, errors.New("sign out failed"))
+		}
+	}
+	resp := connect.NewResponse(&authv1.SignOutResponse{Success: true})
+	resp.Header().Add("Set-Cookie", h.svc.ExpiredSessionCookie(requesthost.Request(ctx, req.Header())).String())
+	return resp, nil
 }
 
 // GetSession returns the current user session if authenticated
@@ -258,19 +271,6 @@ func getClientIP(header http.Header) string {
 		return ip
 	}
 	return ""
-}
-
-func parseSameSite(s string) http.SameSite {
-	switch s {
-	case "strict":
-		return http.SameSiteStrictMode
-	case "lax":
-		return http.SameSiteLaxMode
-	case "none":
-		return http.SameSiteNoneMode
-	default:
-		return http.SameSiteLaxMode
-	}
 }
 
 // corsMiddleware applies the shared credentialed-CORS policy.

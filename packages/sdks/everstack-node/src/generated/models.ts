@@ -1,7 +1,7 @@
 // AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
 // Generated from model-catalog/providers
-// Catalog version: 2.8.0
-// Catalog generated: 2026-09-04T08:52:00Z
+// Catalog version: 2.13.0
+// Catalog generated: 2026-11-26T13:39:31Z
 
 /* eslint-disable */
 
@@ -21,8 +21,10 @@ export type AnthropicModel =
   | "@anthropic/claude-3-sonnet-20240229"
   | "@anthropic/claude-fable-5"
   | "@anthropic/claude-fable-5-1"
+  | "@anthropic/claude-fable-5-2"
   | "@anthropic/claude-haiku-4-5"
   | "@anthropic/claude-haiku-4-5-20251001"
+  | "@anthropic/claude-haiku-5-5"
   | "@anthropic/claude-instant-1.2"
   | "@anthropic/claude-opus-4-1"
   | "@anthropic/claude-opus-4-1-20250805"
@@ -34,12 +36,14 @@ export type AnthropicModel =
   | "@anthropic/claude-opus-4-8"
   | "@anthropic/claude-opus-4-latest"
   | "@anthropic/claude-opus-5"
+  | "@anthropic/claude-opus-5-5"
   | "@anthropic/claude-sonnet-4-20250514"
   | "@anthropic/claude-sonnet-4-5"
   | "@anthropic/claude-sonnet-4-5-20250929"
   | "@anthropic/claude-sonnet-4-6"
   | "@anthropic/claude-sonnet-4-latest"
-  | "@anthropic/claude-sonnet-5";
+  | "@anthropic/claude-sonnet-5"
+  | "@anthropic/claude-sonnet-5-5";
 
 /**
  * AWS Bedrock models
@@ -48,7 +52,9 @@ export type AwsBedrockModel =
   | "@aws-bedrock/amazon.nova-pro-v1:0"
   | "@aws-bedrock/anthropic.claude-3-7-sonnet-20250219-v1:0"
   | "@aws-bedrock/anthropic.claude-fable-5"
+  | "@aws-bedrock/anthropic.claude-fable-5-2"
   | "@aws-bedrock/anthropic.claude-haiku-4-5-20251001-v1:0"
+  | "@aws-bedrock/anthropic.claude-haiku-5-5"
   | "@aws-bedrock/anthropic.claude-opus-4-1-20250805-v1:0"
   | "@aws-bedrock/anthropic.claude-opus-4-5-20251101-v1:0"
   | "@aws-bedrock/anthropic.claude-opus-4-6-v1"
@@ -60,16 +66,28 @@ export type AwsBedrockModel =
   | "@aws-bedrock/anthropic.claude-sonnet-4-6"
   | "@aws-bedrock/anthropic.claude-sonnet-5"
   | "@aws-bedrock/deepseek.v3.2"
+  | "@aws-bedrock/global.anthropic.claude-fable-5-2"
+  | "@aws-bedrock/global.moonshotai.kimi-k3.1"
+  | "@aws-bedrock/global.openai.gpt-6.1-terra"
+  | "@aws-bedrock/global.openai.gpt-6.2-astra"
+  | "@aws-bedrock/global.openai.gpt-6.2-sol"
   | "@aws-bedrock/meta.llama3-1-70b-instruct-v1:0"
   | "@aws-bedrock/meta.llama3-3-70b-instruct-v1:0"
   | "@aws-bedrock/mistral.mistral-large-2407-v1:0"
   | "@aws-bedrock/mistral.mistral-large-3-675b-instruct"
+  | "@aws-bedrock/us.anthropic.claude-fable-5-2"
+  | "@aws-bedrock/us.moonshotai.kimi-k3.1"
+  | "@aws-bedrock/us.openai.gpt-6.1-terra"
+  | "@aws-bedrock/us.openai.gpt-6.2-astra"
+  | "@aws-bedrock/us.openai.gpt-6.2-sol"
   | "@aws-bedrock/xai.grok-4.6";
 
 /**
  * Azure OpenAI models
  */
 export type AzureOpenaiModel =
+  | "@azure-openai/claude-fable-5-2"
+  | "@azure-openai/claude-haiku-5-5"
   | "@azure-openai/gpt-4.1"
   | "@azure-openai/gpt-4.1-mini"
   | "@azure-openai/gpt-4.1-nano"
@@ -84,11 +102,34 @@ export type AzureOpenaiModel =
   | "@azure-openai/gpt-5.6-luna"
   | "@azure-openai/gpt-5.6-sol"
   | "@azure-openai/gpt-5.6-terra"
+  | "@azure-openai/gpt-6.1-terra"
+  | "@azure-openai/gpt-6.2-astra"
+  | "@azure-openai/gpt-6.2-sol"
   | "@azure-openai/o3"
   | "@azure-openai/o3-mini"
   | "@azure-openai/o4-mini"
   | "@azure-openai/text-embedding-3-large"
   | "@azure-openai/text-embedding-3-small";
+
+/**
+ * Baseten models
+ */
+export type BasetenModel =
+  | "@baseten/deepseek-ai/DeepSeek-V4-Flash-0731"
+  | "@baseten/deepseek-ai/DeepSeek-V4-Pro-0813"
+  | "@baseten/deepseek-ai/DeepSeek-V4.1-Flash"
+  | "@baseten/deepseek-ai/DeepSeek-V4.1-Flash-1017"
+  | "@baseten/deepseek-ai/DeepSeek-V4.1-Flash-1017-Fast"
+  | "@baseten/deepseek-ai/DeepSeek-V4.1-Flash-Fast"
+  | "@baseten/moonshotai/Kimi-K3"
+  | "@baseten/moonshotai/Kimi-K3.1-Pro"
+  | "@baseten/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B"
+  | "@baseten/openai/gpt-oss-120b"
+  | "@baseten/zai-org/GLM-5.2"
+  | "@baseten/zai-org/GLM-5.2-Fast"
+  | "@baseten/zai-org/GLM-5.3"
+  | "@baseten/zai-org/GLM-5.3-Fast"
+  | "@baseten/zai-org/GLM-5.3-Flash";
 
 /**
  * Cerebras models
@@ -102,7 +143,33 @@ export type CerebrasModel =
   | "@cerebras/llama3.1-8b"
   | "@cerebras/qwen-3-235b-a22b-instruct-2507"
   | "@cerebras/qwen-3-32b"
+  | "@cerebras/qwen-3.8-27b"
   | "@cerebras/zai-glm-4.7";
+
+/**
+ * Chutes models
+ */
+export type ChutesModel =
+  | "@chutes/deepseek-ai/DeepSeek-V3.2-TEE"
+  | "@chutes/deepseek-ai/DeepSeek-V4-Flash-0731-TEE"
+  | "@chutes/deepseek-ai/DeepSeek-V4-Pro-0813"
+  | "@chutes/deepseek-ai/DeepSeek-V4.1-Flash-1017"
+  | "@chutes/google/gemma-4-31B-turbo-TEE"
+  | "@chutes/moonshotai/Kimi-K2.6-TEE"
+  | "@chutes/moonshotai/Kimi-K2.7-Code"
+  | "@chutes/moonshotai/Kimi-K3-TEE"
+  | "@chutes/Qwen/Qwen3.5-27B-TEE"
+  | "@chutes/Qwen/Qwen3.5-397B-A17B-TEE"
+  | "@chutes/Qwen/Qwen3.6-27B-TEE"
+  | "@chutes/Qwen/Qwen3.8-2.4T-A95B"
+  | "@chutes/Qwen/Qwen3.8-27B-TEE"
+  | "@chutes/Qwen/Qwen3.8-Max-0902"
+  | "@chutes/Qwen/Qwen4-Max"
+  | "@chutes/tencent/Hy4"
+  | "@chutes/zai-org/GLM-5.1-TEE"
+  | "@chutes/zai-org/GLM-5.2-Fast"
+  | "@chutes/zai-org/GLM-5.2-TEE"
+  | "@chutes/zai-org/GLM-5.3";
 
 /**
  * Cohere models
@@ -131,10 +198,41 @@ export type CohereModel =
   | "@cohere/rerank-v3.5";
 
 /**
+ * DeepInfra models
+ */
+export type DeepinfraModel =
+  | "@deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731"
+  | "@deepinfra/deepseek-ai/DeepSeek-V4-Pro"
+  | "@deepinfra/deepseek-ai/DeepSeek-V4-Pro-0813"
+  | "@deepinfra/deepseek-ai/DeepSeek-V4.1-Flash"
+  | "@deepinfra/deepseek-ai/DeepSeek-V4.1-Flash-1017"
+  | "@deepinfra/google/gemma-4-31B-it"
+  | "@deepinfra/meta-llama/Llama-3.3-70B-Instruct-Turbo"
+  | "@deepinfra/MiniMaxAI/MiniMax-M3"
+  | "@deepinfra/moonshotai/Kimi-K2.6"
+  | "@deepinfra/moonshotai/Kimi-K3"
+  | "@deepinfra/moonshotai/Kimi-K3.1-Pro"
+  | "@deepinfra/openai/gpt-oss-120b"
+  | "@deepinfra/openai/gpt-oss-20b"
+  | "@deepinfra/Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo"
+  | "@deepinfra/Qwen/Qwen3.8-27B"
+  | "@deepinfra/Qwen/Qwen3.8-Flash"
+  | "@deepinfra/Qwen/Qwen3.8-Max"
+  | "@deepinfra/Qwen/Qwen4-Max"
+  | "@deepinfra/tencent/Hy4"
+  | "@deepinfra/thinkingmachines/Inkling-2-Small"
+  | "@deepinfra/XiaomiMiMo/MiMo-V2.6-Flash"
+  | "@deepinfra/XiaomiMiMo/MiMo-V2.6-Pro"
+  | "@deepinfra/zai-org/GLM-5.2"
+  | "@deepinfra/zai-org/GLM-5.3"
+  | "@deepinfra/zai-org/GLM-5.3-Flash";
+
+/**
  * DeepSeek models
  */
 export type DeepseekModel =
   | "@deepseek/deepseek-chat"
+  | "@deepseek/deepseek-flash"
   | "@deepseek/deepseek-r1"
   | "@deepseek/deepseek-reasoner"
   | "@deepseek/deepseek-v3"
@@ -153,6 +251,7 @@ export type FireworksModel =
   | "@fireworks/accounts/fireworks/models/deepseek-v4-flash-0731"
   | "@fireworks/accounts/fireworks/models/deepseek-v4-pro"
   | "@fireworks/accounts/fireworks/models/deepseek-v4-pro-0813"
+  | "@fireworks/accounts/fireworks/models/deepseek-v4p1-flash-1017"
   | "@fireworks/accounts/fireworks/models/glm-4p5"
   | "@fireworks/accounts/fireworks/models/glm-4p5-air"
   | "@fireworks/accounts/fireworks/models/glm-4p7"
@@ -161,6 +260,7 @@ export type FireworksModel =
   | "@fireworks/accounts/fireworks/models/glm-5p2"
   | "@fireworks/accounts/fireworks/models/gpt-oss-120b"
   | "@fireworks/accounts/fireworks/models/gpt-oss-20b"
+  | "@fireworks/accounts/fireworks/models/hy4-flash"
   | "@fireworks/accounts/fireworks/models/inkling"
   | "@fireworks/accounts/fireworks/models/kimi-k2-instruct"
   | "@fireworks/accounts/fireworks/models/kimi-k2-thinking"
@@ -168,6 +268,7 @@ export type FireworksModel =
   | "@fireworks/accounts/fireworks/models/kimi-k2p6"
   | "@fireworks/accounts/fireworks/models/kimi-k2p7-code"
   | "@fireworks/accounts/fireworks/models/kimi-k3"
+  | "@fireworks/accounts/fireworks/models/kimi-k3p1-pro"
   | "@fireworks/accounts/fireworks/models/llama-v3p1-8b-instruct"
   | "@fireworks/accounts/fireworks/models/llama-v3p2-90b-vision-instruct"
   | "@fireworks/accounts/fireworks/models/llama-v3p3-70b-instruct"
@@ -175,16 +276,27 @@ export type FireworksModel =
   | "@fireworks/accounts/fireworks/models/minimax-m2p5"
   | "@fireworks/accounts/fireworks/models/minimax-m2p7"
   | "@fireworks/accounts/fireworks/models/minimax-m3"
+  | "@fireworks/accounts/fireworks/models/minimax-m3p1-flash"
   | "@fireworks/accounts/fireworks/models/muse-glimmer-30b"
+  | "@fireworks/accounts/fireworks/models/muse-spark-open"
   | "@fireworks/accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b"
   | "@fireworks/accounts/fireworks/models/nomic-embed-text-v1.5"
   | "@fireworks/accounts/fireworks/models/qwen2p5-72b-instruct"
   | "@fireworks/accounts/fireworks/models/qwen3p6-plus"
   | "@fireworks/accounts/fireworks/models/qwen3p7-plus"
   | "@fireworks/accounts/fireworks/models/qwen3p8-max"
+  | "@fireworks/accounts/fireworks/models/qwen4-max"
+  | "@fireworks/accounts/fireworks/models/ultramarine-1-flash-us"
+  | "@fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  | "@fireworks/accounts/fireworks/routers/deepseek-v4p1-flash-1017-flex"
+  | "@fireworks/accounts/fireworks/routers/deepseek-v4p1-flash-1017-spot"
+  | "@fireworks/accounts/fireworks/routers/deepseek-v4p1-flash-1017-ultrafast"
+  | "@fireworks/accounts/fireworks/routers/deepseek-v4p1-flash-1017-us"
   | "@fireworks/accounts/fireworks/routers/glm-5p2-fast"
   | "@fireworks/accounts/fireworks/routers/kimi-k2p7-code-fast"
-  | "@fireworks/accounts/fireworks/routers/kimi-k3-fast";
+  | "@fireworks/accounts/fireworks/routers/kimi-k3-fast"
+  | "@fireworks/accounts/fireworks/routers/kimi-k3p1-pro-us"
+  | "@fireworks/accounts/fireworks/routers/kimi-latest";
 
 /**
  * Google models
@@ -208,6 +320,11 @@ export type GoogleModel =
   | "@google/gemini-3.5-flash-lite"
   | "@google/gemini-3.6-flash"
   | "@google/gemini-3.7-flash"
+  | "@google/gemini-3.8-flash"
+  | "@google/gemini-4-argon"
+  | "@google/gemini-4-carbon"
+  | "@google/gemini-4-hydrogen"
+  | "@google/gemini-4-neon"
   | "@google/gemini-flash-latest"
   | "@google/gemini-flash-lite-latest"
   | "@google/gemini-pro"
@@ -232,7 +349,8 @@ export type GroqModel =
   | "@groq/openai/gpt-oss-20b"
   | "@groq/qwen-qwq-32b"
   | "@groq/qwen/qwen3-32b"
-  | "@groq/qwen/qwen3.6-27b";
+  | "@groq/qwen/qwen3.6-27b"
+  | "@groq/qwen/qwen3.8-27b";
 
 /**
  * Hugging Face models
@@ -241,24 +359,62 @@ export type HuggingfaceModel =
   | "@huggingface/deepseek-ai/DeepSeek-V4-Flash-0731"
   | "@huggingface/deepseek-ai/DeepSeek-V4-Pro"
   | "@huggingface/deepseek-ai/DeepSeek-V4-Pro-0813"
+  | "@huggingface/deepseek-ai/DeepSeek-V4.1-Flash-1017"
   | "@huggingface/huggingface/gpt-3.5-turbo"
   | "@huggingface/huggingface/gpt-4"
   | "@huggingface/huggingface/gpt-4-turbo"
   | "@huggingface/huggingface/gpt-4o"
   | "@huggingface/huggingface/gpt-4o-mini"
   | "@huggingface/huggingface/text-embedding-ada-002"
+  | "@huggingface/meta-models/Muse-Spark-Open-816B-A42B"
   | "@huggingface/MiniMaxAI/MiniMax-M3"
+  | "@huggingface/MiniMaxAI/MiniMax-M3.1-Flash"
+  | "@huggingface/mistralai/Mistral-Large-4-1T-A52B"
   | "@huggingface/moonshotai/Kimi-K2.6"
   | "@huggingface/moonshotai/Kimi-K2.7-Code"
   | "@huggingface/moonshotai/Kimi-K3"
+  | "@huggingface/moonshotai/Kimi-K3.1-Pro"
+  | "@huggingface/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16"
+  | "@huggingface/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4"
   | "@huggingface/Qwen/Qwen3-Coder-480B-A35B-Instruct"
   | "@huggingface/Qwen/Qwen3-Next-80B-A3B-Instruct"
   | "@huggingface/Qwen/Qwen3.8-2.4T-A95B"
+  | "@huggingface/reflection/Beam-1.0-501B-A23B"
   | "@huggingface/stepfun-ai/Step-3.7-Flash"
+  | "@huggingface/tencent/Hy4"
+  | "@huggingface/tencent/Hy4-flash"
   | "@huggingface/thinkingmachines/Inkling"
+  | "@huggingface/thinkingmachines/Inkling-2-Mini"
+  | "@huggingface/thinkingmachines/Inkling-2-Small"
   | "@huggingface/thinkingmachines/Inkling-Small"
   | "@huggingface/zai-org/GLM-5.1"
   | "@huggingface/zai-org/GLM-5.2";
+
+/**
+ * Kev (self-hosted) models
+ */
+export type KevModel =
+  | "@kev/kev-latest";
+
+/**
+ * Laya (self-hosted) models
+ */
+export type LayaModel =
+  | "@laya/english"
+  | "@laya/multilingual"
+  | "@laya/typed-decisions";
+
+/**
+ * Meta models
+ */
+export type MetaModel =
+  | "@meta/muse-ember-1.0"
+  | "@meta/muse-spark-1.1"
+  | "@meta/muse-spark-1.2"
+  | "@meta/muse-spark-1.2-contributor"
+  | "@meta/muse-spark-1.3"
+  | "@meta/muse-spark-1.3-contributor"
+  | "@meta/muse-wonder-1.0";
 
 /**
  * MiniMax models
@@ -272,13 +428,15 @@ export type MinimaxModel =
   | "@minimax/MiniMax-M2.5-highspeed"
   | "@minimax/MiniMax-M2.7"
   | "@minimax/MiniMax-M2.7-highspeed"
-  | "@minimax/MiniMax-M3";
+  | "@minimax/MiniMax-M3"
+  | "@minimax/MiniMax-M3.1-Flash";
 
 /**
  * Mistral AI models
  */
 export type MistralModel =
   | "@mistral/codestral-latest"
+  | "@mistral/deepseek-v4-1-flash-1017"
   | "@mistral/devstral-2512"
   | "@mistral/devstral-latest"
   | "@mistral/devstral-medium-2507"
@@ -294,6 +452,8 @@ export type MistralModel =
   | "@mistral/mistral-embed"
   | "@mistral/mistral-large-2411"
   | "@mistral/mistral-large-2512"
+  | "@mistral/mistral-large-4"
+  | "@mistral/mistral-large-4-0"
   | "@mistral/mistral-large-latest"
   | "@mistral/mistral-medium-2505"
   | "@mistral/mistral-medium-2508"
@@ -310,7 +470,9 @@ export type MistralModel =
   | "@mistral/pixtral-12b"
   | "@mistral/pixtral-large-latest"
   | "@mistral/voxtral-small-2507"
-  | "@mistral/voxtral-small-latest";
+  | "@mistral/voxtral-small-latest"
+  | "@mistral/zai-glm-5-3"
+  | "@mistral/zai-glm-5-3-flash";
 
 /**
  * Moonshot AI models
@@ -326,9 +488,69 @@ export type MoonshotModel =
   | "@moonshot/kimi-k2.7-code"
   | "@moonshot/kimi-k2.7-code-highspeed"
   | "@moonshot/kimi-k3"
+  | "@moonshot/kimi-k3.1-pro"
+  | "@moonshot/kimi-k3.1-pro-highspeed"
   | "@moonshot/moonshot-v1-128k"
   | "@moonshot/moonshot-v1-32k"
   | "@moonshot/moonshot-v1-8k";
+
+/**
+ * Nebius Token Factory models
+ */
+export type NebiusModel =
+  | "@nebius/deepseek-ai/DeepSeek-V4-Pro-0813"
+  | "@nebius/deepseek-ai/DeepSeek-V4.1-Flash-1017"
+  | "@nebius/google/gemma-3-27b-it"
+  | "@nebius/meta-models/muse-spark-open"
+  | "@nebius/MiniMaxAI/MiniMax-M3"
+  | "@nebius/MiniMaxAI/MiniMax-M3.1-Flash"
+  | "@nebius/moonshotai/Kimi-K3"
+  | "@nebius/moonshotai/Kimi-K3.1-Pro"
+  | "@nebius/NousResearch/Hermes-4-405B"
+  | "@nebius/nvidia/Nemotron-3_5-Lightning"
+  | "@nebius/nvidia/nemotron-3-super-120b-a12b"
+  | "@nebius/nvidia/Nemotron-3-Ultra-550b-a55b"
+  | "@nebius/nvidia/Nemotron-3.5-Super-VL"
+  | "@nebius/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"
+  | "@nebius/openai/gpt-oss-120b"
+  | "@nebius/Qwen/Qwen3-235B-A22B-Instruct-2507"
+  | "@nebius/Qwen/Qwen3-30B-A3B-Instruct-2507"
+  | "@nebius/Qwen/Qwen3.8-27B"
+  | "@nebius/reflection/beam"
+  | "@nebius/thinkingmachines/Inkling-2-Small"
+  | "@nebius/zai-org/GLM-5.2"
+  | "@nebius/zai-org/GLM-5.3"
+  | "@nebius/zai-org/GLM-5.3-Flash";
+
+/**
+ * Novita AI models
+ */
+export type NovitaModel =
+  | "@novita/deepseek/deepseek-v4-flash-0731"
+  | "@novita/deepseek/deepseek-v4-pro"
+  | "@novita/deepseek/deepseek-v4-pro-0813"
+  | "@novita/deepseek/deepseek-v4.1-flash"
+  | "@novita/deepseek/deepseek-v4.1-flash-1017"
+  | "@novita/google/gemma-4-31b-it"
+  | "@novita/meta-llama/llama-3.3-70b-instruct"
+  | "@novita/moonshotai/kimi-k2.6"
+  | "@novita/moonshotai/kimi-k2.7-code"
+  | "@novita/moonshotai/kimi-k3"
+  | "@novita/moonshotai/kimi-k3.1-pro"
+  | "@novita/moonshotai/kimi-k3.1-pro-highspeed"
+  | "@novita/openai/gpt-oss-120b"
+  | "@novita/qwen/qwen3.8-27b"
+  | "@novita/qwen/qwen3.8-flash"
+  | "@novita/qwen/qwen3.8-max"
+  | "@novita/qwen/qwen4-max"
+  | "@novita/tencent/hy4"
+  | "@novita/tencent/hy4-flash"
+  | "@novita/xiaomimimo/mimo-v2.6-flash"
+  | "@novita/xiaomimimo/mimo-v2.6-pro"
+  | "@novita/zai-org/glm-5.1"
+  | "@novita/zai-org/glm-5.2"
+  | "@novita/zai-org/glm-5.3"
+  | "@novita/zai-org/glm-5.3-flash";
 
 /**
  * NVIDIA NIM models
@@ -344,10 +566,12 @@ export type NvidiaNimModel =
   | "@nvidia-nim/meta/llama-4-scout-17b-16e-instruct"
   | "@nvidia-nim/meta/muse-glimmer-30b"
   | "@nvidia-nim/minimaxai/minimax-m3"
+  | "@nvidia-nim/minimaxai/minimax-m3.1-flash"
   | "@nvidia-nim/moonshotai/kimi-k3"
   | "@nvidia-nim/nvidia/llama-3.1-nemotron-70b-instruct"
   | "@nvidia-nim/nvidia/nemotron-3-ultra-550b-a55b"
   | "@nvidia-nim/nvidia/nemotron-3.5-lightning-30b-a3b"
+  | "@nvidia-nim/nvidia/nemotron-3.5-super-vl-120b-a12b"
   | "@nvidia-nim/nvidia/nv-embedqa-e5-v5"
   | "@nvidia-nim/stepfun-ai/step-3.7-flash"
   | "@nvidia-nim/thinkingmachines/inkling"
@@ -438,6 +662,12 @@ export type OpenaiModel =
   | "@openai/gpt-5.6-sol"
   | "@openai/gpt-5.6-terra"
   | "@openai/gpt-6-astra"
+  | "@openai/gpt-6-luna"
+  | "@openai/gpt-6-sol"
+  | "@openai/gpt-6.1-sol"
+  | "@openai/gpt-6.1-terra"
+  | "@openai/gpt-6.2-astra"
+  | "@openai/gpt-6.2-sol"
   | "@openai/gpt-audio"
   | "@openai/gpt-audio-2025-08-28"
   | "@openai/gpt-audio-mini"
@@ -478,38 +708,84 @@ export type OpenaiModel =
  * OpenRouter models
  */
 export type OpenrouterModel =
+  | "@openrouter/aion-labs/aion-3.5"
+  | "@openrouter/aion-labs/aion-3.5-mini"
   | "@openrouter/anthropic/claude-fable-5"
+  | "@openrouter/anthropic/claude-fable-5.1"
+  | "@openrouter/anthropic/claude-fable-5.2"
   | "@openrouter/anthropic/claude-haiku-4.5"
+  | "@openrouter/anthropic/claude-haiku-5.5"
   | "@openrouter/anthropic/claude-opus-4.7"
   | "@openrouter/anthropic/claude-opus-4.8"
   | "@openrouter/anthropic/claude-opus-4.8-fast"
   | "@openrouter/anthropic/claude-opus-5"
   | "@openrouter/anthropic/claude-opus-5-fast"
+  | "@openrouter/anthropic/claude-opus-5.5"
   | "@openrouter/anthropic/claude-sonnet-4"
   | "@openrouter/anthropic/claude-sonnet-4.6"
   | "@openrouter/anthropic/claude-sonnet-5"
+  | "@openrouter/anthropic/claude-sonnet-5.5"
+  | "@openrouter/baidu/ernie-5.5-flash-preview:free"
+  | "@openrouter/baidu/ernie-light-dt-1.0-intl"
   | "@openrouter/bytedance-seed/seed-2-1-turbo"
+  | "@openrouter/cohere/command-a-plus"
   | "@openrouter/deepseek/deepseek-r1"
   | "@openrouter/deepseek/deepseek-v4-flash-0731"
   | "@openrouter/deepseek/deepseek-v4-flash-vision-exp"
   | "@openrouter/deepseek/deepseek-v4-pro"
   | "@openrouter/deepseek/deepseek-v4-pro-0813"
+  | "@openrouter/deepseek/deepseek-v4.1-flash"
+  | "@openrouter/deepseek/deepseek-v4.1-flash-1017"
+  | "@openrouter/elorian/glimpse"
+  | "@openrouter/fireworks/ember-1"
   | "@openrouter/google/gemini-2.5-pro"
   | "@openrouter/google/gemini-3-pro-preview"
   | "@openrouter/google/gemini-3.5-flash"
   | "@openrouter/google/gemini-3.5-flash-lite"
   | "@openrouter/google/gemini-3.6-flash"
   | "@openrouter/google/gemini-3.7-flash"
+  | "@openrouter/google/gemini-3.8-flash"
+  | "@openrouter/google/gemini-4-argon"
+  | "@openrouter/google/gemini-4-carbon"
+  | "@openrouter/google/gemini-4-hydrogen"
+  | "@openrouter/google/gemini-4-neon"
+  | "@openrouter/inception/mercury-2.5"
+  | "@openrouter/inclusionai/ling-3.0-flash-sante:free"
+  | "@openrouter/inclusionai/ling-3.0-flash-vl"
+  | "@openrouter/inclusionai/ling-3.1-flash"
+  | "@openrouter/inclusionai/ling-3.2-flash:free"
+  | "@openrouter/inference-net/schematron-v2-small"
+  | "@openrouter/inference-net/schematron-v2-turbo"
+  | "@openrouter/kt/midm-k-3.0-pro"
+  | "@openrouter/liquid/lfm-2.5-24b-a2b"
+  | "@openrouter/liquid/lfm-3-1.7b"
+  | "@openrouter/liquid/lfm-3-1.7b:free"
   | "@openrouter/meta-llama/llama-3.3-70b-instruct"
+  | "@openrouter/meta/muse-ember"
   | "@openrouter/meta/muse-glimmer-30b"
   | "@openrouter/meta/muse-spark-1.2"
+  | "@openrouter/meta/muse-spark-1.3"
+  | "@openrouter/meta/muse-spark-open"
+  | "@openrouter/meta/muse-wonder"
   | "@openrouter/minimax/minimax-m3"
+  | "@openrouter/minimax/minimax-m3.1-flash"
   | "@openrouter/mistralai/mistral-large"
+  | "@openrouter/mistralai/mistral-large-4-0"
+  | "@openrouter/mistralai/pixtral-large-2502"
+  | "@openrouter/moondream/moondream3-preview"
+  | "@openrouter/moondream/moondream3.1-9b-a2b"
   | "@openrouter/moonshotai/kimi-k2.6"
   | "@openrouter/moonshotai/kimi-k2.7-code"
   | "@openrouter/moonshotai/kimi-k3"
+  | "@openrouter/moonshotai/kimi-k3.1-pro"
+  | "@openrouter/motif-technologies/motif-3"
+  | "@openrouter/nex-agi/nex-n2.5-mini"
+  | "@openrouter/nex-agi/nex-n2.5-pro"
+  | "@openrouter/nex-agi/nex-n2.6"
   | "@openrouter/nvidia/nemotron-3-ultra-550b-a55b"
   | "@openrouter/nvidia/nemotron-3.5-lightning"
+  | "@openrouter/nvidia/nemotron-3.5-super-vl"
+  | "@openrouter/nvidia/nemotron-3.5-super-vl:free"
   | "@openrouter/openai/gpt-3.5-turbo"
   | "@openrouter/openai/gpt-4"
   | "@openrouter/openai/gpt-4-turbo"
@@ -523,25 +799,71 @@ export type OpenrouterModel =
   | "@openrouter/openai/gpt-5.6-sol-pro"
   | "@openrouter/openai/gpt-5.6-terra"
   | "@openrouter/openai/gpt-5.6-terra-pro"
+  | "@openrouter/openai/gpt-6-astra"
+  | "@openrouter/openai/gpt-6-astra-pro"
+  | "@openrouter/openai/gpt-6-luna"
+  | "@openrouter/openai/gpt-6-luna-pro"
+  | "@openrouter/openai/gpt-6-sol"
+  | "@openrouter/openai/gpt-6-sol-pro"
+  | "@openrouter/openai/gpt-6.1-terra"
+  | "@openrouter/openai/gpt-6.1-terra-pro"
+  | "@openrouter/openai/gpt-6.2-astra"
+  | "@openrouter/openai/gpt-6.2-astra-pro"
+  | "@openrouter/openai/gpt-6.2-sol"
+  | "@openrouter/openai/gpt-6.2-sol-pro"
   | "@openrouter/openai/text-embedding-3-large"
   | "@openrouter/openai/text-embedding-ada-002"
+  | "@openrouter/particle-ai/particle-1"
+  | "@openrouter/particle-ai/particle-1:free"
+  | "@openrouter/perceptron/perceptron-mk1.5"
+  | "@openrouter/prism-ml/ternary-bonsai-2-27b"
+  | "@openrouter/prism-ml/ternary-bonsai-2-9b"
   | "@openrouter/qwen/qwen3.7-max"
   | "@openrouter/qwen/qwen3.7-plus"
   | "@openrouter/qwen/qwen3.8-2.4t-a95b"
   | "@openrouter/qwen/qwen3.8-27b"
   | "@openrouter/qwen/qwen3.8-max"
+  | "@openrouter/qwen/qwen3.8-max-0902"
+  | "@openrouter/qwen/qwen3.8-max-prime"
+  | "@openrouter/qwen/qwen3.8-omni-flash"
+  | "@openrouter/qwen/qwen4-max"
+  | "@openrouter/radixark/daisyrose-27b"
+  | "@openrouter/recursive/flint-v1.0:free"
+  | "@openrouter/reflection/beam-1.0-501b-a23b"
+  | "@openrouter/ricursiveai/ripple-65b-preview"
+  | "@openrouter/sakana/fugu-max"
+  | "@openrouter/sakana/fugu-ultra-v2"
   | "@openrouter/sakana/sakana-namazu"
   | "@openrouter/stepfun/step-3.7-flash"
+  | "@openrouter/stepfun/step-5-preview"
   | "@openrouter/tencent/hy-mt2-30b-a3b"
+  | "@openrouter/tencent/hy4"
+  | "@openrouter/tencent/hy4-flash"
   | "@openrouter/thinkingmachines/inkling"
+  | "@openrouter/thinkingmachines/inkling-2-mini"
+  | "@openrouter/thinkingmachines/inkling-2-small"
   | "@openrouter/thinkingmachines/inkling-small"
+  | "@openrouter/unbiased/pareto"
+  | "@openrouter/unbiased/pareto-26.10"
+  | "@openrouter/unbiased/pareto-26.10-preview"
+  | "@openrouter/unbiased/pareto-26.9"
+  | "@openrouter/upstage/solar-mini-4-5"
+  | "@openrouter/upstage/solar-mini4"
   | "@openrouter/upstage/solar-pro4"
   | "@openrouter/x-ai/grok-3-beta"
   | "@openrouter/x-ai/grok-4"
   | "@openrouter/x-ai/grok-4.5"
   | "@openrouter/x-ai/grok-4.6"
+  | "@openrouter/x-ai/grok-4.7"
+  | "@openrouter/xiaomi/mimo-v2.6-flash"
+  | "@openrouter/xiaomi/mimo-v2.6-flash-mopd"
+  | "@openrouter/xiaomi/mimo-v2.6-pro"
+  | "@openrouter/xiaomi/mimo-v2.6-pro-ultraspeed"
   | "@openrouter/z-ai/glm-5.2"
-  | "@openrouter/z-ai/glm-5.3";
+  | "@openrouter/z-ai/glm-5.3"
+  | "@openrouter/z-ai/glm-5.3-flashx"
+  | "@openrouter/z-ai/glm-5.3-flashx-legal"
+  | "@openrouter/z-ai/glm-5.3-prime";
 
 /**
  * Perplexity models
@@ -559,6 +881,8 @@ export type PerplexityModel =
 export type QwenModel =
   | "@qwen/deepseek-v4-flash-0731"
   | "@qwen/glm-5.2"
+  | "@qwen/kimi-k3.1-pro"
+  | "@qwen/kimi-k3.1-pro-prime"
   | "@qwen/qvq-max"
   | "@qwen/qwen-flash"
   | "@qwen/qwen-max"
@@ -605,9 +929,30 @@ export type QwenModel =
   | "@qwen/qwen3.6-plus"
   | "@qwen/qwen3.7-max"
   | "@qwen/qwen3.7-plus"
+  | "@qwen/qwen3.7-text-embedding"
+  | "@qwen/qwen3.8-flash"
   | "@qwen/qwen3.8-max"
+  | "@qwen/qwen4-max"
   | "@qwen/qwq-plus"
   | "@qwen/text-embedding-v3";
+
+/**
+ * SambaNova models
+ */
+export type SambanovaModel =
+  | "@sambanova/gemma-4-31B-it"
+  | "@sambanova/GLM-5.3"
+  | "@sambanova/gpt-oss-120b"
+  | "@sambanova/MiniMax-M3.1-Flash";
+
+/**
+ * Tencent TokenHub models
+ */
+export type TencentModel =
+  | "@tencent/hy3"
+  | "@tencent/hy4"
+  | "@tencent/hy4-flash"
+  | "@tencent/hy4-preview";
 
 /**
  * Together AI models
@@ -617,29 +962,49 @@ export type TogetherModel =
   | "@together/deepseek-ai/DeepSeek-V4-Flash-0731"
   | "@together/deepseek-ai/DeepSeek-V4-Pro"
   | "@together/deepseek-ai/DeepSeek-V4-Pro-0813"
+  | "@together/deepseek-ai/DeepSeek-V4.1-Flash-1017"
+  | "@together/deepseek-ai/DeepSeek-V4.1-Flash-1017-fast"
+  | "@together/elorian-labs/glimpse-1.0"
   | "@together/meta-llama/Llama-3.1-8B-Instruct-Turbo"
   | "@together/meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo"
   | "@together/meta-llama/Llama-3.3-70B-Instruct-Turbo"
+  | "@together/meta-models/Muse-Spark-Open-816B-A42B"
   | "@together/MiniMaxAI/MiniMax-M3"
+  | "@together/MiniMaxAI/MiniMax-M3.1-Flash"
   | "@together/moonshotai/Kimi-K2.6"
   | "@together/moonshotai/Kimi-K2.7-Code"
+  | "@together/moonshotai/Kimi-K3.1-Pro"
   | "@together/nvidia/nemotron-3-ultra-550b-a55b"
+  | "@together/nvidia/NVIDIA-Nemotron-3.5-Super-VL"
   | "@together/openai/gpt-oss-120b"
   | "@together/Qwen/Qwen2.5-72B-Instruct-Turbo"
   | "@together/Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8"
   | "@together/Qwen/Qwen3.7-Max"
+  | "@together/Qwen/Qwen4-Max"
+  | "@together/reflection/Beam-1.0-501B-A23B"
+  | "@together/ricursive-ai/Ripple-65B-Preview"
+  | "@together/tencent/Hy4"
   | "@together/thinkingmachines/Inkling"
+  | "@together/thinkingmachines/Inkling-2-Small"
   | "@together/togethercomputer/m2-bert-80M-8k-retrieval"
   | "@together/zai-org/GLM-5.1"
   | "@together/zai-org/GLM-5.2";
+
+/**
+ * TypeSafe AI models
+ */
+export type TypesafeModel =
+  | "@typesafe/jev-1.13.0";
 
 /**
  * Vertex AI models
  */
 export type VertexAiModel =
   | "@vertex-ai/claude-3-7-sonnet@20250219"
+  | "@vertex-ai/claude-fable-5-2@default"
   | "@vertex-ai/claude-fable-5@default"
   | "@vertex-ai/claude-haiku-4-5@20251001"
+  | "@vertex-ai/claude-haiku-5-5@default"
   | "@vertex-ai/claude-opus-4-5@20251101"
   | "@vertex-ai/claude-opus-4-6@default"
   | "@vertex-ai/claude-opus-4-7@default"
@@ -658,6 +1023,10 @@ export type VertexAiModel =
   | "@vertex-ai/gemini-3.5-flash-lite"
   | "@vertex-ai/gemini-3.6-flash"
   | "@vertex-ai/gemini-3.7-flash"
+  | "@vertex-ai/gemini-4-argon"
+  | "@vertex-ai/gemini-4-carbon"
+  | "@vertex-ai/gemini-4-hydrogen"
+  | "@vertex-ai/gemini-4-neon"
   | "@vertex-ai/gemini-flash-latest"
   | "@vertex-ai/llama-3.1-70b-instruct-maas"
   | "@vertex-ai/mistral-large-2411";
@@ -691,6 +1060,7 @@ export type XaiModel =
   | "@xai/grok-4.3"
   | "@xai/grok-4.5"
   | "@xai/grok-4.6"
+  | "@xai/grok-4.7"
   | "@xai/grok-build-0.1"
   | "@xai/grok-code-fast-1";
 
@@ -712,6 +1082,9 @@ export type ZaiModel =
   | "@zai/glm-5.1"
   | "@zai/glm-5.2"
   | "@zai/glm-5.3"
+  | "@zai/glm-5.3-flash"
+  | "@zai/glm-5.3-flashx"
+  | "@zai/glm-5.3-flashx-legal"
   | "@zai/glm-5v-turbo";
 
 /**
@@ -721,22 +1094,33 @@ export type AllModels =
   | AnthropicModel
   | AwsBedrockModel
   | AzureOpenaiModel
+  | BasetenModel
   | CerebrasModel
+  | ChutesModel
   | CohereModel
+  | DeepinfraModel
   | DeepseekModel
   | FireworksModel
   | GoogleModel
   | GroqModel
   | HuggingfaceModel
+  | KevModel
+  | LayaModel
+  | MetaModel
   | MinimaxModel
   | MistralModel
   | MoonshotModel
+  | NebiusModel
+  | NovitaModel
   | NvidiaNimModel
   | OpenaiModel
   | OpenrouterModel
   | PerplexityModel
   | QwenModel
+  | SambanovaModel
+  | TencentModel
   | TogetherModel
+  | TypesafeModel
   | VertexAiModel
   | VoyageModel
   | XaiModel
@@ -750,6 +1134,7 @@ export type Capability =
   | "chat"
   | "coding"
   | "computer_use"
+  | "decisions"
   | "deep_research"
   | "embeddings"
   | "extended_thinking"
@@ -774,22 +1159,33 @@ export const providers = [
   "anthropic",
   "aws-bedrock",
   "azure-openai",
+  "baseten",
   "cerebras",
+  "chutes",
   "cohere",
+  "deepinfra",
   "deepseek",
   "fireworks",
   "google",
   "groq",
   "huggingface",
+  "kev",
+  "laya",
+  "meta",
   "minimax",
   "mistral",
   "moonshot",
+  "nebius",
+  "novita",
   "nvidia-nim",
   "openai",
   "openrouter",
   "perplexity",
   "qwen",
+  "sambanova",
+  "tencent",
   "together",
+  "typesafe",
   "vertex-ai",
   "voyage",
   "xai",
@@ -814,8 +1210,10 @@ export const allModels: readonly AllModels[] = [
   "@anthropic/claude-3-sonnet-20240229",
   "@anthropic/claude-fable-5",
   "@anthropic/claude-fable-5-1",
+  "@anthropic/claude-fable-5-2",
   "@anthropic/claude-haiku-4-5",
   "@anthropic/claude-haiku-4-5-20251001",
+  "@anthropic/claude-haiku-5-5",
   "@anthropic/claude-instant-1.2",
   "@anthropic/claude-opus-4-1",
   "@anthropic/claude-opus-4-1-20250805",
@@ -827,16 +1225,20 @@ export const allModels: readonly AllModels[] = [
   "@anthropic/claude-opus-4-8",
   "@anthropic/claude-opus-4-latest",
   "@anthropic/claude-opus-5",
+  "@anthropic/claude-opus-5-5",
   "@anthropic/claude-sonnet-4-20250514",
   "@anthropic/claude-sonnet-4-5",
   "@anthropic/claude-sonnet-4-5-20250929",
   "@anthropic/claude-sonnet-4-6",
   "@anthropic/claude-sonnet-4-latest",
   "@anthropic/claude-sonnet-5",
+  "@anthropic/claude-sonnet-5-5",
   "@aws-bedrock/amazon.nova-pro-v1:0",
   "@aws-bedrock/anthropic.claude-3-7-sonnet-20250219-v1:0",
   "@aws-bedrock/anthropic.claude-fable-5",
+  "@aws-bedrock/anthropic.claude-fable-5-2",
   "@aws-bedrock/anthropic.claude-haiku-4-5-20251001-v1:0",
+  "@aws-bedrock/anthropic.claude-haiku-5-5",
   "@aws-bedrock/anthropic.claude-opus-4-1-20250805-v1:0",
   "@aws-bedrock/anthropic.claude-opus-4-5-20251101-v1:0",
   "@aws-bedrock/anthropic.claude-opus-4-6-v1",
@@ -848,11 +1250,23 @@ export const allModels: readonly AllModels[] = [
   "@aws-bedrock/anthropic.claude-sonnet-4-6",
   "@aws-bedrock/anthropic.claude-sonnet-5",
   "@aws-bedrock/deepseek.v3.2",
+  "@aws-bedrock/global.anthropic.claude-fable-5-2",
+  "@aws-bedrock/global.moonshotai.kimi-k3.1",
+  "@aws-bedrock/global.openai.gpt-6.1-terra",
+  "@aws-bedrock/global.openai.gpt-6.2-astra",
+  "@aws-bedrock/global.openai.gpt-6.2-sol",
   "@aws-bedrock/meta.llama3-1-70b-instruct-v1:0",
   "@aws-bedrock/meta.llama3-3-70b-instruct-v1:0",
   "@aws-bedrock/mistral.mistral-large-2407-v1:0",
   "@aws-bedrock/mistral.mistral-large-3-675b-instruct",
+  "@aws-bedrock/us.anthropic.claude-fable-5-2",
+  "@aws-bedrock/us.moonshotai.kimi-k3.1",
+  "@aws-bedrock/us.openai.gpt-6.1-terra",
+  "@aws-bedrock/us.openai.gpt-6.2-astra",
+  "@aws-bedrock/us.openai.gpt-6.2-sol",
   "@aws-bedrock/xai.grok-4.6",
+  "@azure-openai/claude-fable-5-2",
+  "@azure-openai/claude-haiku-5-5",
   "@azure-openai/gpt-4.1",
   "@azure-openai/gpt-4.1-mini",
   "@azure-openai/gpt-4.1-nano",
@@ -867,11 +1281,29 @@ export const allModels: readonly AllModels[] = [
   "@azure-openai/gpt-5.6-luna",
   "@azure-openai/gpt-5.6-sol",
   "@azure-openai/gpt-5.6-terra",
+  "@azure-openai/gpt-6.1-terra",
+  "@azure-openai/gpt-6.2-astra",
+  "@azure-openai/gpt-6.2-sol",
   "@azure-openai/o3",
   "@azure-openai/o3-mini",
   "@azure-openai/o4-mini",
   "@azure-openai/text-embedding-3-large",
   "@azure-openai/text-embedding-3-small",
+  "@baseten/deepseek-ai/DeepSeek-V4-Flash-0731",
+  "@baseten/deepseek-ai/DeepSeek-V4-Pro-0813",
+  "@baseten/deepseek-ai/DeepSeek-V4.1-Flash",
+  "@baseten/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+  "@baseten/deepseek-ai/DeepSeek-V4.1-Flash-1017-Fast",
+  "@baseten/deepseek-ai/DeepSeek-V4.1-Flash-Fast",
+  "@baseten/moonshotai/Kimi-K3",
+  "@baseten/moonshotai/Kimi-K3.1-Pro",
+  "@baseten/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B",
+  "@baseten/openai/gpt-oss-120b",
+  "@baseten/zai-org/GLM-5.2",
+  "@baseten/zai-org/GLM-5.2-Fast",
+  "@baseten/zai-org/GLM-5.3",
+  "@baseten/zai-org/GLM-5.3-Fast",
+  "@baseten/zai-org/GLM-5.3-Flash",
   "@cerebras/deepseek-r1-distill-llama-70b",
   "@cerebras/gemma-4-31b",
   "@cerebras/gpt-oss-120b",
@@ -880,7 +1312,28 @@ export const allModels: readonly AllModels[] = [
   "@cerebras/llama3.1-8b",
   "@cerebras/qwen-3-235b-a22b-instruct-2507",
   "@cerebras/qwen-3-32b",
+  "@cerebras/qwen-3.8-27b",
   "@cerebras/zai-glm-4.7",
+  "@chutes/Qwen/Qwen3.5-27B-TEE",
+  "@chutes/Qwen/Qwen3.5-397B-A17B-TEE",
+  "@chutes/Qwen/Qwen3.6-27B-TEE",
+  "@chutes/Qwen/Qwen3.8-2.4T-A95B",
+  "@chutes/Qwen/Qwen3.8-27B-TEE",
+  "@chutes/Qwen/Qwen3.8-Max-0902",
+  "@chutes/Qwen/Qwen4-Max",
+  "@chutes/deepseek-ai/DeepSeek-V3.2-TEE",
+  "@chutes/deepseek-ai/DeepSeek-V4-Flash-0731-TEE",
+  "@chutes/deepseek-ai/DeepSeek-V4-Pro-0813",
+  "@chutes/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+  "@chutes/google/gemma-4-31B-turbo-TEE",
+  "@chutes/moonshotai/Kimi-K2.6-TEE",
+  "@chutes/moonshotai/Kimi-K2.7-Code",
+  "@chutes/moonshotai/Kimi-K3-TEE",
+  "@chutes/tencent/Hy4",
+  "@chutes/zai-org/GLM-5.1-TEE",
+  "@chutes/zai-org/GLM-5.2-Fast",
+  "@chutes/zai-org/GLM-5.2-TEE",
+  "@chutes/zai-org/GLM-5.3",
   "@cohere/c4ai-aya-expanse-32b",
   "@cohere/c4ai-aya-expanse-8b",
   "@cohere/c4ai-aya-vision-32b",
@@ -902,7 +1355,33 @@ export const allModels: readonly AllModels[] = [
   "@cohere/embed-v4.0",
   "@cohere/north-mini-code-1-0",
   "@cohere/rerank-v3.5",
+  "@deepinfra/MiniMaxAI/MiniMax-M3",
+  "@deepinfra/Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo",
+  "@deepinfra/Qwen/Qwen3.8-27B",
+  "@deepinfra/Qwen/Qwen3.8-Flash",
+  "@deepinfra/Qwen/Qwen3.8-Max",
+  "@deepinfra/Qwen/Qwen4-Max",
+  "@deepinfra/XiaomiMiMo/MiMo-V2.6-Flash",
+  "@deepinfra/XiaomiMiMo/MiMo-V2.6-Pro",
+  "@deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731",
+  "@deepinfra/deepseek-ai/DeepSeek-V4-Pro",
+  "@deepinfra/deepseek-ai/DeepSeek-V4-Pro-0813",
+  "@deepinfra/deepseek-ai/DeepSeek-V4.1-Flash",
+  "@deepinfra/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+  "@deepinfra/google/gemma-4-31B-it",
+  "@deepinfra/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+  "@deepinfra/moonshotai/Kimi-K2.6",
+  "@deepinfra/moonshotai/Kimi-K3",
+  "@deepinfra/moonshotai/Kimi-K3.1-Pro",
+  "@deepinfra/openai/gpt-oss-120b",
+  "@deepinfra/openai/gpt-oss-20b",
+  "@deepinfra/tencent/Hy4",
+  "@deepinfra/thinkingmachines/Inkling-2-Small",
+  "@deepinfra/zai-org/GLM-5.2",
+  "@deepinfra/zai-org/GLM-5.3",
+  "@deepinfra/zai-org/GLM-5.3-Flash",
   "@deepseek/deepseek-chat",
+  "@deepseek/deepseek-flash",
   "@deepseek/deepseek-r1",
   "@deepseek/deepseek-reasoner",
   "@deepseek/deepseek-v3",
@@ -916,6 +1395,7 @@ export const allModels: readonly AllModels[] = [
   "@fireworks/accounts/fireworks/models/deepseek-v4-flash-0731",
   "@fireworks/accounts/fireworks/models/deepseek-v4-pro",
   "@fireworks/accounts/fireworks/models/deepseek-v4-pro-0813",
+  "@fireworks/accounts/fireworks/models/deepseek-v4p1-flash-1017",
   "@fireworks/accounts/fireworks/models/glm-4p5",
   "@fireworks/accounts/fireworks/models/glm-4p5-air",
   "@fireworks/accounts/fireworks/models/glm-4p7",
@@ -924,6 +1404,7 @@ export const allModels: readonly AllModels[] = [
   "@fireworks/accounts/fireworks/models/glm-5p2",
   "@fireworks/accounts/fireworks/models/gpt-oss-120b",
   "@fireworks/accounts/fireworks/models/gpt-oss-20b",
+  "@fireworks/accounts/fireworks/models/hy4-flash",
   "@fireworks/accounts/fireworks/models/inkling",
   "@fireworks/accounts/fireworks/models/kimi-k2-instruct",
   "@fireworks/accounts/fireworks/models/kimi-k2-thinking",
@@ -931,6 +1412,7 @@ export const allModels: readonly AllModels[] = [
   "@fireworks/accounts/fireworks/models/kimi-k2p6",
   "@fireworks/accounts/fireworks/models/kimi-k2p7-code",
   "@fireworks/accounts/fireworks/models/kimi-k3",
+  "@fireworks/accounts/fireworks/models/kimi-k3p1-pro",
   "@fireworks/accounts/fireworks/models/llama-v3p1-8b-instruct",
   "@fireworks/accounts/fireworks/models/llama-v3p2-90b-vision-instruct",
   "@fireworks/accounts/fireworks/models/llama-v3p3-70b-instruct",
@@ -938,16 +1420,27 @@ export const allModels: readonly AllModels[] = [
   "@fireworks/accounts/fireworks/models/minimax-m2p5",
   "@fireworks/accounts/fireworks/models/minimax-m2p7",
   "@fireworks/accounts/fireworks/models/minimax-m3",
+  "@fireworks/accounts/fireworks/models/minimax-m3p1-flash",
   "@fireworks/accounts/fireworks/models/muse-glimmer-30b",
+  "@fireworks/accounts/fireworks/models/muse-spark-open",
   "@fireworks/accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b",
   "@fireworks/accounts/fireworks/models/nomic-embed-text-v1.5",
   "@fireworks/accounts/fireworks/models/qwen2p5-72b-instruct",
   "@fireworks/accounts/fireworks/models/qwen3p6-plus",
   "@fireworks/accounts/fireworks/models/qwen3p7-plus",
   "@fireworks/accounts/fireworks/models/qwen3p8-max",
+  "@fireworks/accounts/fireworks/models/qwen4-max",
+  "@fireworks/accounts/fireworks/models/ultramarine-1-flash-us",
+  "@fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+  "@fireworks/accounts/fireworks/routers/deepseek-v4p1-flash-1017-flex",
+  "@fireworks/accounts/fireworks/routers/deepseek-v4p1-flash-1017-spot",
+  "@fireworks/accounts/fireworks/routers/deepseek-v4p1-flash-1017-ultrafast",
+  "@fireworks/accounts/fireworks/routers/deepseek-v4p1-flash-1017-us",
   "@fireworks/accounts/fireworks/routers/glm-5p2-fast",
   "@fireworks/accounts/fireworks/routers/kimi-k2p7-code-fast",
   "@fireworks/accounts/fireworks/routers/kimi-k3-fast",
+  "@fireworks/accounts/fireworks/routers/kimi-k3p1-pro-us",
+  "@fireworks/accounts/fireworks/routers/kimi-latest",
   "@google/gemini-1.5-flash",
   "@google/gemini-1.5-flash-8b",
   "@google/gemini-1.5-pro",
@@ -966,6 +1459,11 @@ export const allModels: readonly AllModels[] = [
   "@google/gemini-3.5-flash-lite",
   "@google/gemini-3.6-flash",
   "@google/gemini-3.7-flash",
+  "@google/gemini-3.8-flash",
+  "@google/gemini-4-argon",
+  "@google/gemini-4-carbon",
+  "@google/gemini-4-hydrogen",
+  "@google/gemini-4-neon",
   "@google/gemini-flash-latest",
   "@google/gemini-flash-lite-latest",
   "@google/gemini-pro",
@@ -986,27 +1484,51 @@ export const allModels: readonly AllModels[] = [
   "@groq/qwen-qwq-32b",
   "@groq/qwen/qwen3-32b",
   "@groq/qwen/qwen3.6-27b",
+  "@groq/qwen/qwen3.8-27b",
   "@huggingface/MiniMaxAI/MiniMax-M3",
+  "@huggingface/MiniMaxAI/MiniMax-M3.1-Flash",
   "@huggingface/Qwen/Qwen3-Coder-480B-A35B-Instruct",
   "@huggingface/Qwen/Qwen3-Next-80B-A3B-Instruct",
   "@huggingface/Qwen/Qwen3.8-2.4T-A95B",
   "@huggingface/deepseek-ai/DeepSeek-V4-Flash-0731",
   "@huggingface/deepseek-ai/DeepSeek-V4-Pro",
   "@huggingface/deepseek-ai/DeepSeek-V4-Pro-0813",
+  "@huggingface/deepseek-ai/DeepSeek-V4.1-Flash-1017",
   "@huggingface/huggingface/gpt-3.5-turbo",
   "@huggingface/huggingface/gpt-4",
   "@huggingface/huggingface/gpt-4-turbo",
   "@huggingface/huggingface/gpt-4o",
   "@huggingface/huggingface/gpt-4o-mini",
   "@huggingface/huggingface/text-embedding-ada-002",
+  "@huggingface/meta-models/Muse-Spark-Open-816B-A42B",
+  "@huggingface/mistralai/Mistral-Large-4-1T-A52B",
   "@huggingface/moonshotai/Kimi-K2.6",
   "@huggingface/moonshotai/Kimi-K2.7-Code",
   "@huggingface/moonshotai/Kimi-K3",
+  "@huggingface/moonshotai/Kimi-K3.1-Pro",
+  "@huggingface/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16",
+  "@huggingface/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4",
+  "@huggingface/reflection/Beam-1.0-501B-A23B",
   "@huggingface/stepfun-ai/Step-3.7-Flash",
+  "@huggingface/tencent/Hy4",
+  "@huggingface/tencent/Hy4-flash",
   "@huggingface/thinkingmachines/Inkling",
+  "@huggingface/thinkingmachines/Inkling-2-Mini",
+  "@huggingface/thinkingmachines/Inkling-2-Small",
   "@huggingface/thinkingmachines/Inkling-Small",
   "@huggingface/zai-org/GLM-5.1",
   "@huggingface/zai-org/GLM-5.2",
+  "@kev/kev-latest",
+  "@laya/english",
+  "@laya/multilingual",
+  "@laya/typed-decisions",
+  "@meta/muse-ember-1.0",
+  "@meta/muse-spark-1.1",
+  "@meta/muse-spark-1.2",
+  "@meta/muse-spark-1.2-contributor",
+  "@meta/muse-spark-1.3",
+  "@meta/muse-spark-1.3-contributor",
+  "@meta/muse-wonder-1.0",
   "@minimax/MiniMax-M1",
   "@minimax/MiniMax-M2",
   "@minimax/MiniMax-M2.1",
@@ -1016,7 +1538,9 @@ export const allModels: readonly AllModels[] = [
   "@minimax/MiniMax-M2.7",
   "@minimax/MiniMax-M2.7-highspeed",
   "@minimax/MiniMax-M3",
+  "@minimax/MiniMax-M3.1-Flash",
   "@mistral/codestral-latest",
+  "@mistral/deepseek-v4-1-flash-1017",
   "@mistral/devstral-2512",
   "@mistral/devstral-latest",
   "@mistral/devstral-medium-2507",
@@ -1032,6 +1556,8 @@ export const allModels: readonly AllModels[] = [
   "@mistral/mistral-embed",
   "@mistral/mistral-large-2411",
   "@mistral/mistral-large-2512",
+  "@mistral/mistral-large-4",
+  "@mistral/mistral-large-4-0",
   "@mistral/mistral-large-latest",
   "@mistral/mistral-medium-2505",
   "@mistral/mistral-medium-2508",
@@ -1049,6 +1575,8 @@ export const allModels: readonly AllModels[] = [
   "@mistral/pixtral-large-latest",
   "@mistral/voxtral-small-2507",
   "@mistral/voxtral-small-latest",
+  "@mistral/zai-glm-5-3",
+  "@mistral/zai-glm-5-3-flash",
   "@moonshot/kimi-k2-0711-preview",
   "@moonshot/kimi-k2-0905-preview",
   "@moonshot/kimi-k2-thinking",
@@ -1059,9 +1587,59 @@ export const allModels: readonly AllModels[] = [
   "@moonshot/kimi-k2.7-code",
   "@moonshot/kimi-k2.7-code-highspeed",
   "@moonshot/kimi-k3",
+  "@moonshot/kimi-k3.1-pro",
+  "@moonshot/kimi-k3.1-pro-highspeed",
   "@moonshot/moonshot-v1-128k",
   "@moonshot/moonshot-v1-32k",
   "@moonshot/moonshot-v1-8k",
+  "@nebius/MiniMaxAI/MiniMax-M3",
+  "@nebius/MiniMaxAI/MiniMax-M3.1-Flash",
+  "@nebius/NousResearch/Hermes-4-405B",
+  "@nebius/Qwen/Qwen3-235B-A22B-Instruct-2507",
+  "@nebius/Qwen/Qwen3-30B-A3B-Instruct-2507",
+  "@nebius/Qwen/Qwen3.8-27B",
+  "@nebius/deepseek-ai/DeepSeek-V4-Pro-0813",
+  "@nebius/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+  "@nebius/google/gemma-3-27b-it",
+  "@nebius/meta-models/muse-spark-open",
+  "@nebius/moonshotai/Kimi-K3",
+  "@nebius/moonshotai/Kimi-K3.1-Pro",
+  "@nebius/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+  "@nebius/nvidia/Nemotron-3-Ultra-550b-a55b",
+  "@nebius/nvidia/Nemotron-3.5-Super-VL",
+  "@nebius/nvidia/Nemotron-3_5-Lightning",
+  "@nebius/nvidia/nemotron-3-super-120b-a12b",
+  "@nebius/openai/gpt-oss-120b",
+  "@nebius/reflection/beam",
+  "@nebius/thinkingmachines/Inkling-2-Small",
+  "@nebius/zai-org/GLM-5.2",
+  "@nebius/zai-org/GLM-5.3",
+  "@nebius/zai-org/GLM-5.3-Flash",
+  "@novita/deepseek/deepseek-v4-flash-0731",
+  "@novita/deepseek/deepseek-v4-pro",
+  "@novita/deepseek/deepseek-v4-pro-0813",
+  "@novita/deepseek/deepseek-v4.1-flash",
+  "@novita/deepseek/deepseek-v4.1-flash-1017",
+  "@novita/google/gemma-4-31b-it",
+  "@novita/meta-llama/llama-3.3-70b-instruct",
+  "@novita/moonshotai/kimi-k2.6",
+  "@novita/moonshotai/kimi-k2.7-code",
+  "@novita/moonshotai/kimi-k3",
+  "@novita/moonshotai/kimi-k3.1-pro",
+  "@novita/moonshotai/kimi-k3.1-pro-highspeed",
+  "@novita/openai/gpt-oss-120b",
+  "@novita/qwen/qwen3.8-27b",
+  "@novita/qwen/qwen3.8-flash",
+  "@novita/qwen/qwen3.8-max",
+  "@novita/qwen/qwen4-max",
+  "@novita/tencent/hy4",
+  "@novita/tencent/hy4-flash",
+  "@novita/xiaomimimo/mimo-v2.6-flash",
+  "@novita/xiaomimimo/mimo-v2.6-pro",
+  "@novita/zai-org/glm-5.1",
+  "@novita/zai-org/glm-5.2",
+  "@novita/zai-org/glm-5.3",
+  "@novita/zai-org/glm-5.3-flash",
   "@nvidia-nim/deepseek-ai/deepseek-v3.2",
   "@nvidia-nim/deepseek-ai/deepseek-v4-flash-0731",
   "@nvidia-nim/deepseek-ai/deepseek-v4-pro",
@@ -1072,10 +1650,12 @@ export const allModels: readonly AllModels[] = [
   "@nvidia-nim/meta/llama-4-scout-17b-16e-instruct",
   "@nvidia-nim/meta/muse-glimmer-30b",
   "@nvidia-nim/minimaxai/minimax-m3",
+  "@nvidia-nim/minimaxai/minimax-m3.1-flash",
   "@nvidia-nim/moonshotai/kimi-k3",
   "@nvidia-nim/nvidia/llama-3.1-nemotron-70b-instruct",
   "@nvidia-nim/nvidia/nemotron-3-ultra-550b-a55b",
   "@nvidia-nim/nvidia/nemotron-3.5-lightning-30b-a3b",
+  "@nvidia-nim/nvidia/nemotron-3.5-super-vl-120b-a12b",
   "@nvidia-nim/nvidia/nv-embedqa-e5-v5",
   "@nvidia-nim/stepfun-ai/step-3.7-flash",
   "@nvidia-nim/thinkingmachines/inkling",
@@ -1161,6 +1741,12 @@ export const allModels: readonly AllModels[] = [
   "@openai/gpt-5.6-sol",
   "@openai/gpt-5.6-terra",
   "@openai/gpt-6-astra",
+  "@openai/gpt-6-luna",
+  "@openai/gpt-6-sol",
+  "@openai/gpt-6.1-sol",
+  "@openai/gpt-6.1-terra",
+  "@openai/gpt-6.2-astra",
+  "@openai/gpt-6.2-sol",
   "@openai/gpt-audio",
   "@openai/gpt-audio-2025-08-28",
   "@openai/gpt-audio-mini",
@@ -1196,38 +1782,84 @@ export const allModels: readonly AllModels[] = [
   "@openai/text-embedding-3-large",
   "@openai/text-embedding-3-small",
   "@openai/text-embedding-ada-002",
+  "@openrouter/aion-labs/aion-3.5",
+  "@openrouter/aion-labs/aion-3.5-mini",
   "@openrouter/anthropic/claude-fable-5",
+  "@openrouter/anthropic/claude-fable-5.1",
+  "@openrouter/anthropic/claude-fable-5.2",
   "@openrouter/anthropic/claude-haiku-4.5",
+  "@openrouter/anthropic/claude-haiku-5.5",
   "@openrouter/anthropic/claude-opus-4.7",
   "@openrouter/anthropic/claude-opus-4.8",
   "@openrouter/anthropic/claude-opus-4.8-fast",
   "@openrouter/anthropic/claude-opus-5",
   "@openrouter/anthropic/claude-opus-5-fast",
+  "@openrouter/anthropic/claude-opus-5.5",
   "@openrouter/anthropic/claude-sonnet-4",
   "@openrouter/anthropic/claude-sonnet-4.6",
   "@openrouter/anthropic/claude-sonnet-5",
+  "@openrouter/anthropic/claude-sonnet-5.5",
+  "@openrouter/baidu/ernie-5.5-flash-preview:free",
+  "@openrouter/baidu/ernie-light-dt-1.0-intl",
   "@openrouter/bytedance-seed/seed-2-1-turbo",
+  "@openrouter/cohere/command-a-plus",
   "@openrouter/deepseek/deepseek-r1",
   "@openrouter/deepseek/deepseek-v4-flash-0731",
   "@openrouter/deepseek/deepseek-v4-flash-vision-exp",
   "@openrouter/deepseek/deepseek-v4-pro",
   "@openrouter/deepseek/deepseek-v4-pro-0813",
+  "@openrouter/deepseek/deepseek-v4.1-flash",
+  "@openrouter/deepseek/deepseek-v4.1-flash-1017",
+  "@openrouter/elorian/glimpse",
+  "@openrouter/fireworks/ember-1",
   "@openrouter/google/gemini-2.5-pro",
   "@openrouter/google/gemini-3-pro-preview",
   "@openrouter/google/gemini-3.5-flash",
   "@openrouter/google/gemini-3.5-flash-lite",
   "@openrouter/google/gemini-3.6-flash",
   "@openrouter/google/gemini-3.7-flash",
+  "@openrouter/google/gemini-3.8-flash",
+  "@openrouter/google/gemini-4-argon",
+  "@openrouter/google/gemini-4-carbon",
+  "@openrouter/google/gemini-4-hydrogen",
+  "@openrouter/google/gemini-4-neon",
+  "@openrouter/inception/mercury-2.5",
+  "@openrouter/inclusionai/ling-3.0-flash-sante:free",
+  "@openrouter/inclusionai/ling-3.0-flash-vl",
+  "@openrouter/inclusionai/ling-3.1-flash",
+  "@openrouter/inclusionai/ling-3.2-flash:free",
+  "@openrouter/inference-net/schematron-v2-small",
+  "@openrouter/inference-net/schematron-v2-turbo",
+  "@openrouter/kt/midm-k-3.0-pro",
+  "@openrouter/liquid/lfm-2.5-24b-a2b",
+  "@openrouter/liquid/lfm-3-1.7b",
+  "@openrouter/liquid/lfm-3-1.7b:free",
   "@openrouter/meta-llama/llama-3.3-70b-instruct",
+  "@openrouter/meta/muse-ember",
   "@openrouter/meta/muse-glimmer-30b",
   "@openrouter/meta/muse-spark-1.2",
+  "@openrouter/meta/muse-spark-1.3",
+  "@openrouter/meta/muse-spark-open",
+  "@openrouter/meta/muse-wonder",
   "@openrouter/minimax/minimax-m3",
+  "@openrouter/minimax/minimax-m3.1-flash",
   "@openrouter/mistralai/mistral-large",
+  "@openrouter/mistralai/mistral-large-4-0",
+  "@openrouter/mistralai/pixtral-large-2502",
+  "@openrouter/moondream/moondream3-preview",
+  "@openrouter/moondream/moondream3.1-9b-a2b",
   "@openrouter/moonshotai/kimi-k2.6",
   "@openrouter/moonshotai/kimi-k2.7-code",
   "@openrouter/moonshotai/kimi-k3",
+  "@openrouter/moonshotai/kimi-k3.1-pro",
+  "@openrouter/motif-technologies/motif-3",
+  "@openrouter/nex-agi/nex-n2.5-mini",
+  "@openrouter/nex-agi/nex-n2.5-pro",
+  "@openrouter/nex-agi/nex-n2.6",
   "@openrouter/nvidia/nemotron-3-ultra-550b-a55b",
   "@openrouter/nvidia/nemotron-3.5-lightning",
+  "@openrouter/nvidia/nemotron-3.5-super-vl",
+  "@openrouter/nvidia/nemotron-3.5-super-vl:free",
   "@openrouter/openai/gpt-3.5-turbo",
   "@openrouter/openai/gpt-4",
   "@openrouter/openai/gpt-4-turbo",
@@ -1241,25 +1873,71 @@ export const allModels: readonly AllModels[] = [
   "@openrouter/openai/gpt-5.6-sol-pro",
   "@openrouter/openai/gpt-5.6-terra",
   "@openrouter/openai/gpt-5.6-terra-pro",
+  "@openrouter/openai/gpt-6-astra",
+  "@openrouter/openai/gpt-6-astra-pro",
+  "@openrouter/openai/gpt-6-luna",
+  "@openrouter/openai/gpt-6-luna-pro",
+  "@openrouter/openai/gpt-6-sol",
+  "@openrouter/openai/gpt-6-sol-pro",
+  "@openrouter/openai/gpt-6.1-terra",
+  "@openrouter/openai/gpt-6.1-terra-pro",
+  "@openrouter/openai/gpt-6.2-astra",
+  "@openrouter/openai/gpt-6.2-astra-pro",
+  "@openrouter/openai/gpt-6.2-sol",
+  "@openrouter/openai/gpt-6.2-sol-pro",
   "@openrouter/openai/text-embedding-3-large",
   "@openrouter/openai/text-embedding-ada-002",
+  "@openrouter/particle-ai/particle-1",
+  "@openrouter/particle-ai/particle-1:free",
+  "@openrouter/perceptron/perceptron-mk1.5",
+  "@openrouter/prism-ml/ternary-bonsai-2-27b",
+  "@openrouter/prism-ml/ternary-bonsai-2-9b",
   "@openrouter/qwen/qwen3.7-max",
   "@openrouter/qwen/qwen3.7-plus",
   "@openrouter/qwen/qwen3.8-2.4t-a95b",
   "@openrouter/qwen/qwen3.8-27b",
   "@openrouter/qwen/qwen3.8-max",
+  "@openrouter/qwen/qwen3.8-max-0902",
+  "@openrouter/qwen/qwen3.8-max-prime",
+  "@openrouter/qwen/qwen3.8-omni-flash",
+  "@openrouter/qwen/qwen4-max",
+  "@openrouter/radixark/daisyrose-27b",
+  "@openrouter/recursive/flint-v1.0:free",
+  "@openrouter/reflection/beam-1.0-501b-a23b",
+  "@openrouter/ricursiveai/ripple-65b-preview",
+  "@openrouter/sakana/fugu-max",
+  "@openrouter/sakana/fugu-ultra-v2",
   "@openrouter/sakana/sakana-namazu",
   "@openrouter/stepfun/step-3.7-flash",
+  "@openrouter/stepfun/step-5-preview",
   "@openrouter/tencent/hy-mt2-30b-a3b",
+  "@openrouter/tencent/hy4",
+  "@openrouter/tencent/hy4-flash",
   "@openrouter/thinkingmachines/inkling",
+  "@openrouter/thinkingmachines/inkling-2-mini",
+  "@openrouter/thinkingmachines/inkling-2-small",
   "@openrouter/thinkingmachines/inkling-small",
+  "@openrouter/unbiased/pareto",
+  "@openrouter/unbiased/pareto-26.10",
+  "@openrouter/unbiased/pareto-26.10-preview",
+  "@openrouter/unbiased/pareto-26.9",
+  "@openrouter/upstage/solar-mini-4-5",
+  "@openrouter/upstage/solar-mini4",
   "@openrouter/upstage/solar-pro4",
   "@openrouter/x-ai/grok-3-beta",
   "@openrouter/x-ai/grok-4",
   "@openrouter/x-ai/grok-4.5",
   "@openrouter/x-ai/grok-4.6",
+  "@openrouter/x-ai/grok-4.7",
+  "@openrouter/xiaomi/mimo-v2.6-flash",
+  "@openrouter/xiaomi/mimo-v2.6-flash-mopd",
+  "@openrouter/xiaomi/mimo-v2.6-pro",
+  "@openrouter/xiaomi/mimo-v2.6-pro-ultraspeed",
   "@openrouter/z-ai/glm-5.2",
   "@openrouter/z-ai/glm-5.3",
+  "@openrouter/z-ai/glm-5.3-flashx",
+  "@openrouter/z-ai/glm-5.3-flashx-legal",
+  "@openrouter/z-ai/glm-5.3-prime",
   "@perplexity/sonar",
   "@perplexity/sonar-deep-research",
   "@perplexity/sonar-pro",
@@ -1267,6 +1945,8 @@ export const allModels: readonly AllModels[] = [
   "@perplexity/sonar-reasoning-pro",
   "@qwen/deepseek-v4-flash-0731",
   "@qwen/glm-5.2",
+  "@qwen/kimi-k3.1-pro",
+  "@qwen/kimi-k3.1-pro-prime",
   "@qwen/qvq-max",
   "@qwen/qwen-flash",
   "@qwen/qwen-max",
@@ -1313,31 +1993,57 @@ export const allModels: readonly AllModels[] = [
   "@qwen/qwen3.6-plus",
   "@qwen/qwen3.7-max",
   "@qwen/qwen3.7-plus",
+  "@qwen/qwen3.7-text-embedding",
+  "@qwen/qwen3.8-flash",
   "@qwen/qwen3.8-max",
+  "@qwen/qwen4-max",
   "@qwen/qwq-plus",
   "@qwen/text-embedding-v3",
+  "@sambanova/GLM-5.3",
+  "@sambanova/MiniMax-M3.1-Flash",
+  "@sambanova/gemma-4-31B-it",
+  "@sambanova/gpt-oss-120b",
+  "@tencent/hy3",
+  "@tencent/hy4",
+  "@tencent/hy4-flash",
+  "@tencent/hy4-preview",
   "@together/MiniMaxAI/MiniMax-M3",
+  "@together/MiniMaxAI/MiniMax-M3.1-Flash",
   "@together/Qwen/Qwen2.5-72B-Instruct-Turbo",
   "@together/Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8",
   "@together/Qwen/Qwen3.7-Max",
+  "@together/Qwen/Qwen4-Max",
   "@together/deepseek-ai/DeepSeek-V3",
   "@together/deepseek-ai/DeepSeek-V4-Flash-0731",
   "@together/deepseek-ai/DeepSeek-V4-Pro",
   "@together/deepseek-ai/DeepSeek-V4-Pro-0813",
+  "@together/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+  "@together/deepseek-ai/DeepSeek-V4.1-Flash-1017-fast",
+  "@together/elorian-labs/glimpse-1.0",
   "@together/meta-llama/Llama-3.1-8B-Instruct-Turbo",
   "@together/meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo",
   "@together/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+  "@together/meta-models/Muse-Spark-Open-816B-A42B",
   "@together/moonshotai/Kimi-K2.6",
   "@together/moonshotai/Kimi-K2.7-Code",
+  "@together/moonshotai/Kimi-K3.1-Pro",
+  "@together/nvidia/NVIDIA-Nemotron-3.5-Super-VL",
   "@together/nvidia/nemotron-3-ultra-550b-a55b",
   "@together/openai/gpt-oss-120b",
+  "@together/reflection/Beam-1.0-501B-A23B",
+  "@together/ricursive-ai/Ripple-65B-Preview",
+  "@together/tencent/Hy4",
   "@together/thinkingmachines/Inkling",
+  "@together/thinkingmachines/Inkling-2-Small",
   "@together/togethercomputer/m2-bert-80M-8k-retrieval",
   "@together/zai-org/GLM-5.1",
   "@together/zai-org/GLM-5.2",
+  "@typesafe/jev-1.13.0",
   "@vertex-ai/claude-3-7-sonnet@20250219",
+  "@vertex-ai/claude-fable-5-2@default",
   "@vertex-ai/claude-fable-5@default",
   "@vertex-ai/claude-haiku-4-5@20251001",
+  "@vertex-ai/claude-haiku-5-5@default",
   "@vertex-ai/claude-opus-4-5@20251101",
   "@vertex-ai/claude-opus-4-6@default",
   "@vertex-ai/claude-opus-4-7@default",
@@ -1356,6 +2062,10 @@ export const allModels: readonly AllModels[] = [
   "@vertex-ai/gemini-3.5-flash-lite",
   "@vertex-ai/gemini-3.6-flash",
   "@vertex-ai/gemini-3.7-flash",
+  "@vertex-ai/gemini-4-argon",
+  "@vertex-ai/gemini-4-carbon",
+  "@vertex-ai/gemini-4-hydrogen",
+  "@vertex-ai/gemini-4-neon",
   "@vertex-ai/gemini-flash-latest",
   "@vertex-ai/llama-3.1-70b-instruct-maas",
   "@vertex-ai/mistral-large-2411",
@@ -1379,6 +2089,7 @@ export const allModels: readonly AllModels[] = [
   "@xai/grok-4.3",
   "@xai/grok-4.5",
   "@xai/grok-4.6",
+  "@xai/grok-4.7",
   "@xai/grok-build-0.1",
   "@xai/grok-code-fast-1",
   "@zai/glm-4.5",
@@ -1395,6 +2106,9 @@ export const allModels: readonly AllModels[] = [
   "@zai/glm-5.1",
   "@zai/glm-5.2",
   "@zai/glm-5.3",
+  "@zai/glm-5.3-flash",
+  "@zai/glm-5.3-flashx",
+  "@zai/glm-5.3-flashx-legal",
   "@zai/glm-5v-turbo",
 ] as const;
 
@@ -1531,6 +2245,15 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@anthropic/claude-fable-5-2" as AllModels,
+    provider: "anthropic" as Provider,
+    model: "claude-fable-5-2",
+    displayName: "Claude Fable 5.2",
+    capabilities: ["chat", "function_calling", "vision", "extended_thinking", "computer_use"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
     id: "@anthropic/claude-haiku-4-5" as AllModels,
     provider: "anthropic" as Provider,
     model: "claude-haiku-4-5",
@@ -1546,6 +2269,15 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Claude Haiku 4.5",
     capabilities: ["chat", "function_calling", "vision", "extended_thinking", "computer_use"],
     maxTokens: 200000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@anthropic/claude-haiku-5-5" as AllModels,
+    provider: "anthropic" as Provider,
+    model: "claude-haiku-5-5",
+    displayName: "Claude Haiku 5.5",
+    capabilities: ["chat", "function_calling", "vision", "extended_thinking", "computer_use"],
+    maxTokens: 1000000,
     status: "stable" as Status,
   },
   {
@@ -1648,6 +2380,15 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@anthropic/claude-opus-5-5" as AllModels,
+    provider: "anthropic" as Provider,
+    model: "claude-opus-5-5",
+    displayName: "Claude Opus 5.5",
+    capabilities: ["chat", "function_calling", "vision", "extended_thinking", "computer_use"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
     id: "@anthropic/claude-sonnet-4-20250514" as AllModels,
     provider: "anthropic" as Provider,
     model: "claude-sonnet-4-20250514",
@@ -1702,6 +2443,15 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@anthropic/claude-sonnet-5-5" as AllModels,
+    provider: "anthropic" as Provider,
+    model: "claude-sonnet-5-5",
+    displayName: "Claude Sonnet 5.5",
+    capabilities: ["chat", "function_calling", "vision", "extended_thinking", "computer_use"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
     id: "@aws-bedrock/amazon.nova-pro-v1:0" as AllModels,
     provider: "aws-bedrock" as Provider,
     model: "amazon.nova-pro-v1:0",
@@ -1729,12 +2479,30 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@aws-bedrock/anthropic.claude-fable-5-2" as AllModels,
+    provider: "aws-bedrock" as Provider,
+    model: "anthropic.claude-fable-5-2",
+    displayName: "Claude Fable 5.2 (Bedrock)",
+    capabilities: ["chat", "function_calling", "vision", "extended_thinking"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
     id: "@aws-bedrock/anthropic.claude-haiku-4-5-20251001-v1:0" as AllModels,
     provider: "aws-bedrock" as Provider,
     model: "anthropic.claude-haiku-4-5-20251001-v1:0",
     displayName: "Claude Haiku 4.5 (Bedrock)",
     capabilities: ["chat", "function_calling", "vision", "extended_thinking"],
     maxTokens: 200000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@aws-bedrock/anthropic.claude-haiku-5-5" as AllModels,
+    provider: "aws-bedrock" as Provider,
+    model: "anthropic.claude-haiku-5-5",
+    displayName: "Claude Haiku 5.5 (Bedrock)",
+    capabilities: ["chat", "function_calling", "vision", "extended_thinking"],
+    maxTokens: 1000000,
     status: "stable" as Status,
   },
   {
@@ -1837,6 +2605,51 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@aws-bedrock/global.anthropic.claude-fable-5-2" as AllModels,
+    provider: "aws-bedrock" as Provider,
+    model: "global.anthropic.claude-fable-5-2",
+    displayName: "Claude Fable 5.2 (Global) (Bedrock)",
+    capabilities: ["chat", "function_calling", "vision", "extended_thinking"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@aws-bedrock/global.moonshotai.kimi-k3.1" as AllModels,
+    provider: "aws-bedrock" as Provider,
+    model: "global.moonshotai.kimi-k3.1",
+    displayName: "Kimi K3.1 Pro Highspeed (Global) (Bedrock)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@aws-bedrock/global.openai.gpt-6.1-terra" as AllModels,
+    provider: "aws-bedrock" as Provider,
+    model: "global.openai.gpt-6.1-terra",
+    displayName: "GPT-6.1 Terra (Global) (Bedrock)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@aws-bedrock/global.openai.gpt-6.2-astra" as AllModels,
+    provider: "aws-bedrock" as Provider,
+    model: "global.openai.gpt-6.2-astra",
+    displayName: "GPT-6.2 Astra (Global) (Bedrock)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@aws-bedrock/global.openai.gpt-6.2-sol" as AllModels,
+    provider: "aws-bedrock" as Provider,
+    model: "global.openai.gpt-6.2-sol",
+    displayName: "GPT-6.2 Sol (Global) (Bedrock)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
     id: "@aws-bedrock/meta.llama3-1-70b-instruct-v1:0" as AllModels,
     provider: "aws-bedrock" as Provider,
     model: "meta.llama3-1-70b-instruct-v1:0",
@@ -1873,12 +2686,75 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@aws-bedrock/us.anthropic.claude-fable-5-2" as AllModels,
+    provider: "aws-bedrock" as Provider,
+    model: "us.anthropic.claude-fable-5-2",
+    displayName: "Claude Fable 5.2 (US) (Bedrock)",
+    capabilities: ["chat", "function_calling", "vision", "extended_thinking"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@aws-bedrock/us.moonshotai.kimi-k3.1" as AllModels,
+    provider: "aws-bedrock" as Provider,
+    model: "us.moonshotai.kimi-k3.1",
+    displayName: "Kimi K3.1 Pro Highspeed (US) (Bedrock)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@aws-bedrock/us.openai.gpt-6.1-terra" as AllModels,
+    provider: "aws-bedrock" as Provider,
+    model: "us.openai.gpt-6.1-terra",
+    displayName: "GPT-6.1 Terra (US) (Bedrock)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@aws-bedrock/us.openai.gpt-6.2-astra" as AllModels,
+    provider: "aws-bedrock" as Provider,
+    model: "us.openai.gpt-6.2-astra",
+    displayName: "GPT-6.2 Astra (US) (Bedrock)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@aws-bedrock/us.openai.gpt-6.2-sol" as AllModels,
+    provider: "aws-bedrock" as Provider,
+    model: "us.openai.gpt-6.2-sol",
+    displayName: "GPT-6.2 Sol (US) (Bedrock)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
     id: "@aws-bedrock/xai.grok-4.6" as AllModels,
     provider: "aws-bedrock" as Provider,
     model: "xai.grok-4.6",
     displayName: "Grok 4.6 (Bedrock)",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 500000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@azure-openai/claude-fable-5-2" as AllModels,
+    provider: "azure-openai" as Provider,
+    model: "claude-fable-5-2",
+    displayName: "Claude Fable 5.2 (Azure)",
+    capabilities: ["chat", "function_calling", "vision", "extended_thinking", "computer_use"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@azure-openai/claude-haiku-5-5" as AllModels,
+    provider: "azure-openai" as Provider,
+    model: "claude-haiku-5-5",
+    displayName: "Claude Haiku 5.5 (Azure)",
+    capabilities: ["chat", "function_calling", "vision", "extended_thinking", "computer_use"],
+    maxTokens: 1000000,
     status: "stable" as Status,
   },
   {
@@ -2008,6 +2884,33 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "beta" as Status,
   },
   {
+    id: "@azure-openai/gpt-6.1-terra" as AllModels,
+    provider: "azure-openai" as Provider,
+    model: "gpt-6.1-terra",
+    displayName: "GPT-6.1 Terra (Azure)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning", "computer_use", "coding"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@azure-openai/gpt-6.2-astra" as AllModels,
+    provider: "azure-openai" as Provider,
+    model: "gpt-6.2-astra",
+    displayName: "GPT-6.2 Astra (Azure)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning", "coding"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@azure-openai/gpt-6.2-sol" as AllModels,
+    provider: "azure-openai" as Provider,
+    model: "gpt-6.2-sol",
+    displayName: "GPT-6.2 Sol (Azure)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning", "computer_use", "coding"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
     id: "@azure-openai/o3" as AllModels,
     provider: "azure-openai" as Provider,
     model: "o3",
@@ -2053,6 +2956,141 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@baseten/deepseek-ai/DeepSeek-V4-Flash-0731" as AllModels,
+    provider: "baseten" as Provider,
+    model: "deepseek-ai/DeepSeek-V4-Flash-0731",
+    displayName: "DeepSeek V4 Flash 0731 (Baseten)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@baseten/deepseek-ai/DeepSeek-V4-Pro-0813" as AllModels,
+    provider: "baseten" as Provider,
+    model: "deepseek-ai/DeepSeek-V4-Pro-0813",
+    displayName: "DeepSeek V4 Pro 0813 (Baseten)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@baseten/deepseek-ai/DeepSeek-V4.1-Flash" as AllModels,
+    provider: "baseten" as Provider,
+    model: "deepseek-ai/DeepSeek-V4.1-Flash",
+    displayName: "DeepSeek V4.1 Flash (Baseten)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@baseten/deepseek-ai/DeepSeek-V4.1-Flash-1017" as AllModels,
+    provider: "baseten" as Provider,
+    model: "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    displayName: "DeepSeek V4.1 Flash 1017 (Baseten)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@baseten/deepseek-ai/DeepSeek-V4.1-Flash-1017-Fast" as AllModels,
+    provider: "baseten" as Provider,
+    model: "deepseek-ai/DeepSeek-V4.1-Flash-1017-Fast",
+    displayName: "DeepSeek V4.1 Flash 1017 Fast (Baseten)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@baseten/deepseek-ai/DeepSeek-V4.1-Flash-Fast" as AllModels,
+    provider: "baseten" as Provider,
+    model: "deepseek-ai/DeepSeek-V4.1-Flash-Fast",
+    displayName: "DeepSeek V4.1 Flash Fast (Baseten)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@baseten/moonshotai/Kimi-K3" as AllModels,
+    provider: "baseten" as Provider,
+    model: "moonshotai/Kimi-K3",
+    displayName: "Kimi K3 (Baseten)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@baseten/moonshotai/Kimi-K3.1-Pro" as AllModels,
+    provider: "baseten" as Provider,
+    model: "moonshotai/Kimi-K3.1-Pro",
+    displayName: "Kimi K3.1 Pro (Baseten)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@baseten/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B" as AllModels,
+    provider: "baseten" as Provider,
+    model: "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B",
+    displayName: "Nemotron 3 Ultra (Baseten)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 202800,
+    status: "stable" as Status,
+  },
+  {
+    id: "@baseten/openai/gpt-oss-120b" as AllModels,
+    provider: "baseten" as Provider,
+    model: "openai/gpt-oss-120b",
+    displayName: "OpenAI GPT 120B (Baseten)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 128072,
+    status: "stable" as Status,
+  },
+  {
+    id: "@baseten/zai-org/GLM-5.2" as AllModels,
+    provider: "baseten" as Provider,
+    model: "zai-org/GLM-5.2",
+    displayName: "GLM 5.2 (Baseten)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@baseten/zai-org/GLM-5.2-Fast" as AllModels,
+    provider: "baseten" as Provider,
+    model: "zai-org/GLM-5.2-Fast",
+    displayName: "GLM 5.2 Fast (Baseten)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@baseten/zai-org/GLM-5.3" as AllModels,
+    provider: "baseten" as Provider,
+    model: "zai-org/GLM-5.3",
+    displayName: "GLM 5.3 (Baseten)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@baseten/zai-org/GLM-5.3-Fast" as AllModels,
+    provider: "baseten" as Provider,
+    model: "zai-org/GLM-5.3-Fast",
+    displayName: "GLM 5.3 Fast (Baseten)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@baseten/zai-org/GLM-5.3-Flash" as AllModels,
+    provider: "baseten" as Provider,
+    model: "zai-org/GLM-5.3-Flash",
+    displayName: "GLM 5.3 Flash (Baseten)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
     id: "@cerebras/deepseek-r1-distill-llama-70b" as AllModels,
     provider: "cerebras" as Provider,
     model: "deepseek-r1-distill-llama-70b",
@@ -2068,7 +3106,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Gemma 4 31B IT",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 131072,
-    status: "beta" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@cerebras/gpt-oss-120b" as AllModels,
@@ -2104,7 +3142,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Llama 3.1 8B",
     capabilities: ["chat", "function_calling"],
     maxTokens: 32000,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@cerebras/qwen-3-235b-a22b-instruct-2507" as AllModels,
@@ -2113,7 +3151,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Qwen 3 235B Instruct",
     capabilities: ["chat", "function_calling"],
     maxTokens: 131000,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@cerebras/qwen-3-32b" as AllModels,
@@ -2125,12 +3163,201 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "deprecated" as Status,
   },
   {
+    id: "@cerebras/qwen-3.8-27b" as AllModels,
+    provider: "cerebras" as Provider,
+    model: "qwen-3.8-27b",
+    displayName: "Qwen 3.8 27B",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 131072,
+    status: "stable" as Status,
+  },
+  {
     id: "@cerebras/zai-glm-4.7" as AllModels,
     provider: "cerebras" as Provider,
     model: "zai-glm-4.7",
     displayName: "Z.AI GLM-4.7",
     capabilities: ["chat", "function_calling"],
     maxTokens: 131072,
+    status: "deprecated" as Status,
+  },
+  {
+    id: "@chutes/deepseek-ai/DeepSeek-V3.2-TEE" as AllModels,
+    provider: "chutes" as Provider,
+    model: "deepseek-ai/DeepSeek-V3.2-TEE",
+    displayName: "DeepSeek V3.2 TEE (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 131072,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/deepseek-ai/DeepSeek-V4-Flash-0731-TEE" as AllModels,
+    provider: "chutes" as Provider,
+    model: "deepseek-ai/DeepSeek-V4-Flash-0731-TEE",
+    displayName: "DeepSeek V4 Flash 0731 TEE (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/deepseek-ai/DeepSeek-V4-Pro-0813" as AllModels,
+    provider: "chutes" as Provider,
+    model: "deepseek-ai/DeepSeek-V4-Pro-0813",
+    displayName: "DeepSeek V4 Pro 0813 (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/deepseek-ai/DeepSeek-V4.1-Flash-1017" as AllModels,
+    provider: "chutes" as Provider,
+    model: "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    displayName: "DeepSeek V4.1 Flash 1017 (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/google/gemma-4-31B-turbo-TEE" as AllModels,
+    provider: "chutes" as Provider,
+    model: "google/gemma-4-31B-turbo-TEE",
+    displayName: "gemma 4 31B turbo TEE (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 131072,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/moonshotai/Kimi-K2.6-TEE" as AllModels,
+    provider: "chutes" as Provider,
+    model: "moonshotai/Kimi-K2.6-TEE",
+    displayName: "Kimi K2.6 TEE (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/moonshotai/Kimi-K2.7-Code" as AllModels,
+    provider: "chutes" as Provider,
+    model: "moonshotai/Kimi-K2.7-Code",
+    displayName: "Kimi K2.7 Code (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/moonshotai/Kimi-K3-TEE" as AllModels,
+    provider: "chutes" as Provider,
+    model: "moonshotai/Kimi-K3-TEE",
+    displayName: "Kimi K3 TEE (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/Qwen/Qwen3.5-27B-TEE" as AllModels,
+    provider: "chutes" as Provider,
+    model: "Qwen/Qwen3.5-27B-TEE",
+    displayName: "Qwen3.5 27B TEE (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/Qwen/Qwen3.5-397B-A17B-TEE" as AllModels,
+    provider: "chutes" as Provider,
+    model: "Qwen/Qwen3.5-397B-A17B-TEE",
+    displayName: "Qwen3.5 397B A17B TEE (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/Qwen/Qwen3.6-27B-TEE" as AllModels,
+    provider: "chutes" as Provider,
+    model: "Qwen/Qwen3.6-27B-TEE",
+    displayName: "Qwen3.6 27B TEE (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/Qwen/Qwen3.8-2.4T-A95B" as AllModels,
+    provider: "chutes" as Provider,
+    model: "Qwen/Qwen3.8-2.4T-A95B",
+    displayName: "Qwen3.8 2.4T A95B (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/Qwen/Qwen3.8-27B-TEE" as AllModels,
+    provider: "chutes" as Provider,
+    model: "Qwen/Qwen3.8-27B-TEE",
+    displayName: "Qwen3.8 27B TEE (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/Qwen/Qwen3.8-Max-0902" as AllModels,
+    provider: "chutes" as Provider,
+    model: "Qwen/Qwen3.8-Max-0902",
+    displayName: "Qwen3.8 Max 0902 (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/Qwen/Qwen4-Max" as AllModels,
+    provider: "chutes" as Provider,
+    model: "Qwen/Qwen4-Max",
+    displayName: "Qwen4 Max (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/tencent/Hy4" as AllModels,
+    provider: "chutes" as Provider,
+    model: "tencent/Hy4",
+    displayName: "Hy4 (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/zai-org/GLM-5.1-TEE" as AllModels,
+    provider: "chutes" as Provider,
+    model: "zai-org/GLM-5.1-TEE",
+    displayName: "GLM 5.1 TEE (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 202752,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/zai-org/GLM-5.2-Fast" as AllModels,
+    provider: "chutes" as Provider,
+    model: "zai-org/GLM-5.2-Fast",
+    displayName: "GLM 5.2 Fast (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/zai-org/GLM-5.2-TEE" as AllModels,
+    provider: "chutes" as Provider,
+    model: "zai-org/GLM-5.2-TEE",
+    displayName: "GLM 5.2 TEE (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@chutes/zai-org/GLM-5.3" as AllModels,
+    provider: "chutes" as Provider,
+    model: "zai-org/GLM-5.3",
+    displayName: "GLM 5.3 (Chutes)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
     status: "stable" as Status,
   },
   {
@@ -2323,11 +3550,245 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "deepseek-ai/DeepSeek-V4-Flash-0731",
+    displayName: "DeepSeek V4 Flash 0731 (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/deepseek-ai/DeepSeek-V4-Pro" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "deepseek-ai/DeepSeek-V4-Pro",
+    displayName: "DeepSeek V4 Pro (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/deepseek-ai/DeepSeek-V4-Pro-0813" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "deepseek-ai/DeepSeek-V4-Pro-0813",
+    displayName: "DeepSeek V4 Pro 0813 (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/deepseek-ai/DeepSeek-V4.1-Flash" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "deepseek-ai/DeepSeek-V4.1-Flash",
+    displayName: "DeepSeek V4.1 Flash (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/deepseek-ai/DeepSeek-V4.1-Flash-1017" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    displayName: "DeepSeek V4.1 Flash 1017 (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/google/gemma-4-31B-it" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "google/gemma-4-31B-it",
+    displayName: "Gemma 4 31B IT (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/meta-llama/Llama-3.3-70B-Instruct-Turbo" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+    displayName: "Llama 3.3 70B Turbo (DeepInfra)",
+    capabilities: ["chat", "function_calling"],
+    maxTokens: 131072,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/MiniMaxAI/MiniMax-M3" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "MiniMaxAI/MiniMax-M3",
+    displayName: "MiniMax-M3 (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 524288,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/moonshotai/Kimi-K2.6" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "moonshotai/Kimi-K2.6",
+    displayName: "Kimi K2.6 (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/moonshotai/Kimi-K3" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "moonshotai/Kimi-K3",
+    displayName: "Kimi K3 (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/moonshotai/Kimi-K3.1-Pro" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "moonshotai/Kimi-K3.1-Pro",
+    displayName: "Kimi K3.1 Pro (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/openai/gpt-oss-120b" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "openai/gpt-oss-120b",
+    displayName: "GPT OSS 120B (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 131072,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/openai/gpt-oss-20b" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "openai/gpt-oss-20b",
+    displayName: "GPT OSS 20B (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 131072,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo",
+    displayName: "Qwen3 Coder 480B A35B Instruct Turbo (DeepInfra)",
+    capabilities: ["chat", "function_calling"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/Qwen/Qwen3.8-27B" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "Qwen/Qwen3.8-27B",
+    displayName: "Qwen3.8 27B (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/Qwen/Qwen3.8-Flash" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "Qwen/Qwen3.8-Flash",
+    displayName: "Qwen3.8 Flash (DeepInfra)",
+    capabilities: ["chat", "function_calling"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/Qwen/Qwen3.8-Max" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "Qwen/Qwen3.8-Max",
+    displayName: "Qwen3.8 Max (DeepInfra)",
+    capabilities: ["chat", "function_calling"],
+    maxTokens: 256000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/Qwen/Qwen4-Max" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "Qwen/Qwen4-Max",
+    displayName: "Qwen4 Max (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/tencent/Hy4" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "tencent/Hy4",
+    displayName: "Hy4 (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/thinkingmachines/Inkling-2-Small" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "thinkingmachines/Inkling-2-Small",
+    displayName: "Inkling 2 Small (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/XiaomiMiMo/MiMo-V2.6-Flash" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "XiaomiMiMo/MiMo-V2.6-Flash",
+    displayName: "MiMo-V2.6-Flash (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/XiaomiMiMo/MiMo-V2.6-Pro" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "XiaomiMiMo/MiMo-V2.6-Pro",
+    displayName: "MiMo-V2.6-Pro (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/zai-org/GLM-5.2" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "zai-org/GLM-5.2",
+    displayName: "GLM-5.2 (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/zai-org/GLM-5.3" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "zai-org/GLM-5.3",
+    displayName: "GLM-5.3 (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepinfra/zai-org/GLM-5.3-Flash" as AllModels,
+    provider: "deepinfra" as Provider,
+    model: "zai-org/GLM-5.3-Flash",
+    displayName: "GLM-5.3-Flash (DeepInfra)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
     id: "@deepseek/deepseek-chat" as AllModels,
     provider: "deepseek" as Provider,
     model: "deepseek-chat",
     displayName: "DeepSeek Chat (V4)",
     capabilities: ["chat", "function_calling"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@deepseek/deepseek-flash" as AllModels,
+    provider: "deepseek" as Provider,
+    model: "deepseek-flash",
+    displayName: "DeepSeek V4.1 Flash",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 1000000,
     status: "stable" as Status,
   },
@@ -2372,9 +3833,9 @@ export const modelMetadata: readonly ModelMetadata[] = [
     provider: "deepseek" as Provider,
     model: "deepseek-v4-flash",
     displayName: "DeepSeek V4 Flash",
-    capabilities: ["chat", "function_calling", "reasoning"],
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 1000000,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@deepseek/deepseek-v4-flash-vision-exp" as AllModels,
@@ -2383,7 +3844,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "DeepSeek V4 Flash Vision Exp",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 1000000,
-    status: "beta" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@deepseek/deepseek-v4-pro" as AllModels,
@@ -2445,6 +3906,15 @@ export const modelMetadata: readonly ModelMetadata[] = [
     model: "accounts/fireworks/models/deepseek-v4-pro-0813",
     displayName: "DeepSeek V4 Pro 0813 (Fireworks)",
     capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@fireworks/accounts/fireworks/models/deepseek-v4p1-flash-1017" as AllModels,
+    provider: "fireworks" as Provider,
+    model: "accounts/fireworks/models/deepseek-v4p1-flash-1017",
+    displayName: "DeepSeek V4.1 Flash 1017 (Fireworks)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 1000000,
     status: "stable" as Status,
   },
@@ -2521,6 +3991,15 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@fireworks/accounts/fireworks/models/hy4-flash" as AllModels,
+    provider: "fireworks" as Provider,
+    model: "accounts/fireworks/models/hy4-flash",
+    displayName: "Hy4 flash (Fireworks)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 524288,
+    status: "stable" as Status,
+  },
+  {
     id: "@fireworks/accounts/fireworks/models/inkling" as AllModels,
     provider: "fireworks" as Provider,
     model: "accounts/fireworks/models/inkling",
@@ -2579,6 +4058,15 @@ export const modelMetadata: readonly ModelMetadata[] = [
     provider: "fireworks" as Provider,
     model: "accounts/fireworks/models/kimi-k3",
     displayName: "Kimi K3 (Fireworks)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@fireworks/accounts/fireworks/models/kimi-k3p1-pro" as AllModels,
+    provider: "fireworks" as Provider,
+    model: "accounts/fireworks/models/kimi-k3p1-pro",
+    displayName: "Kimi K3.1 Pro (Fireworks)",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 1048576,
     status: "stable" as Status,
@@ -2647,12 +4135,30 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@fireworks/accounts/fireworks/models/minimax-m3p1-flash" as AllModels,
+    provider: "fireworks" as Provider,
+    model: "accounts/fireworks/models/minimax-m3p1-flash",
+    displayName: "MiniMax-M3.1-Flash (Fireworks)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
     id: "@fireworks/accounts/fireworks/models/muse-glimmer-30b" as AllModels,
     provider: "fireworks" as Provider,
     model: "accounts/fireworks/models/muse-glimmer-30b",
     displayName: "Muse Glimmer 30B (Fireworks)",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 131072,
+    status: "stable" as Status,
+  },
+  {
+    id: "@fireworks/accounts/fireworks/models/muse-spark-open" as AllModels,
+    provider: "fireworks" as Provider,
+    model: "accounts/fireworks/models/muse-spark-open",
+    displayName: "Muse Spark Open (Fireworks)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
     status: "stable" as Status,
   },
   {
@@ -2710,6 +4216,69 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@fireworks/accounts/fireworks/models/qwen4-max" as AllModels,
+    provider: "fireworks" as Provider,
+    model: "accounts/fireworks/models/qwen4-max",
+    displayName: "Qwen4 Max (Fireworks)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@fireworks/accounts/fireworks/models/ultramarine-1-flash-us" as AllModels,
+    provider: "fireworks" as Provider,
+    model: "accounts/fireworks/models/ultramarine-1-flash-us",
+    displayName: "Ultramarine 1 Flash (Fireworks)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@fireworks/accounts/fireworks/routers/deepseek-flash-latest" as AllModels,
+    provider: "fireworks" as Provider,
+    model: "accounts/fireworks/routers/deepseek-flash-latest",
+    displayName: "DeepSeek Flash Latest (Fireworks)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@fireworks/accounts/fireworks/routers/deepseek-v4p1-flash-1017-flex" as AllModels,
+    provider: "fireworks" as Provider,
+    model: "accounts/fireworks/routers/deepseek-v4p1-flash-1017-flex",
+    displayName: "DeepSeek V4.1 Flash 1017 Flex (Fireworks)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@fireworks/accounts/fireworks/routers/deepseek-v4p1-flash-1017-spot" as AllModels,
+    provider: "fireworks" as Provider,
+    model: "accounts/fireworks/routers/deepseek-v4p1-flash-1017-spot",
+    displayName: "DeepSeek V4.1 Flash 1017 Spot (Fireworks)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@fireworks/accounts/fireworks/routers/deepseek-v4p1-flash-1017-ultrafast" as AllModels,
+    provider: "fireworks" as Provider,
+    model: "accounts/fireworks/routers/deepseek-v4p1-flash-1017-ultrafast",
+    displayName: "DeepSeek V4.1 Flash 1017 Ultra-fast (Fireworks)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@fireworks/accounts/fireworks/routers/deepseek-v4p1-flash-1017-us" as AllModels,
+    provider: "fireworks" as Provider,
+    model: "accounts/fireworks/routers/deepseek-v4p1-flash-1017-us",
+    displayName: "DeepSeek V4.1 Flash 1017 (US) (Fireworks)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
     id: "@fireworks/accounts/fireworks/routers/glm-5p2-fast" as AllModels,
     provider: "fireworks" as Provider,
     model: "accounts/fireworks/routers/glm-5p2-fast",
@@ -2732,6 +4301,24 @@ export const modelMetadata: readonly ModelMetadata[] = [
     provider: "fireworks" as Provider,
     model: "accounts/fireworks/routers/kimi-k3-fast",
     displayName: "Kimi K3 Fast (Fireworks)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@fireworks/accounts/fireworks/routers/kimi-k3p1-pro-us" as AllModels,
+    provider: "fireworks" as Provider,
+    model: "accounts/fireworks/routers/kimi-k3p1-pro-us",
+    displayName: "Kimi K3.1 Pro (US) (Fireworks)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@fireworks/accounts/fireworks/routers/kimi-latest" as AllModels,
+    provider: "fireworks" as Provider,
+    model: "accounts/fireworks/routers/kimi-latest",
+    displayName: "Kimi Latest (Kimi K3.1 Pro) (Fireworks)",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 1048576,
     status: "stable" as Status,
@@ -2899,6 +4486,51 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@google/gemini-3.8-flash" as AllModels,
+    provider: "google" as Provider,
+    model: "gemini-3.8-flash",
+    displayName: "Gemini 3.8 Flash",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@google/gemini-4-argon" as AllModels,
+    provider: "google" as Provider,
+    model: "gemini-4-argon",
+    displayName: "Gemini 4 Argon",
+    capabilities: ["chat", "function_calling", "vision", "reasoning", "computer_use", "coding"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@google/gemini-4-carbon" as AllModels,
+    provider: "google" as Provider,
+    model: "gemini-4-carbon",
+    displayName: "Gemini 4 Carbon",
+    capabilities: ["chat", "function_calling", "vision", "reasoning", "computer_use", "coding"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@google/gemini-4-hydrogen" as AllModels,
+    provider: "google" as Provider,
+    model: "gemini-4-hydrogen",
+    displayName: "Gemini 4 Hydrogen",
+    capabilities: ["chat", "function_calling", "vision", "reasoning", "computer_use", "coding"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@google/gemini-4-neon" as AllModels,
+    provider: "google" as Provider,
+    model: "gemini-4-neon",
+    displayName: "Gemini 4 Neon",
+    capabilities: ["chat", "function_calling", "vision", "reasoning", "computer_use", "coding"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
     id: "@google/gemini-flash-latest" as AllModels,
     provider: "google" as Provider,
     model: "gemini-flash-latest",
@@ -2959,7 +4591,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "DeepSeek R1 Distill Llama 70B",
     capabilities: ["chat", "function_calling", "reasoning"],
     maxTokens: 131072,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@groq/groq/compound" as AllModels,
@@ -2968,7 +4600,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Compound",
     capabilities: ["chat"],
     maxTokens: 131072,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@groq/groq/compound-mini" as AllModels,
@@ -2977,7 +4609,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Compound Mini",
     capabilities: ["chat"],
     maxTokens: 131072,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@groq/llama-3.1-8b-instant" as AllModels,
@@ -3013,7 +4645,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Llama 4 Maverick 17B 128E (Groq)",
     capabilities: ["chat", "function_calling"],
     maxTokens: 131072,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@groq/meta-llama/llama-4-scout-17b-16e-instruct" as AllModels,
@@ -3022,7 +4654,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Llama 4 Scout 17B 16E (Groq)",
     capabilities: ["chat", "function_calling"],
     maxTokens: 131072,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@groq/moonshotai/kimi-k2-instruct-0905" as AllModels,
@@ -3031,7 +4663,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Kimi K2 Instruct 0905 (Groq)",
     capabilities: ["chat", "function_calling"],
     maxTokens: 262144,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@groq/openai/gpt-oss-120b" as AllModels,
@@ -3058,7 +4690,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Qwen QwQ 32B",
     capabilities: ["chat", "function_calling", "reasoning"],
     maxTokens: 131072,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@groq/qwen/qwen3-32b" as AllModels,
@@ -3067,7 +4699,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Qwen 3 32B (Groq)",
     capabilities: ["chat", "function_calling", "reasoning"],
     maxTokens: 131072,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@groq/qwen/qwen3.6-27b" as AllModels,
@@ -3076,7 +4708,16 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Qwen3.6 27B",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 131072,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
+  },
+  {
+    id: "@groq/qwen/qwen3.8-27b" as AllModels,
+    provider: "groq" as Provider,
+    model: "qwen/qwen3.8-27b",
+    displayName: "Qwen3.8 27B",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 131072,
+    status: "preview" as Status,
   },
   {
     id: "@huggingface/deepseek-ai/DeepSeek-V4-Flash-0731" as AllModels,
@@ -3103,6 +4744,15 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "DeepSeek V4 Pro 0813 (Hugging Face)",
     capabilities: ["chat", "function_calling", "reasoning"],
     maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@huggingface/deepseek-ai/DeepSeek-V4.1-Flash-1017" as AllModels,
+    provider: "huggingface" as Provider,
+    model: "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    displayName: "DeepSeek V4.1 Flash 1017 (Hugging Face)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
     status: "stable" as Status,
   },
   {
@@ -3160,12 +4810,39 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "deprecated" as Status,
   },
   {
+    id: "@huggingface/meta-models/Muse-Spark-Open-816B-A42B" as AllModels,
+    provider: "huggingface" as Provider,
+    model: "meta-models/Muse-Spark-Open-816B-A42B",
+    displayName: "Muse Spark Open (Hugging Face)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
     id: "@huggingface/MiniMaxAI/MiniMax-M3" as AllModels,
     provider: "huggingface" as Provider,
     model: "MiniMaxAI/MiniMax-M3",
     displayName: "MiniMax-M3 (Hugging Face)",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 524288,
+    status: "stable" as Status,
+  },
+  {
+    id: "@huggingface/MiniMaxAI/MiniMax-M3.1-Flash" as AllModels,
+    provider: "huggingface" as Provider,
+    model: "MiniMaxAI/MiniMax-M3.1-Flash",
+    displayName: "MiniMax-M3.1-Flash (Hugging Face)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@huggingface/mistralai/Mistral-Large-4-1T-A52B" as AllModels,
+    provider: "huggingface" as Provider,
+    model: "mistralai/Mistral-Large-4-1T-A52B",
+    displayName: "Mistral Large 4 (Hugging Face)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
     status: "stable" as Status,
   },
   {
@@ -3196,6 +4873,33 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@huggingface/moonshotai/Kimi-K3.1-Pro" as AllModels,
+    provider: "huggingface" as Provider,
+    model: "moonshotai/Kimi-K3.1-Pro",
+    displayName: "Kimi K3.1 Pro (Hugging Face)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@huggingface/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16" as AllModels,
+    provider: "huggingface" as Provider,
+    model: "nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16",
+    displayName: "Nemotron 3.5 Super VL 120B A12B BF16 (Hugging Face)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@huggingface/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4" as AllModels,
+    provider: "huggingface" as Provider,
+    model: "nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4",
+    displayName: "Nemotron 3.5 Super VL 120B A12B NVFP4 (Hugging Face)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
     id: "@huggingface/Qwen/Qwen3-Coder-480B-A35B-Instruct" as AllModels,
     provider: "huggingface" as Provider,
     model: "Qwen/Qwen3-Coder-480B-A35B-Instruct",
@@ -3223,6 +4927,15 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@huggingface/reflection/Beam-1.0-501B-A23B" as AllModels,
+    provider: "huggingface" as Provider,
+    model: "reflection/Beam-1.0-501B-A23B",
+    displayName: "Beam 1.0 501B A23B (Hugging Face)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
     id: "@huggingface/stepfun-ai/Step-3.7-Flash" as AllModels,
     provider: "huggingface" as Provider,
     model: "stepfun-ai/Step-3.7-Flash",
@@ -3232,10 +4945,46 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@huggingface/tencent/Hy4" as AllModels,
+    provider: "huggingface" as Provider,
+    model: "tencent/Hy4",
+    displayName: "Hy4 (Hugging Face)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@huggingface/tencent/Hy4-flash" as AllModels,
+    provider: "huggingface" as Provider,
+    model: "tencent/Hy4-flash",
+    displayName: "Hy4 flash (Hugging Face)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
     id: "@huggingface/thinkingmachines/Inkling" as AllModels,
     provider: "huggingface" as Provider,
     model: "thinkingmachines/Inkling",
     displayName: "Inkling (Hugging Face)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@huggingface/thinkingmachines/Inkling-2-Mini" as AllModels,
+    provider: "huggingface" as Provider,
+    model: "thinkingmachines/Inkling-2-Mini",
+    displayName: "Inkling 2 Mini (Hugging Face)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@huggingface/thinkingmachines/Inkling-2-Small" as AllModels,
+    provider: "huggingface" as Provider,
+    model: "thinkingmachines/Inkling-2-Small",
+    displayName: "Inkling 2 Small (Hugging Face)",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 1048576,
     status: "stable" as Status,
@@ -3266,6 +5015,105 @@ export const modelMetadata: readonly ModelMetadata[] = [
     capabilities: ["chat", "function_calling", "reasoning"],
     maxTokens: 262144,
     status: "stable" as Status,
+  },
+  {
+    id: "@kev/kev-latest" as AllModels,
+    provider: "kev" as Provider,
+    model: "kev-latest",
+    displayName: "Kev (configured checkpoint)",
+    capabilities: ["decisions"],
+    maxTokens: 0,
+    status: "stable" as Status,
+  },
+  {
+    id: "@laya/english" as AllModels,
+    provider: "laya" as Provider,
+    model: "english",
+    displayName: "Laya English",
+    capabilities: ["decisions"],
+    maxTokens: 512,
+    status: "stable" as Status,
+  },
+  {
+    id: "@laya/multilingual" as AllModels,
+    provider: "laya" as Provider,
+    model: "multilingual",
+    displayName: "Laya Multilingual",
+    capabilities: ["decisions"],
+    maxTokens: 1024,
+    status: "stable" as Status,
+  },
+  {
+    id: "@laya/typed-decisions" as AllModels,
+    provider: "laya" as Provider,
+    model: "typed-decisions",
+    displayName: "Laya Typed Decisions",
+    capabilities: ["decisions"],
+    maxTokens: 1024,
+    status: "stable" as Status,
+  },
+  {
+    id: "@meta/muse-ember-1.0" as AllModels,
+    provider: "meta" as Provider,
+    model: "muse-ember-1.0",
+    displayName: "Muse Ember",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@meta/muse-spark-1.1" as AllModels,
+    provider: "meta" as Provider,
+    model: "muse-spark-1.1",
+    displayName: "Muse Spark 1.1",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@meta/muse-spark-1.2" as AllModels,
+    provider: "meta" as Provider,
+    model: "muse-spark-1.2",
+    displayName: "Muse Spark 1.2",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@meta/muse-spark-1.2-contributor" as AllModels,
+    provider: "meta" as Provider,
+    model: "muse-spark-1.2-contributor",
+    displayName: "Muse Spark 1.2 Contributor",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@meta/muse-spark-1.3" as AllModels,
+    provider: "meta" as Provider,
+    model: "muse-spark-1.3",
+    displayName: "Muse Spark 1.3",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@meta/muse-spark-1.3-contributor" as AllModels,
+    provider: "meta" as Provider,
+    model: "muse-spark-1.3-contributor",
+    displayName: "Muse Spark 1.3 Contributor",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@meta/muse-wonder-1.0" as AllModels,
+    provider: "meta" as Provider,
+    model: "muse-wonder-1.0",
+    displayName: "Muse Wonder",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "preview" as Status,
   },
   {
     id: "@minimax/MiniMax-M1" as AllModels,
@@ -3349,6 +5197,15 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@minimax/MiniMax-M3.1-Flash" as AllModels,
+    provider: "minimax" as Provider,
+    model: "MiniMax-M3.1-Flash",
+    displayName: "MiniMax-M3.1-Flash",
+    capabilities: ["chat", "function_calling", "vision", "reasoning", "coding"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
     id: "@mistral/codestral-latest" as AllModels,
     provider: "mistral" as Provider,
     model: "codestral-latest",
@@ -3356,6 +5213,15 @@ export const modelMetadata: readonly ModelMetadata[] = [
     capabilities: ["chat", "function_calling"],
     maxTokens: 256000,
     status: "stable" as Status,
+  },
+  {
+    id: "@mistral/deepseek-v4-1-flash-1017" as AllModels,
+    provider: "mistral" as Provider,
+    model: "deepseek-v4-1-flash-1017",
+    displayName: "DeepSeek V4.1 Flash 1017",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "preview" as Status,
   },
   {
     id: "@mistral/devstral-2512" as AllModels,
@@ -3445,7 +5311,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Magistral Small 1.2",
     capabilities: ["chat", "function_calling", "reasoning"],
     maxTokens: 128000,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@mistral/ministral-3b-latest" as AllModels,
@@ -3481,7 +5347,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Mistral Large 2411",
     capabilities: ["chat", "function_calling"],
     maxTokens: 131072,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@mistral/mistral-large-2512" as AllModels,
@@ -3493,12 +5359,30 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@mistral/mistral-large-4" as AllModels,
+    provider: "mistral" as Provider,
+    model: "mistral-large-4",
+    displayName: "Mistral Large 4",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@mistral/mistral-large-4-0" as AllModels,
+    provider: "mistral" as Provider,
+    model: "mistral-large-4-0",
+    displayName: "Mistral Large 4 (26.10)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
     id: "@mistral/mistral-large-latest" as AllModels,
     provider: "mistral" as Provider,
     model: "mistral-large-latest",
     displayName: "Mistral Large (Latest)",
-    capabilities: ["chat", "function_calling", "vision"],
-    maxTokens: 262144,
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
     status: "stable" as Status,
   },
   {
@@ -3508,7 +5392,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Mistral Medium 3",
     capabilities: ["chat", "function_calling", "vision"],
     maxTokens: 131072,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@mistral/mistral-medium-2508" as AllModels,
@@ -3517,7 +5401,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Mistral Medium 3.1",
     capabilities: ["chat", "function_calling", "vision"],
     maxTokens: 262144,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@mistral/mistral-medium-2604" as AllModels,
@@ -3553,7 +5437,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Mistral Small 3.2",
     capabilities: ["chat", "function_calling", "vision"],
     maxTokens: 128000,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@mistral/mistral-small-2603" as AllModels,
@@ -3580,7 +5464,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Mistral 7B",
     capabilities: ["chat", "function_calling"],
     maxTokens: 8000,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@mistral/open-mistral-nemo" as AllModels,
@@ -3598,7 +5482,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Mixtral 8x22B",
     capabilities: ["chat", "function_calling"],
     maxTokens: 64000,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@mistral/open-mixtral-8x7b" as AllModels,
@@ -3607,7 +5491,7 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Mixtral 8x7B",
     capabilities: ["chat", "function_calling"],
     maxTokens: 32000,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@mistral/pixtral-12b" as AllModels,
@@ -3643,6 +5527,24 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Voxtral Small (latest)",
     capabilities: ["chat", "function_calling"],
     maxTokens: 32000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@mistral/zai-glm-5-3" as AllModels,
+    provider: "mistral" as Provider,
+    model: "zai-glm-5-3",
+    displayName: "Z.ai GLM 5.3",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@mistral/zai-glm-5-3-flash" as AllModels,
+    provider: "mistral" as Provider,
+    model: "zai-glm-5-3-flash",
+    displayName: "Z.ai GLM 5.3 Flash",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
     status: "stable" as Status,
   },
   {
@@ -3736,6 +5638,24 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@moonshot/kimi-k3.1-pro" as AllModels,
+    provider: "moonshot" as Provider,
+    model: "kimi-k3.1-pro",
+    displayName: "Kimi K3.1 Pro",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@moonshot/kimi-k3.1-pro-highspeed" as AllModels,
+    provider: "moonshot" as Provider,
+    model: "kimi-k3.1-pro-highspeed",
+    displayName: "Kimi K3.1 Pro Highspeed",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
     id: "@moonshot/moonshot-v1-128k" as AllModels,
     provider: "moonshot" as Provider,
     model: "moonshot-v1-128k",
@@ -3761,6 +5681,438 @@ export const modelMetadata: readonly ModelMetadata[] = [
     capabilities: ["chat", "function_calling"],
     maxTokens: 8192,
     status: "deprecated" as Status,
+  },
+  {
+    id: "@nebius/deepseek-ai/DeepSeek-V4-Pro-0813" as AllModels,
+    provider: "nebius" as Provider,
+    model: "deepseek-ai/DeepSeek-V4-Pro-0813",
+    displayName: "DeepSeek V4 Pro 0813 (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 979000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/deepseek-ai/DeepSeek-V4.1-Flash-1017" as AllModels,
+    provider: "nebius" as Provider,
+    model: "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    displayName: "DeepSeek V4.1 Flash 1017 (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/google/gemma-3-27b-it" as AllModels,
+    provider: "nebius" as Provider,
+    model: "google/gemma-3-27b-it",
+    displayName: "Gemma-3-27b-it (Nebius)",
+    capabilities: ["chat", "function_calling"],
+    maxTokens: 110000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/meta-models/muse-spark-open" as AllModels,
+    provider: "nebius" as Provider,
+    model: "meta-models/muse-spark-open",
+    displayName: "Muse Spark Open (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/MiniMaxAI/MiniMax-M3" as AllModels,
+    provider: "nebius" as Provider,
+    model: "MiniMaxAI/MiniMax-M3",
+    displayName: "MiniMax-M3 (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/MiniMaxAI/MiniMax-M3.1-Flash" as AllModels,
+    provider: "nebius" as Provider,
+    model: "MiniMaxAI/MiniMax-M3.1-Flash",
+    displayName: "MiniMax-M3.1-Flash (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/moonshotai/Kimi-K3" as AllModels,
+    provider: "nebius" as Provider,
+    model: "moonshotai/Kimi-K3",
+    displayName: "Kimi K3 (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1024000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/moonshotai/Kimi-K3.1-Pro" as AllModels,
+    provider: "nebius" as Provider,
+    model: "moonshotai/Kimi-K3.1-Pro",
+    displayName: "Kimi K3.1 Pro (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/NousResearch/Hermes-4-405B" as AllModels,
+    provider: "nebius" as Provider,
+    model: "NousResearch/Hermes-4-405B",
+    displayName: "Hermes-4-405B (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 131072,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/nvidia/Nemotron-3_5-Lightning" as AllModels,
+    provider: "nebius" as Provider,
+    model: "nvidia/Nemotron-3_5-Lightning",
+    displayName: "Nemotron 3.5 Lightning 30B A3B (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/nvidia/nemotron-3-super-120b-a12b" as AllModels,
+    provider: "nebius" as Provider,
+    model: "nvidia/nemotron-3-super-120b-a12b",
+    displayName: "Nemotron-3-Super-120B-A12B (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/nvidia/Nemotron-3-Ultra-550b-a55b" as AllModels,
+    provider: "nebius" as Provider,
+    model: "nvidia/Nemotron-3-Ultra-550b-a55b",
+    displayName: "Nemotron 3 Ultra 550B A55B (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/nvidia/Nemotron-3.5-Super-VL" as AllModels,
+    provider: "nebius" as Provider,
+    model: "nvidia/Nemotron-3.5-Super-VL",
+    displayName: "Nemotron 3.5 Super VL 120B A12B (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B" as AllModels,
+    provider: "nebius" as Provider,
+    model: "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+    displayName: "NVIDIA-Nemotron-3-Nano-30B-A3B (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/openai/gpt-oss-120b" as AllModels,
+    provider: "nebius" as Provider,
+    model: "openai/gpt-oss-120b",
+    displayName: "gpt-oss-120b (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 131072,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/Qwen/Qwen3-235B-A22B-Instruct-2507" as AllModels,
+    provider: "nebius" as Provider,
+    model: "Qwen/Qwen3-235B-A22B-Instruct-2507",
+    displayName: "Qwen3 235B A22B Instruct 2507 (Nebius)",
+    capabilities: ["chat", "function_calling"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/Qwen/Qwen3-30B-A3B-Instruct-2507" as AllModels,
+    provider: "nebius" as Provider,
+    model: "Qwen/Qwen3-30B-A3B-Instruct-2507",
+    displayName: "Qwen3-30B-A3B-Instruct-2507 (Nebius)",
+    capabilities: ["chat", "function_calling"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/Qwen/Qwen3.8-27B" as AllModels,
+    provider: "nebius" as Provider,
+    model: "Qwen/Qwen3.8-27B",
+    displayName: "Qwen3.8 27B (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/reflection/beam" as AllModels,
+    provider: "nebius" as Provider,
+    model: "reflection/beam",
+    displayName: "Beam 1.0 501B A23B (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/thinkingmachines/Inkling-2-Small" as AllModels,
+    provider: "nebius" as Provider,
+    model: "thinkingmachines/Inkling-2-Small",
+    displayName: "Inkling 2 Small (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/zai-org/GLM-5.2" as AllModels,
+    provider: "nebius" as Provider,
+    model: "zai-org/GLM-5.2",
+    displayName: "GLM-5.2 (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/zai-org/GLM-5.3" as AllModels,
+    provider: "nebius" as Provider,
+    model: "zai-org/GLM-5.3",
+    displayName: "GLM-5.3 (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1024000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nebius/zai-org/GLM-5.3-Flash" as AllModels,
+    provider: "nebius" as Provider,
+    model: "zai-org/GLM-5.3-Flash",
+    displayName: "GLM-5.3-Flash (Nebius)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1024000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/deepseek/deepseek-v4-flash-0731" as AllModels,
+    provider: "novita" as Provider,
+    model: "deepseek/deepseek-v4-flash-0731",
+    displayName: "DeepSeek V4 Flash 0731 (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/deepseek/deepseek-v4-pro" as AllModels,
+    provider: "novita" as Provider,
+    model: "deepseek/deepseek-v4-pro",
+    displayName: "DeepSeek V4 Pro (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/deepseek/deepseek-v4-pro-0813" as AllModels,
+    provider: "novita" as Provider,
+    model: "deepseek/deepseek-v4-pro-0813",
+    displayName: "DeepSeek V4 Pro 0813 (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/deepseek/deepseek-v4.1-flash" as AllModels,
+    provider: "novita" as Provider,
+    model: "deepseek/deepseek-v4.1-flash",
+    displayName: "DeepSeek V4.1 Flash (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/deepseek/deepseek-v4.1-flash-1017" as AllModels,
+    provider: "novita" as Provider,
+    model: "deepseek/deepseek-v4.1-flash-1017",
+    displayName: "DeepSeek V4.1 Flash 1017 (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/google/gemma-4-31b-it" as AllModels,
+    provider: "novita" as Provider,
+    model: "google/gemma-4-31b-it",
+    displayName: "Gemma 4 31B IT (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/meta-llama/llama-3.3-70b-instruct" as AllModels,
+    provider: "novita" as Provider,
+    model: "meta-llama/llama-3.3-70b-instruct",
+    displayName: "Llama-3.3-70B-Instruct (Novita)",
+    capabilities: ["chat", "function_calling"],
+    maxTokens: 12288,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/moonshotai/kimi-k2.6" as AllModels,
+    provider: "novita" as Provider,
+    model: "moonshotai/kimi-k2.6",
+    displayName: "Kimi K2.6 (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/moonshotai/kimi-k2.7-code" as AllModels,
+    provider: "novita" as Provider,
+    model: "moonshotai/kimi-k2.7-code",
+    displayName: "Kimi K2.7 Code (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/moonshotai/kimi-k3" as AllModels,
+    provider: "novita" as Provider,
+    model: "moonshotai/kimi-k3",
+    displayName: "Kimi K3 (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/moonshotai/kimi-k3.1-pro" as AllModels,
+    provider: "novita" as Provider,
+    model: "moonshotai/kimi-k3.1-pro",
+    displayName: "Kimi K3.1 Pro (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/moonshotai/kimi-k3.1-pro-highspeed" as AllModels,
+    provider: "novita" as Provider,
+    model: "moonshotai/kimi-k3.1-pro-highspeed",
+    displayName: "Kimi K3.1 Pro Highspeed (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/openai/gpt-oss-120b" as AllModels,
+    provider: "novita" as Provider,
+    model: "openai/gpt-oss-120b",
+    displayName: "GPT OSS 120B (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 131072,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/qwen/qwen3.8-27b" as AllModels,
+    provider: "novita" as Provider,
+    model: "qwen/qwen3.8-27b",
+    displayName: "Qwen3.8 27B (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/qwen/qwen3.8-flash" as AllModels,
+    provider: "novita" as Provider,
+    model: "qwen/qwen3.8-flash",
+    displayName: "Qwen3.8 Flash (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/qwen/qwen3.8-max" as AllModels,
+    provider: "novita" as Provider,
+    model: "qwen/qwen3.8-max",
+    displayName: "Qwen3.8 Max (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/qwen/qwen4-max" as AllModels,
+    provider: "novita" as Provider,
+    model: "qwen/qwen4-max",
+    displayName: "Qwen4 Max (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/tencent/hy4" as AllModels,
+    provider: "novita" as Provider,
+    model: "tencent/hy4",
+    displayName: "Hy4 (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/tencent/hy4-flash" as AllModels,
+    provider: "novita" as Provider,
+    model: "tencent/hy4-flash",
+    displayName: "Hy4 flash (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/xiaomimimo/mimo-v2.6-flash" as AllModels,
+    provider: "novita" as Provider,
+    model: "xiaomimimo/mimo-v2.6-flash",
+    displayName: "MiMo-V2.6-Flash (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/xiaomimimo/mimo-v2.6-pro" as AllModels,
+    provider: "novita" as Provider,
+    model: "xiaomimimo/mimo-v2.6-pro",
+    displayName: "MiMo-V2.6-Pro (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/zai-org/glm-5.1" as AllModels,
+    provider: "novita" as Provider,
+    model: "zai-org/glm-5.1",
+    displayName: "GLM-5.1 (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 204800,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/zai-org/glm-5.2" as AllModels,
+    provider: "novita" as Provider,
+    model: "zai-org/glm-5.2",
+    displayName: "GLM-5.2 (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/zai-org/glm-5.3" as AllModels,
+    provider: "novita" as Provider,
+    model: "zai-org/glm-5.3",
+    displayName: "GLM-5.3 (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@novita/zai-org/glm-5.3-flash" as AllModels,
+    provider: "novita" as Provider,
+    model: "zai-org/glm-5.3-flash",
+    displayName: "GLM-5.3-Flash (Novita)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
   },
   {
     id: "@nvidia-nim/deepseek-ai/deepseek-v3.2" as AllModels,
@@ -3853,6 +6205,15 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@nvidia-nim/minimaxai/minimax-m3.1-flash" as AllModels,
+    provider: "nvidia-nim" as Provider,
+    model: "minimaxai/minimax-m3.1-flash",
+    displayName: "MiniMax-M3.1-Flash (NVIDIA NIM)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
     id: "@nvidia-nim/moonshotai/kimi-k3" as AllModels,
     provider: "nvidia-nim" as Provider,
     model: "moonshotai/kimi-k3",
@@ -3886,6 +6247,15 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Nemotron 3.5 Lightning 30B A3B (NVIDIA NIM)",
     capabilities: ["chat", "function_calling", "reasoning"],
     maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@nvidia-nim/nvidia/nemotron-3.5-super-vl-120b-a12b" as AllModels,
+    provider: "nvidia-nim" as Provider,
+    model: "nvidia/nemotron-3.5-super-vl-120b-a12b",
+    displayName: "Nemotron 3.5 Super VL 120B A12B (NVIDIA NIM)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
     status: "stable" as Status,
   },
   {
@@ -4654,6 +7024,60 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@openai/gpt-6-luna" as AllModels,
+    provider: "openai" as Provider,
+    model: "gpt-6-luna",
+    displayName: "GPT-6 Luna",
+    capabilities: ["chat", "function_calling", "vision", "reasoning", "computer_use", "coding"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openai/gpt-6-sol" as AllModels,
+    provider: "openai" as Provider,
+    model: "gpt-6-sol",
+    displayName: "GPT-6 Sol",
+    capabilities: ["chat", "function_calling", "vision", "reasoning", "computer_use", "coding"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openai/gpt-6.1-sol" as AllModels,
+    provider: "openai" as Provider,
+    model: "gpt-6.1-sol",
+    displayName: "GPT-6.1 Sol",
+    capabilities: ["chat", "function_calling", "vision", "reasoning", "computer_use", "coding"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openai/gpt-6.1-terra" as AllModels,
+    provider: "openai" as Provider,
+    model: "gpt-6.1-terra",
+    displayName: "GPT-6.1 Terra",
+    capabilities: ["chat", "function_calling", "vision", "reasoning", "computer_use", "coding"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openai/gpt-6.2-astra" as AllModels,
+    provider: "openai" as Provider,
+    model: "gpt-6.2-astra",
+    displayName: "GPT-6.2 Astra",
+    capabilities: ["chat", "function_calling", "vision", "reasoning", "coding"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openai/gpt-6.2-sol" as AllModels,
+    provider: "openai" as Provider,
+    model: "gpt-6.2-sol",
+    displayName: "GPT-6.2 Sol",
+    capabilities: ["chat", "function_calling", "vision", "reasoning", "computer_use", "coding"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
     id: "@openai/gpt-audio" as AllModels,
     provider: "openai" as Provider,
     model: "gpt-audio",
@@ -4969,10 +7393,46 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@openrouter/aion-labs/aion-3.5" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "aion-labs/aion-3.5",
+    displayName: "AionLabs: Aion 3.5 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/aion-labs/aion-3.5-mini" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "aion-labs/aion-3.5-mini",
+    displayName: "AionLabs: Aion 3.5 Mini (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
     id: "@openrouter/anthropic/claude-fable-5" as AllModels,
     provider: "openrouter" as Provider,
     model: "anthropic/claude-fable-5",
     displayName: "Claude Fable 5 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/anthropic/claude-fable-5.1" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "anthropic/claude-fable-5.1",
+    displayName: "Anthropic: Claude Fable 5.1 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/anthropic/claude-fable-5.2" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "anthropic/claude-fable-5.2",
+    displayName: "Anthropic: Claude Fable 5.2 (OpenRouter)",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 1000000,
     status: "stable" as Status,
@@ -4984,6 +7444,15 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Claude Haiku 4.5 (OR)",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 200000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/anthropic/claude-haiku-5.5" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "anthropic/claude-haiku-5.5",
+    displayName: "Anthropic: Claude Haiku 5.5 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
     status: "stable" as Status,
   },
   {
@@ -5032,6 +7501,15 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@openrouter/anthropic/claude-opus-5.5" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "anthropic/claude-opus-5.5",
+    displayName: "Anthropic: Claude Opus 5.5 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
     id: "@openrouter/anthropic/claude-sonnet-4" as AllModels,
     provider: "openrouter" as Provider,
     model: "anthropic/claude-sonnet-4",
@@ -5059,12 +7537,48 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@openrouter/anthropic/claude-sonnet-5.5" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "anthropic/claude-sonnet-5.5",
+    displayName: "Anthropic: Claude Sonnet 5.5 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/baidu/ernie-5.5-flash-preview:free" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "baidu/ernie-5.5-flash-preview:free",
+    displayName: "Baidu: ERNIE-5.5-Flash-Preview (free) (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1024000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/baidu/ernie-light-dt-1.0-intl" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "baidu/ernie-light-dt-1.0-intl",
+    displayName: "Baidu: ERNIE-Light-DT-1.0 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1024000,
+    status: "stable" as Status,
+  },
+  {
     id: "@openrouter/bytedance-seed/seed-2-1-turbo" as AllModels,
     provider: "openrouter" as Provider,
     model: "bytedance-seed/seed-2-1-turbo",
     displayName: "Seed 2.1 Turbo (OpenRouter)",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/cohere/command-a-plus" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "cohere/command-a-plus",
+    displayName: "Cohere: Command A+ (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 192000,
     status: "stable" as Status,
   },
   {
@@ -5109,6 +7623,42 @@ export const modelMetadata: readonly ModelMetadata[] = [
     model: "deepseek/deepseek-v4-pro-0813",
     displayName: "DeepSeek V4 Pro 0813 (OpenRouter)",
     capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/deepseek/deepseek-v4.1-flash" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "deepseek/deepseek-v4.1-flash",
+    displayName: "DeepSeek: DeepSeek V4.1 Flash (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/deepseek/deepseek-v4.1-flash-1017" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "deepseek/deepseek-v4.1-flash-1017",
+    displayName: "DeepSeek: DeepSeek V4.1 Flash 1017 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/elorian/glimpse" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "elorian/glimpse",
+    displayName: "Elorian: Glimpse (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/fireworks/ember-1" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "fireworks/ember-1",
+    displayName: "Fireworks: Ember-1 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 1048576,
     status: "stable" as Status,
   },
@@ -5167,12 +7717,165 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@openrouter/google/gemini-3.8-flash" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "google/gemini-3.8-flash",
+    displayName: "Google: Gemini 3.8 Flash (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/google/gemini-4-argon" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "google/gemini-4-argon",
+    displayName: "Google: Gemini 4 Argon (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/google/gemini-4-carbon" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "google/gemini-4-carbon",
+    displayName: "Google: Gemini 4 Carbon (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/google/gemini-4-hydrogen" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "google/gemini-4-hydrogen",
+    displayName: "Google: Gemini 4 Hydrogen (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/google/gemini-4-neon" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "google/gemini-4-neon",
+    displayName: "Google: Gemini 4 Neon (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/inception/mercury-2.5" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "inception/mercury-2.5",
+    displayName: "Inception: Mercury 2.5 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 260000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/inclusionai/ling-3.0-flash-sante:free" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "inclusionai/ling-3.0-flash-sante:free",
+    displayName: "inclusionAI: Ling 3.0 Flash Sante (free) (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/inclusionai/ling-3.0-flash-vl" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "inclusionai/ling-3.0-flash-vl",
+    displayName: "inclusionAI: Ling 3.0 Flash VL (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/inclusionai/ling-3.1-flash" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "inclusionai/ling-3.1-flash",
+    displayName: "inclusionAI: Ling 3.1 Flash (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/inclusionai/ling-3.2-flash:free" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "inclusionai/ling-3.2-flash:free",
+    displayName: "inclusionAI: Ling 3.2 Flash (free) (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/inference-net/schematron-v2-small" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "inference-net/schematron-v2-small",
+    displayName: "Inference.net: Schematron V2 Small (OpenRouter)",
+    capabilities: ["chat"],
+    maxTokens: 128000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/inference-net/schematron-v2-turbo" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "inference-net/schematron-v2-turbo",
+    displayName: "Inference.net: Schematron V2 Turbo (OpenRouter)",
+    capabilities: ["chat"],
+    maxTokens: 128000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/kt/midm-k-3.0-pro" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "kt/midm-k-3.0-pro",
+    displayName: "KT: Mi:dm K 3.0 Pro (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 261795,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/liquid/lfm-2.5-24b-a2b" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "liquid/lfm-2.5-24b-a2b",
+    displayName: "LiquidAI: LFM2.5-24B-A2B (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 128000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/liquid/lfm-3-1.7b" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "liquid/lfm-3-1.7b",
+    displayName: "LiquidAI: LFM3-1.7B (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/liquid/lfm-3-1.7b:free" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "liquid/lfm-3-1.7b:free",
+    displayName: "LiquidAI: LFM3-1.7B (free) (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
     id: "@openrouter/meta-llama/llama-3.3-70b-instruct" as AllModels,
     provider: "openrouter" as Provider,
     model: "meta-llama/llama-3.3-70b-instruct",
     displayName: "Llama 3.3 70B Instruct",
     capabilities: ["chat", "function_calling"],
     maxTokens: 131072,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/meta/muse-ember" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "meta/muse-ember",
+    displayName: "Meta: Muse Ember (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
     status: "stable" as Status,
   },
   {
@@ -5194,10 +7897,46 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@openrouter/meta/muse-spark-1.3" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "meta/muse-spark-1.3",
+    displayName: "Meta: Muse Spark 1.3 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/meta/muse-spark-open" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "meta/muse-spark-open",
+    displayName: "Meta: Muse Spark Open (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/meta/muse-wonder" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "meta/muse-wonder",
+    displayName: "Meta: Muse Wonder (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
     id: "@openrouter/minimax/minimax-m3" as AllModels,
     provider: "openrouter" as Provider,
     model: "minimax/minimax-m3",
     displayName: "MiniMax-M3 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/minimax/minimax-m3.1-flash" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "minimax/minimax-m3.1-flash",
+    displayName: "MiniMax: MiniMax M3.1 Flash (OpenRouter)",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 1048576,
     status: "stable" as Status,
@@ -5209,6 +7948,42 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Mistral Large",
     capabilities: ["chat", "function_calling"],
     maxTokens: 128000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/mistralai/mistral-large-4-0" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "mistralai/mistral-large-4-0",
+    displayName: "Mistral: Mistral Large 4 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/mistralai/pixtral-large-2502" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "mistralai/pixtral-large-2502",
+    displayName: "Mistral: Pixtral Large 2502 (OpenRouter)",
+    capabilities: ["chat", "vision"],
+    maxTokens: 128000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/moondream/moondream3-preview" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "moondream/moondream3-preview",
+    displayName: "Moondream: Moondream 3 Preview (OpenRouter)",
+    capabilities: ["chat", "vision", "reasoning"],
+    maxTokens: 32000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/moondream/moondream3.1-9b-a2b" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "moondream/moondream3.1-9b-a2b",
+    displayName: "Moondream: Moondream 3.1 (OpenRouter)",
+    capabilities: ["chat", "vision", "reasoning"],
+    maxTokens: 32000,
     status: "stable" as Status,
   },
   {
@@ -5239,6 +8014,51 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@openrouter/moonshotai/kimi-k3.1-pro" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "moonshotai/kimi-k3.1-pro",
+    displayName: "MoonshotAI: Kimi K3.1 Pro (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/motif-technologies/motif-3" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "motif-technologies/motif-3",
+    displayName: "Motif Technologies: Motif 3 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/nex-agi/nex-n2.5-mini" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "nex-agi/nex-n2.5-mini",
+    displayName: "Nex AGI: Nex-N2.5-Mini (OpenRouter)",
+    capabilities: ["chat", "vision", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/nex-agi/nex-n2.5-pro" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "nex-agi/nex-n2.5-pro",
+    displayName: "Nex AGI: Nex-N2.5-Pro (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/nex-agi/nex-n2.6" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "nex-agi/nex-n2.6",
+    displayName: "Nex AGI: Nex-N2.6 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
     id: "@openrouter/nvidia/nemotron-3-ultra-550b-a55b" as AllModels,
     provider: "openrouter" as Provider,
     model: "nvidia/nemotron-3-ultra-550b-a55b",
@@ -5254,6 +8074,24 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Nemotron 3.5 Lightning 30B A3B (OpenRouter)",
     capabilities: ["chat", "function_calling", "reasoning"],
     maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/nvidia/nemotron-3.5-super-vl" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "nvidia/nemotron-3.5-super-vl",
+    displayName: "NVIDIA: Nemotron 3.5 Super VL (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/nvidia/nemotron-3.5-super-vl:free" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "nvidia/nemotron-3.5-super-vl:free",
+    displayName: "NVIDIA: Nemotron 3.5 Super VL (free) (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
     status: "stable" as Status,
   },
   {
@@ -5374,6 +8212,114 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@openrouter/openai/gpt-6-astra" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "openai/gpt-6-astra",
+    displayName: "OpenAI: GPT-6 Astra (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/openai/gpt-6-astra-pro" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "openai/gpt-6-astra-pro",
+    displayName: "OpenAI: GPT-6 Astra Pro (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/openai/gpt-6-luna" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "openai/gpt-6-luna",
+    displayName: "OpenAI: GPT-6 Luna (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/openai/gpt-6-luna-pro" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "openai/gpt-6-luna-pro",
+    displayName: "OpenAI: GPT-6 Luna Pro (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/openai/gpt-6-sol" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "openai/gpt-6-sol",
+    displayName: "OpenAI: GPT-6 Sol (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/openai/gpt-6-sol-pro" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "openai/gpt-6-sol-pro",
+    displayName: "OpenAI: GPT-6 Sol Pro (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/openai/gpt-6.1-terra" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "openai/gpt-6.1-terra",
+    displayName: "OpenAI: GPT-6.1 Terra (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/openai/gpt-6.1-terra-pro" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "openai/gpt-6.1-terra-pro",
+    displayName: "OpenAI: GPT-6.1 Terra Pro (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/openai/gpt-6.2-astra" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "openai/gpt-6.2-astra",
+    displayName: "OpenAI: GPT-6.2 Astra (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/openai/gpt-6.2-astra-pro" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "openai/gpt-6.2-astra-pro",
+    displayName: "OpenAI: GPT-6.2 Astra Pro (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/openai/gpt-6.2-sol" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "openai/gpt-6.2-sol",
+    displayName: "OpenAI: GPT-6.2 Sol (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/openai/gpt-6.2-sol-pro" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "openai/gpt-6.2-sol-pro",
+    displayName: "OpenAI: GPT-6.2 Sol Pro (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
     id: "@openrouter/openai/text-embedding-3-large" as AllModels,
     provider: "openrouter" as Provider,
     model: "openai/text-embedding-3-large",
@@ -5389,6 +8335,51 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Text Embedding Ada 002",
     capabilities: ["embeddings"],
     maxTokens: 8191,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/particle-ai/particle-1" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "particle-ai/particle-1",
+    displayName: "Particle AI: Particle-1 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/particle-ai/particle-1:free" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "particle-ai/particle-1:free",
+    displayName: "Particle AI: Particle-1 (free) (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/perceptron/perceptron-mk1.5" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "perceptron/perceptron-mk1.5",
+    displayName: "Perceptron: Perceptron Mk1.5 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 36864,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/prism-ml/ternary-bonsai-2-27b" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "prism-ml/ternary-bonsai-2-27b",
+    displayName: "PrismML: Ternary Bonsai 2 27B (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/prism-ml/ternary-bonsai-2-9b" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "prism-ml/ternary-bonsai-2-9b",
+    displayName: "PrismML: Ternary Bonsai 2 9B (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 262144,
     status: "stable" as Status,
   },
   {
@@ -5437,6 +8428,96 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@openrouter/qwen/qwen3.8-max-0902" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "qwen/qwen3.8-max-0902",
+    displayName: "Qwen: Qwen3.8 Max (0902) (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/qwen/qwen3.8-max-prime" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "qwen/qwen3.8-max-prime",
+    displayName: "Qwen: Qwen3.8 Max Prime (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/qwen/qwen3.8-omni-flash" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "qwen/qwen3.8-omni-flash",
+    displayName: "Qwen: Qwen3.8 Omni Flash (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/qwen/qwen4-max" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "qwen/qwen4-max",
+    displayName: "Qwen: Qwen4 Max (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/radixark/daisyrose-27b" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "radixark/daisyrose-27b",
+    displayName: "RadixArk: DaisyRose 27B (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/recursive/flint-v1.0:free" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "recursive/flint-v1.0:free",
+    displayName: "Recursive: Flint (free) (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/reflection/beam-1.0-501b-a23b" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "reflection/beam-1.0-501b-a23b",
+    displayName: "Reflection: Beam 1.0 501B A23B (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/ricursiveai/ripple-65b-preview" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "ricursiveai/ripple-65b-preview",
+    displayName: "Ricursive: Ripple 65B Preview (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/sakana/fugu-max" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "sakana/fugu-max",
+    displayName: "Sakana: Fugu Max (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/sakana/fugu-ultra-v2" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "sakana/fugu-ultra-v2",
+    displayName: "Sakana: Fugu Ultra v2 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
     id: "@openrouter/sakana/sakana-namazu" as AllModels,
     provider: "openrouter" as Provider,
     model: "sakana/sakana-namazu",
@@ -5455,12 +8536,39 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@openrouter/stepfun/step-5-preview" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "stepfun/step-5-preview",
+    displayName: "StepFun: Step 5 Preview (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
     id: "@openrouter/tencent/hy-mt2-30b-a3b" as AllModels,
     provider: "openrouter" as Provider,
     model: "tencent/hy-mt2-30b-a3b",
     displayName: "Hy-MT2-30B-A3B (OpenRouter)",
     capabilities: ["chat"],
     maxTokens: 8192,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/tencent/hy4" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "tencent/hy4",
+    displayName: "Tencent: Hy4 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/tencent/hy4-flash" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "tencent/hy4-flash",
+    displayName: "Tencent: Hy4 flash (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
     status: "stable" as Status,
   },
   {
@@ -5473,12 +8581,84 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@openrouter/thinkingmachines/inkling-2-mini" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "thinkingmachines/inkling-2-mini",
+    displayName: "Thinking Machines: Inkling 2 Mini (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/thinkingmachines/inkling-2-small" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "thinkingmachines/inkling-2-small",
+    displayName: "Thinking Machines: Inkling 2 Small (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
     id: "@openrouter/thinkingmachines/inkling-small" as AllModels,
     provider: "openrouter" as Provider,
     model: "thinkingmachines/inkling-small",
     displayName: "Inkling Small (OpenRouter)",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/unbiased/pareto" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "unbiased/pareto",
+    displayName: "Pareto (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/unbiased/pareto-26.10" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "unbiased/pareto-26.10",
+    displayName: "Pareto 26.10 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/unbiased/pareto-26.10-preview" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "unbiased/pareto-26.10-preview",
+    displayName: "Pareto 26.10 Preview (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/unbiased/pareto-26.9" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "unbiased/pareto-26.9",
+    displayName: "Pareto 26.9 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/upstage/solar-mini-4-5" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "upstage/solar-mini-4-5",
+    displayName: "Upstage: Solar Mini 4.5 (Preview) (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 524288,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/upstage/solar-mini4" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "upstage/solar-mini4",
+    displayName: "Upstage: Solar Mini 4 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 524288,
     status: "stable" as Status,
   },
   {
@@ -5527,6 +8707,51 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@openrouter/x-ai/grok-4.7" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "x-ai/grok-4.7",
+    displayName: "SpaceXAI: Grok 4.7 (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 500000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/xiaomi/mimo-v2.6-flash" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "xiaomi/mimo-v2.6-flash",
+    displayName: "Xiaomi: MiMo-V2.6-Flash (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/xiaomi/mimo-v2.6-flash-mopd" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "xiaomi/mimo-v2.6-flash-mopd",
+    displayName: "Xiaomi: MiMo-V2.6-Flash-MOPD (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/xiaomi/mimo-v2.6-pro" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "xiaomi/mimo-v2.6-pro",
+    displayName: "Xiaomi: MiMo-V2.6-Pro (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1050000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/xiaomi/mimo-v2.6-pro-ultraspeed" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "xiaomi/mimo-v2.6-pro-ultraspeed",
+    displayName: "Xiaomi: MiMo-V2.6-Pro-UltraSpeed (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
     id: "@openrouter/z-ai/glm-5.2" as AllModels,
     provider: "openrouter" as Provider,
     model: "z-ai/glm-5.2",
@@ -5542,6 +8767,33 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "GLM-5.3 (OpenRouter)",
     capabilities: ["chat", "function_calling", "reasoning"],
     maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/z-ai/glm-5.3-flashx" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "z-ai/glm-5.3-flashx",
+    displayName: "Z.ai: GLM 5.3 FlashX (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/z-ai/glm-5.3-flashx-legal" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "z-ai/glm-5.3-flashx-legal",
+    displayName: "Z.ai: GLM 5.3 FlashX Legal (OpenRouter)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@openrouter/z-ai/glm-5.3-prime" as AllModels,
+    provider: "openrouter" as Provider,
+    model: "z-ai/glm-5.3-prime",
+    displayName: "Z.ai: GLM 5.3 Prime (OpenRouter)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1000000,
     status: "stable" as Status,
   },
   {
@@ -5605,6 +8857,24 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "GLM-5.2",
     capabilities: ["chat", "function_calling", "reasoning"],
     maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@qwen/kimi-k3.1-pro" as AllModels,
+    provider: "qwen" as Provider,
+    model: "kimi-k3.1-pro",
+    displayName: "Kimi K3.1 Pro",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@qwen/kimi-k3.1-pro-prime" as AllModels,
+    provider: "qwen" as Provider,
+    model: "kimi-k3.1-pro-prime",
+    displayName: "Kimi K3.1 Pro Prime",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
     status: "stable" as Status,
   },
   {
@@ -6022,10 +9292,37 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@qwen/qwen3.7-text-embedding" as AllModels,
+    provider: "qwen" as Provider,
+    model: "qwen3.7-text-embedding",
+    displayName: "Qwen3.7 Text Embedding",
+    capabilities: ["embeddings"],
+    maxTokens: 128000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@qwen/qwen3.8-flash" as AllModels,
+    provider: "qwen" as Provider,
+    model: "qwen3.8-flash",
+    displayName: "Qwen3.8 Flash",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
     id: "@qwen/qwen3.8-max" as AllModels,
     provider: "qwen" as Provider,
     model: "qwen3.8-max",
     displayName: "Qwen3.8 Max",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@qwen/qwen4-max" as AllModels,
+    provider: "qwen" as Provider,
+    model: "qwen4-max",
+    displayName: "Qwen4 Max",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 1000000,
     status: "stable" as Status,
@@ -6047,6 +9344,78 @@ export const modelMetadata: readonly ModelMetadata[] = [
     capabilities: ["embeddings"],
     maxTokens: 8192,
     status: "stable" as Status,
+  },
+  {
+    id: "@sambanova/gemma-4-31B-it" as AllModels,
+    provider: "sambanova" as Provider,
+    model: "gemma-4-31B-it",
+    displayName: "Gemma 4 31B IT (SambaNova)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 131072,
+    status: "stable" as Status,
+  },
+  {
+    id: "@sambanova/GLM-5.3" as AllModels,
+    provider: "sambanova" as Provider,
+    model: "GLM-5.3",
+    displayName: "GLM-5.3 (SambaNova)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@sambanova/gpt-oss-120b" as AllModels,
+    provider: "sambanova" as Provider,
+    model: "gpt-oss-120b",
+    displayName: "GPT OSS 120B (SambaNova)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 131072,
+    status: "stable" as Status,
+  },
+  {
+    id: "@sambanova/MiniMax-M3.1-Flash" as AllModels,
+    provider: "sambanova" as Provider,
+    model: "MiniMax-M3.1-Flash",
+    displayName: "MiniMax-M3.1-Flash (SambaNova)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "beta" as Status,
+  },
+  {
+    id: "@tencent/hy3" as AllModels,
+    provider: "tencent" as Provider,
+    model: "hy3",
+    displayName: "Hy3",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 256000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@tencent/hy4" as AllModels,
+    provider: "tencent" as Provider,
+    model: "hy4",
+    displayName: "Hy4",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@tencent/hy4-flash" as AllModels,
+    provider: "tencent" as Provider,
+    model: "hy4-flash",
+    displayName: "Hy4 flash",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@tencent/hy4-preview" as AllModels,
+    provider: "tencent" as Provider,
+    model: "hy4-preview",
+    displayName: "Hy4 preview",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1024000,
+    status: "preview" as Status,
   },
   {
     id: "@together/deepseek-ai/DeepSeek-V3" as AllModels,
@@ -6085,6 +9454,33 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@together/deepseek-ai/DeepSeek-V4.1-Flash-1017" as AllModels,
+    provider: "together" as Provider,
+    model: "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    displayName: "DeepSeek V4.1 Flash 1017 (Together)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@together/deepseek-ai/DeepSeek-V4.1-Flash-1017-fast" as AllModels,
+    provider: "together" as Provider,
+    model: "deepseek-ai/DeepSeek-V4.1-Flash-1017-fast",
+    displayName: "DeepSeek V4.1 Flash 1017 Fast (Together)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@together/elorian-labs/glimpse-1.0" as AllModels,
+    provider: "together" as Provider,
+    model: "elorian-labs/glimpse-1.0",
+    displayName: "Glimpse 1.0 (Together)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 262144,
+    status: "stable" as Status,
+  },
+  {
     id: "@together/meta-llama/Llama-3.1-8B-Instruct-Turbo" as AllModels,
     provider: "together" as Provider,
     model: "meta-llama/Llama-3.1-8B-Instruct-Turbo",
@@ -6112,12 +9508,30 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@together/meta-models/Muse-Spark-Open-816B-A42B" as AllModels,
+    provider: "together" as Provider,
+    model: "meta-models/Muse-Spark-Open-816B-A42B",
+    displayName: "Muse Spark Open (Together)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
     id: "@together/MiniMaxAI/MiniMax-M3" as AllModels,
     provider: "together" as Provider,
     model: "MiniMaxAI/MiniMax-M3",
     displayName: "MiniMax-M3 (Together)",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 524288,
+    status: "stable" as Status,
+  },
+  {
+    id: "@together/MiniMaxAI/MiniMax-M3.1-Flash" as AllModels,
+    provider: "together" as Provider,
+    model: "MiniMaxAI/MiniMax-M3.1-Flash",
+    displayName: "MiniMax-M3.1-Flash (Together)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
     status: "stable" as Status,
   },
   {
@@ -6139,12 +9553,30 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@together/moonshotai/Kimi-K3.1-Pro" as AllModels,
+    provider: "together" as Provider,
+    model: "moonshotai/Kimi-K3.1-Pro",
+    displayName: "Kimi K3.1 Pro (Together)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
     id: "@together/nvidia/nemotron-3-ultra-550b-a55b" as AllModels,
     provider: "together" as Provider,
     model: "nvidia/nemotron-3-ultra-550b-a55b",
     displayName: "Nemotron 3 Ultra 550B A55B (Together)",
     capabilities: ["chat", "function_calling", "reasoning"],
     maxTokens: 512300,
+    status: "stable" as Status,
+  },
+  {
+    id: "@together/nvidia/NVIDIA-Nemotron-3.5-Super-VL" as AllModels,
+    provider: "together" as Provider,
+    model: "nvidia/NVIDIA-Nemotron-3.5-Super-VL",
+    displayName: "Nemotron 3.5 Super VL 120B A12B (Together)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 262144,
     status: "stable" as Status,
   },
   {
@@ -6184,12 +9616,57 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@together/Qwen/Qwen4-Max" as AllModels,
+    provider: "together" as Provider,
+    model: "Qwen/Qwen4-Max",
+    displayName: "Qwen4 Max (Together)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@together/reflection/Beam-1.0-501B-A23B" as AllModels,
+    provider: "together" as Provider,
+    model: "reflection/Beam-1.0-501B-A23B",
+    displayName: "Beam 1.0 501B A23B (Together)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@together/ricursive-ai/Ripple-65B-Preview" as AllModels,
+    provider: "together" as Provider,
+    model: "ricursive-ai/Ripple-65B-Preview",
+    displayName: "Ripple 65B Preview (Together)",
+    capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 131072,
+    status: "preview" as Status,
+  },
+  {
+    id: "@together/tencent/Hy4" as AllModels,
+    provider: "together" as Provider,
+    model: "tencent/Hy4",
+    displayName: "Hy4 (Together)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
     id: "@together/thinkingmachines/Inkling" as AllModels,
     provider: "together" as Provider,
     model: "thinkingmachines/Inkling",
     displayName: "Inkling (Together)",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 524288,
+    status: "stable" as Status,
+  },
+  {
+    id: "@together/thinkingmachines/Inkling-2-Small" as AllModels,
+    provider: "together" as Provider,
+    model: "thinkingmachines/Inkling-2-Small",
+    displayName: "Inkling 2 Small (Together)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
     status: "stable" as Status,
   },
   {
@@ -6220,12 +9697,30 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@typesafe/jev-1.13.0" as AllModels,
+    provider: "typesafe" as Provider,
+    model: "jev-1.13.0",
+    displayName: "Jev 1.13",
+    capabilities: ["decisions"],
+    maxTokens: 64000,
+    status: "stable" as Status,
+  },
+  {
     id: "@vertex-ai/claude-3-7-sonnet@20250219" as AllModels,
     provider: "vertex-ai" as Provider,
     model: "claude-3-7-sonnet@20250219",
     displayName: "Claude 3.7 Sonnet",
     capabilities: ["chat", "function_calling", "vision"],
     maxTokens: 200000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@vertex-ai/claude-fable-5-2@default" as AllModels,
+    provider: "vertex-ai" as Provider,
+    model: "claude-fable-5-2@default",
+    displayName: "Claude Fable 5.2 (Vertex)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
     status: "stable" as Status,
   },
   {
@@ -6244,6 +9739,15 @@ export const modelMetadata: readonly ModelMetadata[] = [
     displayName: "Claude Haiku 4.5 (Vertex)",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 200000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@vertex-ai/claude-haiku-5-5@default" as AllModels,
+    provider: "vertex-ai" as Provider,
+    model: "claude-haiku-5-5@default",
+    displayName: "Claude Haiku 5.5 (Vertex)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
     status: "stable" as Status,
   },
   {
@@ -6404,6 +9908,42 @@ export const modelMetadata: readonly ModelMetadata[] = [
     provider: "vertex-ai" as Provider,
     model: "gemini-3.7-flash",
     displayName: "Gemini 3.7 Flash (Vertex)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@vertex-ai/gemini-4-argon" as AllModels,
+    provider: "vertex-ai" as Provider,
+    model: "gemini-4-argon",
+    displayName: "Gemini 4 Argon (Vertex)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@vertex-ai/gemini-4-carbon" as AllModels,
+    provider: "vertex-ai" as Provider,
+    model: "gemini-4-carbon",
+    displayName: "Gemini 4 Carbon (Vertex)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@vertex-ai/gemini-4-hydrogen" as AllModels,
+    provider: "vertex-ai" as Provider,
+    model: "gemini-4-hydrogen",
+    displayName: "Gemini 4 Hydrogen (Vertex)",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1048576,
+    status: "stable" as Status,
+  },
+  {
+    id: "@vertex-ai/gemini-4-neon" as AllModels,
+    provider: "vertex-ai" as Provider,
+    model: "gemini-4-neon",
+    displayName: "Gemini 4 Neon (Vertex)",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 1048576,
     status: "stable" as Status,
@@ -6616,13 +10156,22 @@ export const modelMetadata: readonly ModelMetadata[] = [
     status: "stable" as Status,
   },
   {
+    id: "@xai/grok-4.7" as AllModels,
+    provider: "xai" as Provider,
+    model: "grok-4.7",
+    displayName: "Grok 4.7",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 500000,
+    status: "stable" as Status,
+  },
+  {
     id: "@xai/grok-build-0.1" as AllModels,
     provider: "xai" as Provider,
     model: "grok-build-0.1",
     displayName: "Grok Build 0.1",
     capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 256000,
-    status: "stable" as Status,
+    status: "deprecated" as Status,
   },
   {
     id: "@xai/grok-code-fast-1" as AllModels,
@@ -6756,6 +10305,33 @@ export const modelMetadata: readonly ModelMetadata[] = [
     model: "glm-5.3",
     displayName: "GLM-5.3",
     capabilities: ["chat", "function_calling", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@zai/glm-5.3-flash" as AllModels,
+    provider: "zai" as Provider,
+    model: "glm-5.3-flash",
+    displayName: "GLM-5.3-Flash",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@zai/glm-5.3-flashx" as AllModels,
+    provider: "zai" as Provider,
+    model: "glm-5.3-flashx",
+    displayName: "GLM-5.3-FlashX",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
+    maxTokens: 1000000,
+    status: "stable" as Status,
+  },
+  {
+    id: "@zai/glm-5.3-flashx-legal" as AllModels,
+    provider: "zai" as Provider,
+    model: "glm-5.3-flashx-legal",
+    displayName: "GLM-5.3-FlashX-Legal",
+    capabilities: ["chat", "function_calling", "vision", "reasoning"],
     maxTokens: 1000000,
     status: "stable" as Status,
   },

@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"strings"
-
-	"github.com/everstacklabs/everstack/internal/lib/handlers/gateway/fastpath"
 )
 
 // ModelRoute describes how to route a model request to a provider.
@@ -92,20 +90,11 @@ func (r *Router) ResolveWithContext(ctx context.Context, requestedModel string) 
 		requestedModel = bareModel
 	}
 
-	// 0. Check FastPath RouterCache
-	// This avoids regex matching and map iteration for frequently accessed models.
-	if engine := fastpath.GetGlobalEngine(); engine != nil && engine.RouterCache() != nil {
-		if info, ok := engine.RouterCache().Resolve(requestedModel); ok {
-			// Type assert the provider
-			if p, ok := info.ProviderRef.(Provider); ok {
-				return p, ModelRoute{
-					ProviderName: info.Name,
-					ModelName:    info.ModelName,
-					IsCustom:     info.IsCustom,
-				}, nil
-			}
-		}
-	}
+	// The process-wide fast-path RouterCache is deliberately NOT consulted
+	// here. It stores provider instances, and a router must only hand out
+	// instances from its own registry: routers are built per tenant and
+	// rebuilt when keys change, so an instance cached from another bundle
+	// carries that bundle's credentials and outlives key rotation.
 
 	// 1. Check custom models first (highest priority for user-configured models)
 	if r.customResolver != nil {

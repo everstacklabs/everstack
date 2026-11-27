@@ -61,7 +61,7 @@ function dataTypeBadge(type: string) {
     numeric: 'bg-blue-500/15 text-blue-300 light:text-blue-600',
     boolean: 'bg-emerald-500/15 text-emerald-300 light:text-emerald-600',
     categorical: 'bg-fuchsia-500/15 text-fuchsia-300 light:text-fuchsia-700',
-    llm_judge: 'bg-amber-500/15 text-amber-300 light:text-amber-700',
+    llm_judge: 'bg-warning-surface-strong text-warning',
     code_scorer: 'bg-cyan-500/15 text-cyan-300 light:text-cyan-700',
   }
 
@@ -338,7 +338,7 @@ function ScoreConfigsPageContent() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-danger-solid hover:bg-danger-solid/90"
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? 'Deleting...' : 'Delete'}

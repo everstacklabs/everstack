@@ -2,6 +2,7 @@ package interop
 
 import (
 	"encoding/json"
+	"mime"
 	"net/http"
 	"os"
 	"strings"
@@ -23,6 +24,7 @@ type Router interface {
 // fallback - these settings gate externally reachable surfaces.
 type Handlers struct {
 	store      *Store
+	runs       *RunService
 	sharedMode bool // true in managed cloud (multi-tenant); false self-hosted
 	adkCapable bool // true when the ADK runtime is constructed (sandbox backend present)
 }
@@ -32,7 +34,7 @@ type Handlers struct {
 // runtime is available on this instance (it is ungated/universal - on wherever a
 // sandbox backend exists).
 func NewHandlers(store *Store, sharedMode bool, adkCapable bool) *Handlers {
-	return &Handlers{store: store, sharedMode: sharedMode, adkCapable: adkCapable}
+	return &Handlers{store: store, runs: NewRunService(store), sharedMode: sharedMode, adkCapable: adkCapable}
 }
 
 // Mount registers the admin routes.
@@ -43,13 +45,16 @@ func NewHandlers(store *Store, sharedMode bool, adkCapable bool) *Handlers {
 // gateway-transcoded RPC is swallowed and 404s. /api/* has no such catch-all,
 // mirroring how /mcp and /api/v1/storage/* avoid the same collision.
 func (h *Handlers) Mount(r Router) {
-	r.HandleFunc("/api/interop/a2a/published", h.publishedList)
-	r.HandleFunc("/api/interop/a2a/published/{agentId}", h.publishedSet)
-	r.HandleFunc("/api/interop/mcp/tools", h.toolSettings)
-	r.HandleFunc("/api/interop/mcp/tools/{tool}", h.toolSet)
-	r.HandleFunc("/api/interop/remotes", h.remotes)
-	r.HandleFunc("/api/interop/remotes/{id}", h.remoteDelete)
-	r.HandleFunc("/api/interop/adk/status", h.adkStatus)
+	r.HandleFunc("/api/interop/a2a/published", h.dashboardOnly(jsonWrites(h.publishedList)))
+	r.HandleFunc("/api/interop/a2a/published/{agentId}", h.dashboardOnly(jsonWrites(h.publishedSet)))
+	r.HandleFunc("/api/interop/mcp/tools", h.dashboardOnly(jsonWrites(h.toolSettings)))
+	r.HandleFunc("/api/interop/mcp/tools/{tool}", h.dashboardOnly(jsonWrites(h.toolSet)))
+	r.HandleFunc("/api/interop/remotes", h.dashboardOnly(jsonWrites(h.remotes)))
+	r.HandleFunc("/api/interop/remotes/{id}", h.dashboardOnly(jsonWrites(h.remoteDelete)))
+	r.HandleFunc("/api/interop/adk/status", h.dashboardOnly(jsonWrites(h.adkStatus)))
+	r.HandleFunc("/api/interop/runs", h.dashboardOnly(jsonWrites(h.externalRuns)))
+	r.HandleFunc("/api/interop/runs/{id}", h.dashboardOnly(jsonWrites(h.externalRun)))
+	r.HandleFunc("/api/interop/runs/{id}/{action}", h.dashboardOnly(jsonWrites(h.externalRunAction)))
 	// No adk/enabled route: ADK is a universal capability - not gated, no off-switch.
 }
 
@@ -64,6 +69,25 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+// jsonWrites refuses state-changing requests that are not application/json.
+// A browser cannot send that content type cross-site without a CORS
+// preflight, so form and text/plain posts from another site never reach a
+// handler. It does not replace an origin allowlist: a deployment whose CORS
+// reflects any origin with credentials is still exposed.
+func jsonWrites(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet, http.MethodHead, http.MethodOptions:
+		default:
+			if media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || media != "application/json" {
+				writeJSON(w, http.StatusUnsupportedMediaType, map[string]string{"error": "json_required"})
+				return
+			}
+		}
+		next(w, r)
+	}
 }
 
 // requireTenant resolves the tenant or writes 401 and returns "".
@@ -178,20 +202,21 @@ func (h *Handlers) remotes(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]interface{}{"remotes": list})
 	case http.MethodPost:
 		var body struct {
-			Name      string `json:"name"`
-			Endpoint  string `json:"endpoint"`
-			AuthToken string `json:"auth_token"`
+			Name          string  `json:"name"`
+			Endpoint      string  `json:"endpoint"`
+			AuthToken     *string `json:"auth_token"`
+			Protocol      string  `json:"protocol"`
+			RoutingTenant string  `json:"routing_tenant"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+		if !readInteropBody(w, r, &body) {
 			return
 		}
 		if strings.TrimSpace(body.Name) == "" || strings.TrimSpace(body.Endpoint) == "" {
 			http.Error(w, `{"error":"name and endpoint are required"}`, http.StatusBadRequest)
 			return
 		}
-		if err := h.store.UpsertRemoteAgent(r.Context(), tenant, body.Name, body.Endpoint, body.AuthToken); err != nil {
-			http.Error(w, `{"error":"failed to save remote"}`, http.StatusInternalServerError)
+		if err := h.store.SaveRemote(r.Context(), tenant, body.Name, body.Endpoint, body.Protocol, body.RoutingTenant, body.AuthToken); err != nil {
+			interopError(w, err)
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]interface{}{"name": body.Name, "endpoint": body.Endpoint})
@@ -243,4 +268,14 @@ func (h *Handlers) adkStatus(w http.ResponseWriter, r *http.Request) {
 		"shared_mode":      h.sharedMode,
 		"network_mode":     networkMode,
 	})
+}
+
+func (h *Handlers) dashboardOnly(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !contextkeys.IsDashboardUser(r.Context()) {
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+			return
+		}
+		next(w, r)
+	}
 }

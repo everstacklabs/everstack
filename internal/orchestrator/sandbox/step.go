@@ -4,10 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/everstacklabs/everstack/internal/sandbox"
+	"github.com/everstacklabs/everstack/internal/sandbox/snapshot"
 )
 
 // Executor is the side-effect layer step() drives. Implemented by
@@ -22,11 +24,15 @@ import (
 // all side effects behind this interface.
 type Executor interface {
 	ExecuteCreate(ctx context.Context, id string, config sandbox.InstanceConfig) (*sandbox.Instance, error)
-	// ExecuteStop snapshots the workspace, destroys the VM, and
-	// returns the local tarball path ("" when none could be taken).
-	ExecuteStop(ctx context.Context, id string) (snapshotRef string, err error)
+	// ExecuteStop persists the workspace, destroys the VM, and returns
+	// the workspace ref: an object-storage ref, a legacy local tarball
+	// path (object storage unconfigured), or "" when none could be
+	// taken. Returns sandbox.ErrWorkspaceTooLarge, VM still running,
+	// when the workspace is over the sleep size cap.
+	ExecuteStop(ctx context.Context, id string) (workspaceRef string, err error)
 	// ExecuteRevive recreates the VM and restores the workspace from
-	// the local tarball or, when archived, from object storage.
+	// the row's refs. Returns sandbox.ErrWorkspaceRestoreFailed, with no
+	// VM created, when a saved workspace is missing or corrupt.
 	ExecuteRevive(ctx context.Context, id, snapshotRef, archiveRef string) (*sandbox.Instance, error)
 	// ExecuteArchive uploads the workspace tarball to object storage
 	// and deletes the local copy. Returns the archive ref ("" when
@@ -256,18 +262,43 @@ func Step(ctx context.Context, ex Executor, row Row) (Row, error) {
 		}
 
 	case StateStopping:
-		// ExecuteStop snapshots /workspace BEFORE destroying the VM and
-		// returns the tarball ref to persist; a reconciler-driven stop
-		// is data-preserving exactly like the user-facing one.
-		snapshotRef, err := ex.ExecuteStop(ctx, row.ID)
+		// ExecuteStop persists /workspace BEFORE destroying the VM and
+		// returns the ref to store; the row only says sleeping once the
+		// workspace is durable.
+		workspaceRef, err := ex.ExecuteStop(ctx, row.ID)
 		if err != nil {
+			if we, ok := sandbox.AsWorkspaceError(err); ok && errors.Is(err, sandbox.ErrWorkspaceTooLarge) {
+				// Refused, not failed: the VM was never destroyed. Go
+				// back to running with the reason on the row; the idle
+				// policy tries again after the next idle window.
+				next := row
+				next.LifecycleState = StateRunning
+				next.Status = StateRunning
+				next.DesiredState = DesireRunning
+				next.OverrideDesired = true
+				next.Error = nullable(we.Error())
+				next.Notice = we.CustomerMessage
+				next.ReconcileAfter = parkUntil(24 * time.Hour)
+				return next, nil
+			}
 			return row, fmt.Errorf("stopping: ExecuteStop: %w", err)
 		}
 		next := row
 		next.LifecycleState = StateSleeping
 		next.Status = "stopped"
 		next.ContainerID = sqlNullStringEmpty()
-		next.WorkspaceSnapshotRef = nullable(snapshotRef)
+		switch {
+		case snapshot.IsWorkspaceObjectRef(workspaceRef):
+			// Durable copy in object storage; nothing on local disk.
+			next.WorkspaceSnapshotRef = sqlNullStringEmpty()
+			next.WorkspaceArchiveRef = nullable(workspaceRef)
+		case workspaceRef != "":
+			// Legacy local tarball (object storage not configured).
+			next.WorkspaceSnapshotRef = nullable(workspaceRef)
+		default:
+			// Nothing new was saved. Never overwrite an existing ref
+			// with "": it may point at the only copy.
+		}
 		next.ReconcileAfter = parkUntil(24 * time.Hour)
 		return next, nil
 
@@ -346,6 +377,20 @@ func Step(ctx context.Context, ex Executor, row Row) (Row, error) {
 		// saved config from the DB row itself).
 		inst, err := ex.ExecuteRevive(ctx, row.ID, row.WorkspaceSnapshotRef.String, row.WorkspaceArchiveRef.String)
 		if err != nil {
+			if we, ok := sandbox.AsWorkspaceError(err); ok && errors.Is(err, sandbox.ErrWorkspaceRestoreFailed) {
+				// Permanent: retrying cannot bring the data back, and
+				// booting an empty workspace would hide the loss. Park
+				// in error with the customer-facing reason. The refs
+				// stay on the row for forensics; the recovery checker
+				// skips this error code.
+				next := row
+				next.LifecycleState = StateError
+				next.Status = StateError
+				next.Error = nullable(we.Error())
+				next.Notice = we.CustomerMessage
+				next.ReconcileAfter = parkUntil(365 * 24 * time.Hour)
+				return next, nil
+			}
 			return row, fmt.Errorf("reviving: ExecuteRevive: %w", err)
 		}
 		next := row

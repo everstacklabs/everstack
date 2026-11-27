@@ -258,7 +258,7 @@ export function DateTimePicker({
                 })
             },
             onClick: (e: React.MouseEvent<HTMLInputElement>) => e.stopPropagation(),
-            className: `text-center ${validationErrors[errorKey] ? 'border-red-500' : ''} w-auto max-w-12`
+            className: `text-center ${validationErrors[errorKey] ? 'border-danger-solid' : ''} w-auto max-w-12`
         }
     }
 
@@ -356,7 +356,7 @@ export function DateTimePicker({
                             <CreatePeriodSelect timeType="start" />
                         </div>
                         {validationErrors.startTime && (
-                            <p className="text-xs text-red-500 mt-1">{validationErrors.startTime}</p>
+                            <p className="text-xs text-danger mt-1">{validationErrors.startTime}</p>
                         )}
                     </div>
 
@@ -372,7 +372,7 @@ export function DateTimePicker({
                             <CreatePeriodSelect timeType="end" />
                         </div>
                         {validationErrors.endTime && (
-                            <p className="text-xs text-red-500 mt-1">{validationErrors.endTime}</p>
+                            <p className="text-xs text-danger mt-1">{validationErrors.endTime}</p>
                         )}
                     </div>
                 </div>

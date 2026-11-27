@@ -29,8 +29,8 @@ export function ActiveSessionsBadge() {
     if (count === 0) return null
 
     return (
-        <span className="flex items-center gap-1 rounded-full bg-blue-500/15 px-1.5  text-[10px] font-medium text-blue-400 light:text-blue-600">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+        <span className="flex items-center gap-1 rounded-full bg-info-surface-strong px-1.5  text-[10px] font-medium text-info">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-info-solid animate-pulse" />
             {count}
         </span>
     )

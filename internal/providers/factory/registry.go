@@ -2,11 +2,13 @@ package factory
 
 import (
 	"context"
+	"sort"
 	"strings"
 
 	"github.com/everstacklabs/everstack/cmd/config/gateway/validator"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 	"github.com/everstacklabs/everstack/internal/lib/handlers/gateway/compact"
+	"github.com/everstacklabs/everstack/internal/providers/billing"
 	"github.com/everstacklabs/everstack/internal/services/catalog"
 )
 
@@ -40,8 +42,26 @@ type AggregatedInput struct {
 	// by the compaction middleware to obtain the summarisation model.
 	// May be nil; see SummarizerResolver doc.
 	SummarizerResolve SummarizerResolver
+	// BillingMeter is the wallet sink the provider's billing middleware
+	// settles through, and BillingProvenance says whose key the provider is
+	// built on (billingmeter.ProvenancePlatform or ProvenanceBYOK). Both are
+	// set by the gateway bundle builder from configuration ownership, never
+	// from a key's label; unset means the provider is never metered.
+	BillingMeter      billing.Sink
+	BillingProvenance string
 	// Original model blocks for advanced use (optional)
 	Raw []validator.ModelConfig
+}
+
+// BillingConfig is the billing middleware configuration for a provider built
+// from this input on the given served key.
+func (in AggregatedInput) BillingConfig(keyID string) billing.Config {
+	return billing.Config{
+		Meter:        in.BillingMeter,
+		Provenance:   in.BillingProvenance,
+		KeyID:        keyID,
+		CatalogCache: in.CatalogCache,
+	}
 }
 
 // APIKeyInput represents a single API key for provider initialization
@@ -68,6 +88,16 @@ func (r *Registry) Register(name string, f ProviderFactory) { r.factories[string
 func (r *Registry) Get(name string) (ProviderFactory, bool) {
 	f, ok := r.factories[strings.ToLower(name)]
 	return f, ok
+}
+
+// Names returns every registered provider name, sorted.
+func (r *Registry) Names() []string {
+	names := make([]string, 0, len(r.factories))
+	for name := range r.factories {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 // Default global registry to be populated by providers in their init().

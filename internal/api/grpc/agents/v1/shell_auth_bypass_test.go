@@ -53,7 +53,7 @@ func TestSpoofedHeadersDoNotAuthorizeShell(t *testing.T) {
 func TestOwnerIsAuthorizedForShell(t *testing.T) {
 	s := &Server{}
 	req := httptest.NewRequest("GET", "/v1/sandboxes/sbx-a/shell", nil)
-	req = req.WithContext(contextkeys.WithTenantID(context.Background(), "tenant-a"))
+	req = req.WithContext(verifiedTenantCtx("tenant-a"))
 
 	if err := s.authenticateShellRequest(req, "sbx-a", "tenant-a"); err != nil {
 		t.Fatalf("owner should be authorized, got %v", err)
@@ -65,7 +65,7 @@ func TestOwnerIsAuthorizedForShell(t *testing.T) {
 func TestCrossTenantShellIsRefusedWithoutDisclosure(t *testing.T) {
 	s := &Server{}
 	req := httptest.NewRequest("GET", "/v1/sandboxes/sbx-b/shell", nil)
-	req = req.WithContext(contextkeys.WithTenantID(context.Background(), "tenant-a"))
+	req = req.WithContext(verifiedTenantCtx("tenant-a"))
 
 	err := s.authenticateShellRequest(req, "sbx-b", "tenant-b")
 	if err == nil {
@@ -83,9 +83,28 @@ func TestSpoofedHeadersDoNotHelpAnAuthenticatedCaller(t *testing.T) {
 	req := httptest.NewRequest("GET", "/v1/sandboxes/sbx-b/shell", nil)
 	req.Header.Set("Sec-Fetch-Site", "same-origin")
 	req.Header.Set("Origin", "http://localhost:8089")
-	req = req.WithContext(contextkeys.WithTenantID(context.Background(), "tenant-a"))
+	req = req.WithContext(verifiedTenantCtx("tenant-a"))
 
 	if err := s.authenticateShellRequest(req, "sbx-b", "tenant-b"); err == nil {
 		t.Fatal("spoofed headers let an authenticated caller cross tenants")
+	}
+}
+
+// A tenant id on the context is not a caller. The standalone local-tenant
+// middleware puts one on every request, including requests with no credential,
+// so a shell must not open on that alone.
+func TestTenantContextWithoutPrincipalDoesNotAuthorizeShell(t *testing.T) {
+	s := &Server{}
+	cases := map[string]context.Context{
+		"tenant id only":                contextkeys.WithTenantID(context.Background(), "tenant-a"),
+		"tenant id plus bare auth flag": contextkeys.WithTenantAuthenticated(contextkeys.WithTenantID(context.Background(), "tenant-a")),
+	}
+	for name, ctx := range cases {
+		t.Run(name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/v1/sandboxes/sbx-a/shell", nil).WithContext(ctx)
+			if err := s.authenticateShellRequest(req, "sbx-a", "tenant-a"); err == nil {
+				t.Fatal("a tenant id with no verified principal opened a shell")
+			}
+		})
 	}
 }

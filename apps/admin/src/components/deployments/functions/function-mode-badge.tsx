@@ -22,11 +22,11 @@ export function FunctionModeBadge({ mode, className = '' }: FunctionModeBadgePro
     const getModeColor = (mode: ExecutionMode): string => {
         switch (mode) {
             case ExecutionMode.WEBHOOK:
-                return 'bg-blue-500/20 text-blue-300 light:text-blue-600'
+                return 'bg-info-surface-strong text-info'
             case ExecutionMode.PROXY:
                 return 'bg-purple-500/20 text-purple-300 light:text-purple-600'
             case ExecutionMode.ISOLATED:
-                return 'bg-amber-500/20 text-amber-300 light:text-amber-700'
+                return 'bg-warning-surface-strong text-warning'
             default:
                 return 'bg-gray-500/20 text-gray-300 light:text-gray-700'
         }

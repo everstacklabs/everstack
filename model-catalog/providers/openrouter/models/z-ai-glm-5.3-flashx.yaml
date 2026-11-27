@@ -1,0 +1,39 @@
+# Verified 2026-09-29.
+# Source: https://openrouter.ai/api/v1/models
+# Source: https://openrouter.ai/z-ai/glm-5.3-flashx
+name: "z-ai/glm-5.3-flashx"
+display_name: "Z.ai: GLM 5.3 FlashX (OpenRouter)"
+family: "z-ai"
+status: "stable"
+release_date: "2026-09-18"
+cost:
+  input_per_1k: 0.00037
+  output_per_1k: 0.00125
+  cache_read_per_1k: 9e-05
+limits:
+  max_tokens: 1048576
+  max_completion_tokens: 131072
+capabilities:
+  - "chat"
+  - "function_calling"
+  - "vision"
+  - "reasoning"
+modalities:
+  input:
+    - "text"
+    - "image"
+    - "video"
+  output:
+    - "text"
+structured_output: false
+notes: "OpenRouter listing date, not necessarily the original model launch. Provider-route pricing and limits verified 2026-09-29; endpoint selection can change rates. Tool, audio, and other non-text charges are not represented by these text token rates."
+parameters:
+  -
+    key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 131072
+    has_max_value: true
+added_in_version: "2.9.0"

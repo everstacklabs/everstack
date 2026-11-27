@@ -1,6 +1,8 @@
 package otlp
 
 import (
+	"context"
+	apikeylib "github.com/everstacklabs/everstack/internal/lib/apikey"
 	"net/http"
 
 	"github.com/everstacklabs/everstack/internal/database"
@@ -15,7 +17,7 @@ import (
 // headers here, so that "what counts as a presented credential" can never drift
 // from what Authenticate actually reads.
 type TenantResolver interface {
-	Authenticate(r *http.Request) (string, bool)
+	AuthenticateKeyContext(r *http.Request) (context.Context, string, string, bool)
 	PresentsCredential(r *http.Request) bool
 }
 
@@ -49,8 +51,13 @@ func WithTenantAuth(next http.Handler, auth TenantResolver) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// API key first — authoritative owner of the ingested data.
 		if auth != nil {
-			if tenantID, ok := auth.Authenticate(r); ok && tenantID != "" {
-				ctx := contextkeys.WithTenantID(r.Context(), tenantID)
+			ctx, tenantID, keyID, ok := auth.AuthenticateKeyContext(r)
+			if ok && tenantID != "" {
+				if apikeylib.WriteRateLimit(w, ctx) {
+					return
+				}
+				ctx = context.WithValue(ctx, ingestKey{}, keyID)
+				ctx = contextkeys.WithTenantID(ctx, tenantID)
 				ctx = database.WithTenantSchema(ctx, tenantID)
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
@@ -63,7 +70,8 @@ func WithTenantAuth(next http.Handler, auth TenantResolver) http.Handler {
 		// No credential at all — fall back to a tenant resolved upstream
 		// (self-hosted standalone mode).
 		if contextkeys.GetTenantID(r.Context()) != "" || database.TenantSchemaFromContext(r.Context()) != "" {
-			next.ServeHTTP(w, r)
+			// Keyless ingest intentionally consumes no shared rate-limit bucket.
+			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ingestKey{}, "")))
 			return
 		}
 		reject(w)
@@ -72,4 +80,15 @@ func WithTenantAuth(next http.Handler, auth TenantResolver) http.Handler {
 
 func reject(w http.ResponseWriter) {
 	http.Error(w, "unauthorized: provide a valid Everstack API key as 'Authorization: Bearer <key>'", http.StatusUnauthorized)
+}
+
+type ingestKey struct{}
+
+// stampKey always overwrites or removes a client claim, including keyless ingest.
+func stampKey(ctx context.Context, attrs map[string]string) {
+	key, _ := ctx.Value(ingestKey{}).(string)
+	delete(attrs, "everstack.api_key_id")
+	if key != "" {
+		attrs["everstack.api_key_id"] = key
+	}
 }

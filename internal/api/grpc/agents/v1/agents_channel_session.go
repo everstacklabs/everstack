@@ -222,13 +222,15 @@ func channelTenantContext(ctx context.Context, tenantID string) (context.Context
 	if tenantID == "" {
 		return nil, fmt.Errorf("channel tenant ID is required")
 	}
-	if existing := contextkeys.GetTenantID(ctx); existing != "" {
-		if existing != tenantID {
-			return nil, fmt.Errorf("channel tenant context mismatch")
-		}
-		return ctx, nil
+	if existing := contextkeys.GetTenantID(ctx); existing != "" && existing != tenantID {
+		return nil, fmt.Errorf("channel tenant context mismatch")
 	}
-	return contextkeys.WithTenantID(ctx, tenantID), nil
+	// The tenant comes from the stored channel config, not from the platform
+	// user, so it may resolve the organization's plan on a managed gateway.
+	// Without the mark this detached context resolved Community Edition
+	// limits for a cloud customer.
+	ctx = agentrt.ContextWithTenantIdentity(ctx, tenantID)
+	return enterprise.WithServerResolvedTenant(ctx, tenantID), nil
 }
 
 func (s *Server) loadSessionWithRetry(ctx context.Context, sys *cqrs.System, sessionID, tenantID string) (*agentsquery.SessionWithTurns, error) {
@@ -347,8 +349,11 @@ func (s *Server) buildChannelSessionLoop(
 	}
 
 	// Spawn + sandbox config
-	spawnConfig := agenttools.ParseSpawnConfig(agentConfig)
-	sandboxConfig := sandbox.ParseSandboxConfig(agentConfig)
+	spawnConfig := agenttools.PlanSpawnConfig(ctx, agenttools.ParseSpawnConfig(agentConfig))
+	sandboxConfig, err := sandbox.ParseSandboxConfig(agentConfig)
+	if err != nil {
+		return nil, err
+	}
 	executionMode, persistenceMode, templateConfigured := classifySessionModes(agentConfig, sandboxConfig)
 	loopInput.ExecutionMode = executionMode
 	loopInput.PersistenceMode = persistenceMode
@@ -717,13 +722,14 @@ func (s *Server) prepareAndLaunchChannelSession(
 	// itself so a new turn on an already-running agent is never blocked.
 	isPersistent := agent.LifecycleMode == "persistent"
 	if isPersistent && s.db != nil {
-		if err := enterprise.CheckResourceLimit(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
-			enterprise.UsageTypeConcurrentRunning,
-			`SELECT COUNT(*) FROM agent_definitions WHERE tenant_id = $1 AND deleted_at IS NULL AND lifecycle_status = 'running' AND id <> $2`,
-			[]interface{}{result.loopInput.TenantID, agent.ID}, 1, "concurrently running agent"); err != nil {
+		// Lock held across the status write; see runTurnStreamInternal.
+		runSlot, err := enterprise.ReserveLimitSlot(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
+			enterprise.ConcurrentRunningLimit(result.loopInput.TenantID, agent.ID))
+		if err != nil {
 			return nil, err
 		}
 		s.db.ExecContext(ctx, `UPDATE agent_definitions SET lifecycle_status = 'running', updated_at = NOW() WHERE id = $1 AND tenant_id = $2`, agent.ID, result.loopInput.TenantID)
+		runSlot.Release()
 	}
 
 	// Launch in goroutine so caller can attach sinks before events flow

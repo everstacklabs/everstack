@@ -119,9 +119,9 @@ export function VoiceProfileSheet({ open, onOpenChange, profile }: VoiceProfileS
                 <SheetBody className="py-4">
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {!isEdit && !hasStorage && (
-                            <div className="rounded-md border border-amber-500/20 bg-amber-500/5 p-3">
+                            <div className="rounded-md border border-warning-border bg-warning-surface/60 p-3">
                                 <div className="flex items-start gap-2">
-                                    <Iconify.Icon icon="lucide:hard-drive" className="h-4 w-4 text-amber-400 light:text-amber-700 mt-0.5 shrink-0" />
+                                    <Iconify.Icon icon="lucide:hard-drive" className="h-4 w-4 text-warning mt-0.5 shrink-0" />
                                     <p className="text-xs text-white/50 light:text-black/50">
                                         Object storage is not configured. Reference audio will not be persisted.
                                     </p>
@@ -131,7 +131,7 @@ export function VoiceProfileSheet({ open, onOpenChange, profile }: VoiceProfileS
 
                         <div className="space-y-2">
                             <Label className="text-white light:text-brand-main-50 font-medium">
-                                Name <span className="text-red-400 light:text-red-600">*</span>
+                                Name <span className="text-danger">*</span>
                             </Label>
                             <Input
                                 placeholder="e.g., Customer Support Voice"

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/everstacklabs/everstack/internal/api/grpc/planlimit"
 	trooperscmd "github.com/everstacklabs/everstack/internal/commands/handlers/troopers"
 	"github.com/everstacklabs/everstack/internal/cqrs"
 	"github.com/everstacklabs/everstack/internal/enterprise"
@@ -214,6 +215,9 @@ func (s *Server) GetTrooper(ctx context.Context, req *connect.Request[agentspb.G
 	if err != nil {
 		return nil, err
 	}
+	if err := s.requireOwnedTrooper(ctx, req.Msg.GetId()); err != nil {
+		return nil, err
+	}
 
 	q := troopersquery.NewGetTrooperByIDQuery(req.Msg.GetId(), tenantID)
 	res, err := sys.QueryBus.Execute(ctx, q)
@@ -304,6 +308,9 @@ func (s *Server) UpdateTrooper(ctx context.Context, req *connect.Request[agentsp
 	if err != nil {
 		return nil, err
 	}
+	if err := s.requireOwnedTrooper(ctx, req.Msg.GetId()); err != nil {
+		return nil, err
+	}
 	userID := contextkeys.GetUserID(ctx)
 
 	cmd := trooperscmd.NewUpdateTrooperCommand(req.Msg.GetId(), tenantID, userID, "")
@@ -386,6 +393,9 @@ func (s *Server) DeleteTrooper(ctx context.Context, req *connect.Request[agentsp
 	if err != nil {
 		return nil, err
 	}
+	if err := s.requireOwnedTrooper(ctx, req.Msg.GetId()); err != nil {
+		return nil, err
+	}
 	userID := contextkeys.GetUserID(ctx)
 
 	cmd := trooperscmd.NewDeleteTrooperCommand(req.Msg.GetId(), tenantID, userID, "")
@@ -408,6 +418,9 @@ func (s *Server) ProvisionTrooper(ctx context.Context, req *connect.Request[agen
 
 	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
 	if err != nil {
+		return nil, err
+	}
+	if err := s.requireOwnedTrooper(ctx, req.Msg.GetTrooperId()); err != nil {
 		return nil, err
 	}
 
@@ -438,8 +451,8 @@ func (s *Server) ProvisionTrooper(ctx context.Context, req *connect.Request[agen
 		SELECT name, sandbox_image, sandbox_cpu_limit, sandbox_memory_mb, sandbox_disk_mb,
 			sandbox_network_mode, sandbox_ssh_enabled, sandbox_git_repo_url, sandbox_git_branch,
 			soul_md, identity_md, user_md, role_md, db_sqlite_path, db_lancedb_path, db_redb_path
-		FROM troopers WHERE id = $1 AND deleted_at IS NULL
-	`, req.Msg.GetTrooperId())
+		FROM troopers WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
+	`, req.Msg.GetTrooperId(), tenantID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("trooper not found: %w", err))
 	}
@@ -453,7 +466,11 @@ func (s *Server) ProvisionTrooper(ctx context.Context, req *connect.Request[agen
 		gitBranch = *ws.SandboxGitBranch
 	}
 
-	sandboxID, err := s.trooperMgr.Provision(ctx, trooper.ProvisionConfig{
+	provisionTrooper := s.provisionTrooper
+	if provisionTrooper == nil {
+		provisionTrooper = s.trooperMgr.Provision
+	}
+	sandboxID, err := provisionTrooper(ctx, trooper.ProvisionConfig{
 		TrooperID:   req.Msg.GetTrooperId(),
 		TenantID:    tenantID,
 		Name:        ws.Name,
@@ -497,6 +514,9 @@ func (s *Server) SleepTrooper(ctx context.Context, req *connect.Request[agentspb
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("trooper manager not available"))
 	}
 
+	if err := s.requireOwnedTrooper(ctx, req.Msg.GetTrooperId()); err != nil {
+		return nil, err
+	}
 	if err := s.trooperMgr.Sleep(ctx, req.Msg.GetTrooperId()); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -512,6 +532,9 @@ func (s *Server) WakeTrooper(ctx context.Context, req *connect.Request[agentspb.
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("trooper manager not available"))
 	}
 
+	if err := s.requireOwnedTrooper(ctx, req.Msg.GetTrooperId()); err != nil {
+		return nil, err
+	}
 	if err := s.trooperMgr.Wake(ctx, req.Msg.GetTrooperId()); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -538,6 +561,22 @@ func (s *Server) CreateTrooperLink(ctx context.Context, req *connect.Request[age
 	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
 	if err != nil {
 		return nil, err
+	}
+	if err := s.requireOwnedTrooper(ctx, req.Msg.GetSourceTrooperId()); err != nil {
+		return nil, err
+	}
+	switch strings.ToLower(strings.TrimSpace(req.Msg.GetTargetType())) {
+	case "agent":
+		if _, err := s.requireOwnedAgent(ctx, req.Msg.GetTargetId(), tenantID); err != nil {
+			return nil, err
+		}
+	case "trooper":
+		if err := s.requireOwnedTrooper(ctx, req.Msg.GetTargetId()); err != nil {
+			return nil, err
+		}
+	case "human":
+	default:
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("target_type must be agent, trooper, or human"))
 	}
 	userID := contextkeys.GetUserID(ctx)
 
@@ -586,6 +625,9 @@ func (s *Server) ListTrooperLinks(ctx context.Context, req *connect.Request[agen
 	if err != nil {
 		return nil, err
 	}
+	if err := s.requireOwnedTrooper(ctx, req.Msg.GetTrooperId()); err != nil {
+		return nil, err
+	}
 
 	q := troopersquery.NewListTrooperLinksQuery(tenantID, req.Msg.GetTrooperId())
 	res, err := sys.QueryBus.Execute(ctx, q)
@@ -627,6 +669,9 @@ func (s *Server) DeleteTrooperLink(ctx context.Context, req *connect.Request[age
 	if err != nil {
 		return nil, err
 	}
+	if err := s.requireOwnedTrooperLink(ctx, req.Msg.GetLinkId(), tenantID); err != nil {
+		return nil, err
+	}
 	userID := contextkeys.GetUserID(ctx)
 
 	cmd := trooperscmd.NewDeleteTrooperLinkCommand(req.Msg.GetLinkId(), tenantID, userID, "")
@@ -655,17 +700,28 @@ func (s *Server) BindChannelToTrooper(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, err
 	}
+	if err := s.requireOwnedTrooper(ctx, req.Msg.GetTrooperId()); err != nil {
+		return nil, err
+	}
+	if err := s.requireOwnedChannelConfig(ctx, req.Msg.GetChannelConfigId(), tenantID); err != nil {
+		return nil, err
+	}
 	userID := contextkeys.GetUserID(ctx)
 
 	// CHANNEL_BINDINGS covers agent AND trooper bindings together; without
 	// this gate the legacy trooper RPC bypassed the limit entirely.
-	if err := enterprise.CheckResourceLimit(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
-		enterprise.UsageTypeChannelBindings,
-		`SELECT (SELECT COUNT(*) FROM agent_channel_bindings WHERE tenant_id = $1 AND deleted_at IS NULL)
-		      + (SELECT COUNT(*) FROM trooper_channel_bindings WHERE tenant_id = $1)`,
-		[]interface{}{tenantID}, 1, "channel binding"); err != nil {
-		return nil, connect.NewError(connect.CodeResourceExhausted, err)
+	// agent_channel_bindings has no deleted_at column (bindings are hard
+	// deleted), and trooper bindings already copied into agent bindings are
+	// counted once (enterprise.CountChannelBindingsQuery).
+	// Serialized per organization: two creators racing for the last slot
+	// take the same advisory lock, and the slot is held until the read
+	// model shows this create.
+	limitSlot, limitErr := enterprise.ReserveLimitSlot(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
+		enterprise.ChannelBindingsLimit(tenantID))
+	if limitErr != nil {
+		return nil, planlimit.ConnectError(limitErr, "channel binding")
 	}
+	defer limitSlot.Release()
 
 	cmd := trooperscmd.NewBindChannelCommand(
 		tenantID, req.Msg.GetTrooperId(), req.Msg.GetChannelConfigId(),
@@ -675,6 +731,7 @@ func (s *Server) BindChannelToTrooper(ctx context.Context, req *connect.Request[
 	if err := sys.CommandBus.Dispatch(ctx, cmd); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	limitSlot.Confirm(ctx)
 
 	return connect.NewResponse(&agentspb.BindChannelToTrooperResponse{
 		Binding: &agentspb.TrooperChannelBinding{
@@ -697,6 +754,12 @@ func (s *Server) UnbindChannelFromTrooper(ctx context.Context, req *connect.Requ
 
 	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
 	if err != nil {
+		return nil, err
+	}
+	if err := s.requireOwnedTrooper(ctx, req.Msg.GetTrooperId()); err != nil {
+		return nil, err
+	}
+	if err := s.requireOwnedChannelConfig(ctx, req.Msg.GetChannelConfigId(), tenantID); err != nil {
 		return nil, err
 	}
 	userID := contextkeys.GetUserID(ctx)
@@ -727,6 +790,9 @@ func (s *Server) ListTrooperChannelBindings(ctx context.Context, req *connect.Re
 
 	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
 	if err != nil {
+		return nil, err
+	}
+	if err := s.requireOwnedTrooper(ctx, req.Msg.GetTrooperId()); err != nil {
 		return nil, err
 	}
 
@@ -760,6 +826,23 @@ func (s *Server) ListTrooperChannelBindings(ctx context.Context, req *connect.Re
 		Bindings: protos,
 		Total:    int32(len(protos)),
 	}), nil
+}
+
+func (s *Server) requireOwnedTrooperLink(ctx context.Context, linkID, tenantID string) error {
+	if linkID == "" {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("link_id is required"))
+	}
+	if s.db == nil {
+		return connect.NewError(connect.CodeInternal, errors.New("database not available"))
+	}
+	var owned bool
+	if err := s.db.GetContext(ctx, &owned, `SELECT EXISTS(SELECT 1 FROM trooper_links WHERE id = $1 AND tenant_id = $2)`, linkID, tenantID); err != nil {
+		return connect.NewError(connect.CodeInternal, err)
+	}
+	if !owned {
+		return connect.NewError(connect.CodeNotFound, errors.New("trooper link not found"))
+	}
+	return nil
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -1074,4 +1157,35 @@ func stringToProtoTrooperLinkStatus(s string) agentspb.TrooperLinkStatus {
 	default:
 		return agentspb.TrooperLinkStatus_TROOPER_LINK_STATUS_UNSPECIFIED
 	}
+}
+
+// requireOwnedTrooper answers NotFound unless the trooper belongs to the
+// caller's tenant.
+func (s *Server) requireOwnedTrooper(ctx context.Context, trooperID string) error {
+	if trooperID == "" {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("trooper_id is required"))
+	}
+	sys, err := cqrs.GetSystemFromContext(ctx)
+	if err != nil && s.ctx != nil {
+		sys, err = cqrs.GetSystemFromContext(s.ctx)
+	}
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, errors.New("CQRS system not available"))
+	}
+	tenantID, err := s.resolveTenantID(ctx, "")
+	if err != nil {
+		return err
+	}
+	res, err := sys.QueryBus.Execute(ctx, troopersquery.NewGetTrooperByIDQuery(trooperID, tenantID))
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, err)
+	}
+	var data interface{} = res
+	if resp, ok := res.(*query.Response); ok {
+		data = resp.Data
+	}
+	if rm, ok := data.(*troopersquery.TrooperReadModel); !ok || rm == nil {
+		return connect.NewError(connect.CodeNotFound, errors.New("trooper not found"))
+	}
+	return nil
 }

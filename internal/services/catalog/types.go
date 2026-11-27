@@ -1,17 +1,23 @@
 package catalog
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 // ModelDefinition represents a model in the catalog
 type ModelDefinition struct {
-	Name             string  `yaml:"name"`
-	DisplayName      string  `yaml:"display_name"`
-	APIType          string  `yaml:"api_type,omitempty"`
-	Publisher        string  `yaml:"publisher,omitempty"`
-	CanonicalModelID string  `yaml:"canonical_model_id,omitempty"`
-	MaxTokens        int     `yaml:"max_tokens"`
-	InputCostPer1k   float64 `yaml:"input_cost_per_1k"`
-	OutputCostPer1k  float64 `yaml:"output_cost_per_1k"`
+	Name             string `yaml:"name"`
+	DisplayName      string `yaml:"display_name"`
+	APIType          string `yaml:"api_type,omitempty"`
+	Publisher        string `yaml:"publisher,omitempty"`
+	CanonicalModelID string `yaml:"canonical_model_id,omitempty"`
+	MaxTokens        int    `yaml:"max_tokens"`
+	// MaxOutputTokens is the model's output cap. The admission estimator
+	// uses it as max_tokens when a request omits one.
+	MaxOutputTokens int     `yaml:"max_output_tokens,omitempty"`
+	InputCostPer1k  float64 `yaml:"input_cost_per_1k"`
+	OutputCostPer1k float64 `yaml:"output_cost_per_1k"`
 	// Zero means the catalog does not price cache reads/writes for this model.
 	CacheReadCostPer1k          float64  `yaml:"cache_read_cost_per_1k,omitempty"`
 	CacheWriteCostPer1k         float64  `yaml:"cache_write_cost_per_1k,omitempty"`
@@ -28,6 +34,35 @@ type ModelDefinition struct {
 	// uses them to decide whether a provider-wide default may be applied to
 	// this model, so a control the model rejects is never sent to it.
 	Parameters []ModelParameterDefinition `yaml:"parameters,omitempty"`
+	// UnsupportedParameters names request controls the upstream rejects for
+	// this model. The gateway drops them before dispatch so a caller's value
+	// (or a configured default) does not turn into an upstream 400. Unknown
+	// keys are ignored.
+	UnsupportedParameters []string `yaml:"unsupported_parameters,omitempty"`
+}
+
+// Keys recognised in ModelDefinition.UnsupportedParameters.
+const (
+	UnsupportedTemperature    = "temperature"
+	UnsupportedTopP           = "top_p"
+	UnsupportedTopK           = "top_k"
+	UnsupportedThinkingToggle = "thinking_toggle" // explicit thinking enabled/disabled switch
+	UnsupportedThinkingBudget = "thinking_budget" // manual reasoning token budget
+)
+
+// RejectsParameter reports whether the catalog marks the named request
+// control as unsupported for this model. Matching ignores case and
+// surrounding whitespace.
+func (m *ModelDefinition) RejectsParameter(key string) bool {
+	if m == nil {
+		return false
+	}
+	for _, unsupported := range m.UnsupportedParameters {
+		if strings.EqualFold(strings.TrimSpace(unsupported), key) {
+			return true
+		}
+	}
+	return false
 }
 
 // ModelParameterDefinition names one request control a model accepts. Only the

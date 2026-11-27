@@ -1,0 +1,48 @@
+# Verified 2026-11-26.
+# Source: https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-openai-gpt-6-1-terra.md
+name: "us.openai.gpt-6.1-terra"
+display_name: "GPT-6.1 Terra (US) (Bedrock)"
+family: "gpt-terra"
+status: "stable"
+release_date: "2026-10-26"
+
+cost:
+  input_per_1k: 0.0011
+  output_per_1k: 0.0055
+  cache_read_per_1k: 0.000055
+  cache_write_per_1k: 0.001375
+  long_context:
+    threshold_tokens: 272000
+    input_multiplier: 2
+    cache_multiplier: 2
+    output_multiplier: 1.5
+
+limits:
+  max_tokens: 1050000
+  max_completion_tokens: 128000
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image"]
+  output: ["text"]
+
+knowledge_cutoff: "2026-06-01"
+notes: "Fast, efficient model for visual reasoning, precise computer use, and clear, natural writing. Served through the Converse API, which takes this inference profile id rather than the base model id. Prompts over 272K input tokens bill the whole request at 2x input and cache rates and 1.5x output. Cache write price is the 30-minute rate."
+structured_output: false
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 128000
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+added_in_version: "2.13.0"

@@ -67,7 +67,7 @@ export function SSHKeysSection() {
                                         <button
                                             onClick={() => handleDelete(key.id)}
                                             disabled={deleteMutation.isPending}
-                                            className="px-2 py-1 text-xs text-red-400 light:text-red-600 hover:text-red-300 light:hover:text-red-600 transition-colors disabled:opacity-50"
+                                            className="px-2 py-1 text-xs text-danger transition-colors disabled:opacity-50"
                                         >
                                             Confirm
                                         </button>
@@ -81,7 +81,7 @@ export function SSHKeysSection() {
                                 ) : (
                                     <button
                                         onClick={() => setConfirmDelete(key.id)}
-                                        className="p-1 rounded text-red-400/60 light:text-red-600/60 hover:text-red-400 light:hover:text-red-600 hover:bg-red-500/10 transition-colors"
+                                        className="p-1 rounded text-danger/60 hover:text-danger hover:bg-danger-surface transition-colors"
                                         title="Delete key"
                                     >
                                         <Iconify.Icon icon="heroicons:trash" className="size-4" />

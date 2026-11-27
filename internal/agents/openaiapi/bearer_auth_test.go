@@ -27,6 +27,9 @@ func TestDeviceBearerResolvesVerifiedIdentityLink(t *testing.T) {
 	mock.ExpectQuery("JOIN everstack.identity_links il").
 		WithArgs(bearerTestOrg, bearerTestInstance, "person@example.com").
 		WillReturnRows(sqlmock.NewRows([]string{"role", "user_id"}).AddRow("admin", "stable-user"))
+	mock.ExpectQuery(`SELECT revoked_at FROM everstack\.user_credential_revocations`).
+		WithArgs("stable-user").
+		WillReturnRows(sqlmock.NewRows([]string{"revoked_at"}).AddRow(nil))
 	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM everstack.tenant_config").
 		WithArgs(bearerTestInstance, bearerTestOrg).WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
@@ -41,6 +44,9 @@ func TestDeviceBearerDirectMemberStillWorks(t *testing.T) {
 	mock.ExpectQuery("SELECT COALESCE\\(role,''\\) AS role, user_id::text AS user_id").
 		WithArgs("stable-user", bearerTestOrg).
 		WillReturnRows(sqlmock.NewRows([]string{"role", "user_id"}).AddRow("member", "stable-user"))
+	mock.ExpectQuery(`SELECT revoked_at FROM everstack\.user_credential_revocations`).
+		WithArgs("stable-user").
+		WillReturnRows(sqlmock.NewRows([]string{"revoked_at"}).AddRow(nil))
 	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM everstack.tenant_config").
 		WithArgs(bearerTestInstance, bearerTestOrg).WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
@@ -91,6 +97,9 @@ func TestDeviceBearerIdentityLinkDenialAndDatabaseFailure(t *testing.T) {
 		db, mock := newBearerAuthMock(t)
 		mock.ExpectQuery("SELECT COALESCE\\(role,''\\) AS role, user_id::text AS user_id").
 			WillReturnRows(sqlmock.NewRows([]string{"role", "user_id"}).AddRow("member", "stable-user"))
+		mock.ExpectQuery(`SELECT revoked_at FROM everstack\.user_credential_revocations`).
+			WithArgs("stable-user").
+			WillReturnRows(sqlmock.NewRows([]string{"revoked_at"}).AddRow(nil))
 		mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM everstack.tenant_config").
 			WillReturnError(errors.New("database unavailable"))
 		status, _ := serveBearer(t, db, deviceauth.Identity{UserID: "stable-user", OrganizationID: bearerTestOrg, InstanceID: bearerTestInstance})

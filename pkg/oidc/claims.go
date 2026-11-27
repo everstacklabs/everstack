@@ -14,9 +14,12 @@ type IDClaims struct {
 	Name                 string `json:"name,omitempty"`
 	OrgID                string `json:"org_id,omitempty"`
 	OrgSlug              string `json:"org_slug,omitempty"`
-	InstanceID           string `json:"instance_id,omitempty"`
-	Nonce                string `json:"nonce,omitempty"`
-	AuthTime             int64  `json:"auth_time,omitempty"`
+	// OrgRole is the user's role in OrgID. Additive: older providers omit
+	// it, and relying parties then grant least privilege.
+	OrgRole    string `json:"org_role,omitempty"`
+	InstanceID string `json:"instance_id,omitempty"`
+	Nonce      string `json:"nonce,omitempty"`
+	AuthTime   int64  `json:"auth_time,omitempty"`
 }
 
 // AccessClaims are the minimal access-token claims for instance->cloud API calls.

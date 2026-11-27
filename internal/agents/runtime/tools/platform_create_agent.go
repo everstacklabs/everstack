@@ -3,10 +3,12 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	agentscmd "github.com/everstacklabs/everstack/internal/commands/handlers/agents"
+	"github.com/everstacklabs/everstack/internal/enterprise"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 )
 
@@ -120,6 +122,17 @@ func (h *PlatformCreateAgentHandler) Execute(ctx context.Context, args map[strin
 		h.Ctx.UserID,
 		"", // traceID
 	)
+
+	if h.Ctx.ReserveAgentSlot != nil {
+		done, err := h.Ctx.ReserveAgentSlot(ctx)
+		if err != nil {
+			if errors.Is(err, enterprise.ErrResourceLimit) {
+				return "", err // customer-facing: cap, count and upgrade path
+			}
+			return "", fmt.Errorf("could not check the agent limit; try again")
+		}
+		defer done(ctx)
+	}
 
 	if err := h.Ctx.CommandBus.Dispatch(ctx, cmd); err != nil {
 		return "", fmt.Errorf("failed to create agent: %w", err)

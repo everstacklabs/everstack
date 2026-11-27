@@ -7,7 +7,9 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/everstacklabs/everstack/internal/billingmeter"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 )
 
@@ -331,5 +333,125 @@ func assertNativeBlock(t *testing.T, part gw.ContentPart, wantType, field, wantV
 	}
 	if block["type"] != wantType || block[field] != wantValue {
 		t.Fatalf("native block = %#v, want type=%s %s=%s", block, wantType, field, wantValue)
+	}
+}
+
+// Anthropic streams thinking as deltas, but the provider emits the block only
+// when it ends. While it is buffered, the metering seam's PendingOutput holds
+// its size, so a stream that breaks off mid-thinking can still be estimated.
+func TestChatStreamReportsBufferedThinkingAsPending(t *testing.T) {
+	release := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte(strings.Join([]string{
+			`data: {"type":"message_start","message":{"id":"msg_stream","model":"claude-fable-5-1","usage":{"input_tokens":10}}}`,
+			`data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}`,
+			`data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"` + strings.Repeat("a", 300) + `"}}`,
+			`data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"` + strings.Repeat("b", 100) + `"}}`,
+			"", "",
+		}, "\n")))
+		w.(http.Flusher).Flush()
+		select {
+		case <-r.Context().Done():
+		case <-release:
+		}
+	}))
+	defer server.Close()
+	defer close(release)
+
+	p := NewProvider(Config{APIKey: "test-key", BaseURL: server.URL})
+	p.client = server.Client()
+	pending := &billingmeter.PendingOutput{}
+	ctx, cancel := context.WithCancel(billingmeter.WithPendingOutput(context.Background(), pending))
+	defer cancel()
+	done := make(chan error, 1)
+	go func() {
+		done <- p.ChatStream(ctx, gw.ChatCompletionRequest{Model: "claude-fable-5-1"}, func(gw.ChatResponseChunk) error { return nil })
+	}()
+	deadline := time.Now().Add(5 * time.Second)
+	for pending.ReasoningChars() != 400 {
+		if time.Now().After(deadline) {
+			t.Fatalf("pending reasoning chars = %d, want 400", pending.ReasoningChars())
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	cancel() // the client goes away mid-thinking
+	if err := <-done; err == nil {
+		t.Fatal("ChatStream must report the aborted stream")
+	}
+	if got := pending.ReasoningChars(); got != 400 {
+		t.Fatalf("pending after abort = %d, want 400", got)
+	}
+}
+
+// Once the block is emitted, nothing is pending.
+func TestChatStreamClearsPendingThinkingOnceEmitted(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte(strings.Join([]string{
+			`data: {"type":"message_start","message":{"id":"msg_stream","model":"claude-fable-5-1","usage":{"input_tokens":10}}}`,
+			`data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}`,
+			`data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"private reasoning"}}`,
+			`data: {"type":"content_block_stop","index":0}`,
+			`data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":5}}`,
+			`data: {"type":"message_stop"}`,
+			"",
+		}, "\n")))
+	}))
+	defer server.Close()
+
+	p := NewProvider(Config{APIKey: "test-key", BaseURL: server.URL})
+	p.client = server.Client()
+	pending := &billingmeter.PendingOutput{}
+	sawPending := 0
+	err := p.ChatStream(billingmeter.WithPendingOutput(context.Background(), pending), gw.ChatCompletionRequest{Model: "claude-fable-5-1"},
+		func(gw.ChatResponseChunk) error {
+			if n := pending.ReasoningChars(); n > sawPending {
+				sawPending = n
+			}
+			return nil
+		})
+	if err != nil {
+		t.Fatalf("ChatStream() error = %v", err)
+	}
+	if got := pending.ReasoningChars(); got != 0 {
+		t.Fatalf("pending after the block was emitted = %d, want 0", got)
+	}
+	if sawPending != 0 {
+		t.Fatalf("pending while the emitted block was delivered = %d, want 0 (no double count)", sawPending)
+	}
+}
+
+// message_start already carries the exact prompt usage; the provider hands
+// it to the metering seam before any output, so an abort is priced on it.
+func TestChatStreamReportsPromptUsageFromMessageStart(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte(strings.Join([]string{
+			`data: {"type":"message_start","message":{"id":"msg_stream","model":"claude-fable-5-1","usage":{"input_tokens":5000,"cache_read_input_tokens":45000,"cache_creation_input_tokens":200}}}`,
+			`data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}`,
+			`data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"partial"}}`,
+			"",
+		}, "\n")))
+	}))
+	defer server.Close()
+
+	p := NewProvider(Config{APIKey: "test-key", BaseURL: server.URL})
+	p.client = server.Client()
+	pending := &billingmeter.PendingOutput{}
+	err := p.ChatStream(billingmeter.WithPendingOutput(context.Background(), pending), gw.ChatCompletionRequest{Model: "claude-fable-5-1"},
+		func(gw.ChatResponseChunk) error { return nil })
+	prompt, cacheRead, cacheWrite, ok := pending.PromptUsage()
+	if !ok || prompt != 50200 || cacheRead != 45000 || cacheWrite != 200 {
+		t.Fatalf("prompt usage = %d/%d/%d ok=%v, want 50200 inclusive, 45000 read, 200 write", prompt, cacheRead, cacheWrite, ok)
+	}
+	// The upstream cut off without message_delta or message_stop: that is
+	// an aborted stream, not a completed one, so its buffered thinking is
+	// counted.
+	if err == nil {
+		t.Fatal("a stream cut off before its final events must be an error")
+	}
+	if got := pending.ReasoningChars(); got != len("partial") {
+		t.Fatalf("pending reasoning = %d", got)
 	}
 }

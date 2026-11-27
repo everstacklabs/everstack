@@ -24,7 +24,7 @@ USER sandbox
 WORKDIR /workspace
 
 LABEL org.opencontainers.image.title="Everstack OpenAI Agents API executor" \
-      org.opencontainers.image.source="https://github.com/everstacklabs/platform" \
+      org.opencontainers.image.source="https://github.com/everstacklabs/everstack" \
       dev.everstack.openai-codex.version="0.154.0" \
       dev.everstack.openai-codex.npm-integrity="sha512-FV/x1OHXYv/ifjf3mXj9ThTTAWcUZN6cGIRQRhRxkKNOPuImu1WW0c8ev1vUkE9XGH90dEnYG1tBjIkxRikg0w=="
 

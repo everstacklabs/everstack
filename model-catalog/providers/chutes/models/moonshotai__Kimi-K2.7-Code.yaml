@@ -1,0 +1,40 @@
+# Verified 2026-11-24.
+# Source: https://llm.chutes.ai/v1/models
+name: "moonshotai/Kimi-K2.7-Code"
+display_name: "Kimi K2.7 Code (Chutes)"
+family: "kimi-code"
+status: "stable"
+release_date: "2026-10-26"
+
+cost:
+  input_per_1k: 0.000832
+  output_per_1k: 0.0035
+  cache_read_per_1k: 0.000167
+
+limits:
+  max_tokens: 262144
+  max_completion_tokens: 16384
+
+capabilities:
+  - chat
+  - function_calling
+  - reasoning
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+notes: "Kimi coding model for software agents, refactors, and repository reasoning"
+
+structured_output: true
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 16384
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+added_in_version: "2.11.0"

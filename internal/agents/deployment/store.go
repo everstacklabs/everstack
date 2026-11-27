@@ -14,12 +14,12 @@ type Store interface {
 	// Keys
 	CreateKey(ctx context.Context, key *DeploymentKey) error
 	GetKeyByHash(ctx context.Context, hash string) (*DeploymentKey, error)
-	ListKeys(ctx context.Context, deploymentID string) ([]*DeploymentKey, error)
-	RevokeKey(ctx context.Context, keyID string) error
+	ListKeys(ctx context.Context, deploymentID, tenantID string) ([]*DeploymentKey, error)
+	RevokeKey(ctx context.Context, keyID, tenantID string) error
 	TouchKeyLastUsed(ctx context.Context, keyID string) error
 
 	// Invocations
 	RecordInvocation(ctx context.Context, inv *Invocation) error
 	CompleteInvocation(ctx context.Context, id string, sessionID string, status string, output string, turns, promptTokens, completionTokens, durationMs int) error
-	ListInvocations(ctx context.Context, deploymentID string, limit, offset int) ([]*Invocation, int, error)
+	ListInvocations(ctx context.Context, deploymentID, tenantID string, limit, offset int) ([]*Invocation, int, error)
 }

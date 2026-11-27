@@ -152,7 +152,7 @@ export function ModelDiscoveryDialog({
                             {!isSearching && !searchError && searchResults?.warning && (
                                 <div className="bg-brand-secondary-500/10 border border-brand-secondary-500/50 rounded-md py-2 px-4">
                                     <div className="flex items-start gap-2">
-                                        {/* <div className="text-yellow-400 light:text-yellow-700 mt-0.5 text-xl">ℹ️</div> */}
+                                        {/* <div className="text-warning mt-0.5 text-xl">ℹ️</div> */}
                                         <Iconify.Icon icon="mdi:warning-outline" className="text-brand-secondary-500 size-4 mt-0.5" />
                                         <div className="flex-1">
                                             <h4 className="text-sm font-semibold text-brand-secondary-500 mb-1">
@@ -175,11 +175,11 @@ export function ModelDiscoveryDialog({
                             )}
 
                             {searchError && (
-                                <div className="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-4 my-4">
+                                <div className="bg-warning-surface border border-warning-border rounded-lg p-4 my-4">
                                     <div className="flex items-start gap-3">
-                                        <div className="text-yellow-400 light:text-yellow-700 mt-0.5 text-xl">ℹ️</div>
+                                        <div className="text-warning mt-0.5 text-xl">ℹ️</div>
                                         <div className="flex-1">
-                                            <h4 className="text-sm font-semibold text-yellow-400 light:text-yellow-700 mb-1">
+                                            <h4 className="text-sm font-semibold text-warning mb-1">
                                                 {providerName === 'ollama' && searchError.message.toLowerCase().includes('connect')
                                                     ? 'Local Ollama Not Running'
                                                     : searchError.message.toLowerCase().includes('connect')
@@ -188,30 +188,30 @@ export function ModelDiscoveryDialog({
                                             </h4>
                                             {providerName === 'ollama' && searchError.message.toLowerCase().includes('connect') ? (
                                                 <>
-                                                    <p className="text-sm text-yellow-300/90 light:text-yellow-700/90 mb-3">
+                                                    <p className="text-sm text-warning/90 mb-3">
                                                         Your local Ollama instance is not running. You can still browse and add cloud models below.
                                                     </p>
-                                                    <div className="mt-3 pt-3 border-t border-yellow-500/30">
-                                                        <p className="text-sm text-yellow-200/90 light:text-yellow-700/90 mb-2 font-medium">Options:</p>
+                                                    <div className="mt-3 pt-3 border-t border-warning-border">
+                                                        <p className="text-sm text-warning/90 mb-2 font-medium">Options:</p>
                                                         <div className="space-y-2">
                                                             <div className="text-sm">
-                                                                <span className="text-yellow-200/90 light:text-yellow-700/90 font-medium">Option 1:</span>
-                                                                <span className="text-yellow-200/70 light:text-yellow-700/70 ml-1">Use cloud models directly</span>
-                                                                <div className="ml-4 mt-1 text-yellow-200/70 light:text-yellow-700/70">
-                                                                    • Change Base URL to <code className="bg-black/40 text-yellow-100 px-1.5 py-0.5 rounded font-mono text-xs">https://ollama.com</code>
+                                                                <span className="text-warning/90 font-medium">Option 1:</span>
+                                                                <span className="text-warning/70 ml-1">Use cloud models directly</span>
+                                                                <div className="ml-4 mt-1 text-warning/70">
+                                                                    • Change Base URL to <code className="bg-black/40 text-warning px-1.5 py-0.5 rounded font-mono text-xs">https://ollama.com</code>
                                                                 </div>
-                                                                <div className="ml-4 text-yellow-200/70 light:text-yellow-700/70">
+                                                                <div className="ml-4 text-warning/70">
                                                                     • Add your Ollama API key
                                                                 </div>
                                                             </div>
                                                             <div className="text-sm">
-                                                                <span className="text-yellow-200/90 light:text-yellow-700/90 font-medium">Option 2:</span>
-                                                                <span className="text-yellow-200/70 light:text-yellow-700/70 ml-1">Run cloud models locally</span>
-                                                                <div className="ml-4 mt-1 text-yellow-200/70 light:text-yellow-700/70">
-                                                                    • Pull any cloud model: <code className="bg-black/40 text-yellow-100 px-1.5 py-0.5 rounded font-mono text-xs">ollama pull model-name</code>
+                                                                <span className="text-warning/90 font-medium">Option 2:</span>
+                                                                <span className="text-warning/70 ml-1">Run cloud models locally</span>
+                                                                <div className="ml-4 mt-1 text-warning/70">
+                                                                    • Pull any cloud model: <code className="bg-black/40 text-warning px-1.5 py-0.5 rounded font-mono text-xs">ollama pull model-name</code>
                                                                 </div>
-                                                                <div className="ml-4 text-yellow-200/70 light:text-yellow-700/70">
-                                                                    • Start Ollama: <code className="bg-black/40 text-yellow-100 px-1.5 py-0.5 rounded font-mono text-xs">ollama serve</code>
+                                                                <div className="ml-4 text-warning/70">
+                                                                    • Start Ollama: <code className="bg-black/40 text-warning px-1.5 py-0.5 rounded font-mono text-xs">ollama serve</code>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -219,20 +219,20 @@ export function ModelDiscoveryDialog({
                                                 </>
                                             ) : (
                                                 <>
-                                                    <p className="text-sm text-yellow-300/90 light:text-yellow-700/90">{searchError.message}</p>
+                                                    <p className="text-sm text-warning/90">{searchError.message}</p>
                                                     {searchError.message.toLowerCase().includes('connect') && (
-                                                        <div className="mt-3 pt-3 border-t border-yellow-500/30">
-                                                            <p className="text-sm text-yellow-200/90 light:text-yellow-700/90 mb-2">Possible solutions:</p>
+                                                        <div className="mt-3 pt-3 border-t border-warning-border">
+                                                            <p className="text-sm text-warning/90 mb-2">Possible solutions:</p>
                                                             <div className="text-sm">
-                                                                <span className="text-yellow-200/70 light:text-yellow-700/70">• Check your network connection</span>
+                                                                <span className="text-warning/70">• Check your network connection</span>
                                                             </div>
                                                             <div className="text-sm mt-1">
-                                                                <span className="text-yellow-200/70 light:text-yellow-700/70">• Verify the provider service is running</span>
+                                                                <span className="text-warning/70">• Verify the provider service is running</span>
                                                             </div>
                                                             {customBaseUrl && (
                                                                 <div className="text-sm mt-1">
-                                                                    <span className="text-yellow-200/70 light:text-yellow-700/70">• Verify custom URL is correct:</span>
-                                                                    <code className="bg-black/40 text-yellow-100 px-2 py-1 rounded font-mono text-xs ml-2">
+                                                                    <span className="text-warning/70">• Verify custom URL is correct:</span>
+                                                                    <code className="bg-black/40 text-warning px-2 py-1 rounded font-mono text-xs ml-2">
                                                                         {customBaseUrl}
                                                                     </code>
                                                                 </div>
@@ -295,7 +295,7 @@ export function ModelDiscoveryDialog({
                                                         )}
                                                     </div>
                                                     {isCloudAvailable && (
-                                                        <p className="text-xs text-blue-400 light:text-blue-600 mt-1">
+                                                        <p className="text-xs text-info mt-1">
                                                             Run <code className="bg-brand-main-700 px-1 rounded">ollama pull {model.name}</code> to use locally
                                                         </p>
                                                     )}

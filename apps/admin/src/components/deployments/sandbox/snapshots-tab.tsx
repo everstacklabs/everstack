@@ -26,11 +26,11 @@ function formatBytes(bytes: number): string {
 }
 
 const STATE_STYLES: Record<string, string> = {
-    active: 'bg-green-500/20 text-green-400 light:text-green-600 border-green-500/30',
-    building: 'bg-blue-500/20 text-blue-400 light:text-blue-600 border-blue-500/30',
-    pending: 'bg-yellow-500/20 text-yellow-400 light:text-yellow-700 border-yellow-500/30',
+    active: 'bg-success-surface-strong text-success border-success-border',
+    building: 'bg-info-surface-strong text-info border-info-border',
+    pending: 'bg-warning-surface-strong text-warning border-warning-border',
     inactive: 'bg-gray-500/20 text-gray-400 light:text-gray-600 border-gray-500/30',
-    error: 'bg-red-500/20 text-red-400 light:text-red-600 border-red-500/30',
+    error: 'bg-danger-surface-strong text-danger border-danger-border',
 }
 
 // ─── Main Component ─────────────────────────────────────────────────
@@ -103,7 +103,7 @@ export function SnapshotsTab() {
                         <Loader loaderText="Loading snapshots..." />
                     </div>
                 ) : error ? (
-                    <div className="flex items-center justify-center h-full text-red-400 light:text-red-600 text-sm">
+                    <div className="flex items-center justify-center h-full text-danger text-sm">
                         Error loading snapshots: {error.message}
                     </div>
                 ) : snapshots.length === 0 ? (
@@ -141,7 +141,7 @@ export function SnapshotsTab() {
                                                 {snap.state}
                                             </span>
                                         </td>
-                                        <td className="py-2.5 px-3 font-mono text-xs text-white/50 light:text-black/50 max-w-[220px] truncate" title={snap.baseImage}>
+                                        <td className="py-2.5 px-3 font-mono text-xs text-white/50 light:text-black/50 max-w-[220px] truncate">
                                             {snap.baseImage || '--'}
                                         </td>
                                         <td className="py-2.5 px-3 text-white/50 light:text-black/50 text-xs">{formatBytes(snap.sizeBytes)}</td>
@@ -150,7 +150,7 @@ export function SnapshotsTab() {
                                             <button
                                                 onClick={() => handleDelete(snap.id, snap.name)}
                                                 disabled={deleteMutation.isPending}
-                                                className="p-1 rounded text-red-400 light:text-red-600 hover:text-red-300 light:hover:text-red-600 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                                className="p-1 rounded text-danger hover:bg-danger-surface transition-colors disabled:opacity-50"
                                                 title="Delete"
                                             >
                                                 <Iconify.Icon icon="heroicons:trash" className="size-4" />

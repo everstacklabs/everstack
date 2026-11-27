@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,20 +15,22 @@ import (
 // fakeAuth resolves any request bearing the magic header to a fixed tenant.
 type fakeAuth struct {
 	tenantID string
+	apiKeyID string
 	ok       bool
 }
 
-func (f fakeAuth) Authenticate(r *http.Request) (string, bool) {
+func (f fakeAuth) AuthenticateKey(r *http.Request) (string, string, bool) {
 	if r.Header.Get("X-Test-Auth") == "" {
-		return "", false
+		return "", "", false
 	}
-	return f.tenantID, f.ok
+	return f.tenantID, f.apiKeyID, f.ok
 }
 
 // fakeProvider records the tenant it was asked about and returns canned tools.
 type fakeProvider struct {
 	listedTenant string
 	calledTenant string
+	calledKeyID  string
 	calledTool   string
 	callErr      error
 }
@@ -37,8 +40,9 @@ func (p *fakeProvider) ListTools(_ context.Context, tenantID string) ([]mcp.Tool
 	return []mcp.ToolInfo{{Name: "everstack_whoami", Description: "who am i"}}, nil
 }
 
-func (p *fakeProvider) CallTool(_ context.Context, tenantID, name string, _ map[string]interface{}) (*mcp.ToolCallResult, error) {
+func (p *fakeProvider) CallTool(ctx context.Context, tenantID, name string, _ map[string]interface{}) (*mcp.ToolCallResult, error) {
 	p.calledTenant = tenantID
+	p.calledKeyID = contextkeys.GetAPIKeyID(ctx)
 	p.calledTool = name
 	if p.callErr != nil {
 		return nil, p.callErr
@@ -225,5 +229,20 @@ func TestBatchRejected(t *testing.T) {
 	resp := decode(t, rr)
 	if resp.Error == nil || resp.Error.Code != codeInvalidRequest {
 		t.Fatalf("want invalid request for batch, got %+v", resp.Error)
+	}
+}
+
+// Spend attribution (docs/design/spend-limits-v2.md S1): a tool call runs
+// with the verified API key's id on its context, so inference it triggers
+// (run_agent) is attributed to that key.
+func TestToolsCallCarriesAPIKeyID(t *testing.T) {
+	prov := &fakeProvider{}
+	h := New(prov, fakeAuth{tenantID: "tenant-A", apiKeyID: "key-mcp", ok: true}, nil)
+	body := `{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"everstack_whoami","arguments":{}}}`
+	if rr := do(t, h, true, body); rr.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", rr.Code)
+	}
+	if prov.calledKeyID != "key-mcp" {
+		t.Fatalf("tool call key id %q, want key-mcp", prov.calledKeyID)
 	}
 }

@@ -14,6 +14,8 @@ import (
 	"github.com/everstacklabs/everstack/internal/lib/correlation"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/everstacklabs/everstack/internal/providers/google"
+	"github.com/everstacklabs/everstack/internal/providers/google/geminiusage"
 	clientx "github.com/everstacklabs/everstack/internal/providers/httpclient"
 	"github.com/everstacklabs/everstack/internal/providers/ratelimit"
 	attrs "github.com/everstacklabs/everstack/internal/telemetry/attributes"
@@ -75,13 +77,7 @@ type vertexResponse struct {
 			} `json:"parts"`
 		} `json:"content"`
 	} `json:"candidates"`
-	UsageMetadata struct {
-		PromptTokenCount        int `json:"promptTokenCount"`
-		CandidatesTokenCount    int `json:"candidatesTokenCount"`
-		TotalTokenCount         int `json:"totalTokenCount"`
-		CachedContentTokenCount int `json:"cachedContentTokenCount,omitempty"`
-		ThoughtTokenCount       int `json:"thoughtTokenCount,omitempty"`
-	} `json:"usageMetadata"`
+	UsageMetadata geminiusage.Metadata `json:"usageMetadata"`
 }
 
 func NewProvider(cfg Config) (*Provider, error) {
@@ -224,6 +220,9 @@ func (p *Provider) Embed(ctx context.Context, req gw.EmbeddingsRequest) (gw.Embe
 
 func buildTokenSource(creds string) (oauth2.TokenSource, error) {
 	creds = strings.TrimSpace(creds)
+	if clientx.PublicEndpointsRequired() {
+		return buildManagedTokenSource(creds)
+	}
 	if creds == "" {
 		defaultCreds, err := googleoauth.FindDefaultCredentials(context.Background(), vertexScope)
 		if err != nil {
@@ -239,6 +238,31 @@ func buildTokenSource(creds string) (oauth2.TokenSource, error) {
 		return googleCreds.TokenSource, nil
 	}
 	return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: creds, TokenType: "Bearer"}), nil
+}
+
+// buildManagedTokenSource is buildTokenSource for gateways serving more than
+// one tenant, where the credential is tenant-supplied and the oauth2 library
+// acts on what it says:
+//
+//   - external_account credentials name a URL or file to read a subject token
+//     from, then send it to a token URL of the tenant's choosing, so they could
+//     read internal services and local files such as the pod's service account
+//     token. Only service_account is accepted.
+//   - token_uri is tenant-chosen too, so token requests use the guarded client.
+//   - An empty credential would fall back to the platform's own identity.
+func buildManagedTokenSource(creds string) (oauth2.TokenSource, error) {
+	if creds == "" {
+		return nil, fmt.Errorf("vertex credentials are required")
+	}
+	if !strings.HasPrefix(creds, "{") {
+		return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: creds, TokenType: "Bearer"}), nil
+	}
+	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, clientx.Unary())
+	googleCreds, err := googleoauth.CredentialsFromJSONWithType(ctx, []byte(creds), googleoauth.ServiceAccount, vertexScope)
+	if err != nil {
+		return nil, fmt.Errorf("vertex credentials must be a service account key: %w", err)
+	}
+	return googleCreds.TokenSource, nil
 }
 
 func (p *Provider) setHeaders(ctx context.Context, h http.Header) error {
@@ -266,6 +290,12 @@ func (p *Provider) buildRequest(req gw.ChatCompletionRequest, stream bool) ([]by
 	}
 	if req.Sampling.TopK != nil {
 		genConfig["topK"] = *req.Sampling.TopK
+	}
+	// Gemini on Vertex takes the same thinkingConfig as the Gemini API. Other
+	// publishers (Claude, Llama, Mistral) and Gemini generations without
+	// thinking are left exactly as they were.
+	if supportsGeminiThinking(req.Model) {
+		google.ApplyThinkingConfig(genConfig, req.Sampling)
 	}
 	vr := vertexRequest{Contents: convertMessages(req.Messages), Tools: convertTools(req.Tools), GenerationConfig: genConfig}
 	body, _ := json.Marshal(vr)
@@ -330,6 +360,27 @@ func buildEndpoint(baseURL string, model string, stream bool) (string, error) {
 	return root + "/" + modelPath + ":generateContent", nil
 }
 
+// isGooglePublisher reports whether a model id resolves to a Google
+// (Gemini) model on Vertex.
+func isGooglePublisher(model string) bool {
+	return strings.HasPrefix(resolveModelPath(model), "publishers/google/")
+}
+
+// supportsGeminiThinking reports whether a model id is a Google model that
+// accepts thinkingConfig. Gemini 1.x and 2.0 predate thinking: they used to
+// ignore reasoning fields silently, and sending thinkingConfig to them would
+// turn a working call into an upstream 400, so they keep getting none.
+func supportsGeminiThinking(model string) bool {
+	if !isGooglePublisher(model) {
+		return false
+	}
+	name := strings.ToLower(strings.TrimSpace(model))
+	if i := strings.LastIndexByte(name, '/'); i >= 0 {
+		name = name[i+1:]
+	}
+	return !strings.HasPrefix(name, "gemini-1.") && !strings.HasPrefix(name, "gemini-2.0")
+}
+
 func resolveModelPath(model string) string {
 	model = strings.TrimSpace(model)
 	if strings.HasPrefix(model, "publishers/") {
@@ -389,13 +440,8 @@ func chunkFromVertex(resp vertexResponse, model string) gw.ChatResponseChunk {
 		chunk.Choices = []gw.ChoiceDelta{{Index: 0, Delta: msg}}
 	}
 	if resp.UsageMetadata.TotalTokenCount > 0 {
-		chunk.Usage = &gw.Usage{PromptTokens: resp.UsageMetadata.PromptTokenCount, CompletionTokens: resp.UsageMetadata.CandidatesTokenCount, TotalTokens: resp.UsageMetadata.TotalTokenCount}
-		if resp.UsageMetadata.CachedContentTokenCount > 0 {
-			chunk.Usage.PromptDetails = &gw.TokenDetails{CachedTokens: resp.UsageMetadata.CachedContentTokenCount, TextTokens: resp.UsageMetadata.PromptTokenCount - resp.UsageMetadata.CachedContentTokenCount}
-		}
-		if resp.UsageMetadata.ThoughtTokenCount > 0 {
-			chunk.Usage.CompletionDetails = &gw.TokenDetails{ReasoningTokens: resp.UsageMetadata.ThoughtTokenCount, TextTokens: resp.UsageMetadata.CandidatesTokenCount - resp.UsageMetadata.ThoughtTokenCount}
-		}
+		usage := resp.UsageMetadata.ToUsage()
+		chunk.Usage = &usage
 	}
 	return chunk
 }

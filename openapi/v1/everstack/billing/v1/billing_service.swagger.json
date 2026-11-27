@@ -64,6 +64,161 @@
         }
       }
     },
+    "v1ApiKeySpend": {
+      "type": "object",
+      "properties": {
+        "apiKeyId": {
+          "type": "string",
+          "description": "The gateway API key id. Empty for traffic that used no API key\n(dashboard sessions, agent triggers, workflows, internal calls)."
+        },
+        "today": {
+          "$ref": "#/definitions/v1SpendTotals"
+        },
+        "month": {
+          "$ref": "#/definitions/v1SpendTotals"
+        }
+      },
+      "description": "ApiKeySpend is one gateway API key's spend this month."
+    },
+    "v1AutoTopUpAttempt": {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "$ref": "#/definitions/v1AutoTopUpAttemptOutcome"
+        },
+        "amountMicros": {
+          "type": "string",
+          "format": "int64"
+        },
+        "attemptedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "failureMessage": {
+          "type": "string",
+          "description": "Customer-safe reason and next step, for a failed attempt."
+        }
+      },
+      "description": "AutoTopUpAttempt is one auto top-up charge."
+    },
+    "v1AutoTopUpAttemptOutcome": {
+      "type": "string",
+      "enum": [
+        "AUTO_TOP_UP_ATTEMPT_OUTCOME_UNSPECIFIED",
+        "AUTO_TOP_UP_ATTEMPT_OUTCOME_PENDING",
+        "AUTO_TOP_UP_ATTEMPT_OUTCOME_SUCCEEDED",
+        "AUTO_TOP_UP_ATTEMPT_OUTCOME_FAILED"
+      ],
+      "default": "AUTO_TOP_UP_ATTEMPT_OUTCOME_UNSPECIFIED",
+      "description": " - AUTO_TOP_UP_ATTEMPT_OUTCOME_PENDING: Charge sent to the card, not confirmed yet."
+    },
+    "v1AutoTopUpConsent": {
+      "type": "object",
+      "properties": {
+        "thresholdCents": {
+          "type": "string",
+          "format": "int64",
+          "description": "Whole USD cents. Charge when the balance drops below this."
+        },
+        "amountCents": {
+          "type": "string",
+          "format": "int64",
+          "description": "Whole USD cents charged per top-up."
+        },
+        "monthlyCapCents": {
+          "type": "string",
+          "format": "int64",
+          "description": "Whole USD cents; at most this much is charged per calendar month (UTC)."
+        },
+        "consentVersion": {
+          "type": "string",
+          "description": "The consent wording version the client rendered\n(GetCreditPurchaseOptionsResponse.auto_top_up_consent_version)."
+        }
+      },
+      "description": "AutoTopUpConsent is the disclosed auto top-up terms a buyer agreed to."
+    },
+    "v1AutoTopUpPolicy": {
+      "type": "object",
+      "properties": {
+        "configured": {
+          "type": "boolean",
+          "description": "False when the organization never set up auto top-up."
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "status": {
+          "$ref": "#/definitions/v1AutoTopUpStatus"
+        },
+        "thresholdMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Micro-dollars (1 USD = 1,000,000)."
+        },
+        "amountMicros": {
+          "type": "string",
+          "format": "int64"
+        },
+        "monthlyCapMicros": {
+          "type": "string",
+          "format": "int64"
+        },
+        "usedThisMonthMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Charged or in flight this calendar month (UTC), and what is left."
+        },
+        "remainingThisMonthMicros": {
+          "type": "string",
+          "format": "int64"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Pass back as expected_version when saving."
+        },
+        "lastAttempt": {
+          "$ref": "#/definitions/v1AutoTopUpAttempt"
+        },
+        "chargeInFlight": {
+          "type": "boolean",
+          "description": "A charge has been sent to the card and is not settled yet."
+        },
+        "actionMessage": {
+          "type": "string",
+          "description": "Customer-safe explanation of ACTION_REQUIRED or PAUSED."
+        },
+        "nextAttemptAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the next charge may happen after a failure (ACTION_REQUIRED)."
+        },
+        "consentText": {
+          "type": "string",
+          "description": "The consent on record."
+        },
+        "consentAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "pausedReason": {
+          "type": "string",
+          "description": "Why it is PAUSED: \"failed_payments\", \"dispute\" or \"refund\". After a\ndispute or refund only an owner or admin turning it back on resumes it."
+        }
+      }
+    },
+    "v1AutoTopUpStatus": {
+      "type": "string",
+      "enum": [
+        "AUTO_TOP_UP_STATUS_UNSPECIFIED",
+        "AUTO_TOP_UP_STATUS_OFF",
+        "AUTO_TOP_UP_STATUS_ACTIVE",
+        "AUTO_TOP_UP_STATUS_ACTION_REQUIRED",
+        "AUTO_TOP_UP_STATUS_PAUSED"
+      ],
+      "default": "AUTO_TOP_UP_STATUS_UNSPECIFIED",
+      "description": " - AUTO_TOP_UP_STATUS_OFF: Not set up, or turned off.\n - AUTO_TOP_UP_STATUS_ACTIVE: On and healthy.\n - AUTO_TOP_UP_STATUS_ACTION_REQUIRED: On, but the last charge failed; retried automatically after a wait.\n - AUTO_TOP_UP_STATUS_PAUSED: Stopped after repeated failed charges. Saving the settings resumes it."
+    },
     "v1BillingPeriod": {
       "type": "string",
       "enum": [
@@ -82,8 +237,84 @@
         },
         "subscription": {
           "$ref": "#/definitions/v1Subscription"
+        },
+        "summary": {
+          "$ref": "#/definitions/v1SubscriptionSummary"
+        },
+        "keptInstances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PlanChangeInstance"
+          },
+          "description": "What happens at the period end: the instances that keep running on\nStarter and the ones that pause. Without keep_instance_ids the most\nrecently active are kept."
+        },
+        "pausedInstances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PlanChangeInstance"
+          }
         }
       }
+    },
+    "v1ChangePlanResponse": {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "$ref": "#/definitions/v1PlanChangeOutcome"
+        },
+        "timing": {
+          "$ref": "#/definitions/v1PlanChangeTiming"
+        },
+        "effectiveAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "clientAction": {
+          "$ref": "#/definitions/v1ClientAction"
+        },
+        "summary": {
+          "$ref": "#/definitions/v1SubscriptionSummary"
+        },
+        "keptInstances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PlanChangeInstance"
+          },
+          "description": "A scheduled downgrade: the instances that keep running and the ones\nthat pause at the switch."
+        },
+        "pausedInstances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PlanChangeInstance"
+          }
+        }
+      }
+    },
+    "v1ClientAction": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/v1ClientActionKind"
+        },
+        "url": {
+          "type": "string",
+          "description": "Stripe-hosted URL to open."
+        }
+      }
+    },
+    "v1ClientActionKind": {
+      "type": "string",
+      "enum": [
+        "CLIENT_ACTION_KIND_UNSPECIFIED",
+        "CLIENT_ACTION_KIND_CONFIRM_PAYMENT",
+        "CLIENT_ACTION_KIND_ADD_PAYMENT_METHOD"
+      ],
+      "default": "CLIENT_ACTION_KIND_UNSPECIFIED",
+      "description": "ClientActionKind is a step the customer must finish in Stripe.\n\n - CLIENT_ACTION_KIND_CONFIRM_PAYMENT: Pay or authenticate (SCA) the upgrade invoice on Stripe's hosted page.\nThe change applies once it is paid; Stripe drops it if it is not paid\nwithin about a day.\n - CLIENT_ACTION_KIND_ADD_PAYMENT_METHOD: Add a payment method in the Stripe portal, then retry ChangePlan.\nNothing was changed."
     },
     "v1CreateBillingPortalSessionResponse": {
       "type": "object",
@@ -111,6 +342,171 @@
           "type": "boolean"
         }
       }
+    },
+    "v1CreateSetupIntentResponse": {
+      "type": "object",
+      "properties": {
+        "clientSecret": {
+          "type": "string",
+          "description": "Stripe SetupIntent client secret for stripe.confirmSetup. Short-lived;\nnever log or persist it."
+        },
+        "setupIntentId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreditEntryType": {
+      "type": "string",
+      "enum": [
+        "CREDIT_ENTRY_TYPE_UNSPECIFIED",
+        "CREDIT_ENTRY_TYPE_GRANT",
+        "CREDIT_ENTRY_TYPE_PURCHASE",
+        "CREDIT_ENTRY_TYPE_DEBIT",
+        "CREDIT_ENTRY_TYPE_REFUND",
+        "CREDIT_ENTRY_TYPE_EXPIRY",
+        "CREDIT_ENTRY_TYPE_ADJUSTMENT"
+      ],
+      "default": "CREDIT_ENTRY_TYPE_UNSPECIFIED",
+      "description": "CreditEntryType is the kind of one credit ledger entry.\n\n - CREDIT_ENTRY_TYPE_GRANT: Credit issued by Everstack (signup grant, promotion, ops grant).\n - CREDIT_ENTRY_TYPE_PURCHASE: Credit bought by the customer.\n - CREDIT_ENTRY_TYPE_DEBIT: Usage that consumed credit.\n - CREDIT_ENTRY_TYPE_REFUND: Reversal of a debit.\n - CREDIT_ENTRY_TYPE_EXPIRY: Unused granted credit removed when it expired.\n - CREDIT_ENTRY_TYPE_ADJUSTMENT: Correction in either direction."
+    },
+    "v1CreditLedgerEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "entryType": {
+          "$ref": "#/definitions/v1CreditEntryType"
+        },
+        "amountMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Signed: positive adds credit, negative consumes it."
+        },
+        "resourceType": {
+          "type": "string",
+          "description": "Empty when the entry is not tied to a resource."
+        },
+        "metricType": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human readable summary, for example \"Inference: gpt-4o-mini\"."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "periodStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "periodEnd": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "model": {
+          "type": "string",
+          "description": "Model for inference entries, when recorded."
+        }
+      },
+      "description": "CreditLedgerEntry is one customer-visible ledger row."
+    },
+    "v1CreditPurchase": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/definitions/v1CreditPurchaseState"
+        },
+        "requestedMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Pre-tax credit requested, in micro-dollars (1 USD = 1,000,000)."
+        },
+        "mintedMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Credit minted (0 until paid)."
+        },
+        "reversedMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Credit clawed back by refunds and lost disputes."
+        },
+        "amountTotalMinor": {
+          "type": "string",
+          "format": "int64",
+          "description": "Amount charged including tax, in minor units of `currency` (0 until paid)."
+        },
+        "amountTaxMinor": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "paidAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "CreditPurchase is one prepaid credit purchase attempt."
+    },
+    "v1CreditPurchaseState": {
+      "type": "string",
+      "enum": [
+        "CREDIT_PURCHASE_STATE_UNSPECIFIED",
+        "CREDIT_PURCHASE_STATE_PENDING",
+        "CREDIT_PURCHASE_STATE_PAID",
+        "CREDIT_PURCHASE_STATE_FAILED",
+        "CREDIT_PURCHASE_STATE_EXPIRED",
+        "CREDIT_PURCHASE_STATE_CANCELED",
+        "CREDIT_PURCHASE_STATE_ACTION_REQUIRED",
+        "CREDIT_PURCHASE_STATE_REFUNDED",
+        "CREDIT_PURCHASE_STATE_DISPUTED",
+        "CREDIT_PURCHASE_STATE_NEEDS_REVIEW"
+      ],
+      "default": "CREDIT_PURCHASE_STATE_UNSPECIFIED",
+      "description": "CreditPurchaseState mirrors billing.credit_purchases.state.\n\n - CREDIT_PURCHASE_STATE_PENDING: Created; the customer is on (or left) the Stripe Checkout page.\n - CREDIT_PURCHASE_STATE_PAID: Paid and minted. The only state that means the credit is available.\n - CREDIT_PURCHASE_STATE_FAILED: A delayed payment method failed.\n - CREDIT_PURCHASE_STATE_EXPIRED: The Checkout session expired unpaid.\n - CREDIT_PURCHASE_STATE_ACTION_REQUIRED: Checkout completed; the payment is still processing.\n - CREDIT_PURCHASE_STATE_REFUNDED: Fully refunded; the credit was clawed back.\n - CREDIT_PURCHASE_STATE_DISPUTED: A chargeback is open or was lost.\n - CREDIT_PURCHASE_STATE_NEEDS_REVIEW: Paid but held for manual review (for example a non-USD payment)."
+    },
+    "v1CreditSpend": {
+      "type": "object",
+      "properties": {
+        "resourceType": {
+          "type": "string",
+          "description": "inference | sandbox | browser | extra_instance | processed_data | ..."
+        },
+        "spentMicros": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "CreditSpend is the net credit one resource consumed (debits minus refunds)."
+    },
+    "v1CreditWalletState": {
+      "type": "string",
+      "enum": [
+        "CREDIT_WALLET_STATE_UNSPECIFIED",
+        "CREDIT_WALLET_STATE_ACTIVE",
+        "CREDIT_WALLET_STATE_EXHAUSTED"
+      ],
+      "default": "CREDIT_WALLET_STATE_UNSPECIFIED",
+      "description": "CreditWalletState summarises whether the wallet can pay for new usage.\n\n - CREDIT_WALLET_STATE_ACTIVE: Available credit is positive.\n - CREDIT_WALLET_STATE_EXHAUSTED: Available credit is zero or negative."
     },
     "v1DeleteSpendLimitResponse": {
       "type": "object",
@@ -153,6 +549,177 @@
         }
       }
     },
+    "v1GetAutoTopUpPolicyResponse": {
+      "type": "object",
+      "properties": {
+        "policy": {
+          "$ref": "#/definitions/v1AutoTopUpPolicy"
+        },
+        "available": {
+          "type": "boolean",
+          "description": "False while auto top-up is switched off for this deployment; the UI\nhides it."
+        },
+        "minAmountUsd": {
+          "type": "string",
+          "format": "int64",
+          "description": "Bounds for the edit dialog, whole USD."
+        },
+        "maxAmountUsd": {
+          "type": "string",
+          "format": "int64"
+        },
+        "minThresholdUsd": {
+          "type": "string",
+          "format": "int64"
+        },
+        "maxMonthlyCapUsd": {
+          "type": "string",
+          "format": "int64"
+        },
+        "consentVersion": {
+          "type": "string"
+        }
+      }
+    },
+    "v1GetCreditBalanceResponse": {
+      "type": "object",
+      "properties": {
+        "balanceMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Signed sum of every ledger entry. Can be negative."
+        },
+        "heldMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Credit reserved by in-flight requests and not yet settled."
+        },
+        "availableMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "balance_micros - held_micros: what new usage can spend now."
+        },
+        "walletState": {
+          "$ref": "#/definitions/v1CreditWalletState"
+        },
+        "asOf": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the ledger was read (database clock)."
+        },
+        "grantedMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Lifetime totals. balance = granted + purchased - spent - expired + adjusted."
+        },
+        "purchasedMicros": {
+          "type": "string",
+          "format": "int64"
+        },
+        "spentMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Net consumption: debits minus refunds, as a positive number."
+        },
+        "expiredMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Granted credit that expired unused, as a positive number."
+        },
+        "adjustedMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Net of every adjustment entry (signed)."
+        },
+        "spendByResource": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CreditSpend"
+          },
+          "description": "Lifetime spend per resource, largest first. Resources with no net\nspend are omitted."
+        },
+        "signupGrantMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "The one-time signup grant included in granted_micros (0 when none)."
+        },
+        "planCreditGrantedMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Plan credit from the earlier subscription model (fee converted into\nperiod credit, resource_type \"subscription\"). Included in granted_micros."
+        },
+        "planCreditExpiredMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "The part of plan_credit_granted_micros that expired, as a positive number.\nIncluded in expired_micros."
+        },
+        "grantedCurrentMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Headline totals: granted_micros and expired_micros with expired plan\ncredit netted out of both, so credit that is gone and was never part of\nthe prepaid wallet does not inflate either figure. The identity\nbalance = granted_current + purchased - spent - expired_current + adjusted\nstill holds."
+        },
+        "expiredCurrentMicros": {
+          "type": "string",
+          "format": "int64"
+        },
+        "signupGrantExpiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the signup grant's unspent remainder expires (30 days after it was\ngranted). Unset when the org holds no signup grant or its grant predates\nthe 30-day rule and never expires."
+        }
+      }
+    },
+    "v1GetCreditPurchaseOptionsResponse": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "False while self-serve purchase is switched off; the UI hides Buy."
+        },
+        "presetsUsd": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "int64"
+          },
+          "description": "Preset top-up amounts, whole USD, pre-tax."
+        },
+        "minUsd": {
+          "type": "string",
+          "format": "int64"
+        },
+        "maxUsd": {
+          "type": "string",
+          "format": "int64"
+        },
+        "offerAutoTopUp": {
+          "type": "boolean",
+          "description": "True when the Buy dialog should show the pre-checked auto top-up box:\nauto top-up is available and the organization has no policy yet."
+        },
+        "autoTopUpDefaultThresholdUsd": {
+          "type": "string",
+          "format": "int64",
+          "description": "Defaults for that box: the threshold, and the monthly cap as a multiple\nof the amount being bought (the refill amount is the amount bought)."
+        },
+        "autoTopUpDefaultCapMultiple": {
+          "type": "string",
+          "format": "int64"
+        },
+        "autoTopUpConsentVersion": {
+          "type": "string",
+          "description": "Version of the consent wording; send it back in AutoTopUpConsent."
+        }
+      }
+    },
+    "v1GetCreditPurchaseResponse": {
+      "type": "object",
+      "properties": {
+        "purchase": {
+          "$ref": "#/definitions/v1CreditPurchase"
+        }
+      }
+    },
     "v1GetInstanceOrganizationResponse": {
       "type": "object",
       "properties": {
@@ -179,6 +746,50 @@
         },
         "gatewayUrl": {
           "type": "string"
+        }
+      }
+    },
+    "v1GetModelTrialResponse": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string"
+        },
+        "eligible": {
+          "type": "boolean"
+        },
+        "granted": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "used": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "remaining": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "state": {
+          "$ref": "#/definitions/v1ModelTrialState"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Unset until the free requests are granted (on first use); they expire a\nfixed number of days after the grant."
+        },
+        "resumesAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Set when paused by today's limit: the next 00:00 UTC."
+        },
+        "model": {
+          "type": "string",
+          "description": "The one model free requests are served on, and the output cap per\nrequest."
+        },
+        "maxOutputTokens": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -255,11 +866,47 @@
         }
       }
     },
+    "v1GetSpendStatusResponse": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "type": "string"
+        },
+        "today": {
+          "$ref": "#/definitions/v1SpendTotals",
+          "description": "The current UTC day and UTC month, for the whole organization."
+        },
+        "month": {
+          "$ref": "#/definitions/v1SpendTotals"
+        },
+        "apiKeys": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ApiKeySpend"
+          },
+          "description": "Every API key with recorded attempts this month, highest month spend\nfirst. Sums to the organization totals."
+        },
+        "asOf": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Attempts recorded up to this time are included. Unset until the rollup\njob has completed its first pass."
+        }
+      }
+    },
     "v1GetSubscriptionResponse": {
       "type": "object",
       "properties": {
         "subscription": {
           "$ref": "#/definitions/v1Subscription"
+        },
+        "hasBillingPortal": {
+          "type": "boolean",
+          "description": "True when the organization has a Stripe customer, so\nCreateBillingPortalSession can open the portal (payment methods and\ninvoices) even without a subscription, e.g. after a credit top-up."
+        },
+        "summary": {
+          "$ref": "#/definitions/v1SubscriptionSummary",
+          "description": "Everything one plan summary needs, computed server side. Set whenever\nsubscription is set. Members without org:manage_billing get the\nread-only subset (see SubscriptionSummary)."
         }
       }
     },
@@ -364,8 +1011,120 @@
         },
         "sandboxBillingActive": {
           "type": "boolean"
+        },
+        "unmeteredFields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names of the top-level usage fields above that nothing reports for this\norganization yet, spelled as their proto field names (for example\n\"cache_savings_micros\", \"network_rx_bytes\"). Clients render these as not\nmetered instead of 0. Empty from servers older than this field, which\nmeans render every field as before."
         }
       }
+    },
+    "v1InferenceAttempt": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "$ref": "#/definitions/v1InferenceAttemptRole"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "modality": {
+          "type": "string",
+          "description": "chat | embeddings | responses | ..."
+        },
+        "customerKey": {
+          "type": "boolean",
+          "description": "True when the attempt ran on the customer's own provider key. Such\nattempts are never charged."
+        },
+        "inputTokens": {
+          "type": "string",
+          "format": "int64",
+          "description": "Unset when not recorded (history from before attempts were recorded)."
+        },
+        "outputTokens": {
+          "type": "string",
+          "format": "int64"
+        },
+        "estimated": {
+          "type": "boolean",
+          "description": "The provider reported no usage (the stream was cut off, or sent no usage\nchunk), so the tokens are Everstack's estimate."
+        },
+        "charged": {
+          "type": "boolean",
+          "description": "Whether the attempt consumed credit, and how much (positive)."
+        },
+        "amountMicros": {
+          "type": "string",
+          "format": "int64"
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "internal": {
+          "type": "boolean",
+          "description": "A call Everstack made for the request itself (a context summary or a\ncache lookup), not an answer to it. Charged like any other attempt;\nnever counted as served."
+        }
+      },
+      "description": "InferenceAttempt is one provider attempt."
+    },
+    "v1InferenceAttemptRole": {
+      "type": "string",
+      "enum": [
+        "INFERENCE_ATTEMPT_ROLE_UNSPECIFIED",
+        "INFERENCE_ATTEMPT_ROLE_SERVED",
+        "INFERENCE_ATTEMPT_ROLE_RACE_LOSER",
+        "INFERENCE_ATTEMPT_ROLE_FAILED_FALLBACK",
+        "INFERENCE_ATTEMPT_ROLE_RETRY",
+        "INFERENCE_ATTEMPT_ROLE_PLATFORM_RETRY",
+        "INFERENCE_ATTEMPT_ROLE_INTERRUPTED"
+      ],
+      "default": "INFERENCE_ATTEMPT_ROLE_UNSPECIFIED",
+      "description": "InferenceAttemptRole is why an attempt was made and how it ended.\n\n - INFERENCE_ATTEMPT_ROLE_UNSPECIFIED: Not recorded (history from before attempts were recorded).\n - INFERENCE_ATTEMPT_ROLE_SERVED: Its response was returned to the caller.\n - INFERENCE_ATTEMPT_ROLE_RACE_LOSER: A leg of a parallel race that another leg won.\n - INFERENCE_ATTEMPT_ROLE_FAILED_FALLBACK: Failed, after which fallback tried the next provider.\n - INFERENCE_ATTEMPT_ROLE_RETRY: A repeat of the same target that the routing configuration asked for.\n - INFERENCE_ATTEMPT_ROLE_PLATFORM_RETRY: A repeat Everstack made for its own reasons. Never charged.\n - INFERENCE_ATTEMPT_ROLE_INTERRUPTED: Broke off part way (for example a stream that failed) with nothing\nconfigured to take over. Charged for the tokens it generated."
+    },
+    "v1InferenceRequestAttempts": {
+      "type": "object",
+      "properties": {
+        "groupKey": {
+          "type": "string",
+          "description": "Opaque key, stable across pages, for UI state such as which groups are\nexpanded. Not an identifier to show."
+        },
+        "firstAttemptAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastAttemptAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "attemptCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "servedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Attempts whose answer was returned, internal calls excluded."
+        },
+        "chargedMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Sum of the charged attempts' amounts (positive)."
+        },
+        "attempts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1InferenceAttempt"
+          }
+        }
+      },
+      "description": "InferenceRequestAttempts is every attempt of one request, oldest first."
     },
     "v1Invoice": {
       "type": "object",
@@ -415,6 +1174,51 @@
       },
       "title": "Invoice represents a billing invoice"
     },
+    "v1ListCreditLedgerResponse": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CreditLedgerEntry"
+          }
+        },
+        "nextPageToken": {
+          "type": "string",
+          "description": "Empty when there are no more entries."
+        }
+      }
+    },
+    "v1ListCreditPurchasesResponse": {
+      "type": "object",
+      "properties": {
+        "purchases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CreditPurchase"
+          }
+        }
+      }
+    },
+    "v1ListInferenceAttemptsResponse": {
+      "type": "object",
+      "properties": {
+        "requests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1InferenceRequestAttempts"
+          },
+          "description": "Newest request first."
+        },
+        "nextPageToken": {
+          "type": "string",
+          "description": "Empty when there are no more requests."
+        }
+      }
+    },
     "v1ListInvoicesResponse": {
       "type": "object",
       "properties": {
@@ -431,6 +1235,18 @@
         }
       }
     },
+    "v1ListPaymentMethodsResponse": {
+      "type": "object",
+      "properties": {
+        "paymentMethods": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PaymentMethod"
+          }
+        }
+      }
+    },
     "v1MigrateSubscriptionResponse": {
       "type": "object",
       "properties": {
@@ -441,6 +1257,131 @@
           "type": "string"
         }
       }
+    },
+    "v1ModelTrialState": {
+      "type": "string",
+      "enum": [
+        "MODEL_TRIAL_STATE_UNSPECIFIED",
+        "MODEL_TRIAL_STATE_ACTIVE",
+        "MODEL_TRIAL_STATE_EXHAUSTED",
+        "MODEL_TRIAL_STATE_EXPIRED",
+        "MODEL_TRIAL_STATE_PAUSED",
+        "MODEL_TRIAL_STATE_NOT_ELIGIBLE"
+      ],
+      "default": "MODEL_TRIAL_STATE_UNSPECIFIED",
+      "description": "ModelTrialState is the state of an organization's free model requests.\n\n - MODEL_TRIAL_STATE_ACTIVE: Free requests can be used now.\n - MODEL_TRIAL_STATE_EXHAUSTED: Every free request is used.\n - MODEL_TRIAL_STATE_EXPIRED: The free requests expired (see expires_at).\n - MODEL_TRIAL_STATE_PAUSED: Free requests are paused for everyone: until resumes_at when set,\notherwise until further notice.\n - MODEL_TRIAL_STATE_NOT_ELIGIBLE: The organization has no free requests."
+    },
+    "v1PaymentMethod": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Everstack id of the saved method; pass it to SetDefault/Remove."
+        },
+        "type": {
+          "type": "string",
+          "description": "Stripe payment method type, for example \"card\" or \"link\"."
+        },
+        "brand": {
+          "type": "string",
+          "description": "Card network, for example \"visa\" or \"mastercard\". Empty for non-cards."
+        },
+        "last4": {
+          "type": "string"
+        },
+        "expMonth": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "expYear": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "funding": {
+          "type": "string",
+          "description": "\"credit\", \"debit\", \"prepaid\" or \"unknown\"."
+        },
+        "country": {
+          "type": "string",
+          "description": "Issuing country, ISO 3166-1 alpha-2."
+        },
+        "isDefault": {
+          "type": "boolean"
+        },
+        "expiringSoon": {
+          "type": "boolean",
+          "description": "True in the card's last two months of validity (this month or next)."
+        },
+        "expired": {
+          "type": "boolean",
+          "description": "True once the expiry month has passed."
+        },
+        "billingName": {
+          "type": "string"
+        },
+        "billingPostalCode": {
+          "type": "string"
+        },
+        "billingCountry": {
+          "type": "string"
+        },
+        "wallet": {
+          "type": "string",
+          "description": "Wallet the card was added through, for example \"apple_pay\". Empty\nfor a card entered directly."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "linkEmail": {
+          "type": "string",
+          "description": "Email of the Link account, for type \"link\". Only returned to owners and\nadmins; empty for other members and for every other type."
+        },
+        "billingAddressLine1": {
+          "type": "string",
+          "description": "Billing address lines of a card. Only returned to owners and admins, to\nprefill the edit form."
+        },
+        "billingAddressLine2": {
+          "type": "string"
+        },
+        "billingAddressCity": {
+          "type": "string"
+        },
+        "billingAddressState": {
+          "type": "string"
+        }
+      },
+      "description": "PaymentMethod is display metadata for a saved Stripe payment method. It\nnever carries a card number or security code: those never reach Everstack."
+    },
+    "v1PaymentRecovery": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/v1PaymentRecoveryStatus"
+        },
+        "amountDue": {
+          "type": "string",
+          "format": "int64",
+          "description": "Smallest currency unit."
+        },
+        "currency": {
+          "type": "string"
+        },
+        "clientAction": {
+          "$ref": "#/definitions/v1ClientAction"
+        }
+      }
+    },
+    "v1PaymentRecoveryStatus": {
+      "type": "string",
+      "enum": [
+        "PAYMENT_RECOVERY_STATUS_UNSPECIFIED",
+        "PAYMENT_RECOVERY_STATUS_PAID",
+        "PAYMENT_RECOVERY_STATUS_ACTION_REQUIRED",
+        "PAYMENT_RECOVERY_STATUS_FAILED"
+      ],
+      "default": "PAYMENT_RECOVERY_STATUS_UNSPECIFIED",
+      "description": "PaymentRecoveryStatus is the outcome of paying an overdue subscription\ninvoice with a newly chosen default card.\n\n - PAYMENT_RECOVERY_STATUS_PAID: Paid; the subscription returns to active through the usual webhooks.\n - PAYMENT_RECOVERY_STATUS_ACTION_REQUIRED: The bank requires authentication: send the customer to client_action\n(CONFIRM_PAYMENT, Stripe's hosted invoice).\n - PAYMENT_RECOVERY_STATUS_FAILED: The card was declined or Stripe failed. The card stays the default and\nStripe keeps retrying; client_action points at the hosted invoice to\npay another way."
     },
     "v1PendingActivation": {
       "type": "object",
@@ -469,6 +1410,77 @@
           "format": "date-time"
         }
       }
+    },
+    "v1PlanChangeDirection": {
+      "type": "string",
+      "enum": [
+        "PLAN_CHANGE_DIRECTION_UNSPECIFIED",
+        "PLAN_CHANGE_DIRECTION_UPGRADE",
+        "PLAN_CHANGE_DIRECTION_DOWNGRADE",
+        "PLAN_CHANGE_DIRECTION_NONE"
+      ],
+      "default": "PLAN_CHANGE_DIRECTION_UNSPECIFIED",
+      "description": "PlanChangeDirection classifies a change: tier rank first, then the price\nof the target interval for a same-plan interval switch.\n\n - PLAN_CHANGE_DIRECTION_NONE: Target equals the current plan and interval. ChangePlan with no change\nwithdraws any scheduled change instead."
+    },
+    "v1PlanChangeInstance": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "lastActiveAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "wouldPause": {
+          "type": "boolean",
+          "description": "True when it would pause at the switch under the given (or default)\nkeep choice."
+        },
+        "paidExtra": {
+          "type": "boolean",
+          "description": "True when it already runs as a paid extra instance (credit-funded fee)\nand holds no plan slot."
+        }
+      },
+      "description": "PlanChangeInstance is one managed instance that holds a plan slot."
+    },
+    "v1PlanChangeOutcome": {
+      "type": "string",
+      "enum": [
+        "PLAN_CHANGE_OUTCOME_UNSPECIFIED",
+        "PLAN_CHANGE_OUTCOME_APPLIED",
+        "PLAN_CHANGE_OUTCOME_SCHEDULED",
+        "PLAN_CHANGE_OUTCOME_UNCHANGED",
+        "PLAN_CHANGE_OUTCOME_ACTION_REQUIRED"
+      ],
+      "default": "PLAN_CHANGE_OUTCOME_UNSPECIFIED",
+      "description": "PlanChangeOutcome is what ChangePlan did.\n\n - PLAN_CHANGE_OUTCOME_APPLIED: Upgrade applied and paid.\n - PLAN_CHANGE_OUTCOME_SCHEDULED: Downgrade or cheaper interval scheduled for the period end.\n - PLAN_CHANGE_OUTCOME_UNCHANGED: Already on the target (a scheduled change, if any, was withdrawn).\n - PLAN_CHANGE_OUTCOME_ACTION_REQUIRED: The customer must finish client_action."
+    },
+    "v1PlanChangeTiming": {
+      "type": "string",
+      "enum": [
+        "PLAN_CHANGE_TIMING_UNSPECIFIED",
+        "PLAN_CHANGE_TIMING_IMMEDIATE",
+        "PLAN_CHANGE_TIMING_PERIOD_END"
+      ],
+      "default": "PLAN_CHANGE_TIMING_UNSPECIFIED",
+      "description": "PlanChangeTiming says when a plan change takes effect.\n\n - PLAN_CHANGE_TIMING_IMMEDIATE: Applied now, with a prorated charge for the rest of the period.\n - PLAN_CHANGE_TIMING_PERIOD_END: Scheduled for the end of the current period (downgrades, cheaper\nintervals, cancellation)."
+    },
+    "v1PlanChoice": {
+      "type": "string",
+      "enum": [
+        "PLAN_CHOICE_UNSPECIFIED",
+        "PLAN_CHOICE_STARTER",
+        "PLAN_CHOICE_BUILD",
+        "PLAN_CHOICE_SCALE"
+      ],
+      "default": "PLAN_CHOICE_UNSPECIFIED",
+      "description": "PlanChoice names a self-serve plan. The server maps it (with a\nBillingPeriod) to the Stripe price; clients never send price ids.\n\n - PLAN_CHOICE_STARTER: Starter (tier \"free\"). Reached by cancelling; ChangePlan rejects it.\n - PLAN_CHOICE_BUILD: Build (tier \"basic\").\n - PLAN_CHOICE_SCALE: Scale (tier \"pro\")."
     },
     "v1PlanConfig": {
       "type": "object",
@@ -514,6 +1526,139 @@
         }
       }
     },
+    "v1PlanLimitsSummary": {
+      "type": "object",
+      "properties": {
+        "instanceLimit": {
+          "type": "integer",
+          "format": "int32",
+          "description": "0 means unlimited."
+        },
+        "seatLimit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "usageLimits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PlanUsageLimit"
+          },
+          "description": "Named usage limits from the catalog (-1 = unlimited)."
+        }
+      },
+      "description": "PlanLimitsSummary is the part of a plan's limits a change affects."
+    },
+    "v1PlanUsageLimit": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1PreviewPlanChangeResponse": {
+      "type": "object",
+      "properties": {
+        "direction": {
+          "$ref": "#/definitions/v1PlanChangeDirection"
+        },
+        "timing": {
+          "$ref": "#/definitions/v1PlanChangeTiming"
+        },
+        "targetPlan": {
+          "$ref": "#/definitions/v1PlanChoice"
+        },
+        "targetPlanName": {
+          "type": "string"
+        },
+        "targetBillingPeriod": {
+          "$ref": "#/definitions/v1BillingPeriod"
+        },
+        "effectiveAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Now for an immediate change; the end of the current period otherwise."
+        },
+        "currentLimits": {
+          "$ref": "#/definitions/v1PlanLimitsSummary"
+        },
+        "newLimits": {
+          "$ref": "#/definitions/v1PlanLimitsSummary"
+        },
+        "instances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PlanChangeInstance"
+          },
+          "description": "Every instance holding a slot under the current plan."
+        },
+        "overLimitInstances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PlanChangeInstance"
+          },
+          "description": "The instances that exceed the new limit and would pause at the switch\n(would_pause = true), under keep_instance_ids or the default."
+        },
+        "keepChoiceRequired": {
+          "type": "boolean",
+          "description": "True when the new limit leaves instances to pause, so the UI should\noffer a keep choice (preselect the instances with would_pause = false).\nNot required: without one, the most recently active are kept."
+        },
+        "maxKeep": {
+          "type": "integer",
+          "format": "int32",
+          "description": "How many instances keep_instance_ids may name (the new instance limit)."
+        },
+        "prorationAmountDue": {
+          "type": "string",
+          "format": "int64",
+          "description": "Immediate changes: the prorated amount charged now, smallest currency\nunit (Stripe invoice preview). Unset for scheduled changes or when\nStripe could not price it."
+        },
+        "currency": {
+          "type": "string"
+        },
+        "targetPriceAmount": {
+          "type": "string",
+          "format": "int64",
+          "description": "The recurring price of the target plan and period, smallest unit."
+        },
+        "extraInstanceMonthlyCents": {
+          "type": "string",
+          "format": "int64",
+          "description": "Credit-funded extra instances: the monthly wallet fee per instance\nbeyond the plan limit, and what keeping every over-limit instance as an\nextra would cost per month. Both 0 when the option is unavailable."
+        },
+        "overLimitExtrasMonthlyCents": {
+          "type": "string",
+          "format": "int64"
+        },
+        "hasPaymentMethod": {
+          "type": "boolean",
+          "description": "Upgrades charge the default saved card. False means ChangePlan will\nreturn an ADD_PAYMENT_METHOD action instead of charging."
+        },
+        "blockedReason": {
+          "type": "string",
+          "description": "Set when ChangePlan would refuse: \"past_due\", \"cancel_scheduled\",\n\"no_subscription\", \"not_self_serve\", \"same_plan\"."
+        }
+      }
+    },
+    "v1PurchaseCreditsResponse": {
+      "type": "object",
+      "properties": {
+        "purchase": {
+          "$ref": "#/definitions/v1CreditPurchase"
+        },
+        "checkoutUrl": {
+          "type": "string",
+          "description": "Stripe Checkout URL to redirect the browser to."
+        }
+      }
+    },
     "v1RegenerateActivationResponse": {
       "type": "object",
       "properties": {
@@ -527,6 +1672,21 @@
           "type": "integer",
           "format": "int32",
           "title": "Seconds until expiration"
+        }
+      }
+    },
+    "v1RegisterApiKeyResponse": {
+      "type": "object"
+    },
+    "v1RemovePaymentMethodResponse": {
+      "type": "object",
+      "properties": {
+        "paymentMethods": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PaymentMethod"
+          }
         }
       }
     },
@@ -578,6 +1738,9 @@
         },
         "subscription": {
           "$ref": "#/definitions/v1Subscription"
+        },
+        "summary": {
+          "$ref": "#/definitions/v1SubscriptionSummary"
         }
       }
     },
@@ -592,6 +1755,54 @@
         }
       }
     },
+    "v1ScheduledPlanChange": {
+      "type": "object",
+      "properties": {
+        "targetPlan": {
+          "$ref": "#/definitions/v1PlanChoice"
+        },
+        "targetPlanName": {
+          "type": "string",
+          "description": "Catalog display name of the target plan (\"Build\")."
+        },
+        "targetBillingPeriod": {
+          "$ref": "#/definitions/v1BillingPeriod"
+        },
+        "effectiveAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "scheduledInApp": {
+          "type": "boolean",
+          "description": "False when the change was scheduled outside the app (for example in\nthe Stripe portal); keep_instance_ids is then empty."
+        }
+      },
+      "description": "ScheduledPlanChange is a plan or interval change that takes effect at\nthe end of the current period."
+    },
+    "v1SetAutoTopUpPolicyResponse": {
+      "type": "object",
+      "properties": {
+        "policy": {
+          "$ref": "#/definitions/v1AutoTopUpPolicy"
+        }
+      }
+    },
+    "v1SetDefaultPaymentMethodResponse": {
+      "type": "object",
+      "properties": {
+        "paymentMethods": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PaymentMethod"
+          }
+        },
+        "paymentRecovery": {
+          "$ref": "#/definitions/v1PaymentRecovery",
+          "description": "Set when a subscription was past due or unpaid with an open invoice\nand the new default card was tried on it. Every live subscription is\nmoved to the new default card either way."
+        }
+      }
+    },
     "v1SetSpendLimitResponse": {
       "type": "object",
       "properties": {
@@ -599,6 +1810,16 @@
           "$ref": "#/definitions/v1SpendLimit"
         }
       }
+    },
+    "v1SpendBasis": {
+      "type": "string",
+      "enum": [
+        "SPEND_BASIS_UNSPECIFIED",
+        "SPEND_BASIS_PLATFORM_CREDIT",
+        "SPEND_BASIS_ALL_INFERENCE"
+      ],
+      "default": "SPEND_BASIS_UNSPECIFIED",
+      "description": "SpendBasis is what a spend limit counts (docs/design/spend-limits-v2.md\n4.1). UNSPECIFIED on a write keeps an existing limit's basis and creates\na PLATFORM_CREDIT limit, so callers that predate it are unchanged.\n\n - SPEND_BASIS_PLATFORM_CREDIT: Everstack credit only: limits written before spend limits v2.\n - SPEND_BASIS_ALL_INFERENCE: Everstack credit charged plus traffic on the organization's own provider\nkeys at catalog list price: one combined budget."
     },
     "v1SpendLimit": {
       "type": "object",
@@ -640,6 +1861,25 @@
         "updatedAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "apiKeyId": {
+          "type": "string",
+          "description": "The gateway API key this limit applies to. Unset on organization and\ninstance limits."
+        },
+        "basis": {
+          "$ref": "#/definitions/v1SpendBasis"
+        },
+        "notifyPercents": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": "Percentages of the limit at which owners and admins are emailed. Fixed\nat 80 and 100 for now."
+        },
+        "apiKeyName": {
+          "type": "string",
+          "description": "Display name of the API key, as given when the limit was set. Unset on\norganization and instance limits."
         }
       },
       "title": "SpendLimit represents a spending limit configuration"
@@ -674,6 +1914,51 @@
       ],
       "default": "SPEND_LIMIT_TYPE_UNSPECIFIED",
       "title": "SpendLimitType represents the type of spend limit"
+    },
+    "v1SpendTotals": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Inclusive window start (00:00 UTC of the day, or of the 1st of the month)."
+        },
+        "resetsAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Exclusive window end: when the window resets (00:00 UTC)."
+        },
+        "spentMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "platform_micros + byok_estimated_micros, in USD micros."
+        },
+        "platformMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Everstack credit charged, as billed (with markup)."
+        },
+        "byokEstimatedMicros": {
+          "type": "string",
+          "format": "int64",
+          "description": "Traffic on the organization's own provider keys at catalog list price,\nno markup. An estimate: the provider's invoice is authoritative."
+        },
+        "attempts": {
+          "type": "string",
+          "format": "int64",
+          "description": "Provider attempts in the window, priced or not."
+        },
+        "unpricedAttempts": {
+          "type": "string",
+          "format": "int64",
+          "description": "Attempts on the organization's own keys for models without a list\nprice. They count $0 and are not in spent_micros."
+        },
+        "estimated": {
+          "type": "boolean",
+          "description": "True when spent_micros includes an estimate (byok_estimated_micros \u003e 0)."
+        }
+      },
+      "description": "SpendTotals is estimated inference spend over one window."
     },
     "v1Subscription": {
       "type": "object",
@@ -720,6 +2005,60 @@
       },
       "title": "Subscription represents an organization's subscription"
     },
+    "v1SubscriptionAllowedActions": {
+      "type": "object",
+      "properties": {
+        "cancel": {
+          "type": "boolean",
+          "description": "CancelSubscription (at period end)."
+        },
+        "resume": {
+          "type": "boolean",
+          "description": "ResumeSubscription: withdraws a scheduled cancellation or a scheduled\nplan change."
+        },
+        "changePlan": {
+          "type": "boolean",
+          "description": "ChangePlan to another plan."
+        },
+        "switchInterval": {
+          "type": "boolean",
+          "description": "ChangePlan to the other billing period of the current plan."
+        },
+        "updatePayment": {
+          "type": "boolean",
+          "description": "CreateBillingPortalSession / payment method RPCs."
+        }
+      },
+      "description": "SubscriptionAllowedActions is what the caller may do now. Server\ncomputed; the UI should not re-derive it. All false for members without\norg:manage_billing."
+    },
+    "v1SubscriptionPaymentMethod": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Stripe payment method type, for example \"card\" or \"link\"."
+        },
+        "brand": {
+          "type": "string"
+        },
+        "last4": {
+          "type": "string"
+        },
+        "expMonth": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "expYear": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "source": {
+          "type": "string",
+          "description": "\"subscription\" when set on the subscription itself, \"customer_default\"\nwhen it falls back to the organization's default method."
+        }
+      },
+      "description": "SubscriptionPaymentMethod is the display summary of the card or method\nthat pays the subscription. Never a full number."
+    },
     "v1SubscriptionStatus": {
       "type": "string",
       "enum": [
@@ -732,6 +2071,92 @@
       ],
       "default": "SUBSCRIPTION_STATUS_UNSPECIFIED",
       "title": "SubscriptionStatus represents the current state of a subscription"
+    },
+    "v1SubscriptionSummary": {
+      "type": "object",
+      "properties": {
+        "planTier": {
+          "type": "string",
+          "description": "Internal tier for logic (\"free\", \"basic\", \"pro\", \"enterprise\")."
+        },
+        "plan": {
+          "$ref": "#/definitions/v1PlanChoice"
+        },
+        "planName": {
+          "type": "string",
+          "description": "Catalog display name (\"Starter\", \"Build\", \"Scale\"); never the tier."
+        },
+        "status": {
+          "$ref": "#/definitions/v1SubscriptionStatus"
+        },
+        "billingPeriod": {
+          "$ref": "#/definitions/v1BillingPeriod"
+        },
+        "currentPeriodStart": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The real period: Stripe's license item when it could be read, else the\nstored row. Never projected."
+        },
+        "currentPeriodEnd": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "renewsAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Next renewal; unset when a cancellation is scheduled or the\nsubscription has ended."
+        },
+        "cancelsAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When a scheduled cancellation takes effect."
+        },
+        "cancelAtPeriodEnd": {
+          "type": "boolean"
+        },
+        "scheduledChange": {
+          "$ref": "#/definitions/v1ScheduledPlanChange"
+        },
+        "pastDueGraceEndsAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "End of the past-due grace window. Reserved for the dunning slice; not\nset yet."
+        },
+        "nextInvoice": {
+          "$ref": "#/definitions/v1UpcomingInvoice",
+          "description": "Manager only. Unset when nothing is due (cancellation scheduled,\nended) or Stripe could not be read."
+        },
+        "paymentMethod": {
+          "$ref": "#/definitions/v1SubscriptionPaymentMethod",
+          "description": "Manager only."
+        },
+        "allowedActions": {
+          "$ref": "#/definitions/v1SubscriptionAllowedActions"
+        },
+        "needsReview": {
+          "type": "boolean",
+          "description": "True when the stored subscription disagrees with Stripe or with\nitself and someone should look (see review_reasons)."
+        },
+        "reviewReasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Machine-readable reasons: \"stripe_subscription_missing\",\n\"stripe_status_mismatch\", \"period_ended\", \"unknown_price\",\n\"org_tier_mismatch\"."
+        },
+        "keepInstanceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Manager only. Instances chosen to keep when the scheduled cancellation\nor downgrade takes effect; the rest pause then. Empty means \"keep the\nmost recently active\"."
+        },
+        "managerView": {
+          "type": "boolean",
+          "description": "False when the caller lacks org:manage_billing and manager-only fields\nwere withheld."
+        }
+      },
+      "description": "SubscriptionSummary is the plan summary view. Fields marked \"manager\nonly\" are left unset for members without org:manage_billing."
     },
     "v1SyncPlansResponse": {
       "type": "object",
@@ -777,6 +2202,40 @@
       },
       "title": "SyncedPlans contains the synced plan price IDs from Stripe"
     },
+    "v1UnregisterApiKeyResponse": {
+      "type": "object"
+    },
+    "v1UpcomingInvoice": {
+      "type": "object",
+      "properties": {
+        "amountDue": {
+          "type": "string",
+          "format": "int64",
+          "description": "Smallest currency unit (cents for USD), tax and credits included."
+        },
+        "currency": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When Stripe will attempt to collect it."
+        }
+      },
+      "description": "UpcomingInvoice is the next invoice Stripe will raise for the\nsubscription (Stripe invoice preview, cached for a few minutes)."
+    },
+    "v1UpdatePaymentMethodResponse": {
+      "type": "object",
+      "properties": {
+        "paymentMethods": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PaymentMethod"
+          }
+        }
+      }
+    },
     "v1UsageHistoryPoint": {
       "type": "object",
       "properties": {
@@ -798,6 +2257,16 @@
       },
       "title": "UsageHistoryPoint - One daily data point for a metric"
     },
+    "v1UsageMetering": {
+      "type": "string",
+      "enum": [
+        "USAGE_METERING_UNSPECIFIED",
+        "USAGE_METERING_METERED",
+        "USAGE_METERING_NOT_METERED"
+      ],
+      "default": "USAGE_METERING_UNSPECIFIED",
+      "description": "UsageMetering says whether billing has a producer for a usage metric, so a\nclient can tell a measured zero from a metric nobody reports yet.\n\n - USAGE_METERING_UNSPECIFIED: Sent by servers older than this field. Clients render the value as before.\n - USAGE_METERING_METERED: A producer reports this metric for the organization; used is a measurement.\n - USAGE_METERING_NOT_METERED: Nothing reports this metric for the organization yet. used is 0 because\nthere is no data, not because nothing was used."
+    },
     "v1UsageMetric": {
       "type": "object",
       "properties": {
@@ -816,6 +2285,9 @@
         "unit": {
           "type": "string",
           "description": "\"requests\", \"tokens\", etc."
+        },
+        "metering": {
+          "$ref": "#/definitions/v1UsageMetering"
         }
       }
     }

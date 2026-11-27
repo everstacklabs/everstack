@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"errors"
 
 	"connectrpc.com/connect"
 	agentmem "github.com/everstacklabs/everstack/internal/agents/memory"
@@ -19,7 +20,10 @@ func (s *Server) ListAgentMemories(ctx context.Context, req *connect.Request[age
 	if err != nil {
 		return nil, err
 	}
-	_ = req // tenant id comes from context only — request body is ignored
+	_ = req
+	if _, err := s.requireOwnedAgent(ctx, req.Msg.GetAgentId(), tenantID); err != nil {
+		return nil, err
+	}
 
 	opts := agentmem.ListOptions{
 		AgentID:  req.Msg.GetAgentId(),
@@ -67,6 +71,9 @@ func (s *Server) CreateAgentMemory(ctx context.Context, req *connect.Request[age
 	if err != nil {
 		return nil, err
 	}
+	if _, err := s.requireOwnedAgent(ctx, req.Msg.GetAgentId(), tenantID); err != nil {
+		return nil, err
+	}
 
 	scope := agentmem.MemoryScope(req.Msg.GetScope())
 	if scope == "" {
@@ -110,6 +117,9 @@ func (s *Server) UpdateAgentMemory(ctx context.Context, req *connect.Request[age
 	if err != nil {
 		return nil, err
 	}
+	if _, err := s.requireOwnedMemory(ctx, tenantID, req.Msg.GetMemoryId()); err != nil {
+		return nil, err
+	}
 
 	confidence := float64(req.Msg.GetConfidence())
 	if confidence <= 0 {
@@ -145,6 +155,9 @@ func (s *Server) DeactivateAgentMemory(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, err
 	}
+	if _, err := s.requireOwnedMemory(ctx, tenantID, req.Msg.GetMemoryId()); err != nil {
+		return nil, err
+	}
 
 	if err := s.agentMemStore.Deactivate(ctx, tenantID, req.Msg.GetMemoryId()); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -164,6 +177,9 @@ func (s *Server) DeleteAgentMemory(ctx context.Context, req *connect.Request[age
 	if err != nil {
 		return nil, err
 	}
+	if _, err := s.requireOwnedMemory(ctx, tenantID, req.Msg.GetMemoryId()); err != nil {
+		return nil, err
+	}
 
 	if err := s.agentMemStore.Delete(ctx, tenantID, req.Msg.GetMemoryId()); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -172,6 +188,17 @@ func (s *Server) DeleteAgentMemory(ctx context.Context, req *connect.Request[age
 	return connect.NewResponse(&agentspb.DeleteAgentMemoryResponse{
 		Success: true,
 	}), nil
+}
+
+func (s *Server) requireOwnedMemory(ctx context.Context, tenantID, memoryID string) (*agentmem.AgentMemory, error) {
+	if memoryID == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("memory_id is required"))
+	}
+	memory, err := s.agentMemStore.Get(ctx, tenantID, memoryID)
+	if err != nil || memory == nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("memory not found"))
+	}
+	return memory, nil
 }
 
 // memoryToProto converts an AgentMemory to its proto representation.

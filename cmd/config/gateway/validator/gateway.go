@@ -3,6 +3,8 @@ package validator
 import (
 	"fmt"
 	"strings"
+
+	"github.com/everstacklabs/everstack/pkg/decision"
 )
 
 // ProvidersMetadata represents provider metadata from providers.yaml
@@ -21,20 +23,21 @@ type ProviderMetadata struct {
 
 // GatewayConfig represents the gateway configuration
 type GatewayConfig struct {
-	Models         []ModelConfig        `mapstructure:"models"`
-	RateLimit      RateLimitConfig      `mapstructure:"rate_limit"`
-	LoadBalancer   LoadBalancerConfig   `mapstructure:"load_balancer"`
-	Memory         MemoryConfig         `mapstructure:"memory"`
-	Capabilities   CapabilitiesConfig   `mapstructure:"capabilities"`
-	Backup         BackupConfig         `mapstructure:"backup"`
-	FileProcessing FileProcessingConfig `mapstructure:"file_processing"`
-	Plugins        PluginsConfig        `mapstructure:"plugins"`
-	Guardrails     GuardrailsConfig     `mapstructure:"guardrails"`
-	Agents         AgentsConfig         `mapstructure:"agents"`
-	EnableSSE      bool                 `mapstructure:"enable_sse"`
-	SSE            SSEConfig            `mapstructure:"sse"`
-	Catalog        CatalogConfig        `mapstructure:"catalog"`
-	McpGateway     McpGatewayConfig     `mapstructure:"mcp_gateway"`
+	DecisionRouting decision.RoutingConfig `mapstructure:"decision_routing"`
+	Models          []ModelConfig          `mapstructure:"models"`
+	RateLimit       RateLimitConfig        `mapstructure:"rate_limit"`
+	LoadBalancer    LoadBalancerConfig     `mapstructure:"load_balancer"`
+	Memory          MemoryConfig           `mapstructure:"memory"`
+	Capabilities    CapabilitiesConfig     `mapstructure:"capabilities"`
+	Backup          BackupConfig           `mapstructure:"backup"`
+	FileProcessing  FileProcessingConfig   `mapstructure:"file_processing"`
+	Plugins         PluginsConfig          `mapstructure:"plugins"`
+	Guardrails      GuardrailsConfig       `mapstructure:"guardrails"`
+	Agents          AgentsConfig           `mapstructure:"agents"`
+	EnableSSE       bool                   `mapstructure:"enable_sse"`
+	SSE             SSEConfig              `mapstructure:"sse"`
+	Catalog         CatalogConfig          `mapstructure:"catalog"`
+	McpGateway      McpGatewayConfig       `mapstructure:"mcp_gateway"`
 }
 
 // SSEConfig defines how SSE output should be framed.
@@ -323,6 +326,9 @@ func validateGatewayConfigAgainstDefaults(userConfig GatewayConfig, defaultModel
 
 // Validate validates the GatewayConfig
 func (g *GatewayConfig) Validate() error {
+	if err := g.DecisionRouting.Validate(); err != nil {
+		return err
+	}
 	var errors []string
 
 	// Validate models - allow zero models/providers for flexible configuration

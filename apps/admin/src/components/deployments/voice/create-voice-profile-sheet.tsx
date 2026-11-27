@@ -91,7 +91,7 @@ export function CreateVoiceProfileSheet({ open, onOpenChange }: CreateVoiceProfi
 
                 <div className="space-y-4 py-4">
                     {!hasStorage && (
-                        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300 light:text-amber-700">
+                        <div className="rounded-lg border border-warning-border bg-warning-surface px-3 py-2 text-xs text-warning">
                             Object storage is not configured. Reference audio will not be persisted.
                         </div>
                     )}

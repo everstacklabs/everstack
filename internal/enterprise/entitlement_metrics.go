@@ -34,6 +34,17 @@ var (
 		Name:      "entitlement_shadow_limited_tenants",
 		Help:      "Distinct tenants that would hit a capped plan limit under enforcement. Labels: tier, limit_type.",
 	}, []string{"tier", "limit_type"})
+
+	// entitlementTierEnforced mirrors the rollout policy: 1 when the tier's
+	// limits are applied, 0 while it resolves shadow-only. Stage 0 slice 2
+	// (per-tier policy + kill switch). Alert on unexpected flips:
+	//   entitlement_tier_enforced{tier="pro"} != <expected>
+	entitlementTierEnforced = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "everstack",
+		Subsystem: "gateway",
+		Name:      "entitlement_tier_enforced",
+		Help:      "Whether a plan tier's limits are enforced (1) or shadow-only (0). Labels: tier.",
+	}, []string{"tier"})
 )
 
 // observeEntitlementResolution records one resolution. Empty source/tier

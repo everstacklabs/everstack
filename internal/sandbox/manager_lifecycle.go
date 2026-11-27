@@ -384,7 +384,9 @@ func (m *SandboxManager) ReviveSandbox(ctx context.Context, sandboxID string) (*
 	if err := m.RequireConcurrentSandboxSlot(ctx, savedConfigForBilling.TenantID, sandboxID); err != nil {
 		return nil, err
 	}
-	if err := m.validateInstanceMachineProfile(*savedConfigForBilling); err != nil {
+	// Fail fast before the reconciler handoff; each allocation path below
+	// (ExecuteRevive, or the claim path here) fits the size it provisions.
+	if _, err := m.fitExistingInstanceMachineProfile(*savedConfigForBilling); err != nil {
 		return nil, err
 	}
 	if m.delegateLifecycleToReconciler() {
@@ -401,6 +403,9 @@ func (m *SandboxManager) ReviveSandbox(ctx context.Context, sandboxID string) (*
 		return inst, nil
 	}
 
+	// Reconciler-delegated revives are reported by ExecuteRevive; this is
+	// the in-process allocation path.
+	m.shadowAdmitCompute(savedConfigForBilling.TenantID, ComputeSurfaceSandboxRevive)
 	// Phase 1: Claim (stopped → reviving, also check revivable_until).
 	// workspace_snapshot_ref is nullable in the schema — most stops happen
 	// before any snapshot is taken (or with snapshotting disabled), so the
@@ -433,6 +438,12 @@ func (m *SandboxManager) ReviveSandbox(ctx context.Context, sandboxID string) (*
 		m.compensateLifecycle(ctx, sandboxID, LifecycleStopped, LifecycleReviving)
 		return nil, fmt.Errorf("failed to get saved config: %w", err)
 	}
+	fittedConfig, err := m.fitExistingInstanceMachineProfile(*savedConfig)
+	if err != nil {
+		m.compensateLifecycle(ctx, sandboxID, LifecycleStopped, LifecycleReviving)
+		return nil, err
+	}
+	savedConfig = &fittedConfig
 	prevInst := m.findInstanceBySandboxID(sandboxID)
 
 	// Phase 2a: Create new container with same config
@@ -948,6 +959,33 @@ func (m *SandboxManager) SeedInstancesForTest(instances map[string]*Instance) {
 	m.instancesBySandbox = instances
 }
 
+// SeedSessionsForTest installs the session-keyed in-memory instance map.
+// Test-only, like SeedInstancesForTest.
+func (m *SandboxManager) SeedSessionsForTest(instances map[string]*Instance) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.instances = instances
+}
+
+// SeedLiveInstancesForTest seeds instances like SeedInstancesForTest and also
+// registers them as live sessions, so lookups that read the session map (for
+// example ListInstances) find them too.
+func (m *SandboxManager) SeedLiveInstancesForTest(instances map[string]*Instance) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.instancesBySandbox = instances
+	if m.instances == nil {
+		m.instances = make(map[string]*Instance, len(instances))
+	}
+	for id, inst := range instances {
+		key := inst.Config.SessionID
+		if key == "" {
+			key = id
+		}
+		m.instances[key] = inst
+	}
+}
+
 // GetBySandboxIDOrNameScoped is the tenant-scoped form of GetBySandboxIDOrName.
 // It only returns an instance whose Config.TenantID equals tenantID, so a
 // caller authenticated for one tenant/instance cannot resolve another's
@@ -988,6 +1026,48 @@ func (m *SandboxManager) GetBySandboxIDOrNameScoped(idOrName, tenantID string) (
 // sandbox table owner (`tenant_id`, or instance_id in cloud deployments).
 func (m *SandboxManager) GetBySandboxIDOrNameInScope(idOrName string, scope TenantInstanceScope) (*Instance, bool) {
 	return m.GetBySandboxIDOrNameScoped(idOrName, scope.SandboxTenantID())
+}
+
+// GetBySandboxIDOrShortCodeInScope resolves only globally unique sandbox
+// identifiers inside the supplied tenant scope. It never falls back to a
+// display name.
+func (m *SandboxManager) GetBySandboxIDOrShortCodeInScope(identifier string, scope TenantInstanceScope) (*Instance, bool) {
+	owner := scope.SandboxTenantID()
+	if owner == "" {
+		return nil, false
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if inst, ok := m.instancesBySandbox[identifier]; ok && inst.Config.TenantID == owner {
+		return inst, true
+	}
+	for _, inst := range m.instancesBySandbox {
+		if inst != nil && inst.Config.TenantID == owner && inst.ShortCode == identifier {
+			return inst, true
+		}
+	}
+	return nil, false
+}
+
+// GetBySandboxNameInScope resolves a running sandbox by display name inside
+// the supplied tenant scope. Identifier-shaped values receive no special
+// treatment here.
+func (m *SandboxManager) GetBySandboxNameInScope(name string, scope TenantInstanceScope) (*Instance, bool) {
+	owner := scope.SandboxTenantID()
+	if owner == "" {
+		return nil, false
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for _, inst := range m.instancesBySandbox {
+		if inst == nil || inst.Config.TenantID != owner || inst.Name != name {
+			continue
+		}
+		if inst.LifecycleState == LifecycleRunning || (inst.LifecycleState == "" && inst.Status == StatusRunning) {
+			return inst, true
+		}
+	}
+	return nil, false
 }
 
 // findInstanceBySandboxID returns the instance for a sandbox ID (unlocked, for internal use).

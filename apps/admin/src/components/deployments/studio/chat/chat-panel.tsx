@@ -131,7 +131,7 @@ function ChatAudioPlayer({
           step={0.1}
           value={currentTime}
           onChange={handleSeek}
-          className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-brand-main-700 accent-emerald-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500"
+          className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-brand-main-700 accent-success [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-success-solid"
         />
         <div className="flex items-center justify-between">
           <span className="text-[10px] text-white/40 light:text-black/40">
@@ -309,7 +309,7 @@ export function ChatPanelContent({ layout }: ChatPanelContentProps) {
 
           {executionError && !isExecuting && (
             <div className="flex justify-start">
-              <div className="max-w-[85%] rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400 light:text-red-600">
+              <div className="max-w-[85%] rounded-lg border border-danger-border bg-danger-surface px-3 py-2 text-sm text-danger">
                 <div className="flex items-start gap-2">
                   <Icon
                     icon="lucide:alert-circle"
@@ -450,7 +450,7 @@ export function ChatPanelContent({ layout }: ChatPanelContentProps) {
                   {isExecuting ? (
                     <button
                       onClick={cancelExecution}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-600 text-white hover:bg-red-500 transition-colors flex-shrink-0"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-danger-solid text-white hover:bg-danger-solid/90 transition-colors flex-shrink-0"
                       title="Stop execution"
                     >
                       <Icon icon="lucide:square" className="h-4 w-4" />
@@ -588,7 +588,7 @@ export function ChatPanelContent({ layout }: ChatPanelContentProps) {
               {isExecuting ? (
                 <button
                   onClick={cancelExecution}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-600 text-white hover:bg-red-500 transition-colors flex-shrink-0"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-danger-solid text-white hover:bg-danger-solid/90 transition-colors flex-shrink-0"
                   title="Stop execution"
                 >
                   <Icon icon="lucide:square" className="h-4 w-4" />
@@ -646,7 +646,7 @@ function renderHeaders(
           />
           <button
             onClick={() => removeHeader(key)}
-            className="p-0.5 text-brand-main-500 hover:text-red-400 light:hover:text-red-600 transition-colors"
+            className="p-0.5 text-brand-main-500 hover:text-danger transition-colors"
           >
             <Icon icon="lucide:x" className="h-3 w-3" />
           </button>

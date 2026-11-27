@@ -360,7 +360,7 @@ func (m *SessionManager) LaunchSession(ctx context.Context, sessionID string, in
 	// Detach the runner context from the caller's HTTP request context.
 	// The session runner must outlive the SSE stream — if the client
 	// disconnects or navigates away the loop should continue running.
-	// context.WithoutCancel preserves values (tenant ID, CQRS system, etc.)
+	// context.WithoutCancel preserves values (tenant ID, CQRS system, agent hop)
 	// but does not propagate cancellation from the parent.
 	runCtx := context.WithoutCancel(ctx)
 
@@ -1037,6 +1037,19 @@ func (m *SessionManager) handleUserInputRequest(ctx context.Context, sessionID s
 			m.mu.Unlock()
 		}
 	}()
+}
+
+// PendingUserInputSession returns the session that is waiting on inputID.
+// Callers that accept an input id from outside use it to check that the
+// session belongs to the caller before delivering a response.
+func (m *SessionManager) PendingUserInputSession(inputID string) (string, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	gate, ok := m.userInputs[inputID]
+	if !ok || gate == nil {
+		return "", false
+	}
+	return gate.sessionID, true
 }
 
 // SubmitUserInput delivers a user's response to a pending ask_user call.

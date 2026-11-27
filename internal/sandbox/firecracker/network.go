@@ -16,6 +16,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/everstacklabs/everstack/internal/sandbox"
 	"github.com/everstacklabs/everstack/internal/sandbox/egress"
+	"github.com/miekg/dns"
 )
 
 // vmMTUSafetyBuffer is subtracted from the pod's outbound interface MTU when
@@ -130,12 +131,11 @@ func SetupNetwork(vmID string, mode sandbox.NetworkMode, allowedHosts []string, 
 	mode = normalizedMode
 
 	if len(dnsServers) == 0 {
-		// Read the node's resolv.conf (mounted at /host/etc/resolv.conf
-		// by the fcagent DaemonSet), filtering out ClusterIPs and stub
-		// resolvers that the per-VM DNS proxy cannot reliably reach.
-		// The proxy itself runs inside the pod netns and talks to these
-		// upstreams; the guest only ever talks to the proxy on the host
-		// TAP IP. See readNodeNameservers for the filter rationale.
+		// Public resolvers unless the operator set FCAGENT_DNS_UPSTREAMS.
+		// The proxy runs in the agent's netns and talks to these; the
+		// guest only ever talks to the proxy on the host TAP IP. See
+		// readNodeNameservers for why the node's and the pod's
+		// resolv.conf are no longer consulted.
 		dnsServers = readNodeNameservers()
 	}
 	hostIface := defaultOutboundInterface()
@@ -160,8 +160,8 @@ func SetupNetwork(vmID string, mode sandbox.NetworkMode, allowedHosts []string, 
 			ReleaseSubnet(subnet)
 		}
 	}()
-	hostIP := fmt.Sprintf("10.0.%d.1", subnet)
-	guestIP := fmt.Sprintf("10.0.%d.2", subnet)
+	hostIP := guestHostIP(subnet)
+	guestIP := guestGuestIP(subnet)
 	guestMAC := generateMAC()
 
 	mtu := computeVMMTU(hostIface)
@@ -215,9 +215,12 @@ func SetupNetwork(vmID string, mode sandbox.NetworkMode, allowedHosts []string, 
 
 	// Start the per-VM DNS proxy before iptables so the host is ready to
 	// answer queries the moment the guest comes up. Runs in both Allow
-	// and Whitelist modes — they share the same network plumbing and
-	// differ only in whether the proxy enforces an allowlist (empty
-	// AllowedHosts ⇒ allow-all). Deny mode has no networking.
+	// and Whitelist modes: they share the same network plumbing and
+	// differ only in whether the proxy enforces an allowlist. Allow mode
+	// forwards every name. Whitelist mode with an empty AllowedHosts
+	// resolves NOTHING; snapshot restore relies on that to fail closed,
+	// so never treat an empty whitelist as allow-all. Deny mode has no
+	// networking.
 	if mode != sandbox.NetworkDeny {
 		proxy, err := startVMDNSProxy(vmID, hostIP, mode, allowedHosts, dnsServers)
 		if err != nil {
@@ -289,11 +292,14 @@ func logNetworkDiagnostics(cfg *NetworkConfig) {
 		"ip_forward_sysctl", dump("sysctl", "-n", "net.ipv4.ip_forward"),
 	).Info("firecracker_network: applied per-VM iptables state")
 
-	// DNS reachability probe — does the fcagent's own netns reach the
-	// configured upstream resolver? If this fails the guest never had a
-	// chance, and the user gets a clean "egress blocked at the pod /
-	// node, not at the VM" signal instead of a 20-second timeout inside
-	// the VM. Uses the first dns server; falls back to 8.8.8.8.
+	// DNS reachability probe: does the fcagent's own netns get an
+	// answer from the configured upstream? It sends a real query (root
+	// NS) through the same exchange the proxy uses. Dialing UDP is not
+	// a probe: it always succeeds, and on 2026-10-16 this logged "can
+	// reach upstream" while every guest lookup was SERVFAIL. It runs
+	// off the create path because a dead upstream costs up to 4s, and
+	// it warms the proxy's UDP-dead memory before the guest's first
+	// query.
 	upstream := "8.8.8.8:53"
 	if len(cfg.DNSServers) > 0 {
 		s := strings.TrimSpace(cfg.DNSServers[0])
@@ -304,21 +310,28 @@ func logNetworkDiagnostics(cfg *NetworkConfig) {
 			upstream = s
 		}
 	}
-	probeCtx, probeCancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer probeCancel()
-	var dialer net.Dialer
-	conn, err := dialer.DialContext(probeCtx, "udp", upstream)
+	go probeUpstreamDNS(cfg.TapDevice, upstream)
+}
+
+func probeUpstreamDNS(tap, upstream string) {
+	q := new(dns.Msg)
+	q.SetQuestion(".", dns.TypeNS)
+	resp, transport, err := egress.ExchangeUpstream(q, upstream)
 	if err != nil {
 		logger.WithFields(
-			"tap", cfg.TapDevice,
+			"tap", tap,
 			"upstream", upstream,
 			"error", err.Error(),
-		).Warn("firecracker_network: pod-netns cannot reach upstream DNS — egress is blocked above us (NetworkPolicy, node firewall, or missing kernel modules); guest will time out resolving names")
+		).Error("firecracker_network: upstream DNS does not answer from the agent's netns over UDP or TCP; every guest lookup will SERVFAIL. Set FCAGENT_DNS_UPSTREAMS to a resolver this node can reach")
 		return
 	}
-	_ = conn.Close()
-	logger.WithFields("tap", cfg.TapDevice, "upstream", upstream).
-		Info("firecracker_network: pod-netns can reach upstream DNS")
+	if transport != "udp" {
+		logger.WithFields("tap", tap, "upstream", upstream).
+			Warn("firecracker_network: upstream DNS answers only over TCP from this node; guest lookups work over TCP, with a UDP timeout about once a minute. Set FCAGENT_DNS_UPSTREAMS to a resolver reachable over UDP")
+		return
+	}
+	logger.WithFields("tap", tap, "upstream", upstream, "rcode", dns.RcodeToString[resp.Rcode]).
+		Info("firecracker_network: upstream DNS answers")
 }
 
 // startVMDNSProxy spins up an egress DNSProxy bound to the host TAP IP on
@@ -348,6 +361,9 @@ func startVMDNSProxy(vmID, hostIP string, mode sandbox.NetworkMode, allowedHosts
 		ListenAddr:       hostIP + ":53",
 		SandboxID:        vmID,
 		EnforceAllowlist: mode == sandbox.NetworkWhitelist,
+		// Operator-level only. Cluster-internal names are refused in
+		// every mode unless this is set; tenant allowlists cannot.
+		AllowInternalNames: strings.EqualFold(strings.TrimSpace(os.Getenv("FCAGENT_DNS_ALLOW_CLUSTER_NAMES")), "true"),
 	})
 
 	errCh := make(chan error, 1)
@@ -427,11 +443,39 @@ func vmChainName(tapDevice string) string {
 }
 
 func configureIptables(cfg *NetworkConfig) error {
+	// Source pinning first, in every mode, before the guest boots. The
+	// guest deny guard and the per-VM chain both exempt RELATED,
+	// ESTABLISHED before testing the destination, and the node runs
+	// loose reverse-path filtering (rp_filter=2), so a guest forging its
+	// source address could hand the host a datagram that matches the
+	// reply tuple of some pod's SNATed flow (a CoreDNS upstream query)
+	// and have it delivered into the pod network. Pin the source to the
+	// guest's own address at the earliest hook, before conntrack sees
+	// the packet.
+	if err := runIptables(antiSpoofRule(cfg, "-I")...); err != nil {
+		return fmt.Errorf("anti-spoof: %w", err)
+	}
+
 	if cfg.Mode == sandbox.NetworkDeny {
-		return nil // no rules needed
+		// No egress rules, but the pin above must have landed.
+		if err := verifyAntiSpoof(cfg); err != nil {
+			return err
+		}
+		return nil
 	}
 
 	chain := vmChainName(cfg.TapDevice)
+
+	// Shared guest deny guard first, and fail closed. The per-VM chain
+	// below ends in an unconditional ACCEPT; the only thing that keeps
+	// that ACCEPT from forwarding this guest into the pod network, the
+	// service CIDR, the overlay or the node itself is the deny guard
+	// (guest_deny.go). No guard, no VM.
+	if _, err := EnsureGuestDeny(DetectGuestDenySpec()); err != nil {
+		recordGuestDenyAssert(err)
+		return err
+	}
+	recordGuestDenyAssert(nil)
 
 	// Build the per-VM chain up front, then jump into it from FORWARD at
 	// position 1. Doing the inner rules inside our own chain means we don't
@@ -510,9 +554,10 @@ func configureIptables(cfg *NetworkConfig) error {
 	// no DNS lookup to intercept. No legitimate sandbox workload needs link-local
 	// egress (the guest has a static 10.0.x.2 address, never APIPA), so drop the
 	// whole 169.254.0.0/16 range outright. Applied in both allow and whitelist
-	// modes (deny has no egress). NOTE: blocking internal RFC1918 ranges is a
-	// larger follow-up — it must allow-list the legitimate internal endpoints
-	// (the model proxy, cluster DNS path) first, or it breaks them.
+	// modes (deny has no egress). The shared guest deny guard (guest_deny.go)
+	// covers this, every other private range, the pool below and the host's
+	// own addresses ahead of this chain; the per-VM copies stay as defence
+	// in depth.
 	if err := runIptables("-A", chain, "-i", cfg.TapDevice, "-d", "169.254.0.0/16", "-j", "DROP"); err != nil {
 		return fmt.Errorf("metadata/link-local block: %w", err)
 	}
@@ -537,7 +582,7 @@ func configureIptables(cfg *NetworkConfig) error {
 	// per-VM chain so it rides the same position-1 FORWARD jump and wins over
 	// the node's baseline FORWARD policy. host->guest (fcagent :8080, source is
 	// not a TAP) and guest->its-own-host-.1 DNS (INPUT) are unaffected.
-	if err := runIptables("-A", chain, "-i", cfg.TapDevice, "-d", "10.0.0.0/16", "-j", "DROP"); err != nil {
+	if err := runIptables("-A", chain, "-i", cfg.TapDevice, "-d", GuestPoolCIDR(), "-j", "DROP"); err != nil {
 		return fmt.Errorf("inter-guest isolation block: %w", err)
 	}
 
@@ -587,6 +632,13 @@ func configureIptables(cfg *NetworkConfig) error {
 		return fmt.Errorf("forward jump out: %w", err)
 	}
 
+	// The jumps above (and the INPUT accepts) went in at position 1, so
+	// they now sit ahead of the shared deny guard. Put the guard back in
+	// front; verifyIptables refuses the VM if it is not.
+	if err := reassertGuestDenyJumps(); err != nil {
+		return fmt.Errorf("re-assert guest deny jumps: %w", err)
+	}
+
 	// Source-NAT for outbound traffic. Same logic — insert at the top of
 	// POSTROUTING so we run before any CNI MASQUERADE that might rewrite
 	// our packets onto a different interface than we expect.
@@ -606,6 +658,34 @@ func configureIptables(cfg *NetworkConfig) error {
 	}
 
 	return nil
+}
+
+// antiSpoofRule returns the raw-table rule that drops anything arriving
+// on this VM's TAP whose source is not the guest's own address. op is
+// "-I" (install at position 1) or "-D" (remove).
+func antiSpoofRule(cfg *NetworkConfig, op string) []string {
+	args := []string{"-t", "raw", op, "PREROUTING"}
+	if op == "-I" {
+		args = append(args, "1")
+	}
+	return append(args, "-i", cfg.TapDevice, "!", "-s", cfg.GuestIP+"/32", "-j", "DROP")
+}
+
+// verifyAntiSpoof asserts the raw-table source pin is installed.
+func verifyAntiSpoof(cfg *NetworkConfig) error {
+	out, err := exec.Command("iptables", "-w", strconv.Itoa(iptablesWaitSeconds), "-t", "raw", "-S", "PREROUTING").CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("iptables -t raw -S PREROUTING: %w (%s)", err, strings.TrimSpace(string(out)))
+	}
+	if firstRulePosition(string(out), "PREROUTING", antiSpoofFragments(cfg)) == 0 {
+		return fmt.Errorf("missing anti-spoof rule in raw/PREROUTING (expected fragments: %s); dump:\n%s",
+			strings.Join(antiSpoofFragments(cfg), " "), strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+func antiSpoofFragments(cfg *NetworkConfig) []string {
+	return []string{"-i " + cfg.TapDevice, "! -s " + cfg.GuestIP + "/32", "-j DROP"}
 }
 
 // verifyIptables re-reads the chains we just wrote to and asserts the
@@ -640,11 +720,12 @@ func verifyIptables(cfg *NetworkConfig) error {
 		fragments []string
 	}
 	checks := []chainCheck{
+		{name: "anti-spoof source pin", table: "raw", chain: "PREROUTING", fragments: antiSpoofFragments(cfg)},
 		{name: "conntrack accept", chain: chain, fragments: []string{"-m conntrack", "RELATED,ESTABLISHED", "-j ACCEPT"}},
 		{name: "dns gate udp drop", chain: chain, fragments: []string{"-i " + tap, "! -d " + host, "udp", "--dport 53", "-j DROP"}},
 		{name: "dns gate tcp drop", chain: chain, fragments: []string{"-i " + tap, "! -d " + host, "tcp", "--dport 53", "-j DROP"}},
 		{name: "metadata block", chain: chain, fragments: []string{"-i " + tap, "-d 169.254.0.0/16", "-j DROP"}},
-		{name: "inter-guest isolation block", chain: chain, fragments: []string{"-i " + tap, "-d 10.0.0.0/16", "-j DROP"}},
+		{name: "inter-guest isolation block", chain: chain, fragments: []string{"-i " + tap, "-d " + GuestPoolCIDR(), "-j DROP"}},
 		{name: "general accept", chain: chain, fragments: []string{"-i " + tap, "-j ACCEPT"}},
 		{name: "input accept udp", chain: "INPUT", fragments: []string{"-i " + tap, "-d " + host, "udp", "--dport 53", "-j ACCEPT"}},
 		{name: "input accept tcp", chain: "INPUT", fragments: []string{"-i " + tap, "-d " + host, "tcp", "--dport 53", "-j ACCEPT"}},
@@ -712,10 +793,44 @@ func verifyIptables(cfg *NetworkConfig) error {
 		}
 	}
 
+	// Ordering: the shared guest deny guard must be consulted before any
+	// rule of this VM's, in every hook that carries guest traffic. The
+	// per-VM rules are inserted at position 1 and the guard is re-asserted
+	// afterwards; if something displaced it in between, this VM must not
+	// come up on the strength of its own ACCEPT.
+	ordering := []struct {
+		table, hook, chain string
+		vmFragments        []string
+	}{
+		{"filter", "FORWARD", guestDenyFilterChain, []string{"-i " + tap, "-j " + chain}},
+		{"filter", "FORWARD", guestDenyFilterChain, []string{"-o " + tap, "-j " + chain}},
+		{"filter", "INPUT", guestDenyFilterChain, []string{"-i " + tap, "-d " + host, "--dport 53", "-j ACCEPT"}},
+	}
+	for _, o := range ordering {
+		dump, err := dumpChain("", o.hook)
+		if err != nil {
+			return fmt.Errorf("dump %s for guest deny ordering: %w", o.hook, err)
+		}
+		if !guestDenyPrecedes(dump, o.hook, o.chain, o.vmFragments) {
+			return fmt.Errorf("guest deny guard does not precede this VM's rules in %s (%s); hook dump:\n%s",
+				o.hook, strings.Join(o.vmFragments, " "), strings.TrimSpace(dump))
+		}
+	}
+	mangle, err := dumpChain("mangle", "PREROUTING")
+	if err != nil {
+		return fmt.Errorf("dump mangle PREROUTING for guest deny: %w", err)
+	}
+	if !guestDenyJumpFirst(mangle, "PREROUTING", guestDenyMangleChain) {
+		return fmt.Errorf("guest deny guard is not the first rule of mangle PREROUTING; dump:\n%s",
+			strings.TrimSpace(mangle))
+	}
+
 	return nil
 }
 
 func cleanupIptables(cfg *NetworkConfig) {
+	_ = runIptables(antiSpoofRule(cfg, "-D")...)
+
 	if cfg.Mode == sandbox.NetworkDeny {
 		return
 	}
@@ -776,32 +891,24 @@ func runCmd(name string, args ...string) error {
 }
 
 // readNodeNameservers returns the upstream resolvers the per-VM DNS proxy
-// should forward to. Order of preference:
+// forwards guest queries to:
 //
-//  1. /host/etc/resolv.conf — mounted hostPath of the node's resolv.conf.
-//     This is the *node's* view of DNS, populated by cloud-init / netplan /
-//     systemd-resolved. Contains real upstreams (1.1.1.1, the cloud
-//     provider's resolver, etc.) — not a ClusterIP.
-//  2. /etc/resolv.conf — the fcagent pod's own resolv.conf. Kept as a
-//     fallback for dev environments where the hostPath isn't mounted, but
-//     normally yields a cluster CoreDNS ClusterIP which we then filter out.
-//  3. publicResolverFallbacks — last resort.
+//  1. FCAGENT_DNS_UPSTREAMS, comma separated, when the operator set it
+//     (clusters that block public :53, CI runners, a corporate resolver).
+//  2. publicResolverFallbacks otherwise.
 //
-// Filtering: we drop entries that the proxy cannot reliably reach from
-// inside the pod netns: loopback / stub resolvers (127.0.0.0/8 — typically
-// systemd-resolved on the host, only reachable from the host itself), and
-// k8s service ClusterIPs (kube-proxy DNAT applies in the host root netns
-// only, and behaves erratically for MASQUERADE'd traffic transiting a TAP).
-//
-// The earlier "use cluster CoreDNS" workaround for managed-cluster egress
-// firewalls is reversed here: clusters that block public :53 should
-// configure FCAGENT_DNS_UPSTREAMS explicitly. The default has to favor
-// reliability of "any sandbox can resolve names" over corner-case
-// hardening that none of our current deployments need.
+// The node's resolv.conf (hostPath at nodeResolvConfPath) and the pod's
+// own resolv.conf are deliberately not consulted any more. On a node
+// running systemd-resolved the former is 127.0.0.53, which the proxy
+// cannot reach, and the fallback was then the pod's resolv.conf, i.e.
+// the cluster CoreDNS ClusterIP. That let every guest resolve
+// *.svc.cluster.local and reverse-map pod and service addresses: a
+// map of the cluster handed to tenant code, even though the guest deny
+// guard stops it from connecting. Guests are given public resolution
+// only; anything cluster-shaped is also refused by name at the proxy
+// (egress.IsClusterInternalName) in case the operator's upstream is an
+// internal resolver.
 func readNodeNameservers() []string {
-	// Environment override wins: operators can set a comma-separated
-	// list of upstreams when the node's resolv.conf isn't appropriate
-	// (CI runners, hardened clusters with internal-only resolvers).
 	if env := strings.TrimSpace(os.Getenv("FCAGENT_DNS_UPSTREAMS")); env != "" {
 		out := []string{}
 		for _, s := range strings.Split(env, ",") {
@@ -814,20 +921,18 @@ func readNodeNameservers() []string {
 			return out
 		}
 	}
-
-	for _, path := range []string{nodeResolvConfPath, "/etc/resolv.conf"} {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			continue
-		}
-		parsed := parseResolverContent(string(data))
-		filtered := filterUnreachableResolvers(parsed)
-		if len(filtered) > 0 {
-			return filtered
-		}
-	}
-
 	return append([]string(nil), publicResolverFallbacks...)
+}
+
+// readResolvConfNameservers reads and filters a resolv.conf file. No
+// longer on the proxy's upstream path (see readNodeNameservers); kept
+// for diagnostics and for the parser's tests.
+func readResolvConfNameservers(path string) []string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	return filterUnreachableResolvers(parseResolverContent(string(data)))
 }
 
 // filterUnreachableResolvers drops 127/8 (loopback / stub) entries. We do

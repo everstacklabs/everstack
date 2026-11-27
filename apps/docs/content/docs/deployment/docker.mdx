@@ -1,167 +1,165 @@
 ---
 title: Docker
-description: Deploy Everstack with Docker Compose for local and small-scale environments.
+description: Run the Everstack Community Edition with Docker Compose, built from source.
 icon: Container
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-## When to use Docker
+Docker Compose is the simplest way to run Everstack yourself. It suits local
+development, evaluation and small single-node installs.
 
-Docker Compose is the fastest way to get Everstack running. It works well for local development, evaluation, and small production deployments serving a single team. If you need horizontal scaling, high availability, or multi-node redundancy, use [Kubernetes](/deployment/kubernetes) instead.
+<Callout type="info">
+  Everstack's container images are not yet published to a public registry, so
+  this guide builds the image from the open-source repository. Pulling
+  `ghcr.io/everstacklabs/everstack` from outside Everstack does not work today.
+</Callout>
 
 ## Prerequisites
 
-- Docker Engine 24+ and Docker Compose v2
-- At least 4 GB of available RAM (8 GB recommended)
-- 20 GB of free disk space for persistent volumes
+- Docker Engine with Compose v2
+- About 6 GB of memory for the first build
+- Git
 
-## Services overview
+## Start the quickstart
 
-The Compose stack includes the following services:
+The repository ships a Compose file that builds the Community Edition and starts
+it with PostgreSQL:
 
-| Service | Description | Default port |
-| --- | --- | --- |
-| `everstack` | Main server (gateway, API, agent runtime) | `8089` |
-| `postgres` | Metadata store (users, agents, configs) | `5432` |
-| `clickhouse` | Analytics, traces, and log storage | `9000` / `8123` |
-| `redis` | Optional caching and rate limiting | `6379` |
-
-## Getting started
-
-Create a `docker-compose.yml` in your project directory:
-
-```yaml title="docker-compose.yml"
-version: "3.9"
-
-services:
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_USER: everstack
-      POSTGRES_PASSWORD: changeme
-      POSTGRES_DB: everstack
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
-  clickhouse:
-    image: clickhouse/clickhouse-server:24.3
-    volumes:
-      - chdata:/var/lib/clickhouse
-    ports:
-      - "8123:8123"
-      - "9000:9000"
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-
-  everstack:
-    image: ghcr.io/everstacklabs/everstack:latest
-    ports:
-      - "8089:8089"
-    environment:
-      EVS_DATABASE_URL: "postgres://everstack:changeme@postgres:5432/everstack?sslmode=disable"
-      EVS_CLICKHOUSE_URL: "clickhouse://clickhouse:9000/everstack"
-      EVS_REDIS_URL: "redis://redis:6379"
-    depends_on:
-      - postgres
-      - clickhouse
-      - redis
-
-volumes:
-  pgdata:
-  chdata:
+```bash
+git clone https://github.com/everstacklabs/everstack.git
+cd everstack
+docker compose -f examples/quickstart/compose.yaml up -d --build
+curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8089/debug/healthz
 ```
+
+Then open [http://localhost:8089](http://localhost:8089), register the first
+account (it becomes the instance owner), add a model-provider key under
+**Vault → LLM Providers**, create an Everstack API key under
+**Vault → API Keys**, and send a request:
+
+```bash
+curl http://localhost:8089/v1/chat/completions \
+  -H 'content-type: application/json' \
+  -H "Authorization: Bearer $EVERSTACK_API_KEY" \
+  -d '{"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "Hello"}]}'
+```
+
+The `x-evs-api-key` header works as well. The bearer form is accepted
+on the OpenAI-compatible routes under `/v1`.
+
+## What the quickstart runs
+
+| Service | Purpose | Port |
+| --- | --- | --- |
+| `everstack` | Gateway, API and embedded admin dashboard, built with the `ce` tag | `127.0.0.1:8089` |
+| `postgres` | PostgreSQL 16 with pgvector, for platform state | not published |
+
+It leaves out ClickHouse, Redis and sandbox access, runs with telemetry switched
+off (`EVS_TELEMETRY_ENABLED=false`). Sign-in is on (`EVS_AUTH_MODE=builtin`):
+the first account you register becomes the instance owner. The
+[quickstart README](https://github.com/everstacklabs/everstack/blob/master/examples/quickstart/README.md)
+explains what each omission means.
 
 ## Configuration
 
-All Everstack settings can be set through environment variables with the `EVS_` prefix. Add them to the `environment` block of the `everstack` service.
+Settings come from three layers, highest priority first:
 
-```yaml
-environment:
-  EVS_DATABASE_URL: "postgres://everstack:changeme@postgres:5432/everstack?sslmode=disable"
-  EVS_CLICKHOUSE_URL: "clickhouse://clickhouse:9000/everstack"
-  EVS_REDIS_URL: "redis://redis:6379"
-  EVS_AUTH_SECRET: "your-secret-key"
-  EVS_LOG_LEVEL: "info"
-```
+1. Environment variables with the `EVS_` prefix
+2. A YAML file passed with `--config`
+3. Defaults embedded in the binary
 
-You can also mount a YAML config file:
+Commonly used variables:
 
-```yaml
-volumes:
-  - ./everstack.yaml:/etc/everstack/config.yaml
-```
+| Variable | Meaning |
+| --- | --- |
+| `EVS_DATABASE_MODE` | `single` (PostgreSQL only) or `hybrid` (PostgreSQL and ClickHouse) |
+| `EVS_POSTGRES_DSN` | PostgreSQL connection string |
+| `EVS_CLICKHOUSE_DSN` | ClickHouse connection string, for `hybrid` mode |
+| `EVS_CACHE_TYPE` | Cache backend, for example `memory` or `redis` |
+| `EVS_CACHE_REDIS_ADDRESS` | Redis address when the cache type is `redis` |
+| `EVS_AUTH_MODE` | `none`, `builtin` or `oidc` |
+| `EVS_API_KEY_HASH_SECRET` | Secret used to hash Everstack API keys. Required. |
+| `EVS_LOG_LEVEL` | Log level, for example `info` |
 
-See [everstack serve](/cli/serve) for the full list of configuration options.
+The complete list of supported variables, with the config key each one sets, is
+in
+[`cmd/config/gateway/validator/envvars.go`](https://github.com/everstacklabs/everstack/blob/master/cmd/config/gateway/validator/envvars.go).
 
-## Persistent volumes
-
-Both Postgres and ClickHouse use named volumes (`pgdata`, `chdata`) so data survives container restarts. Back up these volumes regularly in production. You can inspect volume locations with `docker volume inspect`.
-
-<Callout type="warn">
-  Never use `docker compose down -v` in production. The `-v` flag deletes all named volumes and permanently removes your data.
-</Callout>
-
-## Running migrations
-
-Before starting Everstack for the first time, run migrations to set up the database schema:
-
-```bash
-docker compose run --rm everstack migrate up
-```
-
-See [everstack migrate](/cli/migrate) for more details on migration commands.
-
-## Starting and stopping
-
-```bash
-# Start all services in the background
-docker compose up -d
-
-# View logs
-docker compose logs -f everstack
-
-# Stop all services (data is preserved)
-docker compose down
-```
-
-## Health checks
-
-The Everstack server exposes a health endpoint at `/healthz`. You can verify the server is running:
-
-```bash
-curl http://localhost:8089/healthz
-```
-
-To add a Docker health check to the Compose file:
+To use a YAML file instead, mount it into the container and pass it to `serve`:
 
 ```yaml
 everstack:
-  healthcheck:
-    test: ["CMD", "curl", "-f", "http://localhost:8089/healthz"]
-    interval: 10s
-    timeout: 5s
-    retries: 3
+  command: ["serve", "--config", "/app/config/everstack.yaml"]
+  volumes:
+    - ./everstack.yaml:/app/config/everstack.yaml:ro
 ```
+
+Example files are in the repository's `examples/` directory.
+
+## Migrations
+
+The gateway applies its PostgreSQL migrations at startup, and its ClickHouse
+migrations too when `EVS_DATABASE_MODE` is `hybrid`. No separate migration step
+is needed before the first start or after an upgrade.
+
+## Tracing
+
+Traces, logs and the observability views are stored in ClickHouse. With only
+PostgreSQL, as in the quickstart, those views stay empty. To store traces, run
+ClickHouse and set:
+
+```yaml
+environment:
+  EVS_DATABASE_MODE: hybrid
+  EVS_CLICKHOUSE_DSN: clickhouse://USER:PASSWORD@clickhouse:9000/everstack
+```
+
+In hybrid mode the gateway also accepts OpenTelemetry traces from your own
+applications over OTLP/HTTP at `/api/public/otel/v1/traces`, authenticated with
+an Everstack API key. A tested Compose file for this setup is not published yet.
+
+## Sandboxes
+
+The Docker sandbox backend needs access to a Docker daemon, which is equivalent
+to root on the host, and the default sandbox images are not yet in a public
+registry. The quickstart does not enable sandboxes, and there is no tested
+self-hosting guide for them yet.
+
+## Health checks
+
+The gateway serves a health endpoint at `/debug/healthz`. The image includes
+`wget`, and the quickstart uses it for the container health check:
+
+```yaml
+healthcheck:
+  test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8089/debug/healthz"]
+  interval: 5s
+  timeout: 5s
+  retries: 30
+```
+
+## Data and volumes
+
+PostgreSQL data lives in the `postgres-data` named volume and gateway data in
+`everstack-data`, so both survive container restarts.
+
+<Callout type="warn">
+  `docker compose down --volumes` deletes the named volumes and all data in
+  them.
+</Callout>
 
 ## Upgrading
 
-To upgrade to a new version:
+Pull the new source and rebuild. Migrations run when the new container starts.
 
 ```bash
-# Pull the latest image
-docker compose pull everstack
-
-# Run any new migrations
-docker compose run --rm everstack migrate up
-
-# Restart with the new image
-docker compose up -d
+git pull
+docker compose -f examples/quickstart/compose.yaml up -d --build
 ```
 
-Always run migrations before restarting the server. Everstack migrations are idempotent, so running them on an already up-to-date database is safe.
+## Before exposing it to a network
+
+The quickstart's database password and API-key hash secret are examples. Replace
+them, keep sign-in on, put TLS in front of the gateway, and back up the
+PostgreSQL volume.

@@ -39,6 +39,53 @@
   --color-brand-secondary-950: oklch(0.203 0.111 282.03);
 }
 
+/* Status tokens: success, info, warning, danger, neutral.
+   Every status colour in cloud, admin and ops (badges, pills, alerts, inline
+   errors, meters, toasts, destructive buttons) resolves through these instead
+   of raw palette classes. Values are deliberately low-chroma: text is a light,
+   desaturated tone on dark and a muted mid tone on light (both WCAG AA on the
+   page, card and raised surfaces), tints sit at 10-14% and borders at 26-30%.
+   `-solid` is for dots, meter fills and buttons; `-solid-foreground` is the
+   label on it. Surface and border are written out per theme (not derived from
+   the solid via var()) so a theme switch never inherits the other theme's
+   mix. `static` keeps them emitted for inline-style and chart consumers. */
+@theme static {
+  --color-success: oklch(0.82 0.095 156);
+  --color-success-surface: color-mix(in oklab, oklch(0.72 0.135 154) 13%, transparent);
+  --color-success-surface-strong: color-mix(in oklab, oklch(0.72 0.135 154) 20%, transparent);
+  --color-success-border: color-mix(in oklab, oklch(0.72 0.135 154) 28%, transparent);
+  --color-success-solid: oklch(0.72 0.135 154);
+  --color-success-solid-foreground: oklch(0.18 0.03 156);
+
+  --color-info: oklch(0.8 0.09 248);
+  --color-info-surface: color-mix(in oklab, oklch(0.68 0.125 250) 13%, transparent);
+  --color-info-surface-strong: color-mix(in oklab, oklch(0.68 0.125 250) 20%, transparent);
+  --color-info-border: color-mix(in oklab, oklch(0.68 0.125 250) 28%, transparent);
+  --color-info-solid: oklch(0.68 0.125 250);
+  --color-info-solid-foreground: oklch(0.16 0.03 250);
+
+  --color-warning: oklch(0.84 0.115 78);
+  --color-warning-surface: color-mix(in oklab, oklch(0.79 0.135 74) 12%, transparent);
+  --color-warning-surface-strong: color-mix(in oklab, oklch(0.79 0.135 74) 19%, transparent);
+  --color-warning-border: color-mix(in oklab, oklch(0.79 0.135 74) 28%, transparent);
+  --color-warning-solid: oklch(0.79 0.135 74);
+  --color-warning-solid-foreground: oklch(0.2 0.03 70);
+
+  --color-danger: oklch(0.78 0.11 22);
+  --color-danger-surface: color-mix(in oklab, oklch(0.57 0.15 24) 14%, transparent);
+  --color-danger-surface-strong: color-mix(in oklab, oklch(0.57 0.15 24) 21%, transparent);
+  --color-danger-border: color-mix(in oklab, oklch(0.57 0.15 24) 30%, transparent);
+  --color-danger-solid: oklch(0.57 0.15 24);
+  --color-danger-solid-foreground: oklch(1 0 0);
+
+  --color-neutral: oklch(0.8 0.012 270);
+  --color-neutral-surface: color-mix(in oklab, oklch(0.64 0.014 270) 12%, transparent);
+  --color-neutral-surface-strong: color-mix(in oklab, oklch(0.64 0.014 270) 18%, transparent);
+  --color-neutral-border: color-mix(in oklab, oklch(0.64 0.014 270) 26%, transparent);
+  --color-neutral-solid: oklch(0.64 0.014 270);
+  --color-neutral-solid-foreground: oklch(0.16 0.008 270);
+}
+
 /* Light theme
    Keep dark-theme class semantics but remap them to a Dub-style light UI:
    white canvas, neutral-50/100/200 surfaces, neutral text, and a restrained
@@ -74,6 +121,41 @@
   --color-brand-secondary-800: oklch(0.38 0.125 282);
   --color-brand-secondary-900: oklch(0.28 0.085 282);
   --color-brand-secondary-950: oklch(0.2 0.055 282);
+
+  --color-success: oklch(0.47 0.105 154);
+  --color-success-surface: color-mix(in oklab, oklch(0.57 0.13 152) 12%, transparent);
+  --color-success-surface-strong: color-mix(in oklab, oklch(0.57 0.13 152) 18%, transparent);
+  --color-success-border: color-mix(in oklab, oklch(0.57 0.13 152) 28%, transparent);
+  --color-success-solid: oklch(0.57 0.13 152);
+  --color-success-solid-foreground: oklch(0.14 0.03 152);
+
+  --color-info: oklch(0.49 0.13 252);
+  --color-info-surface: color-mix(in oklab, oklch(0.56 0.15 254) 12%, transparent);
+  --color-info-surface-strong: color-mix(in oklab, oklch(0.56 0.15 254) 18%, transparent);
+  --color-info-border: color-mix(in oklab, oklch(0.56 0.15 254) 28%, transparent);
+  --color-info-solid: oklch(0.56 0.15 254);
+  --color-info-solid-foreground: oklch(1 0 0);
+
+  --color-warning: oklch(0.5 0.115 60);
+  --color-warning-surface: color-mix(in oklab, oklch(0.6 0.14 62) 13%, transparent);
+  --color-warning-surface-strong: color-mix(in oklab, oklch(0.6 0.14 62) 19%, transparent);
+  --color-warning-border: color-mix(in oklab, oklch(0.6 0.14 62) 30%, transparent);
+  --color-warning-solid: oklch(0.6 0.14 62);
+  --color-warning-solid-foreground: oklch(0.14 0.03 60);
+
+  --color-danger: oklch(0.5 0.16 25);
+  --color-danger-surface: color-mix(in oklab, oklch(0.55 0.175 25) 12%, transparent);
+  --color-danger-surface-strong: color-mix(in oklab, oklch(0.55 0.175 25) 18%, transparent);
+  --color-danger-border: color-mix(in oklab, oklch(0.55 0.175 25) 28%, transparent);
+  --color-danger-solid: oklch(0.55 0.175 25);
+  --color-danger-solid-foreground: oklch(1 0 0);
+
+  --color-neutral: oklch(0.47 0.012 270);
+  --color-neutral-surface: color-mix(in oklab, oklch(0.55 0.012 270) 10%, transparent);
+  --color-neutral-surface-strong: color-mix(in oklab, oklch(0.55 0.012 270) 15%, transparent);
+  --color-neutral-border: color-mix(in oklab, oklch(0.55 0.012 270) 26%, transparent);
+  --color-neutral-solid: oklch(0.55 0.012 270);
+  --color-neutral-solid-foreground: oklch(1 0 0);
 }
 
 /* Light-mode legibility guardrails for dark-first utility classes. Many screens
@@ -192,7 +274,7 @@
   [class~="text-white/90"],
   [class~="text-white/80"],
   [class~="text-white/75"]
-):not([class*="bg-brand-secondary-"]):not([class*="bg-red-"]):not([class*="bg-rose-"]):not([class*="bg-amber-"]):not([class*="bg-yellow-"]):not([class*="bg-green-"]):not([class*="bg-emerald-"]):not([class*="bg-blue-"]) {
+):not([class*="bg-brand-secondary-"]):not([class*="bg-red-"]):not([class*="bg-danger-"]):not([class*="bg-warning-"]):not([class*="bg-success-"]):not([class*="bg-info-"]):not([class*="bg-rose-"]):not([class*="bg-amber-"]):not([class*="bg-yellow-"]):not([class*="bg-green-"]):not([class*="bg-emerald-"]):not([class*="bg-blue-"]) {
   color: var(--color-brand-main-50) !important;
 }
 
@@ -210,7 +292,7 @@
   [class~="text-white/50"],
   [class~="text-white/45"],
   [class~="text-white/40"]
-):not([class*="bg-brand-secondary-"]):not([class*="bg-red-"]):not([class*="bg-rose-"]):not([class*="bg-amber-"]):not([class*="bg-yellow-"]):not([class*="bg-green-"]):not([class*="bg-emerald-"]):not([class*="bg-blue-"]) {
+):not([class*="bg-brand-secondary-"]):not([class*="bg-red-"]):not([class*="bg-danger-"]):not([class*="bg-warning-"]):not([class*="bg-success-"]):not([class*="bg-info-"]):not([class*="bg-rose-"]):not([class*="bg-amber-"]):not([class*="bg-yellow-"]):not([class*="bg-green-"]):not([class*="bg-emerald-"]):not([class*="bg-blue-"]) {
   color: rgb(23 23 23 / 0.65) !important;
 }
 
@@ -233,6 +315,14 @@
   [class*="bg-brand-secondary-"] *,
   [class*="bg-red-"],
   [class*="bg-red-"] *,
+  [class*="bg-danger-"],
+  [class*="bg-danger-"] *,
+  [class*="bg-warning-"],
+  [class*="bg-warning-"] *,
+  [class*="bg-success-"],
+  [class*="bg-success-"] *,
+  [class*="bg-info-"],
+  [class*="bg-info-"] *,
   [class*="bg-rose-"],
   [class*="bg-rose-"] *,
   [class*="bg-amber-"],
@@ -268,6 +358,14 @@
   [class*="bg-brand-secondary-"] *,
   [class*="bg-red-"],
   [class*="bg-red-"] *,
+  [class*="bg-danger-"],
+  [class*="bg-danger-"] *,
+  [class*="bg-warning-"],
+  [class*="bg-warning-"] *,
+  [class*="bg-success-"],
+  [class*="bg-success-"] *,
+  [class*="bg-info-"],
+  [class*="bg-info-"] *,
   [class*="bg-rose-"],
   [class*="bg-rose-"] *,
   [class*="bg-amber-"],
@@ -303,6 +401,14 @@
   [class*="bg-brand-secondary-"] *,
   [class*="bg-red-"],
   [class*="bg-red-"] *,
+  [class*="bg-danger-"],
+  [class*="bg-danger-"] *,
+  [class*="bg-warning-"],
+  [class*="bg-warning-"] *,
+  [class*="bg-success-"],
+  [class*="bg-success-"] *,
+  [class*="bg-info-"],
+  [class*="bg-info-"] *,
   [class*="bg-rose-"],
   [class*="bg-rose-"] *,
   [class*="bg-amber-"],
@@ -326,7 +432,7 @@
   [data-slot="popover-content"],
   [data-slot="select-content"],
   [data-slot="tooltip-content"]
-) [class*="hover:text-white"]:hover:not([class*="bg-brand-secondary-"]):not([class*="bg-red-"]):not([class*="bg-rose-"]):not([class*="bg-amber-"]):not([class*="bg-yellow-"]):not([class*="bg-green-"]):not([class*="bg-emerald-"]):not([class*="bg-blue-"]) {
+) [class*="hover:text-white"]:hover:not([class*="bg-brand-secondary-"]):not([class*="bg-red-"]):not([class*="bg-danger-"]):not([class*="bg-warning-"]):not([class*="bg-success-"]):not([class*="bg-info-"]):not([class*="bg-rose-"]):not([class*="bg-amber-"]):not([class*="bg-yellow-"]):not([class*="bg-green-"]):not([class*="bg-emerald-"]):not([class*="bg-blue-"]) {
   color: var(--color-brand-main-50) !important;
 }
 

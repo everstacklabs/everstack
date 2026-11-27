@@ -3,6 +3,7 @@ package lifecycle
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -487,4 +488,132 @@ func containsLifecycleState(states []string, want string) bool {
 		}
 	}
 	return false
+}
+
+// A sleep only commits once the workspace is durable. An object-storage ref
+// goes to workspace_archive_ref and no local path is kept on the row.
+func TestStep_Stopping_ObjectRefStoredAsArchiveRef(t *testing.T) {
+	const objRef = "objstore:v1:tenants/tenant-1/sandboxes/sbx_test/workspace/g1.tar.gz#sha256=" +
+		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&size=10"
+	fb := &fakeBackend{stopFn: func(context.Context, string) (string, error) { return objRef, nil }}
+	row := newRow(StateStopping, DesireSleeping)
+	row.WorkspaceSnapshotRef = nullable("/tmp/stale/trooper.tar.gz")
+
+	next, err := Step(context.Background(), fb, row)
+	if err != nil {
+		t.Fatalf("Step: %v", err)
+	}
+	if next.LifecycleState != StateSleeping {
+		t.Fatalf("state = %q, want sleeping", next.LifecycleState)
+	}
+	if next.WorkspaceArchiveRef.String != objRef || next.WorkspaceSnapshotRef.Valid {
+		t.Fatalf("refs = (%v, %v), want archive=%q and no local ref", next.WorkspaceSnapshotRef, next.WorkspaceArchiveRef, objRef)
+	}
+}
+
+// Upload failure must not produce a sleeping row: Step returns the error so
+// the reconciler retries with the VM still running.
+func TestStep_Stopping_UploadFailureDoesNotSleep(t *testing.T) {
+	fb := &fakeBackend{stopFn: func(context.Context, string) (string, error) {
+		return "", errors.New("persist workspace to object storage: upload failed")
+	}}
+	row := newRow(StateStopping, DesireSleeping)
+	next, err := Step(context.Background(), fb, row)
+	if err == nil {
+		t.Fatal("Step succeeded although the workspace upload failed")
+	}
+	if next.LifecycleState != StateStopping {
+		t.Fatalf("state = %q, want the row unchanged (stopping)", next.LifecycleState)
+	}
+}
+
+// A workspace over the cap is refused: back to running, desired running,
+// with the customer-facing reason as the notice.
+func TestStep_Stopping_TooLargeReturnsToRunningWithNotice(t *testing.T) {
+	fb := &fakeBackend{stopFn: func(context.Context, string) (string, error) {
+		return "", sandbox.NewWorkspaceTooLarge(2<<30, 1<<30)
+	}}
+	row := newRow(StateStopping, DesireSleeping)
+	next, err := Step(context.Background(), fb, row)
+	if err != nil {
+		t.Fatalf("Step: %v", err)
+	}
+	if next.LifecycleState != StateRunning || next.DesiredState != DesireRunning {
+		t.Fatalf("got (%q, desired %q), want running/running", next.LifecycleState, next.DesiredState)
+	}
+	if !strings.Contains(next.Notice, "1 GiB limit") || !strings.HasPrefix(next.Error.String, sandbox.WorkspaceErrorCodeTooLarge) {
+		t.Fatalf("notice=%q error=%q, want the size-cap reason", next.Notice, next.Error.String)
+	}
+}
+
+// A missing or corrupt saved workspace parks the row in error with the
+// customer message and the restore-failed code; it never retries into an
+// empty boot.
+func TestStep_Reviving_RestoreFailedParksInErrorWithNotice(t *testing.T) {
+	fb := &fakeBackend{reviveFn: func(context.Context, string, string, string) (*sandbox.Instance, error) {
+		return nil, sandbox.NewWorkspaceRestoreFailed("snapshot: not found")
+	}}
+	row := newRow(StateReviving, DesireRunning)
+	row.WorkspaceArchiveRef = nullable("objstore:v1:k#sha256=x&size=1")
+	next, err := Step(context.Background(), fb, row)
+	if err != nil {
+		t.Fatalf("Step: %v", err)
+	}
+	if next.LifecycleState != StateError || next.DesiredState != DesireRunning {
+		t.Fatalf("got (%q, desired %q), want error with desired preserved", next.LifecycleState, next.DesiredState)
+	}
+	if next.Notice != sandbox.RestoreFailedCustomerMessage {
+		t.Fatalf("notice = %q, want the customer restore-failed message", next.Notice)
+	}
+	if !strings.HasPrefix(next.Error.String, sandbox.WorkspaceErrorCodeRestoreFailed) {
+		t.Fatalf("error = %q, want the restore-failed code prefix", next.Error.String)
+	}
+	if next.WorkspaceArchiveRef != row.WorkspaceArchiveRef {
+		t.Fatal("refs must be kept on a restore-failed row for forensics")
+	}
+}
+
+// A transient revive error (network) still retries through the
+// convergence path rather than being marked permanently failed.
+func TestStep_Reviving_TransientErrorRetries(t *testing.T) {
+	fb := &fakeBackend{reviveFn: func(context.Context, string, string, string) (*sandbox.Instance, error) {
+		return nil, errors.New("download saved workspace: connection reset")
+	}}
+	row := newRow(StateReviving, DesireRunning)
+	if _, err := Step(context.Background(), fb, row); err == nil {
+		t.Fatal("transient revive error must be returned for retry")
+	}
+}
+
+// States that move the workspace to or from object storage get the longer
+// transfer budget; every other state keeps the default.
+func TestReconcilerTransferStatesGetLongerBudget(t *testing.T) {
+	r := NewReconciler(nil, &fakeBackend{}, nil)
+	if r.LeaseTimeout <= r.TransferRowTimeout {
+		t.Fatalf("lease %s must outlive the transfer budget %s", r.LeaseTimeout, r.TransferRowTimeout)
+	}
+	for _, s := range []string{StateStopping, StateReviving, StateArchiving} {
+		if got := r.rowTimeout(s); got != r.TransferRowTimeout {
+			t.Fatalf("rowTimeout(%s) = %s, want %s", s, got, r.TransferRowTimeout)
+		}
+	}
+	if got := r.rowTimeout(StateCreating); got != r.PerRowTimeout {
+		t.Fatalf("rowTimeout(creating) = %s, want %s", got, r.PerRowTimeout)
+	}
+}
+
+// A stop that saved nothing new (guest already gone, nothing adoptable)
+// must not erase a ref the row already carries: it may be the only copy.
+func TestStep_Stopping_EmptyRefNeverOverwritesExistingRef(t *testing.T) {
+	fb := &fakeBackend{stopFn: func(context.Context, string) (string, error) { return "", nil }}
+	row := newRow(StateStopping, DesireSleeping)
+	row.WorkspaceArchiveRef = nullable("objstore:v1:k#sha256=x&size=1")
+	row.WorkspaceSnapshotRef = nullable("/data/local.tar.gz")
+	next, err := Step(context.Background(), fb, row)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next.WorkspaceArchiveRef != row.WorkspaceArchiveRef || next.WorkspaceSnapshotRef != row.WorkspaceSnapshotRef {
+		t.Fatalf("refs = (%v, %v), want the existing refs kept", next.WorkspaceSnapshotRef, next.WorkspaceArchiveRef)
+	}
 }

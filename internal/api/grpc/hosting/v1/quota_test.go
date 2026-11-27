@@ -3,6 +3,8 @@ package v1
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/everstacklabs/everstack/internal/enterprise"
 	"testing"
 	"time"
 
@@ -26,7 +28,7 @@ func TestEnforceTenantQuotaSerializesAndRejectsSiteOverflow(t *testing.T) {
 		WithArgs("hosting-quota:tenant-1").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("COUNT\\(DISTINCT s.id\\)").
-		WithArgs("tenant-1").
+		WithArgs(sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"sites", "storage_bytes"}).AddRow(3, 100))
 	mock.ExpectRollback()
 
@@ -65,7 +67,7 @@ func TestEnforceTenantQuotaCountsRetainedAndPendingVersionStorage(t *testing.T) 
 		WithArgs("hosting-quota:tenant-1").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("v.status IN \\('pending', 'finalized'\\)").
-		WithArgs("tenant-1").
+		WithArgs(sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"sites", "storage_bytes"}).AddRow(1, 450))
 	mock.ExpectRollback()
 
@@ -103,8 +105,8 @@ func TestEnforceTenantQuotaCountsPendingStorageAfterSiteDeletion(t *testing.T) {
 	mock.ExpectExec("pg_advisory_xact_lock").
 		WithArgs("hosting-quota:tenant-1").
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectQuery("(?s)COUNT\\(DISTINCT s.id\\) FILTER \\(WHERE s.status <> 'deleted'\\).*WHERE s.tenant_id = \\$1").
-		WithArgs("tenant-1").
+	mock.ExpectQuery("(?s)COUNT\\(DISTINCT s.id\\) FILTER \\(WHERE s.status <> 'deleted'\\).*WHERE s.tenant_id::text = ANY\\(\\$1::text\\[\\]\\)").
+		WithArgs(sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"sites", "storage_bytes"}).AddRow(0, 450))
 	mock.ExpectRollback()
 
@@ -152,7 +154,7 @@ func TestInsertPublishEnforcesQuotaBeforeWritingSite(t *testing.T) {
 		WithArgs("hosting-quota:tenant-1").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("COUNT\\(DISTINCT s.id\\)").
-		WithArgs("tenant-1").
+		WithArgs(sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"sites", "storage_bytes"}).AddRow(3, 100))
 	mock.ExpectRollback()
 
@@ -204,7 +206,7 @@ func TestBindClaimedSiteEnforcesDestinationTenantQuota(t *testing.T) {
 		WithArgs("hosting-quota:tenant-1").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("COUNT\\(DISTINCT s.id\\)").
-		WithArgs("tenant-1").
+		WithArgs(sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"sites", "storage_bytes"}).AddRow(0, 0))
 	mock.ExpectRollback()
 
@@ -214,5 +216,17 @@ func TestBindClaimedSiteEnforcesDestinationTenantQuota(t *testing.T) {
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// An unavailable organization quota surfaces as a retryable Unavailable,
+// never as an internal error or a partial count.
+func TestUnavailableQuotaIsRetryable(t *testing.T) {
+	s := &Server{quotaResolver: hosting.QuotaResolverFunc(func(context.Context, string) (hosting.TenantQuota, error) {
+		return hosting.TenantQuota{}, fmt.Errorf("lookup: %w", enterprise.ErrLimitCheckUnavailable)
+	})}
+	_, _, err := s.resolveTenantQuota(context.Background(), "tenant-1")
+	if connect.CodeOf(err) != connect.CodeUnavailable {
+		t.Fatalf("err = %v, want Unavailable", err)
 	}
 }

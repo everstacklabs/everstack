@@ -40,7 +40,7 @@ function IssueBreadcrumb() {
       {isLoading ? (
         <span className="inline-block h-4 w-32 animate-pulse rounded bg-white/10 light:bg-black/10" />
       ) : (
-        <span className="max-w-[420px] truncate text-sm font-normal text-white light:text-brand-main-50" title={title}>
+        <span className="max-w-[420px] truncate text-sm font-normal text-white light:text-brand-main-50">
           {title}
         </span>
       )}

@@ -53,7 +53,7 @@ Available options:
 ctx := context.Background()
 
 resp, err := client.Chat.Completions.Create(ctx, &everstack.ChatCompletionParams{
-    Model: "@openai/gpt-4o",
+    Model: "@openai/gpt-5.4",
     Messages: []everstack.Message{
         {Role: "user", Content: "Hello!"},
     },
@@ -69,7 +69,7 @@ Streaming:
 
 ```go
 stream, err := client.Chat.Completions.CreateStream(ctx, &everstack.ChatCompletionParams{
-    Model: "@anthropic/claude-sonnet-4-20250514",
+    Model: "@anthropic/claude-sonnet-5-5",
     Messages: []everstack.Message{
         {Role: "user", Content: "Tell me a joke"},
     },
@@ -157,13 +157,13 @@ result, err := client.Rerank.Create(ctx, &everstack.RerankParams{
 
 ```go
 resp, err := client.Responses.Create(ctx, &everstack.ResponseCreateParams{
-    Model: "@openai/gpt-4o",
+    Model: "@openai/gpt-5.4",
     Input: "Summarize this document",
 })
 
 // Streaming
 stream, err := client.Responses.CreateStream(ctx, &everstack.ResponseCreateParams{
-    Model: "@openai/gpt-4o",
+    Model: "@openai/gpt-5.4",
     Input: "Summarize this document",
 })
 defer stream.Close()

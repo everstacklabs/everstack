@@ -245,7 +245,7 @@ function SandboxLifecycleActions() {
                     variant="outline"
                     size="default"
                     disabled={pending}
-                    className="text-white/60 light:text-black/60 hover:text-red-300 light:hover:text-red-600 hover:border-red-500/40"
+                    className="text-white/60 light:text-black/60 hover:text-danger hover:border-danger-border"
                     onClick={() => {
                         if (
                             !window.confirm(

@@ -4,9 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 // PostgresStore implements ChannelStore using PostgreSQL.
@@ -246,5 +249,28 @@ func (s *PostgresStore) CountChannelMessagesThisMonth(ctx context.Context, tenan
 	err := s.db.GetContext(ctx, &n, `
 		SELECT COUNT(*) FROM channel_messages
 		WHERE tenant_id = $1 AND created_at >= date_trunc('month', NOW())`, tenantID)
+	return n, err
+}
+
+// CountChannelMessagesSince counts inbound messages for any of tenantIDs
+// created at or after since. channel_messages.tenant_id is a uuid column, so
+// ids that are not UUIDs cannot match and are dropped before the cast.
+func (s *PostgresStore) CountChannelMessagesSince(ctx context.Context, tenantIDs []string, since time.Time) (int64, error) {
+	ids := make([]string, 0, len(tenantIDs))
+	for _, id := range tenantIDs {
+		if _, err := uuid.Parse(strings.TrimSpace(id)); err == nil {
+			ids = append(ids, strings.TrimSpace(id))
+		}
+	}
+	if len(tenantIDs) == 0 {
+		return 0, fmt.Errorf("tenant id required")
+	}
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	var n int64
+	err := s.db.GetContext(ctx, &n, `
+		SELECT COUNT(*) FROM channel_messages
+		WHERE tenant_id = ANY($1::uuid[]) AND created_at >= $2`, pq.Array(ids), since)
 	return n, err
 }

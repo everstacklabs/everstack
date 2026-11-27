@@ -23,9 +23,9 @@ function formatDuration(ms: number): string {
 }
 
 const statusConfig: Record<string, { icon: string; color: string; bg: string }> = {
-    running: { icon: 'lucide:loader-2', color: 'text-blue-400 light:text-blue-600', bg: 'bg-blue-500/20' },
-    completed: { icon: 'lucide:check', color: 'text-emerald-400 light:text-emerald-600', bg: 'bg-emerald-500/20' },
-    failed: { icon: 'lucide:x', color: 'text-red-400 light:text-red-600', bg: 'bg-red-500/20' },
+    running: { icon: 'lucide:loader-2', color: 'text-info', bg: 'bg-info-surface-strong' },
+    completed: { icon: 'lucide:check', color: 'text-success', bg: 'bg-success-surface-strong' },
+    failed: { icon: 'lucide:x', color: 'text-danger', bg: 'bg-danger-surface-strong' },
 }
 
 const triggerIcons: Record<string, string> = {

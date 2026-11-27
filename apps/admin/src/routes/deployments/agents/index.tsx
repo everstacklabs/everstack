@@ -210,7 +210,7 @@ function SessionsTab() {
       {error && (
         <div
           role="alert"
-          className="border-b border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-400 light:text-red-700"
+          className="border-b border-danger-border bg-danger-surface px-3 py-2 text-xs text-danger"
         >
           Everstack sessions could not load: {error.message}
         </div>
@@ -218,7 +218,7 @@ function SessionsTab() {
       {openAI.error && (
         <div
           role="alert"
-          className="border-b border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200 light:text-amber-800"
+          className="border-b border-warning-border bg-warning-surface px-3 py-2 text-xs text-warning"
         >
           OpenAI sessions are temporarily unavailable. Everstack sessions are
           still shown.

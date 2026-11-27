@@ -46,7 +46,7 @@ export function ChangelogModal({ open, onOpenChange }: ChangelogModalProps) {
 
                                 {entry.newModels && entry.newModels.length > 0 && (
                                     <div>
-                                        <h4 className="text-sm font-medium mb-2 text-green-600 dark:text-green-400">
+                                        <h4 className="text-sm font-medium mb-2 text-success">
                                             New models
                                         </h4>
                                         <ul className="text-sm space-y-1 ml-4">
@@ -59,7 +59,7 @@ export function ChangelogModal({ open, onOpenChange }: ChangelogModalProps) {
 
                                 {entry.newProviders && entry.newProviders.length > 0 && (
                                     <div>
-                                        <h4 className="text-sm font-medium mb-2 text-blue-600 dark:text-blue-400">
+                                        <h4 className="text-sm font-medium mb-2 text-info">
                                             New providers
                                         </h4>
                                         <ul className="text-sm space-y-1 ml-4">
@@ -72,7 +72,7 @@ export function ChangelogModal({ open, onOpenChange }: ChangelogModalProps) {
 
                                 {entry.updatedModels && entry.updatedModels.length > 0 && (
                                     <div>
-                                        <h4 className="text-sm font-medium mb-2 text-amber-600 dark:text-amber-400">
+                                        <h4 className="text-sm font-medium mb-2 text-warning">
                                             Updated models
                                         </h4>
                                         <ul className="text-sm space-y-1 ml-4">
@@ -85,7 +85,7 @@ export function ChangelogModal({ open, onOpenChange }: ChangelogModalProps) {
 
                                 {entry.deprecatedModels && entry.deprecatedModels.length > 0 && (
                                     <div>
-                                        <h4 className="mb-2 text-sm font-medium text-red-500">
+                                        <h4 className="mb-2 text-sm font-medium text-danger">
                                             Deprecated models
                                         </h4>
                                         <ul className="ml-4 space-y-1 text-sm">

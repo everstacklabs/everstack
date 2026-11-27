@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { replayMask } from '@/lib/replay-privacy'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { Plus, Loader2, MoreHorizontal, ExternalLink, Link2, Trash2 } from 'lucide-react'
@@ -153,7 +154,7 @@ function SessionItem({
     >
       <div className="min-w-0 flex-1 text-left">
         <div className="flex items-center justify-between gap-2">
-          <p className={cn(
+          <p {...replayMask} className={cn(
             'text-xs truncate leading-relaxed',
             isActive ? 'text-brand-secondary-300' : 'text-white/55 light:text-black/55',
             'group-hover:text-white/75 light:group-hover:text-black/75',
@@ -205,7 +206,7 @@ function SessionItem({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-brand-main-600" />
                   <DropdownMenuItem
-                    className="rounded text-red-400 hover:bg-red-500/10 hover:text-red-300 focus:bg-red-500/10 focus:text-red-300 light:text-red-600 light:hover:text-red-700 light:focus:text-red-700 cursor-pointer"
+                    className="rounded text-danger hover:bg-danger-surface focus:bg-danger-surface focus:text-danger cursor-pointer"
                     onClick={() => {
                       // TODO: wire up delete session API
                     }}

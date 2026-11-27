@@ -112,6 +112,29 @@ func (m *LoopManager) ShouldExecuteToolLoop(response *gateway.ChatCompletionResp
 	return false
 }
 
+// CanExecuteToolLoop preflights the whole response using the executor's lookup.
+// Unknown, disabled, or differently owned calls belong to the client. No call
+// may execute until every call in the reply has passed this read-only check.
+func (m *LoopManager) CanExecuteToolLoop(ctx context.Context, tenantID string, response *gateway.ChatCompletionResponse) bool {
+	if tenantID == "" || !m.ShouldExecuteToolLoop(response) {
+		return false
+	}
+	found := false
+	for _, choice := range response.Choices {
+		for _, call := range choice.Message.ToolCalls {
+			found = true
+			if call.Type != "" && call.Type != "function" {
+				return false
+			}
+			fn, err := m.handler.functionLookup.GetFunctionByName(ctx, call.Function.Name, tenantID)
+			if err != nil || fn == nil || !fn.Enabled || fn.TenantID != tenantID {
+				return false
+			}
+		}
+	}
+	return found
+}
+
 // ExtractToolCalls extracts tool calls from a chat completion response.
 func (m *LoopManager) ExtractToolCalls(response *gateway.ChatCompletionResponse) []ToolCallMessage {
 	if response == nil || len(response.Choices) == 0 {

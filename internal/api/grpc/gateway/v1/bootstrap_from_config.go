@@ -2,11 +2,14 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/everstacklabs/everstack/pkg/decision"
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/everstacklabs/everstack/cmd/config/gateway/validator"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
@@ -14,7 +17,6 @@ import (
 	"github.com/everstacklabs/everstack/internal/domain/provider_api_keys"
 	"github.com/everstacklabs/everstack/internal/domain/provider_config"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
-	"github.com/everstacklabs/everstack/internal/lib/correlation"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/everstacklabs/everstack/internal/providers/factory"
 	catalogsvc "github.com/everstacklabs/everstack/internal/services/catalog"
@@ -235,6 +237,44 @@ func defaultsFromLegacySampling(sampling gw.SamplingParams) modelRequestDefaults
 	return defaults
 }
 
+// servedKeyInputs turns a provider configuration's DB key rows into the
+// factory inputs a provider is built from, skipping inactive rows. It is the
+// single place a persisted row becomes a served key, so it is where billing
+// provenance is decided: the served key's Source is derived from who owns
+// the configuration (provider_api_keys.BillingSource), never copied from the
+// row's label. The inference meter bills only Source == "config", and a
+// tenant-created key can carry that label (HandleConfigureProvider writes it
+// for an unnamed key), so copying the label would debit a customer's own key
+// against their wallet. A nil cfg is treated as platform-owned.
+func servedKeyInputs(cfg *provider_config.Configuration, keys []*provider_api_keys.ProviderAPIKey) []factory.APIKeyInput {
+	var ownerOrgID *string
+	providerName := ""
+	if cfg != nil {
+		ownerOrgID = cfg.OrganizationID
+		providerName = cfg.ProviderName
+	}
+	inputs := make([]factory.APIKeyInput, 0, len(keys))
+	for _, key := range keys {
+		if key == nil {
+			continue
+		}
+		if !key.IsActive {
+			logger.Debugf("gateway: skipping inactive key %s for provider %s", key.KeyName, providerName)
+			continue
+		}
+		logger.Debugf("gateway: adding active key %s for provider %s", key.KeyName, providerName)
+		inputs = append(inputs, factory.APIKeyInput{
+			ID:           key.ID,
+			KeyName:      key.KeyName,
+			KeyEncrypted: key.KeyEncrypted, // Actually plaintext (field name is legacy)
+			Weight:       key.Weight,
+			IsActive:     key.IsActive,
+			Source:       provider_api_keys.BillingSource(ownerOrgID, key.Source),
+		})
+	}
+	return inputs
+}
+
 // bootstrapFromDatabase loads provider configurations for the request's
 // tenant and returns a fully built bundle. The caller decides what to do
 // with the bundle — install it as the process-wide default (single-tenant
@@ -251,6 +291,20 @@ func (s *Server) bootstrapFromDatabase(ctx context.Context, providerRepo *provid
 	if err != nil {
 		return nil, err
 	}
+	// Platform key pool: instance-level rows merged AFTER the tenant's own
+	// configurations, only on a shared gateway and only for organizations on
+	// the platform-key allowlist. BYOK-first by construction: a provider the
+	// tenant configured is never replaced by the platform's key for it.
+	platformConfigs, err := s.platformProviderConfigs(ctx, providerRepo)
+	if err != nil {
+		return nil, err
+	}
+	configs = mergePlatformConfigs(configs, platformConfigs)
+	// Model trial: the trial row, served as openai for one model, for an
+	// eligible organization whose bundle has no openai row of its own
+	// (docs/design/free-trial-onboarding.md 3.1). Every request on it goes
+	// through the trial gate.
+	configs = mergeTrialConfig(configs, s.trialProviderConfig(ctx, providerRepo, configs))
 
 	reg := gw.NewRegistry()
 	modelMap := map[string]string{}
@@ -258,6 +312,7 @@ func (s *Server) bootstrapFromDatabase(ctx context.Context, providerRepo *provid
 	aggregated := make(map[string]*factory.AggregatedInput)
 	dbProviderDefaults := make(map[string]modelRequestDefaults)
 	dbModelDefaults := make(map[string]modelRequestDefaults)
+	var decisionRouting decision.RoutingConfig
 
 	// Load whitelisted models from catalog service for optional validation.
 	// In shared/cloud mode, DB provider configuration is the runtime source of truth,
@@ -281,6 +336,23 @@ func (s *Server) bootstrapFromDatabase(ctx context.Context, providerRepo *provid
 		}
 
 		provider := strings.ToLower(config.ProviderName)
+		// Decision routing is a tenant setting; a platform or trial row
+		// never contributes one to a tenant's bundle.
+		if raw, ok := config.CustomSettings["decision_routing"]; ok && tenantProvenance(s.billingProvenance(config)) {
+			var routing decision.RoutingConfig
+			if err := json.Unmarshal([]byte(raw), &routing); err != nil {
+				return nil, fmt.Errorf("invalid decision routing settings")
+			}
+			if err := routing.Validate(); err != nil {
+				return nil, err
+			}
+			if routing.Enabled {
+				if decisionRouting.Enabled {
+					return nil, fmt.Errorf("only one decision routing configuration may be enabled per tenant")
+				}
+				decisionRouting = routing
+			}
+		}
 
 		// Filter models only when whitelist enforcement is enabled.
 		// Shared/cloud mode uses DB-configured models directly.
@@ -314,6 +386,12 @@ func (s *Server) bootstrapFromDatabase(ctx context.Context, providerRepo *provid
 			agg = &factory.AggregatedInput{Provider: provider}
 			aggregated[provider] = agg
 		}
+
+		// Billing provenance from ownership of the configuration, never from
+		// a key row's label (and independent of whether any key rows exist,
+		// so the legacy api_key_encrypted path is classified the same way).
+		agg.BillingProvenance = s.billingProvenance(config)
+		agg.BillingMeter = s.meterFor()
 
 		// Set custom base URL if provided
 		if config.CustomBaseURL != nil && *config.CustomBaseURL != "" {
@@ -358,23 +436,9 @@ func (s *Server) bootstrapFromDatabase(ctx context.Context, providerRepo *provid
 
 		// Load API keys (stored as plaintext, no decryption needed)
 		if len(apiKeys) > 0 {
-			agg.APIKeys = make([]factory.APIKeyInput, 0, len(apiKeys))
-			for _, key := range apiKeys {
-				if !key.IsActive {
-					logger.Debugf("gateway: skipping inactive key %s for provider %s", key.KeyName, config.ProviderName)
-					continue
-				}
-
-				logger.Debugf("gateway: adding active key %s for provider %s", key.KeyName, config.ProviderName)
-				agg.APIKeys = append(agg.APIKeys, factory.APIKeyInput{
-					ID:           key.ID,
-					KeyName:      key.KeyName,
-					KeyEncrypted: key.KeyEncrypted, // Actually plaintext (field name is legacy)
-					Weight:       key.Weight,
-					IsActive:     key.IsActive,
-					Source:       key.Source,
-				})
-			}
+			// Skip keys that recently failed authentication while
+			// another key is available (see failedKeyTTL).
+			agg.APIKeys = s.skipFailedKeys(servedKeyInputs(config, apiKeys))
 		}
 
 		// Fallback: If no API keys found in provider_api_keys table, use the one from provider_config (legacy)
@@ -384,7 +448,7 @@ func (s *Server) bootstrapFromDatabase(ctx context.Context, providerRepo *provid
 		}
 
 		// Skip provider if no active keys available
-		if len(agg.APIKeys) == 0 && agg.APIKey == "" {
+		if len(agg.APIKeys) == 0 && agg.APIKey == "" && provider != "kev" && provider != "laya" {
 			logger.Warnf("gateway: skipping provider %s - no active API keys available", config.ProviderName)
 			delete(aggregated, provider)
 			continue
@@ -437,6 +501,7 @@ func (s *Server) bootstrapFromDatabase(ctx context.Context, providerRepo *provid
 		router:           router,
 		providerDefaults: dbProviderDefaults,
 		modelDefaults:    dbModelDefaults,
+		decisionRouting:  decisionRouting,
 	}, nil
 }
 
@@ -597,200 +662,143 @@ func (s *Server) buildSharedSeedModelsFromCatalog() []validator.ModelConfig {
 	return out
 }
 
-// markFailedKey marks an API key as temporarily failed (due to auth error)
+// failedKeyTTL is how long a provider API key that produced an
+// authentication error is skipped by bundle rebuilds and key rotation. A
+// mark is a hint, not a revocation: the key may be fixed or rotated
+// upstream, so the mark expires and the key is tried again. Keys are marked
+// by id, which is unique per key row, so a platform-pool key rejected for
+// one tenant's request is skipped for every tenant until the mark expires
+// (a 401/403 from the upstream is about the key, not the tenant).
+const failedKeyTTL = 5 * time.Minute
+
+// markFailedKey marks an API key as failed for failedKeyTTL, and drops
+// expired marks so the map stays bounded.
 func (s *Server) markFailedKey(keyID string) {
+	if keyID == "" {
+		return
+	}
+	now := time.Now()
 	s.failedKeyMutex.Lock()
 	defer s.failedKeyMutex.Unlock()
-	s.failedKeys[keyID] = true
-	logger.Debugf("gateway: marked key %s as failed", keyID)
+	if s.failedKeys == nil {
+		s.failedKeys = make(map[string]time.Time)
+	}
+	for id, until := range s.failedKeys {
+		if !now.Before(until) {
+			delete(s.failedKeys, id)
+		}
+	}
+	s.failedKeys[keyID] = now.Add(failedKeyTTL)
+	logger.Debugf("gateway: marked key %s as failed for %s", keyID, failedKeyTTL)
 }
 
-// clearFailedKey removes the failed marker from an API key (after successful use)
-func (s *Server) clearFailedKey(keyID string) {
-	s.failedKeyMutex.Lock()
-	defer s.failedKeyMutex.Unlock()
-	delete(s.failedKeys, keyID)
-}
-
-// isKeyFailed checks if an API key is marked as failed
+// isKeyFailed reports whether an API key carries an unexpired failed mark.
 func (s *Server) isKeyFailed(keyID string) bool {
 	s.failedKeyMutex.RLock()
 	defer s.failedKeyMutex.RUnlock()
-	return s.failedKeys[keyID]
+	until, ok := s.failedKeys[keyID]
+	return ok && time.Now().Before(until)
 }
 
-// attemptKeyRotation tries to re-instantiate a provider with a different API key
-// Returns true if rotation succeeded, false if no more keys available
-func (s *Server) attemptKeyRotation(ctx context.Context, modelAlias string) (rotated bool, currentKeyID string) {
-	// Get repositories from context
+// skipFailedKeys drops keys with an unexpired failed mark, unless that would
+// leave none: a provider whose every key is marked keeps them all rather
+// than disappearing from the bundle.
+func (s *Server) skipFailedKeys(keys []factory.APIKeyInput) []factory.APIKeyInput {
+	kept := make([]factory.APIKeyInput, 0, len(keys))
+	for _, k := range keys {
+		if !s.isKeyFailed(k.ID) {
+			kept = append(kept, k)
+		}
+	}
+	if len(kept) == 0 {
+		return keys
+	}
+	return kept
+}
+
+// servedKeyID is the id of the provider API key that router's provider for
+// alias was built on, read from the tracing middleware every factory wraps
+// it in. Resolving through the router (rather than matching the factory's
+// provider name) also covers providers whose Name() differs from the name
+// they are registered under: google registers "google", its provider is
+// "gemini". Returns "" when the key is unknown (legacy single-key path).
+func servedKeyID(ctx context.Context, router *gw.Router, alias string) string {
+	if router == nil {
+		return ""
+	}
+	p, _, err := router.ResolveWithContext(ctx, alias)
+	if err != nil || p == nil {
+		return ""
+	}
+	if k, ok := gw.UnwrapTo[interface{ ServedKeyID() string }](p); ok {
+		return k.ServedKeyID()
+	}
+	return ""
+}
+
+// attemptKeyRotation answers an authentication error from the provider key
+// failedKeyID (the key the failing attempt's provider was built on, see
+// servedKeyID): it marks that key failed, rebuilds the request's provider
+// bundle (which now skips it, see skipFailedKeys) and installs it. It
+// returns the key the rebuilt provider for modelAlias uses, and false when
+// there is nothing to rotate to: the failing key is unknown, the rebuild
+// failed, or the rebuilt provider is still on the same key (no other key).
+//
+// It used to return the first available key's id instead of the key in use,
+// so with keys [good, bad] a 401 on "bad" marked "good"; and it matched the
+// factory's provider name against the provider's runtime name, so Google
+// (registered "google", named "gemini") never rotated.
+//
+// The bundle is rebuilt the way EnsureProvidersForRequest builds it, under
+// the same per-tenant load lock, so every provider, explicit route and
+// default is kept; rebuilding one provider by hand dropped the other
+// providers' routes. Tenant scoping is unchanged: in shared mode the bundle
+// is built from the request's own tenant rows and cached under its own key,
+// and a request with no tenant identity rotates nothing.
+func (s *Server) attemptKeyRotation(ctx context.Context, modelAlias, failedKeyID string) (servedKey string, rotated bool) {
+	if failedKeyID == "" {
+		logger.Debug("gateway: key rotation skipped: the failing key is unknown")
+		return "", false
+	}
+	if s.ctx == nil {
+		return "", false
+	}
 	providerRepoAny := s.ctx.Value(contextkeys.ProviderRepo)
 	apiKeyRepoAny := s.ctx.Value(contextkeys.APIKeyRepo)
 	if providerRepoAny == nil || apiKeyRepoAny == nil {
 		logger.Debug("gateway: key rotation not available (no repos in context)")
-		return false, ""
+		return "", false
 	}
-
 	providerRepo := providerRepoAny.(*provider_config.Repository)
 	apiKeyRepo := apiKeyRepoAny.(provider_api_keys.Repository)
 
-	// Find which provider supports this model. Resolve via the per-tenant
-	// router so a stale-key rotation in tenant A doesn't reach into tenant
-	// B's registry.
-	router := s.routerFor(ctx)
-	if router == nil {
-		return false, ""
-	}
-	provider, route, err := router.ResolveWithContext(ctx, modelAlias)
+	s.markFailedKey(failedKeyID)
 
-	if err != nil || provider == nil {
-		logger.Debugf("gateway: could not find provider for model %s", modelAlias)
-		return false, ""
-	}
-
-	// Get provider name from route
-	providerName := route.ProviderName
-
-	// Tenant-scoped — rotating a failed key for tenant A must not search
-	// or mutate tenant B's rows.
-	configs, err := listProviderConfigs(ctx, providerRepo)
-	if err != nil {
-		logger.Warnf("gateway: failed to get provider configs for key rotation: %v", err)
-		return false, ""
-	}
-
-	var matchingConfig *provider_config.Configuration
-	for _, cfg := range configs {
-		if strings.EqualFold(cfg.ProviderName, providerName) {
-			matchingConfig = cfg
-			break
+	key, buildCtx := "", s.ctx
+	if s.isSharedMode() {
+		key, buildCtx = tenantKeyFromContext(ctx), ctx
+		if key == "" {
+			return "", false
 		}
 	}
+	lock := s.tenantBundles.loadLockFor(key)
+	lock.Lock()
+	defer lock.Unlock()
 
-	if matchingConfig == nil {
-		logger.Debugf("gateway: no provider config found for provider %s (model: %s)", providerName, modelAlias)
-		return false, ""
-	}
-
-	// Get all API keys for this provider
-	allKeys, err := apiKeyRepo.ListByProviderConfig(ctx, matchingConfig.ID)
+	bundle, err := s.bootstrapFromDatabase(buildCtx, providerRepo, apiKeyRepo)
 	if err != nil {
-		logger.Warnf("gateway: failed to get API keys for key rotation: %v", err)
-		return false, ""
+		logger.Warnf("gateway: key rotation could not rebuild providers: %v", err)
+		return "", false
 	}
+	s.installBundle(key, bundle)
 
-	// Filter to active keys that haven't failed
-	var availableKeys []*provider_api_keys.ProviderAPIKey
-	for _, key := range allKeys {
-		if key.IsActive && !s.isKeyFailed(key.ID) {
-			availableKeys = append(availableKeys, key)
-		}
+	servedKey = servedKeyID(ctx, bundle.router, modelAlias)
+	if servedKey == "" || servedKey == failedKeyID {
+		logger.Infof("gateway: no other API key available for model %s", modelAlias)
+		return servedKey, false
 	}
-
-	if len(availableKeys) == 0 {
-		logger.Infof("gateway: no more API keys available for provider %s", matchingConfig.ProviderName)
-		return false, ""
-	}
-
-	logger.Infof("gateway: attempting key rotation for provider %s (model: %s), %d keys available",
-		matchingConfig.ProviderName, modelAlias, len(availableKeys))
-
-	// Build API keys input
-	apiKeys := make([]factory.APIKeyInput, 0, len(availableKeys))
-	for _, k := range availableKeys {
-		apiKeys = append(apiKeys, factory.APIKeyInput{
-			ID:           k.ID,
-			KeyName:      k.KeyName,
-			KeyEncrypted: k.KeyEncrypted, // Plaintext now
-			Weight:       k.Weight,
-			IsActive:     k.IsActive,
-			Source:       k.Source,
-		})
-	}
-
-	stickyKey := s.hashKeyFromContext(ctx)
-	if stickyKey == "" {
-		stickyKey = correlation.GetCorrelationID(ctx)
-	}
-
-	baseURL := ""
-	if matchingConfig.CustomBaseURL != nil {
-		baseURL = *matchingConfig.CustomBaseURL
-	}
-
-	// The rotated provider is a full replacement for the tenant's entry, so
-	// it needs every input the bootstrap paths pass -- including the catalog.
-	// Omitting it here silently dropped cost calculation and canonical model
-	// identity for the rest of the bundle's life after any key rotation.
-	var rotationCatalog *catalogsvc.Cache
-	if catalogSvc := s.catalogServiceFor(ctx); catalogSvc != nil {
-		rotationCatalog = catalogSvc.GetCache()
-	}
-
-	aggInput := factory.AggregatedInput{
-		Provider:          matchingConfig.ProviderName,
-		Models:            matchingConfig.EnabledModels,
-		BaseURL:           baseURL,
-		APIKey:            "", // Not used with multi-key path
-		APIKeys:           apiKeys,
-		StickyKey:         stickyKey,
-		CatalogCache:      rotationCatalog,
-		CompactConfig:     compactConfigFromFeatures(s.feat),
-		SummarizerResolve: factory.SummarizerResolver(s.makeCompactSummarizerResolver()),
-	}
-
-	// Re-initialize this provider
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	// Get factory for this provider
-	factoryFn, ok := factory.Default.Get(matchingConfig.ProviderName)
-	if !ok {
-		logger.Warnf("gateway: no factory found for provider %s", matchingConfig.ProviderName)
-		return false, ""
-	}
-
-	// Create new provider instance
-	newProvider, err := factoryFn(aggInput)
-	if err != nil {
-		logger.Warnf("gateway: failed to re-create provider %s: %v", matchingConfig.ProviderName, err)
-		return false, ""
-	}
-
-	// Build a fresh bundle for the request's tenant: copy every provider
-	// except the one being rotated, then add the rotated provider. The
-	// previous version mutated the global s.reg/s.router which raced with
-	// other tenants' requests; the new bundle replaces only this tenant's
-	// cached entry.
-	currentReg := s.regFor(ctx)
-	newReg := gw.NewRegistry()
-	if currentReg != nil {
-		for name, prov := range currentReg.All() {
-			if !strings.EqualFold(name, matchingConfig.ProviderName) {
-				newReg.Register(prov)
-			}
-		}
-	}
-	newReg.Register(newProvider)
-
-	modelToProvider := make(map[string]string)
-	for _, model := range matchingConfig.EnabledModels {
-		modelToProvider[strings.ToLower(model)] = matchingConfig.ProviderName
-	}
-	newRouter := gw.NewRouter(newReg, modelToProvider)
-	rotatedBundle := &tenantBundle{reg: newReg, router: newRouter}
-	if current := s.providersFor(ctx); current != nil {
-		rotatedBundle.providerDefaults = current.providerDefaults
-		rotatedBundle.modelDefaults = current.modelDefaults
-	}
-	s.installBundle(tenantKeyFromContext(ctx), rotatedBundle)
-
-	logger.Infof("gateway: successfully rotated keys for provider %s", matchingConfig.ProviderName)
-
-	// Return the first available key ID so it can be marked as failed if it also fails
-	if len(availableKeys) > 0 {
-		return true, availableKeys[0].ID
-	}
-	return true, ""
+	logger.Infof("gateway: rotated API key for model %s", modelAlias)
+	return servedKey, true
 }
 
 // catalogServiceFor resolves the model catalog for a provider bootstrap.

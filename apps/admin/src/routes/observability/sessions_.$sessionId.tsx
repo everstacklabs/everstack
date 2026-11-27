@@ -98,7 +98,7 @@ function SessionDetailPage() {
                     <Card className="border-brand-main-500 rounded-md">
                         <CardContent className="pt-4 pb-4">
                             <div className="text-white/60 light:text-black/60 text-sm">Errors</div>
-                            <div className={`text-2xl font-bold mt-1 ${(session.errorCount ?? 0) > 0 ? 'text-red-400 light:text-red-600' : 'text-white light:text-brand-main-50'}`}>
+                            <div className={`text-2xl font-bold mt-1 ${(session.errorCount ?? 0) > 0 ? 'text-danger' : 'text-white light:text-brand-main-50'}`}>
                                 {session.errorCount ?? 0}
                             </div>
                         </CardContent>

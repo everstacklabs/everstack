@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/everstacklabs/everstack/internal/lib/logger"
@@ -28,6 +29,10 @@ type CronScheduler struct {
 	cancel   context.CancelFunc
 	done     chan struct{}
 	notifier CronNotifier // optional: sends channel notifications when crons fire
+
+	// tenantActiveFn reports whether a tenant's instance may run compute.
+	// Nil falls back to the manager's gate (and from there to "active").
+	tenantActiveFn atomic.Pointer[func(ctx context.Context, tenantID string) bool]
 }
 
 // SandboxCron represents a cron schedule for automated sandbox execution.
@@ -129,6 +134,20 @@ func (s *CronScheduler) executeCron(ctx context.Context, c SandboxCron) {
 	}
 	defer db.ExecContext(ctx, `SELECT pg_advisory_unlock(hashtext($1))`, lockKey)
 
+	// A paused instance runs no compute. Still advance next_run_at exactly as
+	// a run would: the due query is LIMIT 20 ordered by next_run_at, so rows
+	// left in the past would starve every other tenant's crons.
+	if !s.tenantActive(ctx, c.TenantID) {
+		logger.WithFields("cron_id", c.ID, "tenant_id", c.TenantID, "sandbox_id", c.SandboxID).
+			Info("cron_scheduler: skipping cron; instance is paused")
+		db.ExecContext(ctx, `
+			UPDATE sandbox_crons SET
+				next_run_at = $1,
+				updated_at = NOW()
+			WHERE id = $2`, s.calculateNextRun(c.Schedule), c.ID)
+		return
+	}
+
 	logger.WithFields("cron_id", c.ID, "name", c.Name, "schedule", c.Schedule).
 		Info("cron_scheduler: executing cron job")
 
@@ -142,6 +161,15 @@ func (s *CronScheduler) executeCron(ctx context.Context, c SandboxCron) {
 		if inst == nil {
 			err = fmt.Errorf("sandbox not running for session %s", c.SessionID)
 		}
+	}
+
+	// The job runs by session id. Refuse when that session leads to a
+	// sandbox of a different tenant than the job's, whatever was stored on
+	// the job when it was created.
+	if err == nil && !instanceBelongsToTenant(inst, c.TenantID) {
+		logger.WithFields("cron_id", c.ID, "tenant_id", c.TenantID).
+			Warn("cron_scheduler: session belongs to another tenant's sandbox; refusing")
+		err = fmt.Errorf("sandbox not running for session %s", c.SessionID)
 	}
 
 	var execErr string
@@ -307,14 +335,14 @@ func (s *CronScheduler) calculateNextRun(schedule string) *time.Time {
 	return &next
 }
 
-// RunCronNow executes a persisted cron immediately.
-func (m *SandboxManager) RunCronNow(ctx context.Context, cronID int64) error {
+// RunCronNow executes a tenant-owned persisted cron immediately.
+func (m *SandboxManager) RunCronNow(ctx context.Context, cronID int64, tenantID string) error {
 	if m == nil || m.DB() == nil {
 		return fmt.Errorf("database not available")
 	}
 
 	var c SandboxCron
-	if err := m.DB().GetContext(ctx, &c, `SELECT * FROM sandbox_crons WHERE id = $1`, cronID); err != nil {
+	if err := m.DB().GetContext(ctx, &c, `SELECT * FROM sandbox_crons WHERE id = $1 AND tenant_id = $2`, cronID, tenantID); err != nil {
 		return fmt.Errorf("load cron %d: %w", cronID, err)
 	}
 
@@ -326,6 +354,27 @@ func (m *SandboxManager) RunCronNow(ctx context.Context, cronID int64) error {
 	return nil
 }
 
+// SetTenantActiveFn installs the paused-instance gate for scheduled runs. fn
+// returns false when the tenant's instance is paused. Passing nil falls back
+// to the manager's gate. Safe for concurrent use.
+func (s *CronScheduler) SetTenantActiveFn(fn func(ctx context.Context, tenantID string) bool) {
+	if fn == nil {
+		s.tenantActiveFn.Store(nil)
+		return
+	}
+	s.tenantActiveFn.Store(&fn)
+}
+
+func (s *CronScheduler) tenantActive(ctx context.Context, tenantID string) bool {
+	if strings.TrimSpace(tenantID) == "" {
+		return true
+	}
+	if ptr := s.tenantActiveFn.Load(); ptr != nil {
+		return (*ptr)(ctx, tenantID)
+	}
+	return s.manager.TenantActive(ctx, tenantID)
+}
+
 // SetNotifier sets the channel notifier for cron notifications.
 func (s *CronScheduler) SetNotifier(n CronNotifier) {
 	s.notifier = n
@@ -335,4 +384,16 @@ func (s *CronScheduler) SetNotifier(n CronNotifier) {
 func (s *CronScheduler) Stop() {
 	s.cancel()
 	<-s.done
+}
+
+// instanceBelongsToTenant reports whether inst may be used on behalf of
+// tenantID. Scheduled commands and webhook triggers reach a sandbox by a
+// session id that was supplied by whoever created them, so the sandbox that
+// session id leads to has to be checked at the moment of use. A sandbox with
+// no recorded tenant (rehydrated before backfill) is not treated as foreign.
+func instanceBelongsToTenant(inst *Instance, tenantID string) bool {
+	if inst == nil || tenantID == "" {
+		return false
+	}
+	return inst.Config.TenantID == "" || inst.Config.TenantID == tenantID
 }

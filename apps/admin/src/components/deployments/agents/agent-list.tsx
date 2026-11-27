@@ -93,7 +93,7 @@ export function AgentList({ onEdit, lifecycleMode }: AgentListProps) {
 
     if (listAgentsQuery.error) {
         return (
-            <div className="flex-1 flex items-center justify-center text-red-400 light:text-red-600">
+            <div className="flex-1 flex items-center justify-center text-danger">
                 Error loading agents: {listAgentsQuery.error.message}
             </div>
         )
@@ -141,8 +141,8 @@ export function AgentList({ onEdit, lifecycleMode }: AgentListProps) {
                     </span>
                     <span
                         className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${agent.mode === AgentMode.SUBAGENT
-                                ? 'bg-amber-500/15 text-amber-300 light:text-amber-700'
-                                : 'bg-emerald-500/15 text-emerald-300 light:text-emerald-600'
+                                ? 'bg-warning-surface-strong text-warning'
+                                : 'bg-success-surface-strong text-success'
                             }`}
                     >
                         {agent.mode === AgentMode.SUBAGENT ? (
@@ -172,7 +172,7 @@ export function AgentList({ onEdit, lifecycleMode }: AgentListProps) {
                         agent.lifecycleStatus > 0 ? (
                             <LifecycleStatusPill status={agent.lifecycleStatus} />
                         ) : (
-                            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-blue-500/15 text-blue-300 light:text-blue-600">
+                            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-info-surface-strong text-info">
                                 Persistent
                             </span>
                         )
@@ -256,7 +256,7 @@ export function AgentList({ onEdit, lifecycleMode }: AgentListProps) {
                     <div className="flex items-center gap-2 justify-center" data-row-actions>
                         <button
                             type="button"
-                            className="p-1 rounded hover:bg-blue-500/20 hover:text-blue-400 light:hover:text-blue-600 transition-colors"
+                            className="p-1 rounded hover:bg-info-surface-strong hover:text-info transition-colors"
                             onClick={() => onEdit?.(agent)}
                             title="Edit agent"
                         >
@@ -265,7 +265,7 @@ export function AgentList({ onEdit, lifecycleMode }: AgentListProps) {
                         {canTerminate && (
                             <button
                                 type="button"
-                                className="p-1 rounded text-white/55 light:text-black/55 hover:bg-red-500/15 hover:text-red-400 light:hover:text-red-600 transition-colors"
+                                className="p-1 rounded text-white/55 light:text-black/55 hover:bg-danger-surface-strong hover:text-danger transition-colors"
                                 onClick={() => setTerminateTarget(agent)}
                                 title="Terminate agent (stops the sandbox)"
                             >
@@ -274,7 +274,7 @@ export function AgentList({ onEdit, lifecycleMode }: AgentListProps) {
                         )}
                         <button
                             type="button"
-                            className="p-1 rounded hover:bg-red-500/20 hover:text-red-400 light:hover:text-red-600 transition-colors"
+                            className="p-1 rounded hover:bg-danger-surface-strong hover:text-danger transition-colors"
                             onClick={() => {
                                 setDeleteConfirmId(agent.id)
                                 setDeleteConfirmName(agent.name)
@@ -369,8 +369,8 @@ export function AgentList({ onEdit, lifecycleMode }: AgentListProps) {
                 <AlertDialogContent className="bg-brand-main-900 border border-brand-main-700 text-brand-main-100 p-0 gap-0 sm:max-w-md shadow-2xl shadow-black/60">
                     <AlertDialogHeader className="p-5 pb-4 sm:text-left">
                         <div className="flex items-start gap-3">
-                            <div className="shrink-0 size-9 rounded-md bg-red-500/10 border border-red-500/25 flex items-center justify-center">
-                                <XCircle size={18} className="text-red-400" />
+                            <div className="shrink-0 size-9 rounded-md bg-danger-surface border border-danger-border flex items-center justify-center">
+                                <XCircle size={18} className="text-danger" />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <AlertDialogTitle className="text-white text-[15px] font-semibold leading-tight light:text-brand-main-50">
@@ -407,7 +407,7 @@ export function AgentList({ onEdit, lifecycleMode }: AgentListProps) {
                                     onError: (err) => toast.error(`Failed to terminate: ${err.message}`),
                                 })
                             }}
-                            className="h-8 px-3.5 text-sm bg-red-500/90 hover:bg-red-500 text-white border-0 inline-flex items-center gap-1.5 shadow-sm shadow-red-900/30"
+                            className="h-8 px-3.5 text-sm bg-danger-solid/90 hover:bg-danger-solid text-white border-0 inline-flex items-center gap-1.5 shadow-sm shadow-danger-solid/30"
                         >
                             <XCircle size={14} />
                             {terminateSandboxMutation.isPending ? 'Terminating' : 'Terminate'}
@@ -421,12 +421,12 @@ export function AgentList({ onEdit, lifecycleMode }: AgentListProps) {
 
 const LIFECYCLE_STATUS_PILL_META: Record<number, { label: string; colors: string; pulse?: boolean }> = {
     [AgentLifecycleStatus.CREATED]: { label: 'Created', colors: 'bg-gray-500/20 text-gray-400' },
-    [AgentLifecycleStatus.PROVISIONING]: { label: 'Provisioning', colors: 'bg-blue-500/20 text-blue-300' },
-    [AgentLifecycleStatus.RUNNING]: { label: 'Running', colors: 'bg-green-500/20 text-green-300', pulse: true },
-    [AgentLifecycleStatus.IDLE]: { label: 'Idle', colors: 'bg-amber-500/20 text-amber-300' },
+    [AgentLifecycleStatus.PROVISIONING]: { label: 'Provisioning', colors: 'bg-info-surface-strong text-info' },
+    [AgentLifecycleStatus.RUNNING]: { label: 'Running', colors: 'bg-success-surface-strong text-success', pulse: true },
+    [AgentLifecycleStatus.IDLE]: { label: 'Idle', colors: 'bg-warning-surface-strong text-warning' },
     [AgentLifecycleStatus.SLEEPING]: { label: 'Sleeping', colors: 'bg-gray-500/20 text-gray-400' },
-    [AgentLifecycleStatus.WAKING]: { label: 'Waking', colors: 'bg-yellow-500/20 text-yellow-300' },
-    [AgentLifecycleStatus.FAILED]: { label: 'Failed', colors: 'bg-red-500/20 text-red-300' },
+    [AgentLifecycleStatus.WAKING]: { label: 'Waking', colors: 'bg-warning-surface-strong text-warning' },
+    [AgentLifecycleStatus.FAILED]: { label: 'Failed', colors: 'bg-danger-surface-strong text-danger' },
     [AgentLifecycleStatus.TERMINATED]: { label: 'Terminated', colors: 'bg-gray-500/20 text-gray-400' },
 }
 
@@ -434,7 +434,7 @@ function LifecycleStatusPill({ status }: { status: AgentLifecycleStatus }) {
     const meta = LIFECYCLE_STATUS_PILL_META[status] ?? LIFECYCLE_STATUS_PILL_META[AgentLifecycleStatus.CREATED]
     return (
         <span className={`inline-flex items-center gap-1 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${meta.colors}`}>
-            {meta.pulse && <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />}
+            {meta.pulse && <span className="h-1.5 w-1.5 rounded-full bg-success-solid animate-pulse" />}
             {meta.label}
         </span>
     )

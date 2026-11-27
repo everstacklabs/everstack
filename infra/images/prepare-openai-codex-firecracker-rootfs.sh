@@ -2,8 +2,161 @@
 # Build the pinned OpenAI Codex Firecracker guest and convert it to the exact
 # filename consumed by the Firecracker backend. Extraction and conversion stay
 # inside Linux Docker volumes so numeric guest ownership is preserved on macOS.
+#
+# Usage:
+#   prepare-openai-codex-firecracker-rootfs.sh [OUTPUT_DIR]
+#       Build into OUTPUT_DIR (default dist/firecracker-rootfs). Run from the
+#       repository root.
+#   prepare-openai-codex-firecracker-rootfs.sh install ARTIFACT_DIR ROOTFS_DIR
+#       On the Firecracker node, install ARTIFACT_DIR/<alias>.ext4 (checked
+#       against ARTIFACT_DIR/<alias>.ext4.sha256) into ROOTFS_DIR, the
+#       FC_ROOTFS_DIR of ONE environment, for example
+#       /var/lib/everstack/vmstore/dev/rootfs. Needs no Docker or checkout.
+#
+# Install keeps at most one previous build, as <alias>.ext4.previous, and only
+# while the new build is being health checked. On success it deletes that copy
+# and any legacy timestamped <alias>.ext4*.backup-* files; on failure it moves
+# the previous build back into place. Nothing timestamped is ever written.
+#
+# Install environment:
+#   EVS_ROOTFS_ENV_CAP_MB          per-env soft cap on ROOTFS_DIR (default
+#                                  10240, half of the shared 20 GiB store).
+#                                  Refuses (exit 3) when the dir plus the new
+#                                  image would exceed it.
+#   EVS_ROOTFS_MIN_FREE_AFTER_MB   free space the store must keep after the
+#                                  install (default 4096, 2x the fcagent create
+#                                  guard). Refuses (exit 3) below it.
+#   ROOTFS_HEALTH_CMD              extra health check run after the swap, for
+#                                  example a sandbox create smoke test. Non-zero
+#                                  exit rolls the install back.
+#   ROOTFS_SKIP_DEBUGFS=1          skip the in-image version marker check (tests).
 
 set -euo pipefail
+
+ROOTFS_ALIAS="openai-codex-0.154.0-r3"
+
+file_sha256() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | cut -d ' ' -f 1
+  else
+    shasum -a 256 "$1" | cut -d ' ' -f 1
+  fi
+}
+
+install_rootfs() {
+  if [ "$#" -ne 2 ]; then
+    echo "usage: $0 install ARTIFACT_DIR ROOTFS_DIR" >&2
+    exit 2
+  fi
+  local artifact="$1/$ROOTFS_ALIAS.ext4"
+  local checksum="$1/$ROOTFS_ALIAS.ext4.sha256"
+  local rootfs_dir="$2"
+  local current="$rootfs_dir/$ROOTFS_ALIAS.ext4"
+  local previous="$current.previous"
+  # Global, not local: the EXIT trap runs after this function returns.
+  INSTALL_STAGED="$rootfs_dir/.$ROOTFS_ALIAS.ext4.install.$$"
+  local staged="$INSTALL_STAGED"
+  local cap_mb="${EVS_ROOTFS_ENV_CAP_MB:-10240}"
+  local min_free_mb="${EVS_ROOTFS_MIN_FREE_AFTER_MB:-4096}"
+
+  [ -s "$artifact" ] || { echo "missing artifact $artifact" >&2; exit 2; }
+  [ -s "$checksum" ] || { echo "missing checksum $checksum" >&2; exit 2; }
+  [ -d "$rootfs_dir" ] || { echo "missing rootfs dir $rootfs_dir" >&2; exit 2; }
+
+  local expected
+  expected="$(cut -d ' ' -f 1 "$checksum")"
+  [[ "$expected" =~ ^[0-9a-f]{64}$ ]] || { echo "malformed checksum file $checksum" >&2; exit 2; }
+  if [ "$(file_sha256 "$artifact")" != "$expected" ]; then
+    echo "refusing to install: $artifact does not match $checksum" >&2
+    exit 1
+  fi
+
+  # Per-env soft cap. du counts allocated blocks, so a reflinked extent
+  # shared with the other env counts in both: a conservative reading.
+  local used_kb new_kb avail_kb
+  used_kb="$(du -sk "$rootfs_dir" | cut -f 1)"
+  new_kb="$(du -sk "$artifact" | cut -f 1)"
+  if [ $((used_kb + new_kb)) -gt $((cap_mb * 1024)) ]; then
+    echo "refusing to install: $rootfs_dir uses $((used_kb / 1024)) MiB, +$((new_kb / 1024)) MiB would exceed EVS_ROOTFS_ENV_CAP_MB=$cap_mb." >&2
+    echo "Free space first: the fcagent rootfs GC lists eligible files (rootfs_gc log lines)." >&2
+    exit 3
+  fi
+  avail_kb="$(df -Pk "$rootfs_dir" | awk 'NR == 2 { print $4 }')"
+  if [ $((avail_kb - new_kb)) -lt $((min_free_mb * 1024)) ]; then
+    echo "refusing to install: only $((avail_kb / 1024)) MiB free on the store; the install would leave less than EVS_ROOTFS_MIN_FREE_AFTER_MB=$min_free_mb." >&2
+    exit 3
+  fi
+
+  # Stage on the same filesystem so the swap below is an atomic rename.
+  trap 'rm -f "$INSTALL_STAGED"' EXIT INT TERM
+  cp --sparse=always "$artifact" "$staged" 2>/dev/null || cp "$artifact" "$staged"
+  if [ "$(file_sha256 "$staged")" != "$expected" ]; then
+    echo "staged copy $staged does not match $checksum" >&2
+    exit 1
+  fi
+
+  # Hard-link the current build as the single previous copy (replacing any
+  # stale one), then swap. Creates never see a missing image: the rename
+  # replaces the name atomically.
+  local had_previous=0
+  if [ -e "$current" ]; then
+    ln -f "$current" "$previous"
+    had_previous=1
+  fi
+  mv -f "$staged" "$current"
+
+  local healthy=1
+  if [ "$(file_sha256 "$current")" != "$expected" ]; then
+    echo "health: installed image digest mismatch" >&2
+    healthy=0
+  fi
+  if [ "$healthy" = 1 ] && [ "${ROOTFS_SKIP_DEBUGFS:-0}" != 1 ]; then
+    local marker
+    if ! marker="$(debugfs -R "cat /etc/everstack-rootfs-version" "$current" 2>/dev/null)"; then
+      echo "health: debugfs could not read /etc/everstack-rootfs-version" >&2
+      healthy=0
+    elif [[ "$marker" != "$ROOTFS_ALIAS-source-"* ]]; then
+      echo "health: version marker '$marker' does not start with $ROOTFS_ALIAS-source-" >&2
+      healthy=0
+    fi
+  fi
+  if [ "$healthy" = 1 ] && [ -n "${ROOTFS_HEALTH_CMD:-}" ]; then
+    if ! sh -c "$ROOTFS_HEALTH_CMD"; then
+      echo "health: ROOTFS_HEALTH_CMD failed" >&2
+      healthy=0
+    fi
+  fi
+
+  if [ "$healthy" != 1 ]; then
+    if [ "$had_previous" = 1 ]; then
+      mv -f "$previous" "$current"
+      echo "install failed its health check; restored the previous $current" >&2
+    else
+      rm -f "$current"
+      echo "install failed its health check; removed $current" >&2
+    fi
+    exit 1
+  fi
+
+  cp "$checksum" "$current.sha256"
+  rm -f "$previous"
+  # Markers from hand installs describe the build just replaced; the
+  # .sha256 written above is the one that matches the installed image.
+  rm -f "$current.version" "$current.source"
+  local legacy
+  for legacy in "$current".backup-* "$current".*.backup-*; do
+    [ -e "$legacy" ] || continue
+    rm -f "$legacy"
+    echo "removed legacy backup $legacy"
+  done
+  printf 'Installed %s (%s)\n' "$current" "$expected"
+}
+
+if [ "${1:-}" = "install" ]; then
+  shift
+  install_rootfs "$@"
+  exit 0
+fi
 
 if [ ! -f infra/images/Dockerfile.openai-codex-firecracker-rootfs ] || \
    [ ! -f services/sandbox-rootfs/converter/Dockerfile ] || \
@@ -12,7 +165,6 @@ if [ ! -f infra/images/Dockerfile.openai-codex-firecracker-rootfs ] || \
   exit 2
 fi
 
-ROOTFS_ALIAS="openai-codex-0.154.0-r3"
 SOURCE_REVISION="$(git rev-parse HEAD)"
 UBUNTU_BASE="docker.io/library/ubuntu:22.04@sha256:281c5745f657873d78e5531fc5ba8575f46ab7769b94550ac99543f122679986"
 ROOTFS_SIZE_MB="${ROOTFS_SIZE_MB:-4096}"

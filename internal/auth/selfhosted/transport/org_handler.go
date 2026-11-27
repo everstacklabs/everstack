@@ -2,6 +2,7 @@ package transport
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -9,7 +10,9 @@ import (
 	"connectrpc.com/connect"
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/domain"
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/service"
+	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/everstacklabs/everstack/internal/lib/orgident"
 	"github.com/everstacklabs/everstack/pkg/ctxkeys"
 	orgv1 "github.com/everstacklabs/everstack/pkg/grpc/everstack/org/v1"
 	"github.com/everstacklabs/everstack/pkg/grpc/everstack/org/v1/orgconnect"
@@ -43,6 +46,9 @@ func mapOrgError(err error) error {
 	if err == nil {
 		return nil
 	}
+	if errors.Is(err, orgident.ErrInvalidSlug) {
+		return connect.NewError(connect.CodeInvalidArgument, err)
+	}
 	msg := strings.ToLower(err.Error())
 	switch {
 	// Target-user-not-member is a NOT FOUND about the subject of the operation;
@@ -65,7 +71,8 @@ func mapOrgError(err error) error {
 		return connect.NewError(connect.CodeAlreadyExists, err)
 	case strings.Contains(msg, "expired"),
 		strings.Contains(msg, "cannot remove yourself"),
-		strings.Contains(msg, "last owner"):
+		strings.Contains(msg, "last owner"),
+		strings.Contains(msg, "last organization"):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
 	case strings.Contains(msg, "seat limit"):
 		return connect.NewError(connect.CodeResourceExhausted, err)
@@ -113,7 +120,33 @@ func (h *OrgHandler) getUserID(ctx context.Context, header http.Header) (uuid.UU
 		return uid, nil
 	}
 
+	// CLI login token. The auth interceptor verified the token, re-checked
+	// the user's membership and set the user id; it also records the
+	// organization the token is bound to, which cliOrganizationPin enforces.
+	// An API key never reaches this branch: it carries no user.
+	if _, viaCLI := contextkeys.CLIOrganizationID(ctx); viaCLI {
+		if uid, err := uuid.Parse(contextkeys.GetUserID(ctx)); err == nil {
+			return uid, nil
+		}
+	}
+
 	return uuid.Nil, fmt.Errorf("not authenticated")
+}
+
+// cliOrganizationPin returns the one organization a CLI login token may see.
+// A login is issued for a single organization, so a CLI caller who belongs to
+// several is still kept inside that one; other callers are not pinned.
+func cliOrganizationPin(ctx context.Context) (uuid.UUID, bool) {
+	id, viaCLI := contextkeys.CLIOrganizationID(ctx)
+	if !viaCLI {
+		return uuid.Nil, false
+	}
+	pinned, err := uuid.Parse(id)
+	if err != nil {
+		// A token whose organization cannot be parsed sees nothing.
+		return uuid.Nil, true
+	}
+	return pinned, true
 }
 
 // ========== Organization CRUD ==========
@@ -184,6 +217,9 @@ func (h *OrgHandler) GetOrganization(ctx context.Context, req *connect.Request[o
 	if org == nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("organization not found"))
 	}
+	if pinned, ok := cliOrganizationPin(ctx); ok && org.ID != pinned {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("organization not found"))
+	}
 
 	return connect.NewResponse(&orgv1.GetOrganizationResponse{
 		Organization:    domainOrgToProto(org),
@@ -203,8 +239,12 @@ func (h *OrgHandler) ListOrganizations(ctx context.Context, req *connect.Request
 		return nil, mapOrgError(err)
 	}
 
+	pinned, isPinned := cliOrganizationPin(ctx)
 	protoOrgs := make([]*orgv1.OrganizationWithRole, 0, len(orgs))
 	for _, org := range orgs {
+		if isPinned && org.Organization.ID != pinned {
+			continue
+		}
 		protoOrgs = append(protoOrgs, &orgv1.OrganizationWithRole{
 			Organization: domainOrgToProto(&org.Organization),
 			Role:         roleToProto(org.Role),
@@ -358,6 +398,10 @@ func (h *OrgHandler) ListMembers(ctx context.Context, req *connect.Request[orgv1
 	orgID, err := uuid.Parse(req.Msg.OrganizationId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid organization ID"))
+	}
+
+	if pinned, ok := cliOrganizationPin(ctx); ok && orgID != pinned {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("organization not found"))
 	}
 
 	members, err := h.orgSvc.ListMembers(ctx, userID, orgID)

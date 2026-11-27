@@ -97,6 +97,14 @@ func (m *ResponseInput) validate(all bool) error {
 
 	// no validation rules for ItemId
 
+	// no validation rules for CallId
+
+	// no validation rules for Output
+
+	// no validation rules for Name
+
+	// no validation rules for Arguments
+
 	if len(errors) > 0 {
 		return ResponseInputMultiError(errors)
 	}
@@ -2208,8 +2216,6 @@ func (m *CreateResponseRequest) validate(all bool) error {
 		}
 	}
 
-	// no validation rules for Store
-
 	// no validation rules for PreviousResponseId
 
 	// no validation rules for Stream
@@ -2226,6 +2232,10 @@ func (m *CreateResponseRequest) validate(all bool) error {
 
 	if m.TopP != nil {
 		// no validation rules for TopP
+	}
+
+	if m.Store != nil {
+		// no validation rules for Store
 	}
 
 	if len(errors) > 0 {
@@ -3713,6 +3723,35 @@ func (m *CreateResponseResponse) validate(all bool) error {
 		}
 	}
 
+	if all {
+		switch v := interface{}(m.GetDelta()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, CreateResponseResponseValidationError{
+					field:  "Delta",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, CreateResponseResponseValidationError{
+					field:  "Delta",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetDelta()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return CreateResponseResponseValidationError{
+				field:  "Delta",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
 	if len(errors) > 0 {
 		return CreateResponseResponseMultiError(errors)
 	}
@@ -3982,6 +4021,10 @@ func (m *ResponseDelta) validate(all bool) error {
 	// no validation rules for ContentDelta
 
 	// no validation rules for ArgumentsDelta
+
+	// no validation rules for OutputIndex
+
+	// no validation rules for ContentIndex
 
 	if len(errors) > 0 {
 		return ResponseDeltaMultiError(errors)

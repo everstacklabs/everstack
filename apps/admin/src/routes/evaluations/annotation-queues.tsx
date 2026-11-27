@@ -135,10 +135,10 @@ function AnnotationQueuesPageContent() {
         minWidth: 170,
         render: (row: any) => (
           <div className="flex gap-1.5">
-            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-amber-500/15 text-amber-300 light:text-amber-700">
+            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-warning-surface-strong text-warning">
               {countLabel(row.pendingCount, 'pending')}
             </span>
-            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-emerald-500/15 text-emerald-300 light:text-emerald-600">
+            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-success-surface-strong text-success">
               {countLabel(row.completedCount, 'done')}
             </span>
           </div>
@@ -284,7 +284,7 @@ function AnnotationQueuesPageContent() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-danger-solid hover:bg-danger-solid/90"
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? 'Deleting...' : 'Delete'}

@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	providerutil "github.com/everstacklabs/everstack/internal/providers"
 	clientx "github.com/everstacklabs/everstack/internal/providers/httpclient"
+	"github.com/everstacklabs/everstack/internal/providers/openai_compatible"
 	"github.com/everstacklabs/everstack/internal/providers/ratelimit"
 )
 
@@ -74,14 +74,16 @@ type dsToolFuncDef struct {
 }
 
 type dsChatReq struct {
-	Model           string      `json:"model"`
-	Messages        []dsMessage `json:"messages"`
-	Tools           []dsTool    `json:"tools,omitempty"`
-	Temperature     *float64    `json:"temperature,omitempty"`
-	TopP            *float64    `json:"top_p,omitempty"`
-	MaxTokens       int         `json:"max_tokens,omitempty"`
-	ReasoningEffort string      `json:"reasoning_effort,omitempty"`
-	Stream          bool        `json:"stream,omitempty"`
+	Model           string         `json:"model"`
+	Messages        []dsMessage    `json:"messages"`
+	Tools           []dsTool       `json:"tools,omitempty"`
+	Temperature     *float64       `json:"temperature,omitempty"`
+	TopP            *float64       `json:"top_p,omitempty"`
+	Stop            []string       `json:"stop,omitempty"`
+	MaxTokens       int            `json:"max_tokens,omitempty"`
+	ReasoningEffort string         `json:"reasoning_effort,omitempty"`
+	Stream          bool           `json:"stream,omitempty"`
+	StreamOptions   *streamOptions `json:"stream_options,omitempty"`
 }
 
 type dsChatResp struct {
@@ -92,12 +94,29 @@ type dsChatResp struct {
 			Content   string       `json:"content"`
 			ToolCalls []dsToolCall `json:"tool_calls,omitempty"`
 		} `json:"message"`
+		FinishReason string `json:"finish_reason"`
 	} `json:"choices"`
-	Usage struct {
-		PromptTokens     int `json:"prompt_tokens"`
-		CompletionTokens int `json:"completion_tokens"`
-		TotalTokens      int `json:"total_tokens"`
-	} `json:"usage"`
+	Usage dsUsage `json:"usage"`
+}
+
+// dsUsage is DeepSeek's usage block. prompt_cache_hit_tokens and
+// prompt_cache_miss_tokens are DeepSeek-specific
+// (https://api-docs.deepseek.com/api/create-chat-completion); their sum is
+// prompt_tokens.
+type dsUsage struct {
+	PromptTokens         int `json:"prompt_tokens"`
+	CompletionTokens     int `json:"completion_tokens"`
+	TotalTokens          int `json:"total_tokens"`
+	PromptCacheHitTokens int `json:"prompt_cache_hit_tokens"`
+}
+
+func (u dsUsage) toUsage() gw.Usage {
+	return gw.Usage{
+		PromptTokens:     u.PromptTokens,
+		CompletionTokens: u.CompletionTokens,
+		TotalTokens:      u.TotalTokens,
+		PromptDetails:    openai_compatible.CachedPromptDetails(u.PromptCacheHitTokens),
+	}
 }
 
 // --- Conversion helpers ---
@@ -172,9 +191,8 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 		topP := req.Sampling.TopP
 		dsReq.TopP = &topP
 	}
-	if req.Sampling.MaxTokens > 0 {
-		dsReq.MaxTokens = req.Sampling.MaxTokens
-	}
+	dsReq.MaxTokens = openai_compatible.MaxOutputTokens(req.Sampling)
+	dsReq.Stop = req.Sampling.Stop
 	dsReq.ReasoningEffort = req.Sampling.ReasoningEffort
 
 	body, _ := json.Marshal(dsReq)
@@ -205,8 +223,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	ratelimit.GlobalMonitor.Update(rateLimitInfo)
 
 	if resp.StatusCode >= 400 {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return gw.ChatCompletionResponse{}, fmt.Errorf("deepseek error: %s", string(bodyBytes))
+		return gw.ChatCompletionResponse{}, openai_compatible.UpstreamError("deepseek", resp)
 	}
 
 	var dsResp dsChatResp
@@ -216,7 +233,9 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 
 	var content string
 	var toolCalls []gw.ToolCall
+	var finishReason string
 	if len(dsResp.Choices) > 0 {
+		finishReason = dsResp.Choices[0].FinishReason
 		content = dsResp.Choices[0].Message.Content
 		for _, tc := range dsResp.Choices[0].Message.ToolCalls {
 			toolCalls = append(toolCalls, gw.ToolCall{
@@ -229,13 +248,9 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	msg := gw.NewMessage(gw.RoleAssistant, gw.Text(content))
 	msg.ToolCalls = toolCalls
 
-	usage := gw.Usage{
-		PromptTokens:     dsResp.Usage.PromptTokens,
-		CompletionTokens: dsResp.Usage.CompletionTokens,
-		TotalTokens:      dsResp.Usage.TotalTokens,
-	}
+	usage := dsResp.Usage.toUsage()
 
-	return gw.NewChatResponse(dsResp.ID, dsResp.Model, []gw.Choice{{Index: 0, Message: msg}}, usage), nil
+	return gw.NewChatResponse(dsResp.ID, dsResp.Model, []gw.Choice{{Index: 0, Message: msg, FinishReason: finishReason}}, usage), nil
 }
 
 // --- Chat (streaming) ---
@@ -246,6 +261,9 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 		Messages: convertMessages(req.Messages),
 		Tools:    convertTools(req.Tools),
 		Stream:   true,
+		// Ask for the final usage chunk so platform-key streams bill on
+		// reported tokens, not the billing seam's estimate.
+		StreamOptions: &streamOptions{IncludeUsage: true},
 	}
 	if req.Sampling.Temperature > 0 || req.Sampling.TemperatureConfigured {
 		temperature := req.Sampling.Temperature
@@ -255,9 +273,8 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 		topP := req.Sampling.TopP
 		dsReq.TopP = &topP
 	}
-	if req.Sampling.MaxTokens > 0 {
-		dsReq.MaxTokens = req.Sampling.MaxTokens
-	}
+	dsReq.MaxTokens = openai_compatible.MaxOutputTokens(req.Sampling)
+	dsReq.Stop = req.Sampling.Stop
 	dsReq.ReasoningEffort = req.Sampling.ReasoningEffort
 
 	body, _ := json.Marshal(dsReq)
@@ -285,8 +302,7 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 	ratelimit.GlobalMonitor.Update(rateLimitInfo)
 
 	if resp.StatusCode >= 400 {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("deepseek stream error: %s", string(bodyBytes))
+		return openai_compatible.UpstreamError("deepseek", resp)
 	}
 
 	type pendingToolCall struct {
@@ -295,6 +311,7 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 	}
 	pendingCalls := make(map[int]*pendingToolCall)
 
+	sawFinish := false
 	reader := bufio.NewReader(resp.Body)
 	for {
 		line, err := reader.ReadString('\n')
@@ -330,11 +347,7 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 					} `json:"delta"`
 					FinishReason string `json:"finish_reason"`
 				} `json:"choices"`
-				Usage *struct {
-					PromptTokens     int `json:"prompt_tokens"`
-					CompletionTokens int `json:"completion_tokens"`
-					TotalTokens      int `json:"total_tokens"`
-				} `json:"usage,omitempty"`
+				Usage *dsUsage `json:"usage,omitempty"`
 			}
 			if jsonErr := json.Unmarshal([]byte(data), &partial); jsonErr != nil {
 				if err != nil {
@@ -345,14 +358,15 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 
 			chunk := gw.NewChatChunk(partial.ID, partial.Model, nil)
 			if partial.Usage != nil {
-				chunk.Usage = &gw.Usage{
-					PromptTokens:     partial.Usage.PromptTokens,
-					CompletionTokens: partial.Usage.CompletionTokens,
-					TotalTokens:      partial.Usage.TotalTokens,
-				}
+				usage := partial.Usage.toUsage()
+				chunk.Usage = &usage
 			}
 
 			for _, ch := range partial.Choices {
+				emitted := false
+				if ch.FinishReason != "" {
+					sawFinish = true
+				}
 				for _, tc := range ch.Delta.ToolCalls {
 					pc, exists := pendingCalls[tc.Index]
 					if !exists {
@@ -377,6 +391,7 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 					chunk.Choices = append(chunk.Choices, gw.ChoiceDelta{
 						Index: ch.Index, Delta: gw.NewMessage(gw.RoleAssistant, gw.Text(ch.Delta.Content)), FinishReason: ch.FinishReason,
 					})
+					emitted = true
 				}
 
 				if ch.FinishReason != "" && len(pendingCalls) > 0 {
@@ -393,6 +408,14 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 						Index: ch.Index, Delta: msg, FinishReason: ch.FinishReason,
 					})
 					pendingCalls = make(map[int]*pendingToolCall)
+					emitted = true
+				}
+				if ch.FinishReason != "" && !emitted {
+					// The terminal frame usually has no content; forward it so
+					// a length-truncated answer is distinguishable.
+					chunk.Choices = append(chunk.Choices, gw.ChoiceDelta{
+						Index: ch.Index, Delta: gw.NewMessage(gw.RoleAssistant, gw.Text("")), FinishReason: ch.FinishReason,
+					})
 				}
 			}
 
@@ -402,10 +425,16 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 		}
 		if err != nil {
 			if err == io.EOF {
+				if !sawFinish {
+					return openai_compatible.ErrStreamTruncated("deepseek")
+				}
 				return nil
 			}
 			return err
 		}
+	}
+	if !sawFinish {
+		return openai_compatible.ErrStreamTruncated("deepseek")
 	}
 	return nil
 }
@@ -427,6 +456,10 @@ func (p *Provider) Embed(ctx context.Context, req gw.EmbeddingsRequest) (gw.Embe
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode >= 300 {
+		return gw.EmbeddingsResponse{}, openai_compatible.UpstreamError("deepseek", resp)
+	}
+
 	var deepseekResp struct {
 		Data []struct {
 			Embedding []float64 `json:"embedding"`
@@ -437,11 +470,15 @@ func (p *Provider) Embed(ctx context.Context, req gw.EmbeddingsRequest) (gw.Embe
 		return gw.EmbeddingsResponse{}, err
 	}
 
+	var first []float64
 	if len(deepseekResp.Data) > 0 {
-		return gw.EmbeddingsResponse{Embedding: deepseekResp.Data[0].Embedding}, nil
+		first = deepseekResp.Data[0].Embedding
 	}
-
-	return gw.EmbeddingsResponse{Embedding: []float64{}}, nil
+	vec, err := openai_compatible.NonEmptyEmbedding("deepseek", first)
+	if err != nil {
+		return gw.EmbeddingsResponse{}, err
+	}
+	return gw.EmbeddingsResponse{Embedding: vec}, nil
 }
 
 func (p *Provider) SupportsModel(model string) bool {
@@ -454,4 +491,10 @@ func (p *Provider) SupportsModel(model string) bool {
 		}
 	}
 	return false
+}
+
+// streamOptions asks an OpenAI-compatible endpoint to append a usage chunk
+// to the stream.
+type streamOptions struct {
+	IncludeUsage bool `json:"include_usage"`
 }

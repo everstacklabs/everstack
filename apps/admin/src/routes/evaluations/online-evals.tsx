@@ -214,7 +214,7 @@ function OnlineEvalsPageContent() {
           <span
             className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
               row.enabled
-                ? 'bg-emerald-500/15 text-emerald-300 light:text-emerald-600'
+                ? 'bg-success-surface-strong text-success'
                 : 'bg-white/10 text-white/45 light:bg-black/10 light:text-black/45'
             }`}
           >
@@ -472,7 +472,7 @@ function OnlineEvalsPageContent() {
                     className={`${evaluationTextareaClass} font-mono`}
                   />
                   {filterError && (
-                    <p className="text-[11px] text-red-400 light:text-red-600">{filterError}</p>
+                    <p className="text-[11px] text-danger">{filterError}</p>
                   )}
                   <p className="text-[11px] text-white/35 light:text-black/40">
                     Restrict which traces are eligible. Leave blank to sample all.
@@ -513,7 +513,7 @@ function OnlineEvalsPageContent() {
             <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-danger-solid hover:bg-danger-solid/90"
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? 'Deleting...' : 'Delete'}

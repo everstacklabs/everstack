@@ -39,8 +39,8 @@ func (s *Server) GetMcpServerHealth(ctx context.Context, req *connect.Request[mc
 
 	// Also update DB
 	_, _ = s.db.ExecContext(ctx,
-		`UPDATE mcp_servers SET health_status = $1, health_last_check = NOW() WHERE id = $2`,
-		string(status), mustParseInt64(req.Msg.Id),
+		`UPDATE mcp_servers SET health_status = $1, health_last_check = NOW() WHERE id = $2 AND tenant_id = $3`,
+		string(status), mustParseInt64(req.Msg.Id), tenantID,
 	)
 
 	// Emit health event

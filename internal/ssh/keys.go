@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,6 +15,8 @@ import (
 
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 )
+
+var ErrSSHKeyNotFound = errors.New("SSH key not found")
 
 // UserSSHKey represents a stored user SSH public key.
 type UserSSHKey struct {
@@ -183,7 +186,7 @@ func (s *KeyStore) DeleteKey(ctx context.Context, keyID int64, tenantID, userID 
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		return fmt.Errorf("SSH key not found")
+		return ErrSSHKeyNotFound
 	}
 	return nil
 }
@@ -202,7 +205,7 @@ func (s *KeyStore) DeleteKeyByTenant(ctx context.Context, keyID int64, tenantID 
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		return fmt.Errorf("SSH key not found")
+		return ErrSSHKeyNotFound
 	}
 	return nil
 }

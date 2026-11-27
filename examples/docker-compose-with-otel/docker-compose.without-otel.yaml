@@ -1,0 +1,106 @@
+# Docker Compose without OTEL Collector
+# This is a simpler setup with telemetry disabled
+#
+# Usage:
+#   docker-compose -f docker-compose.without-otel.yaml up -d
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: everstack-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: everstack
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - everstack
+
+  # ClickHouse Database (for analytics)
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: everstack-clickhouse
+    environment:
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: clickhouse
+      CLICKHOUSE_DB: everstack
+    ports:
+      - "8123:8123"  # HTTP interface
+      - "9000:9000"  # Native protocol
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - everstack
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: everstack-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - everstack
+
+  # Everstack Gateway (Telemetry DISABLED)
+  gateway:
+    image: everstacklabs/everstack:latest
+    container_name: everstack-gateway
+    ports:
+      - "8089:8089"
+    environment:
+      # Database
+      EVS_DATABASE_MODE: hybrid
+      EVS_POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/everstack?sslmode=disable
+      EVS_CLICKHOUSE_DSN: clickhouse://clickhouse:clickhouse@clickhouse:9000/everstack
+      
+      # Cache
+      EVS_CACHE_TYPE: redis
+      EVS_CACHE_REDIS_ADDRESS: redis:6379
+      
+      # Telemetry (DISABLED - no OTEL collector needed)
+      EVS_TELEMETRY_ENABLED: "false"
+      
+      # Security
+      EVS_SERVER_SECURITY_API_KEY_HASH_SECRET: change-me-in-production-use-a-random-64-char-hex-string
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - everstack
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+  redis_data:
+
+networks:
+  everstack:
+    driver: bridge

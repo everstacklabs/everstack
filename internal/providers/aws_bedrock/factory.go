@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
+	"github.com/everstacklabs/everstack/internal/providers/billing"
 	"github.com/everstacklabs/everstack/internal/providers/factory"
 	"github.com/everstacklabs/everstack/internal/providers/logging"
 	"github.com/everstacklabs/everstack/internal/providers/tracing"
@@ -23,9 +24,9 @@ func init() {
 
 		var tracedProvider gw.Provider
 		if in.CatalogCache != nil {
-			tracedProvider = tracing.NewMiddlewareWithCatalog(baseProvider, in.CatalogCache)
+			tracedProvider = tracing.NewMiddlewareWithCatalog(billing.Wrap(baseProvider, in.BillingConfig("")), in.CatalogCache)
 		} else {
-			tracedProvider = tracing.NewMiddleware(baseProvider)
+			tracedProvider = tracing.NewMiddleware(billing.Wrap(baseProvider, in.BillingConfig("")))
 		}
 
 		return logging.NewMiddleware(

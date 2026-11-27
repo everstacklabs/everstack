@@ -313,15 +313,14 @@ func (e *Engine) ResolveModel(model string) (*ProviderInfo, bool) {
 	return info, found
 }
 
-// GetCachedResponse looks up a cached response for the given request.
-// Returns the cached response and true if found and not expired.
-// Legacy method without context - prefer GetCachedResponseWithContext for new code.
-func (e *Engine) GetCachedResponse(req cache.ChatRequest) (*cache.CachedResponse, bool) {
-	return e.GetCachedResponseWithContext(context.Background(), req)
-}
+// Response caching is tenant-scoped: every lookup and store below is confined
+// to the authenticated tenant in ctx (cache.TenantFromContext) and a request
+// without a tenant neither reads nor writes any cache. Callers must pass the
+// request context (or a context.WithoutCancel of it for async stores), never
+// a fresh context.Background().
 
-// GetCachedResponseWithContext looks up a cached response with context support.
-// Returns the cached response and true if found and not expired.
+// GetCachedResponseWithContext looks up the caller tenant's exact-match cached
+// response. Returns the cached response and true if found and not expired.
 // Note: Tracing is handled at the gRPC/HTTP handler layer to avoid import cycles.
 func (e *Engine) GetCachedResponseWithContext(ctx context.Context, req cache.ChatRequest) (*cache.CachedResponse, bool) {
 	if !e.enabled.Load() {
@@ -335,7 +334,6 @@ func (e *Engine) GetCachedResponseWithContext(ctx context.Context, req cache.Cha
 	tracker.StartStage(metrics.StageCacheLookup)
 	defer tracker.EndStage(metrics.StageCacheLookup)
 
-	// Use the context-aware version
 	resp, found := e.exactCache.GetWithContext(ctx, req)
 	if found {
 		metrics.RecordExactCacheHit()
@@ -346,13 +344,7 @@ func (e *Engine) GetCachedResponseWithContext(ctx context.Context, req cache.Cha
 	return resp, found
 }
 
-// CacheResponse stores a response in the cache.
-// Legacy method without context - prefer CacheResponseWithContext for new code.
-func (e *Engine) CacheResponse(req cache.ChatRequest, resp *cache.CachedResponse) {
-	e.CacheResponseWithContext(context.Background(), req, resp)
-}
-
-// CacheResponseWithContext stores a response in the cache with context support.
+// CacheResponseWithContext stores a response in the caller tenant's exact cache.
 // Note: Tracing is handled at the gRPC/HTTP handler layer to avoid import cycles.
 func (e *Engine) CacheResponseWithContext(ctx context.Context, req cache.ChatRequest, resp *cache.CachedResponse) {
 	if !e.enabled.Load() {
@@ -368,20 +360,30 @@ func (e *Engine) CacheResponseWithContext(ctx context.Context, req cache.ChatReq
 	tracker.EndStage(metrics.StageCacheStore)
 }
 
-// GetSemanticCachedResponse looks up a semantically similar cached response.
-// This is called when exact cache misses to find similar queries.
-// Returns the cached response and true if a similar query was found.
-// Legacy method without context - prefer GetSemanticCachedResponseWithContext for new code.
-func (e *Engine) GetSemanticCachedResponse(query string) (*cache.CachedResponse, bool) {
-	return e.GetSemanticCachedResponseWithContext(context.Background(), query)
+// semanticPartition returns the caller's semantic partition for req, or ""
+// when the request has no authenticated tenant (callers must then skip).
+func semanticPartition(ctx context.Context, req cache.ChatRequest) string {
+	if req == nil {
+		return ""
+	}
+	return cache.SemanticPartition(cache.TenantFromContext(ctx), req.SemanticContextFingerprint())
 }
 
-// GetSemanticCachedResponseWithContext looks up a semantically similar cached response with context support.
-// This is called when exact cache misses to find similar queries.
-// Returns the cached response and true if a similar query was found.
+// GetSemanticCachedResponseWithContext looks up a semantically similar cached
+// response. query is the final user turn's text; req supplies the rest of the
+// request context. Only entries written by the same tenant under an identical
+// context (model, system prompt / instructions, prior turns, tools, sampling)
+// are considered.
 // Note: Tracing is handled at the gRPC/HTTP handler layer to avoid import cycles.
-func (e *Engine) GetSemanticCachedResponseWithContext(ctx context.Context, query string) (*cache.CachedResponse, bool) {
+func (e *Engine) GetSemanticCachedResponseWithContext(ctx context.Context, req cache.ChatRequest, query string) (*cache.CachedResponse, bool) {
 	if !e.enabled.Load() {
+		return nil, false
+	}
+	if !e.tenantAllows(ctx) {
+		return nil, false
+	}
+	partition := semanticPartition(ctx, req)
+	if partition == "" || query == "" {
 		return nil, false
 	}
 
@@ -391,7 +393,7 @@ func (e *Engine) GetSemanticCachedResponseWithContext(ctx context.Context, query
 		tracker.StartStage(metrics.StageSemanticLookup)
 		defer tracker.EndStage(metrics.StageSemanticLookup)
 
-		resp, found := e.cacheManager.GetSemanticCachedResponse(ctx, query)
+		resp, found := e.cacheManager.GetSemanticCachedResponse(ctx, partition, query)
 		if found {
 			metrics.RecordSemanticCacheHit()
 		} else {
@@ -407,7 +409,7 @@ func (e *Engine) GetSemanticCachedResponseWithContext(ctx context.Context, query
 
 	// 1. Try MinHash cache (lexical similarity, ~1-2ms)
 	if e.semanticCache != nil {
-		if resp, found := e.semanticCache.Get(query); found {
+		if resp, found := e.semanticCache.Get(partition, query); found {
 			metrics.RecordSemanticCacheHit()
 			return resp, true
 		}
@@ -415,7 +417,7 @@ func (e *Engine) GetSemanticCachedResponseWithContext(ctx context.Context, query
 
 	// 2. Try ONNX cache (deep semantic, ~5ms)
 	if e.onnxCache != nil {
-		if resp, found := e.onnxCache.GetWithContext(ctx, query); found {
+		if resp, found := e.onnxCache.GetWithContext(ctx, partition, query); found {
 			metrics.RecordSemanticCacheHit()
 			return resp, true
 		}
@@ -425,18 +427,18 @@ func (e *Engine) GetSemanticCachedResponseWithContext(ctx context.Context, query
 	return nil, false
 }
 
-// CacheSemanticResponse stores a response in the semantic cache.
-// This associates the response with the query for similarity matching.
-// Legacy method without context - prefer CacheSemanticResponseWithContext for new code.
-func (e *Engine) CacheSemanticResponse(query string, resp *cache.CachedResponse) {
-	e.CacheSemanticResponseWithContext(context.Background(), query, resp)
-}
-
-// CacheSemanticResponseWithContext stores a response in the semantic cache with context support.
-// This associates the response with the query for similarity matching.
+// CacheSemanticResponseWithContext stores a response in the caller tenant's
+// semantic partition for req's context, keyed by query (the final user turn).
 // Note: Tracing is handled at the gRPC/HTTP handler layer to avoid import cycles.
-func (e *Engine) CacheSemanticResponseWithContext(ctx context.Context, query string, resp *cache.CachedResponse) {
-	if !e.enabled.Load() {
+func (e *Engine) CacheSemanticResponseWithContext(ctx context.Context, req cache.ChatRequest, query string, resp *cache.CachedResponse) {
+	if !e.enabled.Load() || resp == nil {
+		return
+	}
+	if !e.tenantAllows(ctx) {
+		return
+	}
+	partition := semanticPartition(ctx, req)
+	if partition == "" || query == "" {
 		return
 	}
 
@@ -444,7 +446,7 @@ func (e *Engine) CacheSemanticResponseWithContext(ctx context.Context, query str
 	if e.cacheManager != nil && e.cacheManager.IsSemanticCacheEnabled() {
 		tracker := metrics.StartLatencyTracker()
 		tracker.StartStage(metrics.StageSemanticStore)
-		_ = e.cacheManager.CacheSemanticResponse(ctx, query, resp)
+		_ = e.cacheManager.CacheSemanticResponse(ctx, partition, query, resp)
 		tracker.EndStage(metrics.StageSemanticStore)
 		return
 	}
@@ -456,12 +458,12 @@ func (e *Engine) CacheSemanticResponseWithContext(ctx context.Context, query str
 
 	// Store in MinHash cache (fast lexical matching)
 	if e.semanticCache != nil {
-		e.semanticCache.Put(query, resp)
+		e.semanticCache.Put(partition, query, resp)
 	}
 
 	// Store in ONNX cache (deep semantic matching)
 	if e.onnxCache != nil {
-		e.onnxCache.PutWithContext(ctx, query, resp)
+		e.onnxCache.PutWithContext(ctx, partition, query, resp)
 	}
 }
 

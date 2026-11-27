@@ -114,7 +114,7 @@ func TestPersistOpenAIExecutorUsesExplicitInstanceOwnership(t *testing.T) {
 	}
 	defer raw.Close()
 	m := &SandboxManager{db: sqlx.NewDb(raw, "sqlmock")}
-	args := make([]driver.Value, 24)
+	args := make([]driver.Value, 25)
 	for i := range args {
 		args[i] = sqlmock.AnyArg()
 	}

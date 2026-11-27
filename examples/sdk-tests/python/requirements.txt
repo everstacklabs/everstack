@@ -1,0 +1,4 @@
+# Tests the published Everstack Python SDK from PyPI.
+# Pin exactly to test a specific release; loosen to `everstack` for latest.
+everstack==0.1.0
+python-dotenv>=1.0

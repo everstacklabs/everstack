@@ -30,7 +30,7 @@ import { TaskTypeEditor } from './task-type-editor'
 
 const TYPE_META: Record<TaskType, { label: string; icon: typeof MessageSquare; cls: string }> = {
     prompt: { label: 'Prompt', icon: MessageSquare, cls: 'text-brand-secondary-300 bg-brand-secondary-500/10' },
-    workflow: { label: 'Workflow', icon: WorkflowIcon, cls: 'text-amber-300 bg-amber-400/10' },
+    workflow: { label: 'Workflow', icon: WorkflowIcon, cls: 'text-warning bg-warning-surface' },
     remote: { label: 'Remote eval', icon: Globe, cls: 'text-sky-300 bg-sky-400/10' },
     scorer: { label: 'Scorer', icon: Triangle, cls: 'text-emerald-300 bg-emerald-400/10' },
 }
@@ -219,7 +219,7 @@ export function VariantColumn({
                         <button
                             type="button"
                             onClick={onRemove}
-                            className={`${variant.type === 'workflow' ? '' : 'ml-auto'} p-1 rounded text-white/30 hover:text-rose-400 transition-colors light:text-black/30`}
+                            className={`${variant.type === 'workflow' ? '' : 'ml-auto'} p-1 rounded text-white/30 hover:text-danger transition-colors light:text-black/30`}
                             title="Remove task"
                         >
                             <X className="h-3.5 w-3.5" />
@@ -278,7 +278,7 @@ export function VariantColumn({
                     <button
                         type="button"
                         onClick={onStop}
-                        className="p-1 rounded text-rose-400 hover:bg-rose-500/10 transition-colors"
+                        className="p-1 rounded text-danger hover:bg-danger-surface transition-colors"
                         title="Stop"
                     >
                         <Square className="h-3.5 w-3.5" />
@@ -298,7 +298,7 @@ export function VariantColumn({
                     <button
                         type="button"
                         onClick={onRemove}
-                        className="p-1 rounded text-white/30 hover:text-rose-400 transition-colors light:text-black/30"
+                        className="p-1 rounded text-white/30 hover:text-danger transition-colors light:text-black/30"
                         title="Remove variant"
                     >
                         <X className="h-3.5 w-3.5" />
@@ -384,7 +384,7 @@ export function VariantColumn({
             {/* Output (quick single-run preview; grid runs live below) */}
             <CardContent className="flex-1 overflow-auto font-mono text-xs !p-3">
                 {status === 'error' ? (
-                    <pre className="whitespace-pre-wrap text-rose-300">{run?.error}</pre>
+                    <pre className="whitespace-pre-wrap text-danger">{run?.error}</pre>
                 ) : run?.text ? (
                     <pre className="whitespace-pre-wrap text-zinc-100 leading-relaxed">
                         {run.text}
@@ -410,7 +410,7 @@ export function VariantColumn({
                     status === 'idle' && !run?.text && 'opacity-0 pointer-events-none',
                 )}
             >
-                {status === 'aborted' && <span className="text-amber-300/80">stopped</span>}
+                {status === 'aborted' && <span className="text-warning/80">stopped</span>}
                 {run?.ttftMs !== undefined && (
                     <span className="inline-flex items-center gap-1 font-mono">
                         <Timer className="h-3 w-3" />
@@ -451,7 +451,7 @@ export function VariantColumn({
                             title="Copy output"
                         >
                             {copied ? (
-                                <Check className="h-3 w-3 text-emerald-400" />
+                                <Check className="h-3 w-3 text-success" />
                             ) : (
                                 <Copy className="h-3 w-3" />
                             )}

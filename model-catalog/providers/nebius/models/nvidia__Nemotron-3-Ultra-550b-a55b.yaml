@@ -1,0 +1,42 @@
+# Catalogued 2026-11-24. Prices not checked against a Nebius page (sign-in required); in/out prices cross-checked for 9 models against OpenRouter's Nebius endpoints.
+# Source: https://models.dev (Nebius list prices; https://tokenfactory.nebius.com/organization/prices requires sign-in)
+name: "nvidia/Nemotron-3-Ultra-550b-a55b"
+display_name: "Nemotron 3 Ultra 550B A55B (Nebius)"
+family: "nemotron-ultra"
+status: "stable"
+release_date: "2026-06-04"
+
+cost:
+  input_per_1k: 0.001
+  output_per_1k: 0.003
+  cache_read_per_1k: 0.00012
+
+limits:
+  max_tokens: 1048576
+  max_completion_tokens: 1048576
+
+capabilities:
+  - chat
+  - function_calling
+  - reasoning
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+
+knowledge_cutoff: "2025-09"
+notes: "Largest Nemotron 3 model for maximum open-weight reasoning and agent accuracy"
+
+structured_output: false
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 1048576
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+added_in_version: "2.11.0"

@@ -77,10 +77,13 @@ func collectResourceCounts(ctx context.Context, db *sqlx.DB) licensemonitor.Reso
 			  'stopping', 'reviving', 'terminating'
 			)
 			   OR (billing_started_at IS NOT NULL AND billing_ended_at IS NULL)`),
-		DatasetItems:     count(`SELECT COUNT(*) FROM dataset_items`),
-		EvalRunsMonthly:  count(`SELECT COUNT(*) FROM eval_runs WHERE created_at >= date_trunc('month', NOW())`),
-		AnnotationQueues: count(`SELECT COUNT(*) FROM annotation_queues WHERE deleted_at IS NULL`),
-		ChannelBindings:  count(`SELECT COUNT(*) FROM agent_channel_bindings WHERE deleted_at IS NULL`),
+		DatasetItems:    count(`SELECT COUNT(*) FROM dataset_items`),
+		EvalRunsMonthly: count(`SELECT COUNT(*) FROM eval_runs WHERE created_at >= date_trunc('month', NOW())`),
+		// Neither table has a deleted_at column (rows are hard deleted). The
+		// old predicate made both queries fail, and count() reports a failed
+		// query as 0, so these two gauges always read zero.
+		AnnotationQueues: count(`SELECT COUNT(*) FROM annotation_queues`),
+		ChannelBindings:  count(`SELECT COUNT(*) FROM agent_channel_bindings`),
 		MessagesMonthly:  count(`SELECT COUNT(*) FROM channel_messages WHERE created_at >= date_trunc('month', NOW())`),
 		StorageBytes:     bigint(`SELECT COALESCE(SUM(total_bytes), 0) FROM object_storage_usage`),
 		// Sandbox network data transfer is a flow metric: sum the per-VM

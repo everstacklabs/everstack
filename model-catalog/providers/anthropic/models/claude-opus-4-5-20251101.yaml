@@ -72,3 +72,4 @@ variants:
     description: "Deeper reasoning for complex analysis and coding."
     parameters:
       reasoning_effort: "high"
+notes: "Deprecated by Anthropic on 2026-11-23; retires 2027-01-22. Migrate to claude-opus-5-5."

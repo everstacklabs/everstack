@@ -1,0 +1,39 @@
+# Verified 2026-11-24.
+# Source: https://openrouter.ai/api/v1/models
+# Source: https://openrouter.ai/minimax/minimax-m3.1-flash
+name: "minimax/minimax-m3.1-flash"
+display_name: "MiniMax: MiniMax M3.1 Flash (OpenRouter)"
+family: "minimax"
+status: "stable"
+release_date: "2026-10-19"
+cost:
+  input_per_1k: 7.5e-05
+  output_per_1k: 0.0003
+  cache_read_per_1k: 7.5e-06
+limits:
+  max_tokens: 1048576
+  max_completion_tokens: 524288
+capabilities:
+  - "chat"
+  - "function_calling"
+  - "vision"
+  - "reasoning"
+modalities:
+  input:
+    - "text"
+    - "image"
+    - "video"
+  output:
+    - "text"
+structured_output: true
+notes: "OpenRouter listing date, not necessarily the original model launch. Provider-route pricing and limits verified 2026-11-24; endpoint selection can change rates. Tool, audio, and other non-text charges are not represented by these text token rates."
+parameters:
+  -
+    key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 524288
+    has_max_value: true
+added_in_version: "2.11.0"

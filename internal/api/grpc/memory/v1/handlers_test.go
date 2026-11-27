@@ -1,8 +1,14 @@
 package v1
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -364,6 +370,91 @@ func TestAddDocuments_CollectionNotFound(t *testing.T) {
 	}
 	if connectErr.Code() != connect.CodeNotFound {
 		t.Fatalf("expected CodeNotFound, got %v", connectErr.Code())
+	}
+}
+
+func TestAddDocumentsLimitsConnectAndREST(t *testing.T) {
+	tests := []struct {
+		name      string
+		documents []string
+		chunkSize int
+		want      string
+	}{
+		{
+			name:      "document count",
+			documents: make([]string, maxDocumentsPerCall+1),
+			want:      fmt.Sprintf("documents per call cannot exceed %d", maxDocumentsPerCall),
+		},
+		{
+			name:      "content bytes",
+			documents: []string{strings.Repeat("x", maxDocumentContentBytes+1)},
+			want:      fmt.Sprintf("total document content cannot exceed %d bytes per call", maxDocumentContentBytes),
+		},
+		{
+			name:      "chunk count",
+			documents: []string{strings.Repeat("x", (maxDocumentChunksPerCall+1)*minDocumentChunkSize)},
+			chunkSize: minDocumentChunkSize,
+			want:      fmt.Sprintf("chunks per call cannot exceed %d", maxDocumentChunksPerCall),
+		},
+		{
+			name:      "minimum chunk size",
+			documents: []string{"content"},
+			chunkSize: minDocumentChunkSize - 1,
+			want:      fmt.Sprintf("chunk_size must be at least %d", minDocumentChunkSize),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name+" connect", func(t *testing.T) {
+			srv, _ := newTestServer()
+			documents := make([]*memorypb.Document, len(tt.documents))
+			for i, content := range tt.documents {
+				documents[i] = &memorypb.Document{Content: content}
+			}
+			_, err := srv.AddDocuments(tenantCtx("tenant-1"), connect.NewRequest(&memorypb.AddDocumentsRequest{
+				CollectionName: "collection",
+				Documents:      documents,
+				ChunkSize:      int32(tt.chunkSize),
+			}))
+			if err == nil {
+				t.Fatal("expected limit error")
+			}
+			connectErr := new(connect.Error)
+			if !errors.As(err, &connectErr) {
+				t.Fatalf("expected connect.Error, got %T", err)
+			}
+			if connectErr.Code() != connect.CodeInvalidArgument {
+				t.Fatalf("code = %v, want %v", connectErr.Code(), connect.CodeInvalidArgument)
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("error = %q, want %q", err, tt.want)
+			}
+		})
+
+		t.Run(tt.name+" rest", func(t *testing.T) {
+			srv, _ := newTestServer()
+			documents := make([]map[string]string, len(tt.documents))
+			for i, content := range tt.documents {
+				documents[i] = map[string]string{"content": content}
+			}
+			body, err := json.Marshal(map[string]interface{}{
+				"documents":  documents,
+				"chunk_size": tt.chunkSize,
+			})
+			if err != nil {
+				t.Fatalf("marshal request: %v", err)
+			}
+			req := httptest.NewRequest(http.MethodPost, "/v1/memory/collections/collection/documents", bytes.NewReader(body))
+			req = req.WithContext(tenantCtx("tenant-1"))
+			recorder := httptest.NewRecorder()
+			srv.handleAddDocuments(recorder, req, map[string]string{"name": "collection"})
+			if recorder.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want %d; body = %s", recorder.Code, http.StatusBadRequest, recorder.Body.String())
+			}
+			if !strings.Contains(recorder.Body.String(), tt.want) {
+				t.Fatalf("body = %q, want %q", recorder.Body.String(), tt.want)
+			}
+		})
 	}
 }
 

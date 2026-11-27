@@ -3,6 +3,7 @@ package v1
 import (
 	"context"
 	"encoding/json"
+	_ "github.com/everstacklabs/everstack/internal/providers/systemone"
 	"hash/fnv"
 	"net/http"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/everstacklabs/everstack/cmd/config/gateway/validator"
 	"github.com/everstacklabs/everstack/internal/api/common"
+	"github.com/everstacklabs/everstack/internal/billingmeter"
 	"github.com/everstacklabs/everstack/internal/commands/handlers/gateway/chat"
 	"github.com/everstacklabs/everstack/internal/cqrs"
 	"github.com/everstacklabs/everstack/internal/database"
@@ -36,22 +38,30 @@ import (
 	_ "github.com/everstacklabs/everstack/internal/providers/anthropic"
 	_ "github.com/everstacklabs/everstack/internal/providers/aws_bedrock"
 	_ "github.com/everstacklabs/everstack/internal/providers/azure_openai"
+	_ "github.com/everstacklabs/everstack/internal/providers/baseten"
 	_ "github.com/everstacklabs/everstack/internal/providers/cerebras"
+	_ "github.com/everstacklabs/everstack/internal/providers/chutes"
 	_ "github.com/everstacklabs/everstack/internal/providers/cohere"
+	_ "github.com/everstacklabs/everstack/internal/providers/deepinfra"
 	_ "github.com/everstacklabs/everstack/internal/providers/deepseek"
 	_ "github.com/everstacklabs/everstack/internal/providers/fireworks"
 	_ "github.com/everstacklabs/everstack/internal/providers/google"
 	_ "github.com/everstacklabs/everstack/internal/providers/groq"
 	_ "github.com/everstacklabs/everstack/internal/providers/huggingface"
+	_ "github.com/everstacklabs/everstack/internal/providers/meta"
 	_ "github.com/everstacklabs/everstack/internal/providers/minimax"
 	_ "github.com/everstacklabs/everstack/internal/providers/mistral"
 	_ "github.com/everstacklabs/everstack/internal/providers/moonshot"
+	_ "github.com/everstacklabs/everstack/internal/providers/nebius"
+	_ "github.com/everstacklabs/everstack/internal/providers/novita"
 	_ "github.com/everstacklabs/everstack/internal/providers/nvidia_nim"
 	_ "github.com/everstacklabs/everstack/internal/providers/ollama"
 	_ "github.com/everstacklabs/everstack/internal/providers/openai"
 	_ "github.com/everstacklabs/everstack/internal/providers/openrouter"
 	_ "github.com/everstacklabs/everstack/internal/providers/perplexity"
 	_ "github.com/everstacklabs/everstack/internal/providers/qwen"
+	_ "github.com/everstacklabs/everstack/internal/providers/sambanova"
+	_ "github.com/everstacklabs/everstack/internal/providers/tencent"
 	_ "github.com/everstacklabs/everstack/internal/providers/together"
 	_ "github.com/everstacklabs/everstack/internal/providers/vertex_ai"
 	_ "github.com/everstacklabs/everstack/internal/providers/voyage"
@@ -88,13 +98,19 @@ type Server struct {
 	// the Server and the LLM-key cross-tenant leak rode that race.
 	tenantBundles  tenantBundleCache
 	defaultBundle  atomic.Pointer[tenantBundle]
-	ctx            context.Context // Context containing CQRS system
-	failedKeys     map[string]bool // Track temporarily failed API keys (keyID -> failed)
-	failedKeyMutex sync.RWMutex    // Mutex for failedKeys map
+	ctx            context.Context      // Context containing CQRS system
+	failedKeys     map[string]time.Time // Temporarily failed API keys (keyID -> mark expiry)
+	failedKeyMutex sync.RWMutex         // Mutex for failedKeys map
 
 	// Cache for default model to avoid DB queries on every request
 	defaultModelCache      string
 	defaultModelCacheMutex sync.RWMutex
+
+	// Wallet meter every platform-provenance provider built for this server
+	// settles through (internal/providers/billing). Built once, lazily, from
+	// the server context; see billingMeter.
+	billingOnce  sync.Once
+	billingMeter *billingmeter.Meter
 
 	// OpenTelemetry logger provider (nil if OTEL is disabled)
 	otelProvider *sdklog.LoggerProvider
@@ -128,7 +144,7 @@ func CreateServer(cfg *validator.GatewayConfig, features *validator.FeaturesConf
 	s := &Server{
 		cfg:        cfg,
 		feat:       features,
-		failedKeys: make(map[string]bool),
+		failedKeys: make(map[string]time.Time),
 	}
 	s.bootstrapFromConfig()
 	return s
@@ -361,6 +377,8 @@ func CreateServerWithContext(ctx context.Context, cfg *validator.GatewayConfig, 
 						ServerCA:   agent.TLSServerCA,
 						ServerName: agent.TLSServerName,
 					}
+					// Env fallback is applied inside NewClientPool.
+					fcaCfg.Agent.AuthToken = agent.AuthToken
 				}
 
 				// Env overrides. Default to the sandbox agent fleet vars so
@@ -414,7 +432,7 @@ func CreateServerWithContext(ctx context.Context, cfg *validator.GatewayConfig, 
 		cfg:          cfg,
 		feat:         features,
 		ctx:          ctx,
-		failedKeys:   make(map[string]bool),
+		failedKeys:   make(map[string]time.Time),
 		otelProvider: otelProvider,
 		otelLogger:   otelLogger,
 		toolLoop:     toolLoopMgr,
@@ -436,6 +454,7 @@ func CreateServerWithContext(ctx context.Context, cfg *validator.GatewayConfig, 
 					logger.Warnf("gateway: failed to seed from YAML: %v", err)
 				}
 			}
+			s.seedModelTrialRow(ctx, providerRepo)
 
 			// Load from database (either existing or just seeded). At
 			// boot we install as the default bundle — shared multi-tenant
@@ -497,6 +516,12 @@ func (s *Server) MethodPrefix() string { return gatewayconnect.GatewayServiceNam
 // RegisterGateway allows the Gateway service to self-register its grpc-gateway handlers.
 func (s *Server) RegisterGateway(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) error {
 	return gatewaypb.RegisterGatewayServiceHandlerFromEndpoint(ctx, mux, endpoint, opts)
+}
+
+// RegisterGatewayClient registers the grpc-gateway handlers on a given client
+// connection: the direct in-process transport, when the server uses it.
+func (s *Server) RegisterGatewayClient(ctx context.Context, mux *runtime.ServeMux, cc grpc.ClientConnInterface) error {
+	return gatewaypb.RegisterGatewayServiceHandlerClient(ctx, mux, gatewaypb.NewGatewayServiceClient(cc))
 }
 
 func (s *Server) defaultModel() string {
@@ -1392,9 +1417,21 @@ func (s *Server) EnsureProvidersForRequest(ctx context.Context) error {
 	if existing := s.tenantBundles.get(key, providerRefreshStaleness); existing != nil {
 		return nil
 	}
+	// A reload just failed and the tenant's stale bundle can serve: do not
+	// queue every request behind another failing reload.
+	if s.tenantBundles.reloadBackoff(key) && s.tenantBundles.getStale(key, providerStaleServeMax) != nil {
+		return nil
+	}
 
 	bundle, err := s.bootstrapFromDatabase(ctx, providerRepo, apiKeyRepo)
+	s.tenantBundles.noteReload(key, err)
 	if err != nil {
+		// Serve this tenant's own last bundle while the reload fails
+		// (see providersFor); the next request tries the reload again.
+		if s.tenantBundles.getStale(key, providerStaleServeMax) != nil {
+			logger.WithFields("tenant_key", key, "error", err.Error()).Warn("gateway: provider reload failed, serving the tenant's last loaded providers")
+			return nil
+		}
 		return err
 	}
 	s.tenantBundles.store(key, bundle)
@@ -1473,6 +1510,11 @@ func (s *Server) ShouldExecuteToolLoop(resp *gw.ChatCompletionResponse) bool {
 		return false
 	}
 	return s.toolLoop.ShouldExecuteToolLoop(resp)
+}
+
+// CanExecuteToolLoop resolves every tool against the authenticated request tenant.
+func (s *Server) CanExecuteToolLoop(ctx context.Context, tenantID string, resp *gw.ChatCompletionResponse) bool {
+	return s.toolLoop != nil && s.toolLoop.CanExecuteToolLoop(ctx, tenantID, resp)
 }
 
 // ExecuteToolLoop runs the tool execution loop and returns messages to append.

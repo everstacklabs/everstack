@@ -27,10 +27,10 @@ func TestVerificationURIResolution(t *testing.T) {
 			name:       "forwarded tenant host replaces configured localhost",
 			configured: "http://localhost:8089",
 			header: http.Header{
-				"X-Forwarded-Host":  []string{"everstack-test-0185df.dev.eu-gra-1.everstack.ai"},
+				"X-Forwarded-Host":  []string{"acme-a1b2c3.dev.eu-gra-1.everstack.ai"},
 				"X-Forwarded-Proto": []string{"https"},
 			},
-			want: "https://everstack-test-0185df.dev.eu-gra-1.everstack.ai/device",
+			want: "https://acme-a1b2c3.dev.eu-gra-1.everstack.ai/device",
 		},
 		{
 			name: "forwarded host and protocol",

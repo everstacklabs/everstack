@@ -1,0 +1,37 @@
+# Verified 2026-11-24.
+# Source: https://openrouter.ai/api/v1/models
+# Source: https://openrouter.ai/unbiased/pareto-26.10
+name: "unbiased/pareto-26.10"
+display_name: "Pareto 26.10 (OpenRouter)"
+family: "unbiased"
+status: "stable"
+release_date: "2026-10-15"
+cost:
+  input_per_1k: 0.0008
+  output_per_1k: 0.0032
+  cache_read_per_1k: 3e-05
+limits:
+  max_tokens: 1048576
+  max_completion_tokens: 131072
+capabilities:
+  - "chat"
+  - "function_calling"
+  - "vision"
+modalities:
+  input:
+    - "text"
+    - "image"
+  output:
+    - "text"
+structured_output: false
+notes: "OpenRouter listing date, not necessarily the original model launch. Provider-route pricing and limits verified 2026-11-24; endpoint selection can change rates. Tool, audio, and other non-text charges are not represented by these text token rates."
+parameters:
+  -
+    key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 131072
+    has_max_value: true
+added_in_version: "2.11.0"

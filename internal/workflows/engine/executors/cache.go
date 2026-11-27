@@ -60,19 +60,21 @@ func (e *CacheExecutor) Execute(ctx context.Context, node *engine.GraphNode, ec 
 		return engine.NodeResult{NextHandle: "miss", Output: map[string]interface{}{"hit": false, "type": cacheType}}
 	}
 
+	// Snapshot the key request now: the provider node rewrites ec.Messages
+	// before the post-provider cache write, which must reuse this snapshot.
+	keyReq := engine.CacheKeyRequest(ec.ResolvedModel, ec.Messages, ec.SamplingParams)
+	ec.CacheKey = &keyReq
+	req := engine.NewCacheRequest(keyReq)
+
 	switch cacheType {
-	case "exact":
-		return e.lookupExact(ctx, fpEngine, ec, query, cacheType)
 	case "semantic":
-		return e.lookupSemantic(ctx, fpEngine, ec, query, cacheType)
+		return e.lookupSemantic(ctx, fpEngine, ec, req, query, cacheType)
 	default:
-		return e.lookupExact(ctx, fpEngine, ec, query, cacheType)
+		return e.lookupExact(ctx, fpEngine, ec, req, query, cacheType)
 	}
 }
 
-func (e *CacheExecutor) lookupExact(ctx context.Context, fpEngine *fastpath.Engine, ec *engine.ExecutionContext, query string, cacheType string) engine.NodeResult {
-	req := &workflowRequestAdapter{ec: ec, query: query}
-
+func (e *CacheExecutor) lookupExact(ctx context.Context, fpEngine *fastpath.Engine, ec *engine.ExecutionContext, req *engine.CacheRequest, query string, cacheType string) engine.NodeResult {
 	cached, ok := fpEngine.GetCachedResponseWithContext(ctx, req)
 	if !ok {
 		ec.CacheHit = false
@@ -100,7 +102,7 @@ func (e *CacheExecutor) lookupExact(ctx context.Context, fpEngine *fastpath.Engi
 	return engine.NodeResult{NextHandle: "hit", Output: map[string]interface{}{"hit": true, "type": cacheType}}
 }
 
-func (e *CacheExecutor) lookupSemantic(ctx context.Context, fpEngine *fastpath.Engine, ec *engine.ExecutionContext, query string, cacheType string) engine.NodeResult {
+func (e *CacheExecutor) lookupSemantic(ctx context.Context, fpEngine *fastpath.Engine, ec *engine.ExecutionContext, req *engine.CacheRequest, query string, cacheType string) engine.NodeResult {
 	if !fpEngine.IsSemanticCacheEnabled() {
 		ec.CacheHit = false
 		ec.CacheMiss = true
@@ -109,7 +111,7 @@ func (e *CacheExecutor) lookupSemantic(ctx context.Context, fpEngine *fastpath.E
 		return engine.NodeResult{NextHandle: "miss", Output: map[string]interface{}{"hit": false, "type": cacheType}}
 	}
 
-	cached, ok := fpEngine.GetSemanticCachedResponseWithContext(ctx, query)
+	cached, ok := fpEngine.GetSemanticCachedResponseWithContext(ctx, req, query)
 	if !ok {
 		ec.CacheHit = false
 		ec.CacheMiss = true
@@ -134,42 +136,6 @@ func (e *CacheExecutor) lookupSemantic(ctx context.Context, fpEngine *fastpath.E
 	ec.SetNodeData("cache_result", "hit")
 	logger.WithFields("model", cached.Model).Debug("cache executor: semantic cache hit")
 	return engine.NodeResult{NextHandle: "hit", Output: map[string]interface{}{"hit": true, "type": cacheType}}
-}
-
-// workflowRequestAdapter implements cache.ChatRequest by wrapping ExecutionContext fields.
-// This follows the same adapter pattern as grpcRequestAdapter in processors.go.
-type workflowRequestAdapter struct {
-	ec    *engine.ExecutionContext
-	query string
-}
-
-func (a *workflowRequestAdapter) GetModel() string { return a.ec.ResolvedModel }
-
-func (a *workflowRequestAdapter) GetMessages() []cache.Message {
-	msgs := make([]cache.Message, 0, len(a.ec.Messages))
-	for i := range a.ec.Messages {
-		msgs = append(msgs, &workflowMessageAdapter{msg: &a.ec.Messages[i]})
-	}
-	return msgs
-}
-
-func (a *workflowRequestAdapter) GetTemperature() float64 { return a.ec.SamplingParams.Temperature }
-func (a *workflowRequestAdapter) GetMaxTokens() int       { return a.ec.SamplingParams.MaxTokens }
-func (a *workflowRequestAdapter) GetTopP() float64        { return a.ec.SamplingParams.TopP }
-func (a *workflowRequestAdapter) GetStream() bool         { return a.ec.StreamingEnabled }
-
-// workflowMessageAdapter implements cache.Message by wrapping a gw.Message.
-type workflowMessageAdapter struct {
-	msg *gw.Message
-}
-
-func (m *workflowMessageAdapter) GetRole() string { return string(m.msg.Role) }
-
-func (m *workflowMessageAdapter) GetContent() string {
-	if len(m.msg.Content) > 0 && m.msg.Content[0].Text != nil {
-		return *m.msg.Content[0].Text
-	}
-	return ""
 }
 
 // extractUserQuery returns the text content of the last user message.

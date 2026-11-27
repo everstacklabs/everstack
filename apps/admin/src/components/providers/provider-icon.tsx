@@ -17,6 +17,9 @@ const LIGHT_IMAGE_PROVIDERS = new Set([
   'openrouter',
   'moonshot',
   'xai',
+  // Monochrome lobehub marks for these inference hosts.
+  'nebius',
+  'baseten',
   // Coding-agent marks that ship as monochrome black, inverted to white on the
   // dark UI.
   'cursor',
@@ -62,6 +65,15 @@ export function getProviderAsset(providerName: string): ProviderAsset {
     // Z.AI is Zhipu's international brand and ships the GLM models under the
     // same mark, so both provider ids resolve to the one asset.
     zai: { type: 'image', value: '/providers/lobehub/zhipu.svg' },
+    deepinfra: { type: 'image', value: '/providers/lobehub/deepinfra.svg' },
+    novita: { type: 'image', value: '/providers/lobehub/novita.svg' },
+    nebius: { type: 'image', value: '/providers/lobehub/nebius.svg' },
+    baseten: { type: 'image', value: '/providers/lobehub/baseten.svg' },
+    sambanova: { type: 'image', value: '/providers/lobehub/sambanova.svg' },
+    meta: { type: 'image', value: '/providers/lobehub/meta.svg' },
+    tencent: { type: 'image', value: '/providers/lobehub/tencent.svg' },
+    // Chutes has no mark in the lobehub icon set, so it keeps the generic
+    // ai-cloud glyph like every other unmapped provider.
     // Coding-agent brand marks (used for the trace-name client logo).
     cursor: { type: 'image', value: '/providers/lobehub/cursor.svg' },
     'github-copilot': { type: 'image', value: '/providers/lobehub/githubcopilot.svg' },
@@ -231,6 +243,15 @@ export function formatProviderName(name: string): string {
     moonshot: 'Moonshot',
     qwen: 'Qwen',
     openrouter: 'OpenRouter',
+    zai: 'Z.AI',
+    deepinfra: 'DeepInfra',
+    novita: 'Novita AI',
+    nebius: 'Nebius Token Factory',
+    baseten: 'Baseten',
+    sambanova: 'SambaNova',
+    chutes: 'Chutes',
+    meta: 'Meta',
+    tencent: 'Tencent TokenHub',
   }
   return map[name.toLowerCase()] ?? name
 }

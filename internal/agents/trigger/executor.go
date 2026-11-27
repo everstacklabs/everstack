@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"sync"
 	"text/template"
 	"time"
 
@@ -32,7 +34,19 @@ type Executor struct {
 	queryBus       query.QueryBus
 	cb             *CircuitBreaker
 	workflowRunner WorkflowRunner // optional — set via SetWorkflowRunner
+
+	// tenantActive reports whether a tenant may run work (managed Cloud
+	// pauses instances over their plan limit or stopped by the user). Nil
+	// means every tenant is active. Guarded because Execute runs on many
+	// goroutines while the gateway may wire the fn after construction.
+	tenantActiveMu sync.RWMutex
+	tenantActiveFn func(ctx context.Context, tenantID string) bool
 }
+
+// ErrTenantPaused is returned by Execute when the trigger's tenant (in
+// managed Cloud, its instance) is paused. The skip is not a trigger failure:
+// no execution is recorded and the circuit breaker is untouched.
+var ErrTenantPaused = errors.New("tenant is paused")
 
 // NewExecutor creates a new trigger executor.
 func NewExecutor(store Store, sessionMgr *agentrt.SessionManager, commandBus commands.CommandBus, queryBus query.QueryBus) *Executor {
@@ -50,17 +64,49 @@ func (e *Executor) SetWorkflowRunner(runner WorkflowRunner) {
 	e.workflowRunner = runner
 }
 
+// SetTenantActiveFn installs the check that decides whether a tenant may run
+// triggers. fn returns true when the tenant may run; nil treats every tenant
+// as active. The Scheduler and WebhookHandler built on this executor use the
+// same check.
+func (e *Executor) SetTenantActiveFn(fn func(ctx context.Context, tenantID string) bool) {
+	e.tenantActiveMu.Lock()
+	e.tenantActiveFn = fn
+	e.tenantActiveMu.Unlock()
+}
+
+// tenantActive reports whether tenantID may run work. Nil-safe on both the
+// receiver and the configured fn.
+func (e *Executor) tenantActive(ctx context.Context, tenantID string) bool {
+	if e == nil {
+		return true
+	}
+	e.tenantActiveMu.RLock()
+	fn := e.tenantActiveFn
+	e.tenantActiveMu.RUnlock()
+	if fn == nil {
+		return true
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return fn(ctx, tenantID)
+}
+
 // Execute fires a trigger, creating an agent session with the rendered input.
 // payload is the webhook body or event data (nil for cron triggers).
-func (e *Executor) Execute(ctx context.Context, t *Trigger, payload json.RawMessage) {
+//
+// It returns ErrTenantPaused when the trigger's tenant is paused; every other
+// skip or failure is handled (logged, recorded, circuit-broken) internally and
+// returns nil.
+func (e *Executor) Execute(ctx context.Context, t *Trigger, payload json.RawMessage) error {
 	if t == nil {
 		logger.Warn("trigger: skipped nil trigger")
-		return
+		return nil
 	}
 	if t.TenantID == "" {
 		logger.WithFields("trigger_id", t.ID, "name", t.Name).
 			Warn("trigger: skipped because stored tenant identity is missing")
-		return
+		return nil
 	}
 
 	// Trigger records come from tenant-scoped persistence and are the trusted
@@ -72,20 +118,29 @@ func (e *Executor) Execute(ctx context.Context, t *Trigger, payload json.RawMess
 	} else {
 		ctx = context.WithoutCancel(ctx)
 	}
+
+	// A paused tenant runs nothing. Checked before the circuit breaker and
+	// any store access so the skip leaves no execution row and no failure.
+	if !e.tenantActive(ctx, t.TenantID) {
+		logger.WithFields("trigger_id", t.ID, "tenant_id", t.TenantID, "type", string(t.Type)).
+			Info("trigger: skipped (tenant paused)")
+		return ErrTenantPaused
+	}
+
 	ctx = agentrt.ContextWithTenantIdentity(ctx, t.TenantID)
 
 	// Check circuit breaker
 	if !e.cb.ShouldExecute(t) {
 		logger.WithFields("trigger_id", t.ID, "name", t.Name, "circuit", t.CircuitState).
 			Debug("trigger: skipped (circuit open)")
-		return
+		return nil
 	}
 
 	// Transition to half-open if reset period has elapsed
 	if t.CircuitState == CircuitOpen {
 		if err := e.cb.TransitionToHalfOpen(ctx, t); err != nil {
 			logger.WithFields("trigger_id", t.ID, "error", err.Error()).Warn("trigger: failed to transition to half-open")
-			return
+			return nil
 		}
 	}
 
@@ -93,12 +148,12 @@ func (e *Executor) Execute(ctx context.Context, t *Trigger, payload json.RawMess
 	running, err := e.store.CountRunningExecutions(ctx, t.ID)
 	if err != nil {
 		logger.WithFields("trigger_id", t.ID, "error", err.Error()).Warn("trigger: failed to count running executions")
-		return
+		return nil
 	}
 	if running >= t.MaxConcurrent {
 		logger.WithFields("trigger_id", t.ID, "name", t.Name, "running", running, "max", t.MaxConcurrent).
 			Debug("trigger: skipped (max concurrent reached)")
-		return
+		return nil
 	}
 
 	// Render input from template
@@ -111,11 +166,12 @@ func (e *Executor) Execute(ctx context.Context, t *Trigger, payload json.RawMess
 	// Branch: workflow-targeted trigger vs agent session trigger
 	if t.WorkflowID != "" {
 		e.executeWorkflowTrigger(ctx, t, input, payload)
-		return
+		return nil
 	}
 
 	// Execute with retries
 	e.executeWithRetries(ctx, t, input, payload)
+	return nil
 }
 
 func (e *Executor) executeWithRetries(ctx context.Context, t *Trigger, input string, payload json.RawMessage) {

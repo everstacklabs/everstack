@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { replayBlock } from '@/lib/replay-privacy'
 import {
   ArrowUp,
   Paperclip,
@@ -489,7 +490,7 @@ const SESSION_STATUS_STYLES: Record<
   },
   [SessionStatus.FAILED]: {
     label: 'Failed',
-    className: 'bg-red-500/15 text-red-400 light:text-red-600',
+    className: 'bg-danger-surface-strong text-danger',
   },
   [SessionStatus.CANCELLED]: {
     label: 'Cancelled',
@@ -861,7 +862,7 @@ function LiveTokenCounter({
   return (
     <span
       className={`text-xs font-mono tabular-nums transition-colors duration-300 ${
-        isStreaming ? 'text-blue-400' : 'text-white/30 light:text-black/30'
+        isStreaming ? 'text-info' : 'text-white/30 light:text-black/30'
       }`}
     >
       {displayCount.toLocaleString()} tokens
@@ -915,11 +916,11 @@ function ContextWindowIndicator({
 
   const ringStroke =
     tier === 'emergency'
-      ? '#ef4444'
+      ? 'var(--color-danger)'
       : tier === 'aggressive'
-        ? '#f59e0b'
+        ? 'var(--color-warning)'
         : tier === 'background'
-          ? '#eab308'
+          ? 'var(--color-warning)'
           : 'var(--color-brand-secondary-400)'
 
   const tierLabel =
@@ -3407,14 +3408,14 @@ export function SessionTimeline({
   const showWorkflowPanel = workflowPanelData !== null && workflowPanelVisible
   const inlineProviderSetupCard =
     shouldReplaceSessionErrorWithProviderSetup || showInlineProviderSetup ? (
-      <div className="rounded border border-red-500/20 bg-brand-main-900/80 p-4 shadow-[0_0_0_1px_rgba(239,68,68,0.04)] sm:p-5">
+      <div className="rounded border border-danger-border bg-brand-main-900/80 p-4 shadow-[0_0_0_1px_rgba(239,68,68,0.04)] sm:p-5">
         <div className="flex items-start gap-3.5">
-          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded border border-red-500/20 bg-red-500/10 text-red-300">
+          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded border border-danger-border bg-danger-surface text-danger">
             <KeyRound className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1 space-y-4">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-red-300">
+              <p className="text-sm font-medium text-danger">
                 Missing API key
               </p>
               <p className="text-sm leading-6 text-white/65 light:text-black/65">
@@ -3571,8 +3572,8 @@ export function SessionTimeline({
                   isStreaming={isStreaming}
                 />
                 {isStreaming && (
-                  <span className="flex items-center gap-1.5 text-[10px] text-blue-400">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                  <span className="flex items-center gap-1.5 text-[10px] text-info">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-info-solid animate-pulse" />
                     Streaming
                   </span>
                 )}
@@ -3636,6 +3637,7 @@ export function SessionTimeline({
                     const [, url] = urlEntries[0]
                     return (
                       <a
+                        {...replayBlock}
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -3663,6 +3665,7 @@ export function SessionTimeline({
                           {urlEntries.map(([port, url]) => (
                             <a
                               key={port}
+                              {...replayBlock}
                               href={url}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -3852,16 +3855,16 @@ export function SessionTimeline({
                           sandboxState.errorMsg,
                         )
                         return (
-                          <div className="rounded bg-red-500/10 px-4 py-3 border border-red-500/15">
+                          <div className="rounded bg-danger-surface px-4 py-3 border border-danger-border">
                             <div className="flex items-start gap-2.5">
-                              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                              <AlertTriangle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium text-red-300">
+                                <p className="text-sm font-medium text-danger">
                                   {isLimitError
                                     ? 'Persistent agent limit reached'
                                     : 'Sandbox error'}
                                 </p>
-                                <p className="text-xs text-red-400/80 mt-1">
+                                <p className="text-xs text-danger/80 mt-1">
                                   {isLimitError
                                     ? "You've reached the maximum number of persistent agents for your plan. Upgrade to add more."
                                     : sandboxState.errorMsg}
@@ -4002,14 +4005,14 @@ export function SessionTimeline({
                         return (
                           <div
                             key={`seg-hitl-cancelled-${seg.inputId}`}
-                            className="flex items-start gap-2.5 rounded px-3 py-2.5 border border-yellow-500/20 bg-yellow-500/5"
+                            className="flex items-start gap-2.5 rounded px-3 py-2.5 border border-warning-border bg-warning-surface/60"
                           >
-                            <Clock className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
+                            <Clock className="w-4 h-4 text-warning shrink-0 mt-0.5" />
                             <div>
                               <div className="text-sm text-white/70 light:text-black/70">
                                 {seg.question}
                               </div>
-                              <div className="text-xs text-yellow-400/70 mt-1">
+                              <div className="text-xs text-warning/70 mt-1">
                                 No response received ({seg.reason})
                               </div>
                             </div>
@@ -4079,10 +4082,10 @@ export function SessionTimeline({
                             key={`seg-fallback-${segIdx}`}
                             className={`flex items-center gap-2 rounded px-3 py-2 text-xs border ${
                               fe.type === 'fallback.succeeded'
-                                ? 'bg-green-500/10 text-green-400 border-green-500/15'
+                                ? 'bg-success-surface text-success border-success-border'
                                 : fe.type === 'fallback.failed'
-                                  ? 'bg-red-500/10 text-red-400 border-red-500/15'
-                                  : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/15'
+                                  ? 'bg-danger-surface text-danger border-danger-border'
+                                  : 'bg-warning-surface text-warning border-warning-border'
                             }`}
                           >
                             <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
@@ -4125,22 +4128,22 @@ export function SessionTimeline({
                         return (
                           <div
                             key={`seg-session-error-${segIdx}`}
-                            className={`rounded px-4 py-3 border ${isMaxTurns ? 'bg-amber-500/10 border-amber-500/20' : 'bg-red-500/10 border-red-500/20'}`}
+                            className={`rounded px-4 py-3 border ${isMaxTurns ? 'bg-warning-surface border-warning-border' : 'bg-danger-surface border-danger-border'}`}
                           >
                             <div className="flex items-start gap-2.5">
                               <AlertTriangle
-                                className={`w-4 h-4 shrink-0 mt-0.5 ${isMaxTurns ? 'text-amber-400' : 'text-red-400'}`}
+                                className={`w-4 h-4 shrink-0 mt-0.5 ${isMaxTurns ? 'text-warning' : 'text-danger'}`}
                               />
                               <div className="min-w-0">
                                 <p
-                                  className={`text-sm font-medium ${isMaxTurns ? 'text-amber-300' : 'text-red-300'}`}
+                                  className={`text-sm font-medium ${isMaxTurns ? 'text-warning' : 'text-danger'}`}
                                 >
                                   {isMaxTurns
                                     ? 'Session Limit Reached'
                                     : 'Session Error'}
                                 </p>
                                 <p
-                                  className={`text-sm mt-1 break-all ${isMaxTurns ? 'text-amber-400/90' : 'text-red-400/90'}`}
+                                  className={`text-sm mt-1 break-all ${isMaxTurns ? 'text-warning/90' : 'text-danger/90'}`}
                                 >
                                   {isMaxTurns
                                     ? 'This session has reached its maximum number of turns. Please start a new session to continue.'
@@ -4189,6 +4192,7 @@ export function SessionTimeline({
                           </div>
                           {url && (
                             <a
+                              {...replayBlock}
                               href={url}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -4542,7 +4546,7 @@ export function SessionTimeline({
                                     e.stopPropagation()
                                     removeAttachedFile(af.file)
                                   }}
-                                  className="text-white/30 hover:text-red-400 light:text-black/30"
+                                  className="text-white/30 hover:text-danger light:text-black/30"
                                 >
                                   <X className="w-3 h-3" />
                                 </button>
@@ -4556,7 +4560,7 @@ export function SessionTimeline({
                               {isImage ? (
                                 <img
                                   src={URL.createObjectURL(af.file)}
-                                  alt={af.file.name}
+                                  alt="Attachment"
                                   className="max-w-[300px] max-h-[300px] rounded object-contain"
                                   onLoad={(e) =>
                                     URL.revokeObjectURL(
@@ -4619,7 +4623,7 @@ export function SessionTimeline({
                           variant="default"
                           type="button"
                           onClick={handleStop}
-                          className="bg-red-500/15 hover:bg-red-500/25 text-red-400 border-red-500/20"
+                          className="bg-danger-surface-strong hover:bg-danger-solid/25 text-danger border-danger-border"
                         >
                           <Square className="w-3.5 h-3.5" />
                           <span className="ml-1 text-xs">Stop</span>
@@ -4735,7 +4739,7 @@ export function SessionTimeline({
                         </span>
                       )}
                       {contextSaveStatus === 'error' && (
-                        <span className="text-[10px] text-red-400">Failed</span>
+                        <span className="text-[10px] text-danger">Failed</span>
                       )}
                     </div>
                   </div>
@@ -4971,10 +4975,10 @@ export function SessionTimeline({
                               <span
                                 className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${
                                   spawn.status === 'running'
-                                    ? 'bg-blue-400 animate-pulse'
+                                    ? 'bg-info-solid animate-pulse'
                                     : spawn.status === 'failed'
-                                      ? 'bg-red-400'
-                                      : 'bg-emerald-400/60'
+                                      ? 'bg-danger-solid'
+                                      : 'bg-success-solid/60'
                                 }`}
                               />
                               <span className="flex-1 truncate text-[11px] text-white/55 light:text-black/55">
@@ -5047,10 +5051,10 @@ export function SessionTimeline({
                                       <span
                                         className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${
                                           group.running > 0
-                                            ? 'bg-blue-400 animate-pulse'
+                                            ? 'bg-info-solid animate-pulse'
                                             : group.failed > 0
-                                              ? 'bg-red-400'
-                                              : 'bg-emerald-400/60'
+                                              ? 'bg-danger-solid'
+                                              : 'bg-success-solid/60'
                                         }`}
                                       />
                                       <span className="flex-1 truncate font-mono text-[11px] text-white/55 light:text-black/55">
@@ -5073,10 +5077,10 @@ export function SessionTimeline({
                                             <span
                                               className={`inline-block w-1 h-1 rounded-full shrink-0 ${
                                                 t.status === 'running'
-                                                  ? 'bg-blue-400 animate-pulse'
+                                                  ? 'bg-info-solid animate-pulse'
                                                   : t.status === 'failed'
-                                                    ? 'bg-red-400'
-                                                    : 'bg-emerald-400/50'
+                                                    ? 'bg-danger-solid'
+                                                    : 'bg-success-solid/50'
                                               }`}
                                             />
                                             <span>#{i + 1}</span>

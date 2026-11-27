@@ -110,3 +110,29 @@ func TestTransformToOpenAIChunkFinishReasonEnumPrefix(t *testing.T) {
 		t.Fatalf("finish_reason = %v, want stop", c0["finish_reason"])
 	}
 }
+
+// An error that is already OpenAI-shaped (the spend limit refusal) keeps its
+// type and code when reframed as an SSE event, so SDKs can tell a spend cap
+// from a server fault.
+func TestTransformToOpenAIChunkKeepsOpenAIErrorTypeAndCode(t *testing.T) {
+	s := &sseWriter{format: "openai"}
+	out := s.transformToOpenAIChunk(`{"error":{"message":"Your organization has reached its monthly spend limit of $10.00.","type":"insufficient_quota","param":null,"code":"spend_limit_exceeded"}}`)
+	var frame struct {
+		Error struct {
+			Message string `json:"message"`
+			Type    string `json:"type"`
+			Code    string `json:"code"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(out, &frame); err != nil {
+		t.Fatalf("frame %s: %v", out, err)
+	}
+	if frame.Error.Type != "insufficient_quota" || frame.Error.Code != "spend_limit_exceeded" || !strings.Contains(frame.Error.Message, "$10.00") {
+		t.Fatalf("frame = %+v", frame.Error)
+	}
+	// A grpc-gateway frame without a string type still reads as api_error.
+	out = s.transformToOpenAIChunk(`{"error":{"code":5,"message":"model not found: x","type":"error"}}`)
+	if !strings.Contains(string(out), `"type":"api_error"`) {
+		t.Fatalf("grpc frame type: %s", out)
+	}
+}

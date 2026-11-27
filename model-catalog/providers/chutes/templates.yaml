@@ -1,0 +1,14 @@
+default:
+  name: "Default"
+  description: "Standard Chutes gateway settings"
+  settings:
+    timeout: 60s
+    retry_attempts: 2
+
+cost_optimized:
+  name: "Cost Optimized"
+  description: "Low-cost models on Chutes"
+  recommended_models:
+    - Qwen/Qwen3.8-27B-TEE
+    - google/gemma-4-31B-turbo-TEE
+    - deepseek-ai/DeepSeek-V4.1-Flash-1017

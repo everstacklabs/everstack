@@ -90,9 +90,10 @@ func TestEnforcementAppliesResolvedPlanLimits(t *testing.T) {
 	}
 }
 
-// An unknown tenant must keep the old behaviour rather than being guessed into
-// a tier, and a resolver failure must never deny a request.
-func TestUnknownTenantFallsBackToBypass(t *testing.T) {
+// A verified tenant the resolver cannot place (no live organization, or a
+// failed lookup) gets Starter caps on Cloud: never unlimited (review of #842:
+// a deleted instance's still-valid key ran unlimited).
+func TestUnknownTenantGetsStarterCaps(t *testing.T) {
 	if IsDev() {
 		t.Skip("dev builds resolve everything unlimited")
 	}
@@ -102,11 +103,11 @@ func TestUnknownTenantFallsBackToBypass(t *testing.T) {
 
 	ent := ResolveEntitlements(verifiedTenantCtx("tenant-unknown"), nil)
 
-	if ent.Source != "managed-bypass" {
-		t.Fatalf("Source = %q, want managed-bypass", ent.Source)
+	if ent.Source != "managed-unresolved" || ent.Tier != "free" {
+		t.Fatalf("Source/Tier = %q/%q, want managed-unresolved/free", ent.Source, ent.Tier)
 	}
-	if _, capped := ent.Limit(UsageTypeAgents); capped {
-		t.Fatal("an unresolvable tenant must not be capped")
+	if limit, capped := ent.Limit(UsageTypeAgents); !capped || limit != 3 {
+		t.Fatalf("AGENTS = %d %v, want the Starter cap", limit, capped)
 	}
 }
 
@@ -171,7 +172,7 @@ func TestCacheEntriesExpire(t *testing.T) {
 	t.Cleanup(func() { timeNow = time.Now })
 
 	r := &dbPlanTierResolver{ttl: time.Minute, cache: map[string]planCacheEntry{}}
-	r.store("tenant-abc", "pro", true)
+	r.store("tenant-abc", OrgScope{OrganizationID: "org-abc", Tier: "pro", Aliases: []string{"tenant-abc"}}, nil)
 
 	if _, ok := r.lookup("tenant-abc"); !ok {
 		t.Fatal("entry missing immediately after store")

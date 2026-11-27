@@ -2,6 +2,7 @@ package browserpool
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -11,7 +12,19 @@ import (
 type TenantLimits struct {
 	MaxConcurrent int
 	MaxSession    time.Duration
+	// ScopeTenantIDs are the tenant ids whose leases count toward
+	// MaxConcurrent: the whole organization on a managed gateway. Empty
+	// means the requesting tenant alone.
+	ScopeTenantIDs []string
+	// ShadowScopeTenantIDs is the organization scope while it is reported,
+	// not enforced: admission still counts the tenant alone and only logs
+	// what the organization-wide count would decide.
+	ShadowScopeTenantIDs []string
 }
+
+// ErrConcurrentBrowserLimit marks an admission refused at the plan's
+// concurrent browser cap.
+var ErrConcurrentBrowserLimit = errors.New("concurrent browser limit reached")
 
 func (l TenantLimits) Validate() error {
 	if l.MaxConcurrent < -1 {

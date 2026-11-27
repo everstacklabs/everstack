@@ -54,3 +54,4 @@ variants:
     description: "Deeper reasoning for complex analysis and coding."
     parameters:
       reasoning_effort: "high"
+notes: "Alias to Mistral Medium 3.5, which Mistral deprecated on 2026-10-31; retires 2027-04-30. Migrate to mistral-large-4."

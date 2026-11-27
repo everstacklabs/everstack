@@ -41,4 +41,20 @@ type AuthConfig struct {
 		// cookie is shared across subdomains (e.g. ".everstack.ai").
 		Domain string `mapstructure:"domain" yaml:"domain"`
 	} `mapstructure:"session" yaml:"session"`
+	// RateLimit holds the authentication endpoint counters. With Redis
+	// configured, every services replica charges the same counters; without
+	// it each replica counts on its own, which multiplies the effective
+	// limit by the replica count.
+	RateLimit AuthRateLimitConfig `mapstructure:"rate_limit" yaml:"rate_limit"`
+}
+
+// AuthRateLimitConfig configures where the auth service counts rate limits.
+type AuthRateLimitConfig struct {
+	// KeyPrefix namespaces the counters in a Redis shared with other
+	// services. Default: "evs:auth:rl:".
+	KeyPrefix string `mapstructure:"key_prefix" yaml:"key_prefix"`
+	// Redis connection. Leaving every connection setting empty keeps the
+	// counters in process memory. Required makes an unreachable Redis refuse
+	// guarded requests instead of counting them locally.
+	Redis RedisConfig `mapstructure:"redis" yaml:"redis"`
 }

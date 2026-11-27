@@ -9,11 +9,11 @@ const { Sheet, SheetContent, SheetHeader, SheetTitle, SheetBody } = ui
 
 const STATUS_LABEL: Record<number, { label: string; className: string }> = {
     [SessionStatus.CREATED]: { label: 'Created', className: 'bg-gray-500/20 text-gray-400 light:text-gray-600' },
-    [SessionStatus.RUNNING]: { label: 'Running', className: 'bg-green-500/20 text-green-300 light:text-green-600' },
-    [SessionStatus.WAITING_FOR_INPUT]: { label: 'Waiting', className: 'bg-amber-500/20 text-amber-300 light:text-amber-700' },
-    [SessionStatus.WAITING_FOR_APPROVAL]: { label: 'Approval', className: 'bg-amber-500/20 text-amber-300 light:text-amber-700' },
+    [SessionStatus.RUNNING]: { label: 'Running', className: 'bg-success-surface-strong text-success' },
+    [SessionStatus.WAITING_FOR_INPUT]: { label: 'Waiting', className: 'bg-warning-surface-strong text-warning' },
+    [SessionStatus.WAITING_FOR_APPROVAL]: { label: 'Approval', className: 'bg-warning-surface-strong text-warning' },
     [SessionStatus.COMPLETED]: { label: 'Done', className: 'bg-brand-secondary-400/20 text-brand-secondary-300' },
-    [SessionStatus.FAILED]: { label: 'Failed', className: 'bg-red-500/20 text-red-400 light:text-red-600' },
+    [SessionStatus.FAILED]: { label: 'Failed', className: 'bg-danger-surface-strong text-danger' },
     [SessionStatus.CANCELLED]: { label: 'Cancelled', className: 'bg-gray-500/20 text-gray-400 light:text-gray-600' },
 }
 

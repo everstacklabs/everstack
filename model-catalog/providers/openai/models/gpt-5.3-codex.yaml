@@ -66,3 +66,4 @@ variants:
     description: "Extended reasoning for long-horizon agentic work."
     parameters:
       reasoning_effort: "xhigh"
+notes: "Deprecated by OpenAI on 2026-10-01; shuts down 2027-04-01. Migrate to gpt-6-sol."

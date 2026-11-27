@@ -44,18 +44,18 @@ export function ExecutionTimeline({ staticEvents }: ExecutionTimelineProps) {
                         {/* Status indicator */}
                         <div className="flex-shrink-0">
                             {isActive && (
-                                <div className="h-5 w-5 rounded-full border-2 border-blue-500 animate-pulse flex items-center justify-center">
-                                    <div className="h-2 w-2 rounded-full bg-blue-500" />
+                                <div className="h-5 w-5 rounded-full border-2 border-info-solid animate-pulse flex items-center justify-center">
+                                    <div className="h-2 w-2 rounded-full bg-info-solid" />
                                 </div>
                             )}
                             {isCompleted && (
-                                <div className="h-5 w-5 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                                    <Icon icon="lucide:check" className="h-3 w-3 text-emerald-400 light:text-emerald-600" />
+                                <div className="h-5 w-5 rounded-full bg-success-surface-strong flex items-center justify-center">
+                                    <Icon icon="lucide:check" className="h-3 w-3 text-success" />
                                 </div>
                             )}
                             {isError && (
-                                <div className="h-5 w-5 rounded-full bg-red-500/20 flex items-center justify-center">
-                                    <Icon icon="lucide:x" className="h-3 w-3 text-red-400 light:text-red-600" />
+                                <div className="h-5 w-5 rounded-full bg-danger-surface-strong flex items-center justify-center">
+                                    <Icon icon="lucide:x" className="h-3 w-3 text-danger" />
                                 </div>
                             )}
                             {!isActive && !isCompleted && !isError && (
@@ -92,7 +92,7 @@ export function ExecutionTimeline({ staticEvents }: ExecutionTimelineProps) {
 
                         {/* Error message */}
                         {isError && nodeEvt.error && (
-                            <span className="text-[10px] text-red-400 light:text-red-600 truncate max-w-[120px]" title={nodeEvt.error}>
+                            <span className="text-[10px] text-danger truncate max-w-[120px]">
                                 {nodeEvt.error}
                             </span>
                         )}

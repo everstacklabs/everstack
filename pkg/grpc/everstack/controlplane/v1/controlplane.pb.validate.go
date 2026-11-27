@@ -487,6 +487,99 @@ func (m *GatewayInstance) validate(all bool) error {
 
 	// no validation rules for Region
 
+	// no validation rules for PauseReason
+
+	if all {
+		switch v := interface{}(m.GetPausedAt()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, GatewayInstanceValidationError{
+					field:  "PausedAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, GatewayInstanceValidationError{
+					field:  "PausedAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetPausedAt()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return GatewayInstanceValidationError{
+				field:  "PausedAt",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetLastUsedAt()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, GatewayInstanceValidationError{
+					field:  "LastUsedAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, GatewayInstanceValidationError{
+					field:  "LastUsedAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetLastUsedAt()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return GatewayInstanceValidationError{
+				field:  "LastUsedAt",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	// no validation rules for ExtraBilling
+
+	if all {
+		switch v := interface{}(m.GetExtraBillingPaidThrough()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, GatewayInstanceValidationError{
+					field:  "ExtraBillingPaidThrough",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, GatewayInstanceValidationError{
+					field:  "ExtraBillingPaidThrough",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetExtraBillingPaidThrough()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return GatewayInstanceValidationError{
+				field:  "ExtraBillingPaidThrough",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	// no validation rules for OverLimit
+
 	if len(errors) > 0 {
 		return GatewayInstanceMultiError(errors)
 	}
@@ -1667,6 +1760,1251 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = ListInstancesResponseValidationError{}
+
+// Validate checks the field values on GetInstanceLimitStatusRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *GetInstanceLimitStatusRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on GetInstanceLimitStatusRequest with
+// the rules defined in the proto definition for this message. If any rules
+// are violated, the result is a list of violation errors wrapped in
+// GetInstanceLimitStatusRequestMultiError, or nil if none found.
+func (m *GetInstanceLimitStatusRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *GetInstanceLimitStatusRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for OrganizationId
+
+	if len(errors) > 0 {
+		return GetInstanceLimitStatusRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// GetInstanceLimitStatusRequestMultiError is an error wrapping multiple
+// validation errors returned by GetInstanceLimitStatusRequest.ValidateAll()
+// if the designated constraints aren't met.
+type GetInstanceLimitStatusRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m GetInstanceLimitStatusRequestMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m GetInstanceLimitStatusRequestMultiError) AllErrors() []error { return m }
+
+// GetInstanceLimitStatusRequestValidationError is the validation error
+// returned by GetInstanceLimitStatusRequest.Validate if the designated
+// constraints aren't met.
+type GetInstanceLimitStatusRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e GetInstanceLimitStatusRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e GetInstanceLimitStatusRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e GetInstanceLimitStatusRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e GetInstanceLimitStatusRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e GetInstanceLimitStatusRequestValidationError) ErrorName() string {
+	return "GetInstanceLimitStatusRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e GetInstanceLimitStatusRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sGetInstanceLimitStatusRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = GetInstanceLimitStatusRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = GetInstanceLimitStatusRequestValidationError{}
+
+// Validate checks the field values on InstanceLimitStatus with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *InstanceLimitStatus) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on InstanceLimitStatus with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// InstanceLimitStatusMultiError, or nil if none found.
+func (m *InstanceLimitStatus) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *InstanceLimitStatus) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for InstanceLimit
+
+	// no validation rules for SlotsUsed
+
+	// no validation rules for OverLimit
+
+	if all {
+		switch v := interface{}(m.GetOverLimitSince()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, InstanceLimitStatusValidationError{
+					field:  "OverLimitSince",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, InstanceLimitStatusValidationError{
+					field:  "OverLimitSince",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetOverLimitSince()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return InstanceLimitStatusValidationError{
+				field:  "OverLimitSince",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetGraceEndsAt()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, InstanceLimitStatusValidationError{
+					field:  "GraceEndsAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, InstanceLimitStatusValidationError{
+					field:  "GraceEndsAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetGraceEndsAt()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return InstanceLimitStatusValidationError{
+				field:  "GraceEndsAt",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	// no validation rules for ExtraBillingAvailable
+
+	// no validation rules for ExtraInstanceUsdPerMonth
+
+	// no validation rules for PlanTier
+
+	// no validation rules for AvailableCreditUsd
+
+	// no validation rules for AvailableCreditKnown
+
+	// no validation rules for CreditPurchaseAvailable
+
+	if len(errors) > 0 {
+		return InstanceLimitStatusMultiError(errors)
+	}
+
+	return nil
+}
+
+// InstanceLimitStatusMultiError is an error wrapping multiple validation
+// errors returned by InstanceLimitStatus.ValidateAll() if the designated
+// constraints aren't met.
+type InstanceLimitStatusMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m InstanceLimitStatusMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m InstanceLimitStatusMultiError) AllErrors() []error { return m }
+
+// InstanceLimitStatusValidationError is the validation error returned by
+// InstanceLimitStatus.Validate if the designated constraints aren't met.
+type InstanceLimitStatusValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e InstanceLimitStatusValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e InstanceLimitStatusValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e InstanceLimitStatusValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e InstanceLimitStatusValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e InstanceLimitStatusValidationError) ErrorName() string {
+	return "InstanceLimitStatusValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e InstanceLimitStatusValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sInstanceLimitStatus.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = InstanceLimitStatusValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = InstanceLimitStatusValidationError{}
+
+// Validate checks the field values on GetInstanceLimitStatusResponse with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *GetInstanceLimitStatusResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on GetInstanceLimitStatusResponse with
+// the rules defined in the proto definition for this message. If any rules
+// are violated, the result is a list of violation errors wrapped in
+// GetInstanceLimitStatusResponseMultiError, or nil if none found.
+func (m *GetInstanceLimitStatusResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *GetInstanceLimitStatusResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetStatus()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, GetInstanceLimitStatusResponseValidationError{
+					field:  "Status",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, GetInstanceLimitStatusResponseValidationError{
+					field:  "Status",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetStatus()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return GetInstanceLimitStatusResponseValidationError{
+				field:  "Status",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	for idx, item := range m.GetInstances() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, GetInstanceLimitStatusResponseValidationError{
+						field:  fmt.Sprintf("Instances[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, GetInstanceLimitStatusResponseValidationError{
+						field:  fmt.Sprintf("Instances[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return GetInstanceLimitStatusResponseValidationError{
+					field:  fmt.Sprintf("Instances[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	if len(errors) > 0 {
+		return GetInstanceLimitStatusResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// GetInstanceLimitStatusResponseMultiError is an error wrapping multiple
+// validation errors returned by GetInstanceLimitStatusResponse.ValidateAll()
+// if the designated constraints aren't met.
+type GetInstanceLimitStatusResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m GetInstanceLimitStatusResponseMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m GetInstanceLimitStatusResponseMultiError) AllErrors() []error { return m }
+
+// GetInstanceLimitStatusResponseValidationError is the validation error
+// returned by GetInstanceLimitStatusResponse.Validate if the designated
+// constraints aren't met.
+type GetInstanceLimitStatusResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e GetInstanceLimitStatusResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e GetInstanceLimitStatusResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e GetInstanceLimitStatusResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e GetInstanceLimitStatusResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e GetInstanceLimitStatusResponseValidationError) ErrorName() string {
+	return "GetInstanceLimitStatusResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e GetInstanceLimitStatusResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sGetInstanceLimitStatusResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = GetInstanceLimitStatusResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = GetInstanceLimitStatusResponseValidationError{}
+
+// Validate checks the field values on PauseInstanceRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *PauseInstanceRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on PauseInstanceRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// PauseInstanceRequestMultiError, or nil if none found.
+func (m *PauseInstanceRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *PauseInstanceRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for InstanceId
+
+	if len(errors) > 0 {
+		return PauseInstanceRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// PauseInstanceRequestMultiError is an error wrapping multiple validation
+// errors returned by PauseInstanceRequest.ValidateAll() if the designated
+// constraints aren't met.
+type PauseInstanceRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m PauseInstanceRequestMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m PauseInstanceRequestMultiError) AllErrors() []error { return m }
+
+// PauseInstanceRequestValidationError is the validation error returned by
+// PauseInstanceRequest.Validate if the designated constraints aren't met.
+type PauseInstanceRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e PauseInstanceRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e PauseInstanceRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e PauseInstanceRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e PauseInstanceRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e PauseInstanceRequestValidationError) ErrorName() string {
+	return "PauseInstanceRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e PauseInstanceRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sPauseInstanceRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = PauseInstanceRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = PauseInstanceRequestValidationError{}
+
+// Validate checks the field values on PauseInstanceResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *PauseInstanceResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on PauseInstanceResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// PauseInstanceResponseMultiError, or nil if none found.
+func (m *PauseInstanceResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *PauseInstanceResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetInstance()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, PauseInstanceResponseValidationError{
+					field:  "Instance",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, PauseInstanceResponseValidationError{
+					field:  "Instance",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetInstance()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return PauseInstanceResponseValidationError{
+				field:  "Instance",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetStatus()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, PauseInstanceResponseValidationError{
+					field:  "Status",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, PauseInstanceResponseValidationError{
+					field:  "Status",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetStatus()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return PauseInstanceResponseValidationError{
+				field:  "Status",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return PauseInstanceResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// PauseInstanceResponseMultiError is an error wrapping multiple validation
+// errors returned by PauseInstanceResponse.ValidateAll() if the designated
+// constraints aren't met.
+type PauseInstanceResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m PauseInstanceResponseMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m PauseInstanceResponseMultiError) AllErrors() []error { return m }
+
+// PauseInstanceResponseValidationError is the validation error returned by
+// PauseInstanceResponse.Validate if the designated constraints aren't met.
+type PauseInstanceResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e PauseInstanceResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e PauseInstanceResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e PauseInstanceResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e PauseInstanceResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e PauseInstanceResponseValidationError) ErrorName() string {
+	return "PauseInstanceResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e PauseInstanceResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sPauseInstanceResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = PauseInstanceResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = PauseInstanceResponseValidationError{}
+
+// Validate checks the field values on ResumeInstanceRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ResumeInstanceRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ResumeInstanceRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ResumeInstanceRequestMultiError, or nil if none found.
+func (m *ResumeInstanceRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ResumeInstanceRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for InstanceId
+
+	if len(errors) > 0 {
+		return ResumeInstanceRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// ResumeInstanceRequestMultiError is an error wrapping multiple validation
+// errors returned by ResumeInstanceRequest.ValidateAll() if the designated
+// constraints aren't met.
+type ResumeInstanceRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ResumeInstanceRequestMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ResumeInstanceRequestMultiError) AllErrors() []error { return m }
+
+// ResumeInstanceRequestValidationError is the validation error returned by
+// ResumeInstanceRequest.Validate if the designated constraints aren't met.
+type ResumeInstanceRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ResumeInstanceRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ResumeInstanceRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ResumeInstanceRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ResumeInstanceRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ResumeInstanceRequestValidationError) ErrorName() string {
+	return "ResumeInstanceRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ResumeInstanceRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sResumeInstanceRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ResumeInstanceRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ResumeInstanceRequestValidationError{}
+
+// Validate checks the field values on ResumeInstanceResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ResumeInstanceResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ResumeInstanceResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ResumeInstanceResponseMultiError, or nil if none found.
+func (m *ResumeInstanceResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ResumeInstanceResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetInstance()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, ResumeInstanceResponseValidationError{
+					field:  "Instance",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, ResumeInstanceResponseValidationError{
+					field:  "Instance",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetInstance()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return ResumeInstanceResponseValidationError{
+				field:  "Instance",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetStatus()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, ResumeInstanceResponseValidationError{
+					field:  "Status",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, ResumeInstanceResponseValidationError{
+					field:  "Status",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetStatus()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return ResumeInstanceResponseValidationError{
+				field:  "Status",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return ResumeInstanceResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// ResumeInstanceResponseMultiError is an error wrapping multiple validation
+// errors returned by ResumeInstanceResponse.ValidateAll() if the designated
+// constraints aren't met.
+type ResumeInstanceResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ResumeInstanceResponseMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ResumeInstanceResponseMultiError) AllErrors() []error { return m }
+
+// ResumeInstanceResponseValidationError is the validation error returned by
+// ResumeInstanceResponse.Validate if the designated constraints aren't met.
+type ResumeInstanceResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ResumeInstanceResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ResumeInstanceResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ResumeInstanceResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ResumeInstanceResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ResumeInstanceResponseValidationError) ErrorName() string {
+	return "ResumeInstanceResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ResumeInstanceResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sResumeInstanceResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ResumeInstanceResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ResumeInstanceResponseValidationError{}
+
+// Validate checks the field values on SetInstanceExtraBillingRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *SetInstanceExtraBillingRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on SetInstanceExtraBillingRequest with
+// the rules defined in the proto definition for this message. If any rules
+// are violated, the result is a list of violation errors wrapped in
+// SetInstanceExtraBillingRequestMultiError, or nil if none found.
+func (m *SetInstanceExtraBillingRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *SetInstanceExtraBillingRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for InstanceId
+
+	// no validation rules for Enabled
+
+	if len(errors) > 0 {
+		return SetInstanceExtraBillingRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// SetInstanceExtraBillingRequestMultiError is an error wrapping multiple
+// validation errors returned by SetInstanceExtraBillingRequest.ValidateAll()
+// if the designated constraints aren't met.
+type SetInstanceExtraBillingRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m SetInstanceExtraBillingRequestMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m SetInstanceExtraBillingRequestMultiError) AllErrors() []error { return m }
+
+// SetInstanceExtraBillingRequestValidationError is the validation error
+// returned by SetInstanceExtraBillingRequest.Validate if the designated
+// constraints aren't met.
+type SetInstanceExtraBillingRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e SetInstanceExtraBillingRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e SetInstanceExtraBillingRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e SetInstanceExtraBillingRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e SetInstanceExtraBillingRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e SetInstanceExtraBillingRequestValidationError) ErrorName() string {
+	return "SetInstanceExtraBillingRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e SetInstanceExtraBillingRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sSetInstanceExtraBillingRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = SetInstanceExtraBillingRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = SetInstanceExtraBillingRequestValidationError{}
+
+// Validate checks the field values on SetInstanceExtraBillingResponse with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *SetInstanceExtraBillingResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on SetInstanceExtraBillingResponse with
+// the rules defined in the proto definition for this message. If any rules
+// are violated, the result is a list of violation errors wrapped in
+// SetInstanceExtraBillingResponseMultiError, or nil if none found.
+func (m *SetInstanceExtraBillingResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *SetInstanceExtraBillingResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetInstance()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, SetInstanceExtraBillingResponseValidationError{
+					field:  "Instance",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, SetInstanceExtraBillingResponseValidationError{
+					field:  "Instance",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetInstance()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return SetInstanceExtraBillingResponseValidationError{
+				field:  "Instance",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetStatus()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, SetInstanceExtraBillingResponseValidationError{
+					field:  "Status",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, SetInstanceExtraBillingResponseValidationError{
+					field:  "Status",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetStatus()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return SetInstanceExtraBillingResponseValidationError{
+				field:  "Status",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return SetInstanceExtraBillingResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// SetInstanceExtraBillingResponseMultiError is an error wrapping multiple
+// validation errors returned by SetInstanceExtraBillingResponse.ValidateAll()
+// if the designated constraints aren't met.
+type SetInstanceExtraBillingResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m SetInstanceExtraBillingResponseMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m SetInstanceExtraBillingResponseMultiError) AllErrors() []error { return m }
+
+// SetInstanceExtraBillingResponseValidationError is the validation error
+// returned by SetInstanceExtraBillingResponse.Validate if the designated
+// constraints aren't met.
+type SetInstanceExtraBillingResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e SetInstanceExtraBillingResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e SetInstanceExtraBillingResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e SetInstanceExtraBillingResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e SetInstanceExtraBillingResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e SetInstanceExtraBillingResponseValidationError) ErrorName() string {
+	return "SetInstanceExtraBillingResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e SetInstanceExtraBillingResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sSetInstanceExtraBillingResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = SetInstanceExtraBillingResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = SetInstanceExtraBillingResponseValidationError{}
 
 // Validate checks the field values on StartInstanceRequest with the rules
 // defined in the proto definition for this message. If any rules are
@@ -3640,3 +4978,1149 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = RemoveCustomDomainResponseValidationError{}
+
+// Validate checks the field values on GetOrgActivityRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *GetOrgActivityRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on GetOrgActivityRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// GetOrgActivityRequestMultiError, or nil if none found.
+func (m *GetOrgActivityRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *GetOrgActivityRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for OrganizationId
+
+	// no validation rules for Range
+
+	if len(errors) > 0 {
+		return GetOrgActivityRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// GetOrgActivityRequestMultiError is an error wrapping multiple validation
+// errors returned by GetOrgActivityRequest.ValidateAll() if the designated
+// constraints aren't met.
+type GetOrgActivityRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m GetOrgActivityRequestMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m GetOrgActivityRequestMultiError) AllErrors() []error { return m }
+
+// GetOrgActivityRequestValidationError is the validation error returned by
+// GetOrgActivityRequest.Validate if the designated constraints aren't met.
+type GetOrgActivityRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e GetOrgActivityRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e GetOrgActivityRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e GetOrgActivityRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e GetOrgActivityRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e GetOrgActivityRequestValidationError) ErrorName() string {
+	return "GetOrgActivityRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e GetOrgActivityRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sGetOrgActivityRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = GetOrgActivityRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = GetOrgActivityRequestValidationError{}
+
+// Validate checks the field values on OrgActivityBucket with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// first error encountered is returned, or nil if there are no violations.
+func (m *OrgActivityBucket) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on OrgActivityBucket with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// OrgActivityBucketMultiError, or nil if none found.
+func (m *OrgActivityBucket) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *OrgActivityBucket) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetStart()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, OrgActivityBucketValidationError{
+					field:  "Start",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, OrgActivityBucketValidationError{
+					field:  "Start",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetStart()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return OrgActivityBucketValidationError{
+				field:  "Start",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	// no validation rules for InstanceId
+
+	// no validation rules for Requests
+
+	// no validation rules for Tokens
+
+	// no validation rules for Errors
+
+	if len(errors) > 0 {
+		return OrgActivityBucketMultiError(errors)
+	}
+
+	return nil
+}
+
+// OrgActivityBucketMultiError is an error wrapping multiple validation errors
+// returned by OrgActivityBucket.ValidateAll() if the designated constraints
+// aren't met.
+type OrgActivityBucketMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m OrgActivityBucketMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m OrgActivityBucketMultiError) AllErrors() []error { return m }
+
+// OrgActivityBucketValidationError is the validation error returned by
+// OrgActivityBucket.Validate if the designated constraints aren't met.
+type OrgActivityBucketValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e OrgActivityBucketValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e OrgActivityBucketValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e OrgActivityBucketValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e OrgActivityBucketValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e OrgActivityBucketValidationError) ErrorName() string {
+	return "OrgActivityBucketValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e OrgActivityBucketValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sOrgActivityBucket.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = OrgActivityBucketValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = OrgActivityBucketValidationError{}
+
+// Validate checks the field values on OrgActivityLatencyBucket with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *OrgActivityLatencyBucket) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on OrgActivityLatencyBucket with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// OrgActivityLatencyBucketMultiError, or nil if none found.
+func (m *OrgActivityLatencyBucket) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *OrgActivityLatencyBucket) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetStart()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, OrgActivityLatencyBucketValidationError{
+					field:  "Start",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, OrgActivityLatencyBucketValidationError{
+					field:  "Start",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetStart()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return OrgActivityLatencyBucketValidationError{
+				field:  "Start",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	// no validation rules for P95LatencyMs
+
+	// no validation rules for Samples
+
+	if len(errors) > 0 {
+		return OrgActivityLatencyBucketMultiError(errors)
+	}
+
+	return nil
+}
+
+// OrgActivityLatencyBucketMultiError is an error wrapping multiple validation
+// errors returned by OrgActivityLatencyBucket.ValidateAll() if the designated
+// constraints aren't met.
+type OrgActivityLatencyBucketMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m OrgActivityLatencyBucketMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m OrgActivityLatencyBucketMultiError) AllErrors() []error { return m }
+
+// OrgActivityLatencyBucketValidationError is the validation error returned by
+// OrgActivityLatencyBucket.Validate if the designated constraints aren't met.
+type OrgActivityLatencyBucketValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e OrgActivityLatencyBucketValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e OrgActivityLatencyBucketValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e OrgActivityLatencyBucketValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e OrgActivityLatencyBucketValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e OrgActivityLatencyBucketValidationError) ErrorName() string {
+	return "OrgActivityLatencyBucketValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e OrgActivityLatencyBucketValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sOrgActivityLatencyBucket.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = OrgActivityLatencyBucketValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = OrgActivityLatencyBucketValidationError{}
+
+// Validate checks the field values on OrgActivityTotals with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// first error encountered is returned, or nil if there are no violations.
+func (m *OrgActivityTotals) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on OrgActivityTotals with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// OrgActivityTotalsMultiError, or nil if none found.
+func (m *OrgActivityTotals) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *OrgActivityTotals) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Requests
+
+	// no validation rules for Tokens
+
+	// no validation rules for Errors
+
+	// no validation rules for ErrorRate
+
+	// no validation rules for P95LatencyMs
+
+	// no validation rules for P95Available
+
+	if len(errors) > 0 {
+		return OrgActivityTotalsMultiError(errors)
+	}
+
+	return nil
+}
+
+// OrgActivityTotalsMultiError is an error wrapping multiple validation errors
+// returned by OrgActivityTotals.ValidateAll() if the designated constraints
+// aren't met.
+type OrgActivityTotalsMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m OrgActivityTotalsMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m OrgActivityTotalsMultiError) AllErrors() []error { return m }
+
+// OrgActivityTotalsValidationError is the validation error returned by
+// OrgActivityTotals.Validate if the designated constraints aren't met.
+type OrgActivityTotalsValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e OrgActivityTotalsValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e OrgActivityTotalsValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e OrgActivityTotalsValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e OrgActivityTotalsValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e OrgActivityTotalsValidationError) ErrorName() string {
+	return "OrgActivityTotalsValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e OrgActivityTotalsValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sOrgActivityTotals.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = OrgActivityTotalsValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = OrgActivityTotalsValidationError{}
+
+// Validate checks the field values on OrgActivityDelta with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// first error encountered is returned, or nil if there are no violations.
+func (m *OrgActivityDelta) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on OrgActivityDelta with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// OrgActivityDeltaMultiError, or nil if none found.
+func (m *OrgActivityDelta) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *OrgActivityDelta) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for HasValue
+
+	// no validation rules for Change
+
+	if len(errors) > 0 {
+		return OrgActivityDeltaMultiError(errors)
+	}
+
+	return nil
+}
+
+// OrgActivityDeltaMultiError is an error wrapping multiple validation errors
+// returned by OrgActivityDelta.ValidateAll() if the designated constraints
+// aren't met.
+type OrgActivityDeltaMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m OrgActivityDeltaMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m OrgActivityDeltaMultiError) AllErrors() []error { return m }
+
+// OrgActivityDeltaValidationError is the validation error returned by
+// OrgActivityDelta.Validate if the designated constraints aren't met.
+type OrgActivityDeltaValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e OrgActivityDeltaValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e OrgActivityDeltaValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e OrgActivityDeltaValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e OrgActivityDeltaValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e OrgActivityDeltaValidationError) ErrorName() string { return "OrgActivityDeltaValidationError" }
+
+// Error satisfies the builtin error interface
+func (e OrgActivityDeltaValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sOrgActivityDelta.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = OrgActivityDeltaValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = OrgActivityDeltaValidationError{}
+
+// Validate checks the field values on OrgActivityModel with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// first error encountered is returned, or nil if there are no violations.
+func (m *OrgActivityModel) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on OrgActivityModel with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// OrgActivityModelMultiError, or nil if none found.
+func (m *OrgActivityModel) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *OrgActivityModel) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Model
+
+	// no validation rules for Requests
+
+	// no validation rules for Tokens
+
+	if len(errors) > 0 {
+		return OrgActivityModelMultiError(errors)
+	}
+
+	return nil
+}
+
+// OrgActivityModelMultiError is an error wrapping multiple validation errors
+// returned by OrgActivityModel.ValidateAll() if the designated constraints
+// aren't met.
+type OrgActivityModelMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m OrgActivityModelMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m OrgActivityModelMultiError) AllErrors() []error { return m }
+
+// OrgActivityModelValidationError is the validation error returned by
+// OrgActivityModel.Validate if the designated constraints aren't met.
+type OrgActivityModelValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e OrgActivityModelValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e OrgActivityModelValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e OrgActivityModelValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e OrgActivityModelValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e OrgActivityModelValidationError) ErrorName() string { return "OrgActivityModelValidationError" }
+
+// Error satisfies the builtin error interface
+func (e OrgActivityModelValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sOrgActivityModel.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = OrgActivityModelValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = OrgActivityModelValidationError{}
+
+// Validate checks the field values on GetOrgActivityResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *GetOrgActivityResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on GetOrgActivityResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// GetOrgActivityResponseMultiError, or nil if none found.
+func (m *GetOrgActivityResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *GetOrgActivityResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetWindowStart()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, GetOrgActivityResponseValidationError{
+					field:  "WindowStart",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, GetOrgActivityResponseValidationError{
+					field:  "WindowStart",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetWindowStart()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return GetOrgActivityResponseValidationError{
+				field:  "WindowStart",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetWindowEnd()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, GetOrgActivityResponseValidationError{
+					field:  "WindowEnd",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, GetOrgActivityResponseValidationError{
+					field:  "WindowEnd",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetWindowEnd()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return GetOrgActivityResponseValidationError{
+				field:  "WindowEnd",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	// no validation rules for BucketSeconds
+
+	for idx, item := range m.GetBuckets() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, GetOrgActivityResponseValidationError{
+						field:  fmt.Sprintf("Buckets[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, GetOrgActivityResponseValidationError{
+						field:  fmt.Sprintf("Buckets[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return GetOrgActivityResponseValidationError{
+					field:  fmt.Sprintf("Buckets[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	if all {
+		switch v := interface{}(m.GetCurrent()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, GetOrgActivityResponseValidationError{
+					field:  "Current",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, GetOrgActivityResponseValidationError{
+					field:  "Current",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetCurrent()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return GetOrgActivityResponseValidationError{
+				field:  "Current",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetPrevious()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, GetOrgActivityResponseValidationError{
+					field:  "Previous",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, GetOrgActivityResponseValidationError{
+					field:  "Previous",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetPrevious()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return GetOrgActivityResponseValidationError{
+				field:  "Previous",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	// no validation rules for PreviousAvailable
+
+	if all {
+		switch v := interface{}(m.GetRequestsDelta()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, GetOrgActivityResponseValidationError{
+					field:  "RequestsDelta",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, GetOrgActivityResponseValidationError{
+					field:  "RequestsDelta",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetRequestsDelta()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return GetOrgActivityResponseValidationError{
+				field:  "RequestsDelta",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetTokensDelta()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, GetOrgActivityResponseValidationError{
+					field:  "TokensDelta",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, GetOrgActivityResponseValidationError{
+					field:  "TokensDelta",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetTokensDelta()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return GetOrgActivityResponseValidationError{
+				field:  "TokensDelta",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetErrorRateDelta()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, GetOrgActivityResponseValidationError{
+					field:  "ErrorRateDelta",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, GetOrgActivityResponseValidationError{
+					field:  "ErrorRateDelta",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetErrorRateDelta()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return GetOrgActivityResponseValidationError{
+				field:  "ErrorRateDelta",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetP95LatencyDelta()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, GetOrgActivityResponseValidationError{
+					field:  "P95LatencyDelta",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, GetOrgActivityResponseValidationError{
+					field:  "P95LatencyDelta",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetP95LatencyDelta()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return GetOrgActivityResponseValidationError{
+				field:  "P95LatencyDelta",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	for idx, item := range m.GetTopModels() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, GetOrgActivityResponseValidationError{
+						field:  fmt.Sprintf("TopModels[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, GetOrgActivityResponseValidationError{
+						field:  fmt.Sprintf("TopModels[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return GetOrgActivityResponseValidationError{
+					field:  fmt.Sprintf("TopModels[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	// no validation rules for Available
+
+	for idx, item := range m.GetLatencyBuckets() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, GetOrgActivityResponseValidationError{
+						field:  fmt.Sprintf("LatencyBuckets[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, GetOrgActivityResponseValidationError{
+						field:  fmt.Sprintf("LatencyBuckets[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return GetOrgActivityResponseValidationError{
+					field:  fmt.Sprintf("LatencyBuckets[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	if len(errors) > 0 {
+		return GetOrgActivityResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// GetOrgActivityResponseMultiError is an error wrapping multiple validation
+// errors returned by GetOrgActivityResponse.ValidateAll() if the designated
+// constraints aren't met.
+type GetOrgActivityResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m GetOrgActivityResponseMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m GetOrgActivityResponseMultiError) AllErrors() []error { return m }
+
+// GetOrgActivityResponseValidationError is the validation error returned by
+// GetOrgActivityResponse.Validate if the designated constraints aren't met.
+type GetOrgActivityResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e GetOrgActivityResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e GetOrgActivityResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e GetOrgActivityResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e GetOrgActivityResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e GetOrgActivityResponseValidationError) ErrorName() string {
+	return "GetOrgActivityResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e GetOrgActivityResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sGetOrgActivityResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = GetOrgActivityResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = GetOrgActivityResponseValidationError{}

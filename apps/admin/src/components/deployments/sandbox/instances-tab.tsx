@@ -389,7 +389,7 @@ function SSHAccessPanel({
                       },
                     )
                   }
-                  className="rounded border border-red-500/20 px-2 py-1 text-xs text-red-300 light:text-red-600 hover:bg-red-500/10 disabled:opacity-50"
+                  className="rounded border border-danger-border px-2 py-1 text-xs text-danger hover:bg-danger-surface disabled:opacity-50"
                 >
                   Revoke
                 </button>
@@ -634,7 +634,6 @@ function ResourceSegments({ parts }: { parts: string[] }) {
   return (
     <div
       className="flex min-w-0 items-center overflow-hidden font-mono text-xs text-white/65 light:text-black/65"
-      title={parts.join(' | ')}
     >
       {parts.map((part, index) => (
         <span key={part} className="flex min-w-0 items-center">
@@ -732,7 +731,6 @@ function InfoLine({
       <div className="flex min-w-0 items-center gap-2 text-right">
         <span
           className={`min-w-0 truncate text-sm text-brand-main-100 ${mono ? 'font-mono text-xs' : ''}`}
-          title={value}
         >
           {value || '--'}
         </span>
@@ -790,7 +788,6 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
       <div className="text-xs text-white/35 light:text-black/35">{label}</div>
       <div
         className="min-w-0 truncate font-mono text-xs text-white/65 light:text-black/65"
-        title={value}
       >
         {value || '--'}
       </div>
@@ -1046,7 +1043,6 @@ function SandboxDetailsSheet({
                           <span
                             key={key}
                             className="max-w-full overflow-hidden rounded border border-brand-main-600 bg-brand-main-800/70 font-mono text-xs text-white/70 light:text-black/70"
-                            title={`${key}=${value}`}
                           >
                             <span className="inline-block border-r border-brand-main-600 px-2 py-1 text-white/40 light:text-black/40">
                               {key}
@@ -1170,7 +1166,7 @@ export function InstancesTab() {
 
   if (error) {
     return (
-      <div className="flex-1 flex items-center justify-center text-red-400 light:text-red-600">
+      <div className="flex-1 flex items-center justify-center text-danger">
         Error loading instances: {error.message}
       </div>
     )
@@ -1185,7 +1181,7 @@ export function InstancesTab() {
       render: (inst) => (
         <div className="flex min-w-0 items-center gap-2">
           <span
-            className={`size-2 shrink-0 rounded-full ${inst.agentHealthy === false ? 'bg-red-400' : isSandboxRunning(inst) ? 'bg-brand-secondary-300' : 'bg-white/25 light:bg-black/25'}`}
+            className={`size-2 shrink-0 rounded-full ${inst.agentHealthy === false ? 'bg-danger-solid' : isSandboxRunning(inst) ? 'bg-brand-secondary-300' : 'bg-white/25 light:bg-black/25'}`}
             title={
               inst.agentHealthy === false
                 ? 'Agent unhealthy'
@@ -1196,7 +1192,6 @@ export function InstancesTab() {
           />
           <span
             className="truncate text-sm font-medium text-white/85 light:text-black/85"
-            title={sandboxDisplayName(inst)}
           >
             {sandboxDisplayName(inst)}
           </span>
@@ -1223,7 +1218,6 @@ export function InstancesTab() {
       render: (inst) => (
         <span
           className="truncate font-mono text-xs text-white/70 light:text-black/70"
-          title={inst.image}
         >
           {inst.image}
         </span>
@@ -1566,7 +1560,7 @@ export function InstancesTab() {
                 {showTerminate && (
                   <DropdownMenuItem
                     onSelect={() => setTerminateTarget(inst)}
-                    className="rounded text-red-400 light:text-red-600 hover:bg-red-500/10 hover:text-red-300 light:hover:text-red-600 focus:bg-red-500/10 focus:text-red-300 light:focus:text-red-600 cursor-pointer [&_svg]:text-red-400 light:[&_svg]:text-red-600 hover:[&_svg]:text-red-300 light:hover:[&_svg]:text-red-600"
+                    className="rounded text-danger hover:bg-danger-surface focus:bg-danger-surface focus:text-danger cursor-pointer [&_svg]:text-danger hover:[&_svg]:text-danger"
                   >
                     <Iconify.Icon
                       icon="heroicons:x-circle"
@@ -1578,7 +1572,7 @@ export function InstancesTab() {
                 {showDelete && (
                   <DropdownMenuItem
                     onSelect={() => setDeleteTarget(inst)}
-                    className="rounded text-red-400 light:text-red-600 hover:bg-red-500/10 hover:text-red-300 light:hover:text-red-600 focus:bg-red-500/10 focus:text-red-300 light:focus:text-red-600 cursor-pointer [&_svg]:text-red-400 light:[&_svg]:text-red-600 hover:[&_svg]:text-red-300 light:hover:[&_svg]:text-red-600"
+                    className="rounded text-danger hover:bg-danger-surface focus:bg-danger-surface focus:text-danger cursor-pointer [&_svg]:text-danger hover:[&_svg]:text-danger"
                   >
                     <Iconify.Icon icon="heroicons:trash" className="size-4" />
                     Delete
@@ -1674,10 +1668,10 @@ export function InstancesTab() {
         <AlertDialogContent className="bg-brand-main-900 border border-brand-main-700 text-brand-main-100 p-0 gap-0 sm:max-w-md shadow-2xl shadow-black/60">
           <AlertDialogHeader className="p-5 pb-4 sm:text-left">
             <div className="flex items-start gap-3">
-              <div className="shrink-0 size-9 rounded-md bg-red-500/10 border border-red-500/25 flex items-center justify-center">
+              <div className="shrink-0 size-9 rounded-md bg-danger-surface border border-danger-border flex items-center justify-center">
                 <Iconify.Icon
                   icon="heroicons:exclamation-triangle"
-                  className="size-5 text-red-400 light:text-red-600"
+                  className="size-5 text-danger"
                 />
               </div>
               <div className="flex-1 min-w-0">
@@ -1741,7 +1735,7 @@ export function InstancesTab() {
                     toast.error(`Failed to terminate: ${err.message}`),
                 })
               }}
-              className="h-8 px-3.5 text-sm bg-red-500/90 hover:bg-red-500 text-white border-0 inline-flex items-center gap-1.5 shadow-sm shadow-red-900/30"
+              className="h-8 px-3.5 text-sm bg-danger-solid/90 hover:bg-danger-solid text-white border-0 inline-flex items-center gap-1.5 shadow-sm shadow-danger-solid/30"
             >
               {terminateMutation.isPending ? (
                 <>
@@ -1774,10 +1768,10 @@ export function InstancesTab() {
         <AlertDialogContent className="bg-brand-main-900 border border-brand-main-700 text-brand-main-100 p-0 gap-0 sm:max-w-md shadow-2xl shadow-black/60">
           <AlertDialogHeader className="p-5 pb-4 sm:text-left">
             <div className="flex items-start gap-3">
-              <div className="shrink-0 size-9 rounded-md bg-red-500/10 border border-red-500/25 flex items-center justify-center">
+              <div className="shrink-0 size-9 rounded-md bg-danger-surface border border-danger-border flex items-center justify-center">
                 <Iconify.Icon
                   icon="heroicons:trash"
-                  className="size-5 text-red-400 light:text-red-600"
+                  className="size-5 text-danger"
                 />
               </div>
               <div className="flex-1 min-w-0">
@@ -1798,7 +1792,7 @@ export function InstancesTab() {
             <div className="mt-4 rounded-md border border-brand-main-700 bg-brand-main-800/60 px-3 py-2.5 flex items-start gap-2">
               <Iconify.Icon
                 icon="heroicons:exclamation-circle"
-                className="size-4 text-red-400 light:text-red-600 shrink-0 mt-0.5"
+                className="size-4 text-danger shrink-0 mt-0.5"
               />
               <p className="text-xs text-white/65 light:text-black/65 leading-relaxed">
                 Workspace data, snapshots, logs, and event history will be
@@ -1831,7 +1825,7 @@ export function InstancesTab() {
                     toast.error(`Failed to delete: ${err.message}`),
                 })
               }}
-              className="h-8 px-3.5 text-sm bg-red-500/90 hover:bg-red-500 text-white border-0 inline-flex items-center gap-1.5 shadow-sm shadow-red-900/30"
+              className="h-8 px-3.5 text-sm bg-danger-solid/90 hover:bg-danger-solid text-white border-0 inline-flex items-center gap-1.5 shadow-sm shadow-danger-solid/30"
             >
               {destroyMutation.isPending ? (
                 <>

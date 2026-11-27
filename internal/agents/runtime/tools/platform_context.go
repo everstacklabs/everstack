@@ -1,6 +1,8 @@
 package tools
 
 import (
+	"context"
+
 	agentrt "github.com/everstacklabs/everstack/internal/agents/runtime"
 	"github.com/everstacklabs/everstack/internal/commands"
 	"github.com/everstacklabs/everstack/internal/query"
@@ -17,6 +19,10 @@ type PlatformToolContext struct {
 	UserID     string
 	Emitter    *agentrt.Emitter
 	SessionID  string
+	// ReserveAgentSlot takes an AGENTS plan slot before the tool creates an
+	// agent. The returned func confirms and releases it after the create.
+	// Nil means no cap applies (tests, self-contained use).
+	ReserveAgentSlot func(ctx context.Context) (done func(context.Context), err error)
 }
 
 // emitSystemBlock emits a system_block event through the emitter.

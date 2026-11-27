@@ -1,0 +1,51 @@
+# Reviewed gitleaks findings in the published tree.
+#
+# Every line is one finding a person has read and judged a test fixture or
+# placeholder, written as gitleaks prints its fingerprint (path:rule:line).
+# A new finding fails publication until someone reviews it and adds it here.
+
+# apps/admin/src/components/gateway/bots/bot-catalog.test.ts: test fixture
+apps/admin/src/components/gateway/bots/bot-catalog.test.ts:generic-api-key:15
+
+# apps/admin/src/components/gateway/bots/bots-panel.test.tsx: test fixture
+apps/admin/src/components/gateway/bots/bots-panel.test.tsx:generic-api-key:17
+
+# apps/admin/src/hooks/gateway/use-interop.ts: query key constants, not a secret
+apps/admin/src/hooks/gateway/use-interop.ts:generic-api-key:76
+apps/admin/src/hooks/gateway/use-interop.ts:generic-api-key:77
+apps/admin/src/hooks/gateway/use-interop.ts:generic-api-key:78
+apps/admin/src/hooks/gateway/use-interop.ts:generic-api-key:88
+
+# apps/admin/src/lib/first-request.test.ts: test fixture
+apps/admin/src/lib/first-request.test.ts:generic-api-key:302
+
+# apps/admin/src/lib/posthog.persistence.test.ts: test fixture
+apps/admin/src/lib/posthog.persistence.test.ts:generic-api-key:10
+
+
+
+
+
+# examples/quickstart/compose.yaml: documented development-only hash secret for the local quickstart
+examples/quickstart/compose.yaml:generic-api-key:34
+
+# internal/api/grpc/gateway/v1/upgrade_callback_secret_test.go: test fixture
+internal/api/grpc/gateway/v1/upgrade_callback_secret_test.go:generic-api-key:14
+
+# internal/api/v1_openai_bearer_test.go: test fixture
+internal/api/v1_openai_bearer_test.go:generic-api-key:29
+internal/api/v1_openai_bearer_test.go:generic-api-key:31
+internal/api/v1_openai_bearer_test.go:generic-api-key:247
+internal/api/v1_openai_bearer_test.go:generic-api-key:248
+
+
+# internal/services/config/config.go: environment variable name, not a value
+internal/services/config/config.go:generic-api-key:425
+
+
+
+# internal/api/grpc/providers/v1/key_ownership_test.go: made-up "sk-attacker" key in a tenant-ownership test
+internal/api/grpc/providers/v1/key_ownership_test.go:generic-api-key:76
+
+# internal/commands/handlers/provider/provider_command_handler_test.go: made-up "sk-attacker" key in a tenant-ownership test
+internal/commands/handlers/provider/provider_command_handler_test.go:generic-api-key:553

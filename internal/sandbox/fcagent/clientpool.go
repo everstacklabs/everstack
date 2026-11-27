@@ -34,7 +34,7 @@ func NewClientPool(cfg Config) (*Discovery, *LoadBalancer, error) {
 		cfg.DialTimeout = 5 * time.Second
 	}
 
-	dialOpts, err := buildDialOptions(cfg.TLS)
+	dialOpts, err := buildDialOptions(cfg.TLS, resolveAuthToken(cfg.AuthToken))
 	if err != nil {
 		return nil, nil, fmt.Errorf("fcagent: tls: %w", err)
 	}

@@ -239,7 +239,7 @@ export function RunGrid({ focus = 'dataset' }: RunGridProps = {}) {
                         <button
                             type="button"
                             onClick={stopGrid}
-                            className="inline-flex items-center gap-1 rounded border border-rose-400/50 bg-rose-500/10 px-2 py-1 text-xs text-rose-300 transition-colors hover:text-rose-200"
+                            className="inline-flex items-center gap-1 rounded border border-danger-border bg-danger-surface px-2 py-1 text-xs text-danger transition-colors"
                         >
                             <Square className="h-3 w-3" />
                             Stop
@@ -487,7 +487,7 @@ function SummaryView({
                                     <td className="px-4 py-3 text-xs text-white/60 light:text-black/60">
                                         {done.length}/{rows.length} done
                                         {failed.length > 0 && (
-                                            <span className="ml-2 text-rose-300">{failed.length} fail</span>
+                                            <span className="ml-2 text-danger">{failed.length} fail</span>
                                         )}
                                     </td>
                                     <td className="px-4 py-3 text-xs text-white/60 light:text-black/60">
@@ -602,7 +602,7 @@ function GridView({
                                             event.stopPropagation()
                                             removeRow(row.id)
                                         }}
-                                        className="pt-1 text-white/0 transition-colors group-hover:text-white/35 hover:!text-rose-300 light:text-black/0 light:group-hover:text-black/35"
+                                        className="pt-1 text-white/0 transition-colors group-hover:text-white/35 hover:!text-danger light:text-black/0 light:group-hover:text-black/35"
                                         aria-label="Remove row"
                                     >
                                         <X className="h-3 w-3" />
@@ -699,7 +699,7 @@ function FailureItem({
                     {taskLabel(entry.variantIndex)}
                 </span>
                 <span className="text-white/65 light:text-black/65">Row {entry.rowIndex + 1}</span>
-                <span className="ml-auto text-rose-300">
+                <span className="ml-auto text-danger">
                     {entry.cell.status === 'error' ? 'Error' : 'Failed score'}
                 </span>
             </div>
@@ -805,7 +805,7 @@ function DiffOutput({ cell }: { cell: CellState }) {
         return <span className="text-xs text-brand-secondary-300">Running</span>
     }
     if (cell.status === 'error') {
-        return <span className="text-xs text-rose-300">{cell.error ?? 'Error'}</span>
+        return <span className="text-xs text-danger">{cell.error ?? 'Error'}</span>
     }
     if (cell.status === 'aborted') {
         return <span className="text-xs text-white/35 light:text-black/35">Stopped</span>
@@ -1253,10 +1253,10 @@ function TracePanel({
                 <DrawerSectionTitle icon={ThumbsUp}>Annotations</DrawerSectionTitle>
                 <div className="text-xs text-white/45 light:text-black/45">Rate this span&apos;s output quality</div>
                 <div className="flex items-center gap-2">
-                    <button type="button" className="text-white/45 hover:text-emerald-300">
+                    <button type="button" className="text-white/45 hover:text-success">
                         <ThumbsUp className="h-3.5 w-3.5" />
                     </button>
-                    <button type="button" className="text-white/45 hover:text-rose-300">
+                    <button type="button" className="text-white/45 hover:text-danger">
                         <ThumbsDown className="h-3.5 w-3.5" />
                     </button>
                 </div>
@@ -1432,7 +1432,6 @@ function WaterfallSpanRow({
             <div
                 className="flex min-w-0 items-center gap-1.5"
                 style={{ paddingLeft: Math.min(row.depth * 12, 48) }}
-                title={config.subtitle ? `${config.title} · ${config.subtitle}` : config.title}
             >
                 <span
                     className="h-2 w-2 shrink-0 rounded-full"
@@ -1461,7 +1460,7 @@ function WaterfallSpanRow({
                     title={`${categoryLabels[config.category]} · ${formatTraceDuration(row.durationNs)}`}
                 />
             </div>
-            <span className={errored ? 'text-right text-[10px] text-rose-300' : 'text-right text-[10px] text-white/35 light:text-black/35'}>
+            <span className={errored ? 'text-right text-[10px] text-danger' : 'text-right text-[10px] text-white/35 light:text-black/35'}>
                 {formatTraceDuration(row.durationNs)}
             </span>
         </div>
@@ -1591,7 +1590,7 @@ function OutputBlock({ cell }: { cell: CellState }) {
         return <div className="text-xs text-brand-secondary-300">Running</div>
     }
     if (cell.status === 'error') {
-        return <div className="text-xs text-rose-300">{cell.error ?? 'Error'}</div>
+        return <div className="text-xs text-danger">{cell.error ?? 'Error'}</div>
     }
     if (cell.status === 'aborted') {
         return <div className="text-xs text-white/35 light:text-black/35">Stopped</div>
@@ -1610,7 +1609,7 @@ function CellMetricLine({ cell, spans }: { cell: CellState; spans: Span[] }) {
             <span>{formatDuration(cell.durationMs)}</span>
             <span>{spans.length || (cell.status === 'done' ? 2 : 0)} spans</span>
             {scoreEntries(cell.scores).map(([name, value]) => (
-                <span key={name} className={scoreFailed(value) ? 'text-rose-300' : 'text-emerald-300'}>
+                <span key={name} className={scoreFailed(value) ? 'text-danger' : 'text-success'}>
                     {name}: {String(value)}
                 </span>
             ))}
@@ -1662,7 +1661,7 @@ function CellView({ rowId, variant }: { rowId: string; variant: PlaygroundVarian
     }
 
     if (cell.status === 'error') {
-        return <span className="text-xs text-rose-300">{cell.error ?? 'Error'}</span>
+        return <span className="text-xs text-danger">{cell.error ?? 'Error'}</span>
     }
 
     if (cell.status === 'aborted') {
@@ -1704,16 +1703,14 @@ function ScoreMarks({ scores }: { scores: CellState['scores'] }) {
                 const pass = scorePassed(value)
                 const fail = scoreFailed(value)
                 const label = typeof value === 'number' ? value.toFixed(2) : String(value)
-                const reason = scores?.[`${name}_reason`]
                 return (
                     <span
                         key={name}
-                        title={typeof reason === 'string' ? reason : undefined}
                         className={
                             pass
-                                ? 'text-emerald-300'
+                                ? 'text-success'
                                 : fail
-                                  ? 'text-rose-300'
+                                  ? 'text-danger'
                                   : hasPositiveScore({ status: 'done', text: '', scores })
                                     ? 'text-brand-secondary-200'
                                     : 'text-white/45 light:text-black/45'

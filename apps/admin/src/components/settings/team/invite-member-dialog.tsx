@@ -70,13 +70,13 @@ export function InviteMemberDialog({
         </DialogHeader>
 
         {upgradeMessage && (
-          <div className="rounded-md border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-300 light:text-amber-700">
+          <div className="rounded-md border border-warning-border bg-warning-surface p-3 text-sm text-warning">
             {upgradeMessage}
           </div>
         )}
 
         {inviteMutation.error && (
-          <div className="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300 light:text-red-600">
+          <div className="rounded-md border border-danger-border bg-danger-surface p-3 text-sm text-danger">
             {(inviteMutation.error as Error).message}
           </div>
         )}

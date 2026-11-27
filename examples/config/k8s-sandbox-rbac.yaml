@@ -1,0 +1,160 @@
+# Kubernetes RBAC for Everstack Sandbox Backend
+#
+# This manifest creates the namespace, ServiceAccount, Role, and RoleBinding
+# needed for the gateway to manage sandbox Pods and NetworkPolicies.
+#
+# Usage:
+#   kubectl apply -f examples/config/k8s-sandbox-rbac.yaml
+#
+# If running the gateway outside the cluster (development), configure your
+# kubeconfig to use a context with these permissions.
+#
+# If running the gateway as a K8s Deployment, set the pod's serviceAccountName
+# to "everstack-sandbox-manager" in the everstack-sandboxes namespace, or use
+# the ClusterRoleBinding variant below.
+
+---
+# 1. Namespace for sandbox pods
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: everstack-sandboxes
+  labels:
+    app.kubernetes.io/managed-by: everstack
+    app.kubernetes.io/component: sandbox
+
+---
+# 2. ServiceAccount for the gateway process
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: everstack-sandbox-manager
+  namespace: everstack-sandboxes
+  labels:
+    app.kubernetes.io/managed-by: everstack
+
+---
+# 3. Role with minimum required permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: everstack-sandbox-manager
+  namespace: everstack-sandboxes
+  labels:
+    app.kubernetes.io/managed-by: everstack
+rules:
+  # Pod lifecycle (create, get, list, watch, delete)
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+
+  # Exec into pods (for command execution, file I/O, shell)
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+
+  # Port-forward to pods. Only needed for the out-of-cluster browser-pool path
+  # (explicit kubeconfig); in-cluster the pool dials the browser pod IP directly.
+  - apiGroups: [""]
+    resources: ["pods/portforward"]
+    verbs: ["create", "get"]
+
+  # Network policies (for deny/whitelist network modes)
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["create", "get", "list", "delete"]
+
+  # Namespace read (for health checks)
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get"]
+
+---
+# 4. Bind the Role to the ServiceAccount
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: everstack-sandbox-manager
+  namespace: everstack-sandboxes
+  labels:
+    app.kubernetes.io/managed-by: everstack
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: everstack-sandbox-manager
+subjects:
+  - kind: ServiceAccount
+    name: everstack-sandbox-manager
+    namespace: everstack-sandboxes
+
+---
+# 5. (Optional) If the gateway runs in a DIFFERENT namespace (e.g., "everstack"),
+#    use a ClusterRoleBinding instead. Uncomment and adjust as needed.
+#
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: ClusterRole
+# metadata:
+#   name: everstack-sandbox-manager
+# rules:
+#   - apiGroups: [""]
+#     resources: ["pods", "pods/exec", "namespaces"]
+#     verbs: ["create", "get", "list", "watch", "delete"]
+#   - apiGroups: ["networking.k8s.io"]
+#     resources: ["networkpolicies"]
+#     verbs: ["create", "get", "list", "delete"]
+#   - apiGroups: ["metrics.k8s.io"]
+#     resources: ["pods"]
+#     verbs: ["get", "list"]
+#
+# ---
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: ClusterRoleBinding
+# metadata:
+#   name: everstack-sandbox-manager
+# roleRef:
+#   apiGroup: rbac.authorization.k8s.io
+#   kind: ClusterRole
+#   name: everstack-sandbox-manager
+# subjects:
+#   - kind: ServiceAccount
+#     name: everstack-gateway
+#     namespace: everstack  # namespace where the gateway runs
+
+---
+# 6. (Optional) ResourceQuota to limit sandbox resource consumption
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: sandbox-limits
+  namespace: everstack-sandboxes
+  labels:
+    app.kubernetes.io/managed-by: everstack
+spec:
+  hard:
+    pods: "50"
+    requests.cpu: "25"
+    requests.memory: "25Gi"
+    limits.cpu: "50"
+    limits.memory: "50Gi"
+
+---
+# 7. (Optional) LimitRange to set defaults for sandbox pods
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: sandbox-defaults
+  namespace: everstack-sandboxes
+  labels:
+    app.kubernetes.io/managed-by: everstack
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: "1"
+        memory: "512Mi"
+      defaultRequest:
+        cpu: "500m"
+        memory: "256Mi"
+      max:
+        cpu: "4"
+        memory: "4Gi"

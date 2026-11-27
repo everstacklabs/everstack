@@ -11,6 +11,7 @@ import (
 	"github.com/coder/websocket"
 
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/everstacklabs/everstack/internal/sandbox"
 	"github.com/gorilla/mux"
 )
 
@@ -69,6 +70,11 @@ func (s *Server) HandleSandboxShell(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"session_id is required"}`, http.StatusBadRequest)
 		return
 	}
+	tenantID, scoped, err := s.prepareShellLookup(r)
+	if err != nil {
+		writeShellAuthenticationRequired(w)
+		return
+	}
 
 	if s.sandboxMgr == nil {
 		http.Error(w, `{"error":"sandbox feature is not enabled"}`, http.StatusServiceUnavailable)
@@ -79,21 +85,19 @@ func (s *Server) HandleSandboxShell(w http.ResponseWriter, r *http.Request) {
 	// the in-memory cache is empty for sandboxes this pod didn't directly
 	// create — fall back to the DB so the shell stays reachable across
 	// rollouts. The actual VM lives on fcagent regardless.
-	inst, ok := s.sandboxMgr.GetInstance(sessionID)
+	inst, ok := s.lookupShellInstanceBySession(r.Context(), sessionID, tenantID, scoped)
 	if !ok {
-		dbCtx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
-		dbInst, dbErr := s.sandboxMgr.LookupInstanceBySession(dbCtx, sessionID)
-		cancel()
-		if dbErr != nil {
-			http.Error(w, `{"error":"no sandbox for this session"}`, http.StatusNotFound)
-			return
+		if scoped {
+			writeJSONError(w, http.StatusNotFound, "sandbox not found")
+		} else {
+			writeShellAuthenticationRequired(w)
 		}
-		inst = dbInst
+		return
 	}
 
 	// Authenticate: same-origin (admin UI) or SSH key signature (CLI)
 	if err := s.authenticateShellRequest(r, inst.ID, inst.Config.TenantID); err != nil {
-		http.Error(w, `{"error":"unauthorized: `+err.Error()+`"}`, http.StatusUnauthorized)
+		writeShellAuthenticationRequired(w)
 		return
 	}
 
@@ -118,30 +122,30 @@ func (s *Server) HandleSandboxShellByIDOrName(w http.ResponseWriter, r *http.Req
 		http.Error(w, `{"error":"sandbox_id is required"}`, http.StatusBadRequest)
 		return
 	}
+	tenantID, scoped, err := s.prepareShellLookup(r)
+	if err != nil {
+		writeShellAuthenticationRequired(w)
+		return
+	}
 
 	if s.sandboxMgr == nil {
 		http.Error(w, `{"error":"sandbox feature is not enabled"}`, http.StatusServiceUnavailable)
 		return
 	}
 
-	inst, ok := s.sandboxMgr.GetBySandboxIDOrName(identifier)
+	inst, ok := s.lookupShellInstanceByIDOrName(r.Context(), identifier, tenantID, scoped)
 	if !ok {
-		// Pod-restart fallback: in-memory cache is empty but the row
-		// exists in the DB. Pull the row's session_id and route through
-		// the same DB-backed path as the by-session handler.
-		dbCtx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
-		dbInst, dbErr := s.sandboxMgr.LookupInstanceByIDFromDB(dbCtx, identifier)
-		cancel()
-		if dbErr != nil {
-			http.Error(w, `{"error":"sandbox not found"}`, http.StatusNotFound)
-			return
+		if scoped {
+			writeJSONError(w, http.StatusNotFound, "sandbox not found")
+		} else {
+			writeShellAuthenticationRequired(w)
 		}
-		inst = dbInst
+		return
 	}
 
 	// Authenticate: same-origin (admin UI) or SSH key signature (CLI)
 	if err := s.authenticateShellRequest(r, inst.ID, inst.Config.TenantID); err != nil {
-		http.Error(w, `{"error":"unauthorized: `+err.Error()+`"}`, http.StatusUnauthorized)
+		writeShellAuthenticationRequired(w)
 		return
 	}
 
@@ -152,6 +156,42 @@ func (s *Server) HandleSandboxShellByIDOrName(w http.ResponseWriter, r *http.Req
 	}
 
 	s.openShellWebSocket(w, r, sessionID, inst.ID)
+}
+
+func (s *Server) lookupShellInstanceBySession(ctx context.Context, sessionID, tenantID string, scoped bool) (*sandbox.Instance, bool) {
+	if inst, ok := s.sandboxMgr.GetInstance(sessionID); ok && inst != nil {
+		if !scoped || inst.Config.TenantID == tenantID {
+			return inst, true
+		}
+		return nil, false
+	}
+	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	inst, err := s.sandboxMgr.LookupInstanceBySession(dbCtx, sessionID)
+	if err != nil || inst == nil || (scoped && inst.Config.TenantID != tenantID) {
+		return nil, false
+	}
+	return inst, true
+}
+
+func (s *Server) lookupShellInstanceByIDOrName(ctx context.Context, identifier, tenantID string, scoped bool) (*sandbox.Instance, bool) {
+	if scoped {
+		scope := sandbox.TenantInstanceScope{TenantID: tenantID}
+		if inst, ok := s.sandboxMgr.GetBySandboxIDOrNameInScope(identifier, scope); ok && inst != nil {
+			return inst, true
+		}
+		dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
+		inst, err := s.sandboxMgr.LookupInstanceByIDFromDBInScope(dbCtx, identifier, scope)
+		return inst, err == nil && inst != nil
+	}
+	if inst, ok := s.sandboxMgr.GetBySandboxIDOrName(identifier); ok && inst != nil {
+		return inst, true
+	}
+	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	inst, err := s.sandboxMgr.LookupInstanceByIDFromDB(dbCtx, identifier)
+	return inst, err == nil && inst != nil
 }
 
 // openShellWebSocket upgrades the connection to a WebSocket and bridges it to

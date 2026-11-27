@@ -61,7 +61,7 @@ function ReadOnlyStudioNodeComponent({ data, selected }: NodeProps<StudioNode>) 
                         </div>
                     </div>
                     {nodeData.isConfigured && (
-                        <div className="h-2 w-2 rounded-full bg-emerald-500" title="Configured" />
+                        <div className="h-2 w-2 rounded-full bg-success-solid" title="Configured" />
                     )}
                 </div>
 

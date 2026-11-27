@@ -29,7 +29,7 @@ func (s *Server) StopSandbox(ctx context.Context, req *connect.Request[agentspb.
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrSandboxIDRequired)
 	}
 
-	result, err := sandboxcp.NewLifecycleService(s.lifecycleRepo, s.sandboxMgr).Stop(ctx, sandboxID)
+	result, err := s.lifecycleService().Stop(ctx, sandboxID)
 	if err != nil {
 		return nil, mapLifecycleError(err)
 	}
@@ -66,13 +66,14 @@ func (s *Server) ReviveSandbox(ctx context.Context, req *connect.Request[agentsp
 				sandboxID,
 				sandboxlc.DesireRunning,
 				s.sandboxMgr.ConcurrentSandboxLimit(cfg.TenantID),
+				s.sandboxMgr.ConcurrencyScope(ctx, cfg.TenantID),
 			); err != nil {
 				return nil, mapLifecycleError(err)
 			}
 		}
 	}
 
-	result, err := sandboxcp.NewLifecycleService(s.lifecycleRepo, s.sandboxMgr).Revive(ctx, sandboxID)
+	result, err := s.lifecycleService().Revive(ctx, sandboxID)
 	if err != nil {
 		return nil, mapLifecycleError(err)
 	}
@@ -93,7 +94,7 @@ func (s *Server) TerminateSandbox(ctx context.Context, req *connect.Request[agen
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrSandboxIDRequired)
 	}
 
-	result, err := sandboxcp.NewLifecycleService(s.lifecycleRepo, s.sandboxMgr).Terminate(ctx, sandboxID)
+	result, err := s.lifecycleService().Terminate(ctx, sandboxID)
 	if err != nil {
 		return nil, mapLifecycleError(err)
 	}
@@ -122,9 +123,11 @@ func (s *Server) HandleRestoreFromArchive(w http.ResponseWriter, r *http.Request
 		writeJSONError(w, http.StatusBadRequest, "sandbox_id is required")
 		return
 	}
-	if !s.requireSandboxOwnershipHTTP(w, r, sandboxID) {
+	ownedInst, ok := s.ownedSandboxHTTP(w, r, sandboxID)
+	if !ok {
 		return
 	}
+	sandboxID = ownedInst.ID
 	if !s.requireSandboxBillingHTTP(w, r) {
 		return
 	}
@@ -140,6 +143,7 @@ func (s *Server) HandleRestoreFromArchive(w http.ResponseWriter, r *http.Request
 		sandboxID,
 		sandboxlc.DesireRunning,
 		s.sandboxMgr.ConcurrentSandboxLimit(cfg.TenantID),
+		s.sandboxMgr.ConcurrencyScope(ctx, cfg.TenantID),
 	); err != nil {
 		if errors.Is(err, sandboxlc.ErrNotFound) {
 			writeJSONError(w, http.StatusNotFound, "sandbox not found")
@@ -225,9 +229,11 @@ func (s *Server) HandleRecoverSandbox(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "sandbox_id is required")
 		return
 	}
-	if !s.requireSandboxOwnershipHTTP(w, r, sandboxID) {
+	ownedInst, ok := s.ownedSandboxHTTP(w, r, sandboxID)
+	if !ok {
 		return
 	}
+	sandboxID = ownedInst.ID
 
 	ctx := r.Context()
 	before, err := s.lifecycleRepo.GetByID(ctx, sandboxID)
@@ -273,7 +279,8 @@ func mapLifecycleError(err error) error {
 		return connect.NewError(connect.CodeNotFound, err)
 	case errors.Is(err, sandbox.ErrLifecycleTransitionRejected):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
-	case errors.Is(err, sandbox.ErrSandboxBillingRequired):
+	case errors.Is(err, sandbox.ErrTenantPaused),
+		errors.Is(err, sandbox.ErrSandboxBillingRequired):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
 	case errors.Is(err, sandbox.ErrConcurrentSandboxLimit):
 		return connect.NewError(connect.CodeResourceExhausted, err)
@@ -307,4 +314,20 @@ func lifecycleInstanceToProto(inst *sandboxcp.LifecycleInstance) *agentspb.Sandb
 		pb.ExpiresAt = timestamppb.New(inst.ExpiresAt)
 	}
 	return pb
+}
+
+// lifecycleService builds the sandbox lifecycle service without handing it a
+// typed nil. A nil *Repository (no lifecycle reconciler) or nil manager stored
+// in an interface is not == nil, so the service would call a method on it and
+// panic instead of falling back or reporting the service as not configured.
+func (s *Server) lifecycleService() *sandboxcp.LifecycleService {
+	var repo sandboxcp.LifecycleRepository
+	if s.lifecycleRepo != nil {
+		repo = s.lifecycleRepo
+	}
+	var manager sandboxcp.LifecycleManager
+	if s.sandboxMgr != nil {
+		manager = s.sandboxMgr
+	}
+	return sandboxcp.NewLifecycleService(repo, manager)
 }

@@ -28,3 +28,4 @@ parameters:
     display_name: "Verbosity"
     type: "enum"
     options: ["low","medium","high"]
+notes: "Deprecated by OpenAI on 2026-10-01; shuts down 2027-04-01. Migrate to gpt-6-sol."

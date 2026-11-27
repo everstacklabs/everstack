@@ -1,0 +1,25 @@
+services:
+  # proxy-disabled-tls:
+  #   image: "caddy:latest"
+  #   volumes:
+  #     - "./disabled-tls.Caddyfile:/etc/caddy/Caddyfile:ro"
+  #   ports:
+  #     - "80:80"
+  
+  everstack-external-tls:
+    image: "caddy:latest"
+    volumes:
+      - "./external-tls.Caddyfile:/etc/caddy/Caddyfile:ro"
+      - "./certs/cert.pem:/etc/certs/cert.pem:ro"
+      - "./certs/key.pem:/etc/certs/key.pem:ro"
+    ports:
+      - "443:443"
+
+  # proxy-enabled-tls:
+  #   image: "caddy:latest"
+  #   volumes:
+  #     - "./enabled-tls.Caddyfile:/etc/caddy/Caddyfile:ro"
+  #     - "./selfsigned.crt:/etc/certs/selfsigned.crt:ro"
+  #     - "./selfsigned.key:/etc/certs/selfsigned.key:ro"
+  #   ports:
+  #     - "443:443"

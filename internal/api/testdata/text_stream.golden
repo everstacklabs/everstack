@@ -1,0 +1,6 @@
+data: {"choices":[{"delta":{"content":"hello","role":"assistant"},"finish_reason":null,"index":0}],"created":1700000000,"id":"chat_fixed","model":"fixed","object":"chat.completion.chunk"}
+
+data: {"choices":[{"delta":{"content":" world"},"finish_reason":"stop","index":0}],"created":1700000000,"id":"chat_fixed","model":"fixed","object":"chat.completion.chunk","usage":{"completion_tokens":2,"prompt_tokens":3,"total_tokens":5}}
+
+data: [DONE]
+

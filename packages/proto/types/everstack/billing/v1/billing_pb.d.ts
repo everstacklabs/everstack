@@ -323,6 +323,24 @@ export declare type GetSubscriptionResponse = Message<"everstack.billing.v1.GetS
    * @generated from field: optional everstack.billing.v1.Subscription subscription = 1;
    */
   subscription?: Subscription;
+
+  /**
+   * True when the organization has a Stripe customer, so
+   * CreateBillingPortalSession can open the portal (payment methods and
+   * invoices) even without a subscription, e.g. after a credit top-up.
+   *
+   * @generated from field: bool has_billing_portal = 2;
+   */
+  hasBillingPortal: boolean;
+
+  /**
+   * Everything one plan summary needs, computed server side. Set whenever
+   * subscription is set. Members without org:manage_billing get the
+   * read-only subset (see SubscriptionSummary).
+   *
+   * @generated from field: optional everstack.billing.v1.SubscriptionSummary summary = 3;
+   */
+  summary?: SubscriptionSummary;
 };
 
 /**
@@ -333,6 +351,24 @@ export declare type GetSubscriptionResponseJson = {
    * @generated from field: optional everstack.billing.v1.Subscription subscription = 1;
    */
   subscription?: SubscriptionJson;
+
+  /**
+   * True when the organization has a Stripe customer, so
+   * CreateBillingPortalSession can open the portal (payment methods and
+   * invoices) even without a subscription, e.g. after a credit top-up.
+   *
+   * @generated from field: bool has_billing_portal = 2;
+   */
+  hasBillingPortal?: boolean;
+
+  /**
+   * Everything one plan summary needs, computed server side. Set whenever
+   * subscription is set. Members without org:manage_billing get the
+   * read-only subset (see SubscriptionSummary).
+   *
+   * @generated from field: optional everstack.billing.v1.SubscriptionSummary summary = 3;
+   */
+  summary?: SubscriptionSummaryJson;
 };
 
 /**
@@ -707,6 +743,17 @@ export declare type CancelSubscriptionRequest = Message<"everstack.billing.v1.Ca
    * @generated from field: string organization_id = 1;
    */
   organizationId: string;
+
+  /**
+   * The managed instances to keep running on Starter when the organization
+   * runs more than Starter allows (PreviewPlanChange with
+   * PLAN_CHOICE_STARTER reports keep_choice_required and max_keep); at most
+   * max_keep ids of its own slot-holding instances. Empty keeps the most
+   * recently active. Every other instance pauses at the end of the period.
+   *
+   * @generated from field: repeated string keep_instance_ids = 2;
+   */
+  keepInstanceIds: string[];
 };
 
 /**
@@ -719,6 +766,17 @@ export declare type CancelSubscriptionRequestJson = {
    * @generated from field: string organization_id = 1;
    */
   organizationId?: string;
+
+  /**
+   * The managed instances to keep running on Starter when the organization
+   * runs more than Starter allows (PreviewPlanChange with
+   * PLAN_CHOICE_STARTER reports keep_choice_required and max_keep); at most
+   * max_keep ids of its own slot-holding instances. Empty keeps the most
+   * recently active. Every other instance pauses at the end of the period.
+   *
+   * @generated from field: repeated string keep_instance_ids = 2;
+   */
+  keepInstanceIds?: string[];
 };
 
 /**
@@ -740,6 +798,25 @@ export declare type CancelSubscriptionResponse = Message<"everstack.billing.v1.C
    * @generated from field: everstack.billing.v1.Subscription subscription = 2;
    */
   subscription?: Subscription;
+
+  /**
+   * @generated from field: everstack.billing.v1.SubscriptionSummary summary = 3;
+   */
+  summary?: SubscriptionSummary;
+
+  /**
+   * What happens at the period end: the instances that keep running on
+   * Starter and the ones that pause. Without keep_instance_ids the most
+   * recently active are kept.
+   *
+   * @generated from field: repeated everstack.billing.v1.PlanChangeInstance kept_instances = 4;
+   */
+  keptInstances: PlanChangeInstance[];
+
+  /**
+   * @generated from field: repeated everstack.billing.v1.PlanChangeInstance paused_instances = 5;
+   */
+  pausedInstances: PlanChangeInstance[];
 };
 
 /**
@@ -755,6 +832,25 @@ export declare type CancelSubscriptionResponseJson = {
    * @generated from field: everstack.billing.v1.Subscription subscription = 2;
    */
   subscription?: SubscriptionJson;
+
+  /**
+   * @generated from field: everstack.billing.v1.SubscriptionSummary summary = 3;
+   */
+  summary?: SubscriptionSummaryJson;
+
+  /**
+   * What happens at the period end: the instances that keep running on
+   * Starter and the ones that pause. Without keep_instance_ids the most
+   * recently active are kept.
+   *
+   * @generated from field: repeated everstack.billing.v1.PlanChangeInstance kept_instances = 4;
+   */
+  keptInstances?: PlanChangeInstanceJson[];
+
+  /**
+   * @generated from field: repeated everstack.billing.v1.PlanChangeInstance paused_instances = 5;
+   */
+  pausedInstances?: PlanChangeInstanceJson[];
 };
 
 /**
@@ -806,6 +902,11 @@ export declare type ResumeSubscriptionResponse = Message<"everstack.billing.v1.R
    * @generated from field: everstack.billing.v1.Subscription subscription = 2;
    */
   subscription?: Subscription;
+
+  /**
+   * @generated from field: everstack.billing.v1.SubscriptionSummary summary = 3;
+   */
+  summary?: SubscriptionSummary;
 };
 
 /**
@@ -821,6 +922,11 @@ export declare type ResumeSubscriptionResponseJson = {
    * @generated from field: everstack.billing.v1.Subscription subscription = 2;
    */
   subscription?: SubscriptionJson;
+
+  /**
+   * @generated from field: everstack.billing.v1.SubscriptionSummary summary = 3;
+   */
+  summary?: SubscriptionSummaryJson;
 };
 
 /**
@@ -986,6 +1092,11 @@ export declare type UsageMetric = Message<"everstack.billing.v1.UsageMetric"> & 
    * @generated from field: string unit = 4;
    */
   unit: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.UsageMetering metering = 5;
+   */
+  metering: UsageMetering;
 };
 
 /**
@@ -1015,6 +1126,11 @@ export declare type UsageMetricJson = {
    * @generated from field: string unit = 4;
    */
   unit?: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.UsageMetering metering = 5;
+   */
+  metering?: UsageMeteringJson;
 };
 
 /**
@@ -1145,6 +1261,17 @@ export declare type GetUsageResponse = Message<"everstack.billing.v1.GetUsageRes
    * @generated from field: bool sandbox_billing_active = 20;
    */
   sandboxBillingActive: boolean;
+
+  /**
+   * Names of the top-level usage fields above that nothing reports for this
+   * organization yet, spelled as their proto field names (for example
+   * "cache_savings_micros", "network_rx_bytes"). Clients render these as not
+   * metered instead of 0. Empty from servers older than this field, which
+   * means render every field as before.
+   *
+   * @generated from field: repeated string unmetered_fields = 21;
+   */
+  unmeteredFields: string[];
 };
 
 /**
@@ -1269,6 +1396,17 @@ export declare type GetUsageResponseJson = {
    * @generated from field: bool sandbox_billing_active = 20;
    */
   sandboxBillingActive?: boolean;
+
+  /**
+   * Names of the top-level usage fields above that nothing reports for this
+   * organization yet, spelled as their proto field names (for example
+   * "cache_savings_micros", "network_rx_bytes"). Clients render these as not
+   * metered instead of 0. Empty from servers older than this field, which
+   * means render every field as before.
+   *
+   * @generated from field: repeated string unmetered_fields = 21;
+   */
+  unmeteredFields?: string[];
 };
 
 /**
@@ -3183,6 +3321,35 @@ export declare type SpendLimit = Message<"everstack.billing.v1.SpendLimit"> & {
    * @generated from field: google.protobuf.Timestamp updated_at = 11;
    */
   updatedAt?: Timestamp;
+
+  /**
+   * The gateway API key this limit applies to. Unset on organization and
+   * instance limits.
+   *
+   * @generated from field: optional string api_key_id = 12;
+   */
+  apiKeyId?: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.SpendBasis basis = 13;
+   */
+  basis: SpendBasis;
+
+  /**
+   * Percentages of the limit at which owners and admins are emailed. Fixed
+   * at 80 and 100 for now.
+   *
+   * @generated from field: repeated int32 notify_percents = 14;
+   */
+  notifyPercents: number[];
+
+  /**
+   * Display name of the API key, as given when the limit was set. Unset on
+   * organization and instance limits.
+   *
+   * @generated from field: optional string api_key_name = 15;
+   */
+  apiKeyName?: string;
 };
 
 /**
@@ -3247,6 +3414,35 @@ export declare type SpendLimitJson = {
    * @generated from field: google.protobuf.Timestamp updated_at = 11;
    */
   updatedAt?: TimestampJson;
+
+  /**
+   * The gateway API key this limit applies to. Unset on organization and
+   * instance limits.
+   *
+   * @generated from field: optional string api_key_id = 12;
+   */
+  apiKeyId?: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.SpendBasis basis = 13;
+   */
+  basis?: SpendBasisJson;
+
+  /**
+   * Percentages of the limit at which owners and admins are emailed. Fixed
+   * at 80 and 100 for now.
+   *
+   * @generated from field: repeated int32 notify_percents = 14;
+   */
+  notifyPercents?: number[];
+
+  /**
+   * Display name of the API key, as given when the limit was set. Unset on
+   * organization and instance limits.
+   *
+   * @generated from field: optional string api_key_name = 15;
+   */
+  apiKeyName?: string;
 };
 
 /**
@@ -3371,6 +3567,41 @@ export declare type SetSpendLimitRequest = Message<"everstack.billing.v1.SetSpen
    * @generated from field: bool enabled = 7;
    */
   enabled: boolean;
+
+  /**
+   * Scope the limit to one gateway API key of this organization. Requires
+   * basis ALL_INFERENCE, limit_type ESTIMATED_COST and no instance_id. The
+   * key must belong to this organization: registered by the gateway when it
+   * was created, or seen in this organization's traffic.
+   *
+   * @generated from field: optional string api_key_id = 8;
+   */
+  apiKeyId?: string;
+
+  /**
+   * UNSPECIFIED keeps an existing limit's basis, or creates PLATFORM_CREDIT.
+   * An existing PLATFORM_CREDIT limit is converted by sending ALL_INFERENCE.
+   *
+   * @generated from field: everstack.billing.v1.SpendBasis basis = 9;
+   */
+  basis: SpendBasis;
+
+  /**
+   * Display name of the API key, used in emails. Required when a key limit
+   * is created; kept when omitted on an update.
+   *
+   * @generated from field: optional string api_key_name = 10;
+   */
+  apiKeyName?: string;
+
+  /**
+   * The user who created the API key, emailed with owners and admins when
+   * the key's limit is reached. Must be a member of the organization. Kept
+   * when omitted on an update. Unset for keys with no creator.
+   *
+   * @generated from field: optional string api_key_creator_user_id = 11;
+   */
+  apiKeyCreatorUserId?: string;
 };
 
 /**
@@ -3413,6 +3644,41 @@ export declare type SetSpendLimitRequestJson = {
    * @generated from field: bool enabled = 7;
    */
   enabled?: boolean;
+
+  /**
+   * Scope the limit to one gateway API key of this organization. Requires
+   * basis ALL_INFERENCE, limit_type ESTIMATED_COST and no instance_id. The
+   * key must belong to this organization: registered by the gateway when it
+   * was created, or seen in this organization's traffic.
+   *
+   * @generated from field: optional string api_key_id = 8;
+   */
+  apiKeyId?: string;
+
+  /**
+   * UNSPECIFIED keeps an existing limit's basis, or creates PLATFORM_CREDIT.
+   * An existing PLATFORM_CREDIT limit is converted by sending ALL_INFERENCE.
+   *
+   * @generated from field: everstack.billing.v1.SpendBasis basis = 9;
+   */
+  basis?: SpendBasisJson;
+
+  /**
+   * Display name of the API key, used in emails. Required when a key limit
+   * is created; kept when omitted on an update.
+   *
+   * @generated from field: optional string api_key_name = 10;
+   */
+  apiKeyName?: string;
+
+  /**
+   * The user who created the API key, emailed with owners and admins when
+   * the key's limit is reached. Must be a member of the organization. Kept
+   * when omitted on an update. Unset for keys with no creator.
+   *
+   * @generated from field: optional string api_key_creator_user_id = 11;
+   */
+  apiKeyCreatorUserId?: string;
 };
 
 /**
@@ -3698,6 +3964,4902 @@ export declare type AdjustSeatsResponseJson = {
 export declare const AdjustSeatsResponseSchema: GenMessage<AdjustSeatsResponse, AdjustSeatsResponseJson>;
 
 /**
+ * @generated from message everstack.billing.v1.GetCreditBalanceRequest
+ */
+export declare type GetCreditBalanceRequest = Message<"everstack.billing.v1.GetCreditBalanceRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.GetCreditBalanceRequest
+ */
+export declare type GetCreditBalanceRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.GetCreditBalanceRequest.
+ * Use `create(GetCreditBalanceRequestSchema)` to create a new message.
+ */
+export declare const GetCreditBalanceRequestSchema: GenMessage<GetCreditBalanceRequest, GetCreditBalanceRequestJson>;
+
+/**
+ * CreditSpend is the net credit one resource consumed (debits minus refunds).
+ *
+ * @generated from message everstack.billing.v1.CreditSpend
+ */
+export declare type CreditSpend = Message<"everstack.billing.v1.CreditSpend"> & {
+  /**
+   * inference | sandbox | browser | extra_instance | processed_data | ...
+   *
+   * @generated from field: string resource_type = 1;
+   */
+  resourceType: string;
+
+  /**
+   * @generated from field: int64 spent_micros = 2;
+   */
+  spentMicros: bigint;
+};
+
+/**
+ * CreditSpend is the net credit one resource consumed (debits minus refunds).
+ *
+ * @generated from message everstack.billing.v1.CreditSpend
+ */
+export declare type CreditSpendJson = {
+  /**
+   * inference | sandbox | browser | extra_instance | processed_data | ...
+   *
+   * @generated from field: string resource_type = 1;
+   */
+  resourceType?: string;
+
+  /**
+   * @generated from field: int64 spent_micros = 2;
+   */
+  spentMicros?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.CreditSpend.
+ * Use `create(CreditSpendSchema)` to create a new message.
+ */
+export declare const CreditSpendSchema: GenMessage<CreditSpend, CreditSpendJson>;
+
+/**
+ * @generated from message everstack.billing.v1.GetCreditBalanceResponse
+ */
+export declare type GetCreditBalanceResponse = Message<"everstack.billing.v1.GetCreditBalanceResponse"> & {
+  /**
+   * Signed sum of every ledger entry. Can be negative.
+   *
+   * @generated from field: int64 balance_micros = 1;
+   */
+  balanceMicros: bigint;
+
+  /**
+   * Credit reserved by in-flight requests and not yet settled.
+   *
+   * @generated from field: int64 held_micros = 2;
+   */
+  heldMicros: bigint;
+
+  /**
+   * balance_micros - held_micros: what new usage can spend now.
+   *
+   * @generated from field: int64 available_micros = 3;
+   */
+  availableMicros: bigint;
+
+  /**
+   * @generated from field: everstack.billing.v1.CreditWalletState wallet_state = 4;
+   */
+  walletState: CreditWalletState;
+
+  /**
+   * When the ledger was read (database clock).
+   *
+   * @generated from field: google.protobuf.Timestamp as_of = 5;
+   */
+  asOf?: Timestamp;
+
+  /**
+   * Lifetime totals. balance = granted + purchased - spent - expired + adjusted.
+   *
+   * @generated from field: int64 granted_micros = 6;
+   */
+  grantedMicros: bigint;
+
+  /**
+   * @generated from field: int64 purchased_micros = 7;
+   */
+  purchasedMicros: bigint;
+
+  /**
+   * Net consumption: debits minus refunds, as a positive number.
+   *
+   * @generated from field: int64 spent_micros = 8;
+   */
+  spentMicros: bigint;
+
+  /**
+   * Granted credit that expired unused, as a positive number.
+   *
+   * @generated from field: int64 expired_micros = 9;
+   */
+  expiredMicros: bigint;
+
+  /**
+   * Net of every adjustment entry (signed).
+   *
+   * @generated from field: int64 adjusted_micros = 10;
+   */
+  adjustedMicros: bigint;
+
+  /**
+   * Lifetime spend per resource, largest first. Resources with no net
+   * spend are omitted.
+   *
+   * @generated from field: repeated everstack.billing.v1.CreditSpend spend_by_resource = 11;
+   */
+  spendByResource: CreditSpend[];
+
+  /**
+   * The one-time signup grant included in granted_micros (0 when none).
+   *
+   * @generated from field: int64 signup_grant_micros = 12;
+   */
+  signupGrantMicros: bigint;
+
+  /**
+   * Plan credit from the earlier subscription model (fee converted into
+   * period credit, resource_type "subscription"). Included in granted_micros.
+   *
+   * @generated from field: int64 plan_credit_granted_micros = 13;
+   */
+  planCreditGrantedMicros: bigint;
+
+  /**
+   * The part of plan_credit_granted_micros that expired, as a positive number.
+   * Included in expired_micros.
+   *
+   * @generated from field: int64 plan_credit_expired_micros = 14;
+   */
+  planCreditExpiredMicros: bigint;
+
+  /**
+   * Headline totals: granted_micros and expired_micros with expired plan
+   * credit netted out of both, so credit that is gone and was never part of
+   * the prepaid wallet does not inflate either figure. The identity
+   * balance = granted_current + purchased - spent - expired_current + adjusted
+   * still holds.
+   *
+   * @generated from field: int64 granted_current_micros = 15;
+   */
+  grantedCurrentMicros: bigint;
+
+  /**
+   * @generated from field: int64 expired_current_micros = 16;
+   */
+  expiredCurrentMicros: bigint;
+
+  /**
+   * When the signup grant's unspent remainder expires (30 days after it was
+   * granted). Unset when the org holds no signup grant or its grant predates
+   * the 30-day rule and never expires.
+   *
+   * @generated from field: google.protobuf.Timestamp signup_grant_expires_at = 17;
+   */
+  signupGrantExpiresAt?: Timestamp;
+};
+
+/**
+ * @generated from message everstack.billing.v1.GetCreditBalanceResponse
+ */
+export declare type GetCreditBalanceResponseJson = {
+  /**
+   * Signed sum of every ledger entry. Can be negative.
+   *
+   * @generated from field: int64 balance_micros = 1;
+   */
+  balanceMicros?: string;
+
+  /**
+   * Credit reserved by in-flight requests and not yet settled.
+   *
+   * @generated from field: int64 held_micros = 2;
+   */
+  heldMicros?: string;
+
+  /**
+   * balance_micros - held_micros: what new usage can spend now.
+   *
+   * @generated from field: int64 available_micros = 3;
+   */
+  availableMicros?: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.CreditWalletState wallet_state = 4;
+   */
+  walletState?: CreditWalletStateJson;
+
+  /**
+   * When the ledger was read (database clock).
+   *
+   * @generated from field: google.protobuf.Timestamp as_of = 5;
+   */
+  asOf?: TimestampJson;
+
+  /**
+   * Lifetime totals. balance = granted + purchased - spent - expired + adjusted.
+   *
+   * @generated from field: int64 granted_micros = 6;
+   */
+  grantedMicros?: string;
+
+  /**
+   * @generated from field: int64 purchased_micros = 7;
+   */
+  purchasedMicros?: string;
+
+  /**
+   * Net consumption: debits minus refunds, as a positive number.
+   *
+   * @generated from field: int64 spent_micros = 8;
+   */
+  spentMicros?: string;
+
+  /**
+   * Granted credit that expired unused, as a positive number.
+   *
+   * @generated from field: int64 expired_micros = 9;
+   */
+  expiredMicros?: string;
+
+  /**
+   * Net of every adjustment entry (signed).
+   *
+   * @generated from field: int64 adjusted_micros = 10;
+   */
+  adjustedMicros?: string;
+
+  /**
+   * Lifetime spend per resource, largest first. Resources with no net
+   * spend are omitted.
+   *
+   * @generated from field: repeated everstack.billing.v1.CreditSpend spend_by_resource = 11;
+   */
+  spendByResource?: CreditSpendJson[];
+
+  /**
+   * The one-time signup grant included in granted_micros (0 when none).
+   *
+   * @generated from field: int64 signup_grant_micros = 12;
+   */
+  signupGrantMicros?: string;
+
+  /**
+   * Plan credit from the earlier subscription model (fee converted into
+   * period credit, resource_type "subscription"). Included in granted_micros.
+   *
+   * @generated from field: int64 plan_credit_granted_micros = 13;
+   */
+  planCreditGrantedMicros?: string;
+
+  /**
+   * The part of plan_credit_granted_micros that expired, as a positive number.
+   * Included in expired_micros.
+   *
+   * @generated from field: int64 plan_credit_expired_micros = 14;
+   */
+  planCreditExpiredMicros?: string;
+
+  /**
+   * Headline totals: granted_micros and expired_micros with expired plan
+   * credit netted out of both, so credit that is gone and was never part of
+   * the prepaid wallet does not inflate either figure. The identity
+   * balance = granted_current + purchased - spent - expired_current + adjusted
+   * still holds.
+   *
+   * @generated from field: int64 granted_current_micros = 15;
+   */
+  grantedCurrentMicros?: string;
+
+  /**
+   * @generated from field: int64 expired_current_micros = 16;
+   */
+  expiredCurrentMicros?: string;
+
+  /**
+   * When the signup grant's unspent remainder expires (30 days after it was
+   * granted). Unset when the org holds no signup grant or its grant predates
+   * the 30-day rule and never expires.
+   *
+   * @generated from field: google.protobuf.Timestamp signup_grant_expires_at = 17;
+   */
+  signupGrantExpiresAt?: TimestampJson;
+};
+
+/**
+ * Describes the message everstack.billing.v1.GetCreditBalanceResponse.
+ * Use `create(GetCreditBalanceResponseSchema)` to create a new message.
+ */
+export declare const GetCreditBalanceResponseSchema: GenMessage<GetCreditBalanceResponse, GetCreditBalanceResponseJson>;
+
+/**
+ * @generated from message everstack.billing.v1.ListCreditLedgerRequest
+ */
+export declare type ListCreditLedgerRequest = Message<"everstack.billing.v1.ListCreditLedgerRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * 1 to 100; 0 means the default of 25.
+   *
+   * @generated from field: int32 page_size = 2;
+   */
+  pageSize: number;
+
+  /**
+   * Opaque token from a previous response's next_page_token.
+   *
+   * @generated from field: string page_token = 3;
+   */
+  pageToken: string;
+
+  /**
+   * Only these entry types. Empty means all.
+   *
+   * @generated from field: repeated everstack.billing.v1.CreditEntryType entry_types = 4;
+   */
+  entryTypes: CreditEntryType[];
+
+  /**
+   * Only these resource types (inference, sandbox, browser, ...). Empty means all.
+   *
+   * @generated from field: repeated string resource_types = 5;
+   */
+  resourceTypes: string[];
+
+  /**
+   * Inclusive lower bound on created_at.
+   *
+   * @generated from field: google.protobuf.Timestamp start_time = 6;
+   */
+  startTime?: Timestamp;
+
+  /**
+   * Exclusive upper bound on created_at.
+   *
+   * @generated from field: google.protobuf.Timestamp end_time = 7;
+   */
+  endTime?: Timestamp;
+};
+
+/**
+ * @generated from message everstack.billing.v1.ListCreditLedgerRequest
+ */
+export declare type ListCreditLedgerRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+
+  /**
+   * 1 to 100; 0 means the default of 25.
+   *
+   * @generated from field: int32 page_size = 2;
+   */
+  pageSize?: number;
+
+  /**
+   * Opaque token from a previous response's next_page_token.
+   *
+   * @generated from field: string page_token = 3;
+   */
+  pageToken?: string;
+
+  /**
+   * Only these entry types. Empty means all.
+   *
+   * @generated from field: repeated everstack.billing.v1.CreditEntryType entry_types = 4;
+   */
+  entryTypes?: CreditEntryTypeJson[];
+
+  /**
+   * Only these resource types (inference, sandbox, browser, ...). Empty means all.
+   *
+   * @generated from field: repeated string resource_types = 5;
+   */
+  resourceTypes?: string[];
+
+  /**
+   * Inclusive lower bound on created_at.
+   *
+   * @generated from field: google.protobuf.Timestamp start_time = 6;
+   */
+  startTime?: TimestampJson;
+
+  /**
+   * Exclusive upper bound on created_at.
+   *
+   * @generated from field: google.protobuf.Timestamp end_time = 7;
+   */
+  endTime?: TimestampJson;
+};
+
+/**
+ * Describes the message everstack.billing.v1.ListCreditLedgerRequest.
+ * Use `create(ListCreditLedgerRequestSchema)` to create a new message.
+ */
+export declare const ListCreditLedgerRequestSchema: GenMessage<ListCreditLedgerRequest, ListCreditLedgerRequestJson>;
+
+/**
+ * CreditLedgerEntry is one customer-visible ledger row.
+ *
+ * @generated from message everstack.billing.v1.CreditLedgerEntry
+ */
+export declare type CreditLedgerEntry = Message<"everstack.billing.v1.CreditLedgerEntry"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.CreditEntryType entry_type = 2;
+   */
+  entryType: CreditEntryType;
+
+  /**
+   * Signed: positive adds credit, negative consumes it.
+   *
+   * @generated from field: int64 amount_micros = 3;
+   */
+  amountMicros: bigint;
+
+  /**
+   * Empty when the entry is not tied to a resource.
+   *
+   * @generated from field: string resource_type = 4;
+   */
+  resourceType: string;
+
+  /**
+   * @generated from field: string metric_type = 5;
+   */
+  metricType: string;
+
+  /**
+   * Human readable summary, for example "Inference: gpt-4o-mini".
+   *
+   * @generated from field: string description = 6;
+   */
+  description: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 7;
+   */
+  createdAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp period_start = 8;
+   */
+  periodStart?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp period_end = 9;
+   */
+  periodEnd?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp expires_at = 10;
+   */
+  expiresAt?: Timestamp;
+
+  /**
+   * Model for inference entries, when recorded.
+   *
+   * @generated from field: string model = 11;
+   */
+  model: string;
+};
+
+/**
+ * CreditLedgerEntry is one customer-visible ledger row.
+ *
+ * @generated from message everstack.billing.v1.CreditLedgerEntry
+ */
+export declare type CreditLedgerEntryJson = {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.CreditEntryType entry_type = 2;
+   */
+  entryType?: CreditEntryTypeJson;
+
+  /**
+   * Signed: positive adds credit, negative consumes it.
+   *
+   * @generated from field: int64 amount_micros = 3;
+   */
+  amountMicros?: string;
+
+  /**
+   * Empty when the entry is not tied to a resource.
+   *
+   * @generated from field: string resource_type = 4;
+   */
+  resourceType?: string;
+
+  /**
+   * @generated from field: string metric_type = 5;
+   */
+  metricType?: string;
+
+  /**
+   * Human readable summary, for example "Inference: gpt-4o-mini".
+   *
+   * @generated from field: string description = 6;
+   */
+  description?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 7;
+   */
+  createdAt?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp period_start = 8;
+   */
+  periodStart?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp period_end = 9;
+   */
+  periodEnd?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp expires_at = 10;
+   */
+  expiresAt?: TimestampJson;
+
+  /**
+   * Model for inference entries, when recorded.
+   *
+   * @generated from field: string model = 11;
+   */
+  model?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.CreditLedgerEntry.
+ * Use `create(CreditLedgerEntrySchema)` to create a new message.
+ */
+export declare const CreditLedgerEntrySchema: GenMessage<CreditLedgerEntry, CreditLedgerEntryJson>;
+
+/**
+ * @generated from message everstack.billing.v1.ListCreditLedgerResponse
+ */
+export declare type ListCreditLedgerResponse = Message<"everstack.billing.v1.ListCreditLedgerResponse"> & {
+  /**
+   * @generated from field: repeated everstack.billing.v1.CreditLedgerEntry entries = 1;
+   */
+  entries: CreditLedgerEntry[];
+
+  /**
+   * Empty when there are no more entries.
+   *
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.ListCreditLedgerResponse
+ */
+export declare type ListCreditLedgerResponseJson = {
+  /**
+   * @generated from field: repeated everstack.billing.v1.CreditLedgerEntry entries = 1;
+   */
+  entries?: CreditLedgerEntryJson[];
+
+  /**
+   * Empty when there are no more entries.
+   *
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.ListCreditLedgerResponse.
+ * Use `create(ListCreditLedgerResponseSchema)` to create a new message.
+ */
+export declare const ListCreditLedgerResponseSchema: GenMessage<ListCreditLedgerResponse, ListCreditLedgerResponseJson>;
+
+/**
+ * InferenceAttempt is one provider attempt.
+ *
+ * @generated from message everstack.billing.v1.InferenceAttempt
+ */
+export declare type InferenceAttempt = Message<"everstack.billing.v1.InferenceAttempt"> & {
+  /**
+   * @generated from field: everstack.billing.v1.InferenceAttemptRole role = 1;
+   */
+  role: InferenceAttemptRole;
+
+  /**
+   * @generated from field: string provider = 2;
+   */
+  provider: string;
+
+  /**
+   * @generated from field: string model = 3;
+   */
+  model: string;
+
+  /**
+   * chat | embeddings | responses | ...
+   *
+   * @generated from field: string modality = 4;
+   */
+  modality: string;
+
+  /**
+   * True when the attempt ran on the customer's own provider key. Such
+   * attempts are never charged.
+   *
+   * @generated from field: bool customer_key = 5;
+   */
+  customerKey: boolean;
+
+  /**
+   * Unset when not recorded (history from before attempts were recorded).
+   *
+   * @generated from field: optional int64 input_tokens = 6;
+   */
+  inputTokens?: bigint;
+
+  /**
+   * @generated from field: optional int64 output_tokens = 7;
+   */
+  outputTokens?: bigint;
+
+  /**
+   * The provider reported no usage (the stream was cut off, or sent no usage
+   * chunk), so the tokens are Everstack's estimate.
+   *
+   * @generated from field: bool estimated = 8;
+   */
+  estimated: boolean;
+
+  /**
+   * Whether the attempt consumed credit, and how much (positive).
+   *
+   * @generated from field: bool charged = 9;
+   */
+  charged: boolean;
+
+  /**
+   * @generated from field: int64 amount_micros = 10;
+   */
+  amountMicros: bigint;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp occurred_at = 11;
+   */
+  occurredAt?: Timestamp;
+
+  /**
+   * A call Everstack made for the request itself (a context summary or a
+   * cache lookup), not an answer to it. Charged like any other attempt;
+   * never counted as served.
+   *
+   * @generated from field: bool internal = 12;
+   */
+  internal: boolean;
+};
+
+/**
+ * InferenceAttempt is one provider attempt.
+ *
+ * @generated from message everstack.billing.v1.InferenceAttempt
+ */
+export declare type InferenceAttemptJson = {
+  /**
+   * @generated from field: everstack.billing.v1.InferenceAttemptRole role = 1;
+   */
+  role?: InferenceAttemptRoleJson;
+
+  /**
+   * @generated from field: string provider = 2;
+   */
+  provider?: string;
+
+  /**
+   * @generated from field: string model = 3;
+   */
+  model?: string;
+
+  /**
+   * chat | embeddings | responses | ...
+   *
+   * @generated from field: string modality = 4;
+   */
+  modality?: string;
+
+  /**
+   * True when the attempt ran on the customer's own provider key. Such
+   * attempts are never charged.
+   *
+   * @generated from field: bool customer_key = 5;
+   */
+  customerKey?: boolean;
+
+  /**
+   * Unset when not recorded (history from before attempts were recorded).
+   *
+   * @generated from field: optional int64 input_tokens = 6;
+   */
+  inputTokens?: string;
+
+  /**
+   * @generated from field: optional int64 output_tokens = 7;
+   */
+  outputTokens?: string;
+
+  /**
+   * The provider reported no usage (the stream was cut off, or sent no usage
+   * chunk), so the tokens are Everstack's estimate.
+   *
+   * @generated from field: bool estimated = 8;
+   */
+  estimated?: boolean;
+
+  /**
+   * Whether the attempt consumed credit, and how much (positive).
+   *
+   * @generated from field: bool charged = 9;
+   */
+  charged?: boolean;
+
+  /**
+   * @generated from field: int64 amount_micros = 10;
+   */
+  amountMicros?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp occurred_at = 11;
+   */
+  occurredAt?: TimestampJson;
+
+  /**
+   * A call Everstack made for the request itself (a context summary or a
+   * cache lookup), not an answer to it. Charged like any other attempt;
+   * never counted as served.
+   *
+   * @generated from field: bool internal = 12;
+   */
+  internal?: boolean;
+};
+
+/**
+ * Describes the message everstack.billing.v1.InferenceAttempt.
+ * Use `create(InferenceAttemptSchema)` to create a new message.
+ */
+export declare const InferenceAttemptSchema: GenMessage<InferenceAttempt, InferenceAttemptJson>;
+
+/**
+ * InferenceRequestAttempts is every attempt of one request, oldest first.
+ *
+ * @generated from message everstack.billing.v1.InferenceRequestAttempts
+ */
+export declare type InferenceRequestAttempts = Message<"everstack.billing.v1.InferenceRequestAttempts"> & {
+  /**
+   * Opaque key, stable across pages, for UI state such as which groups are
+   * expanded. Not an identifier to show.
+   *
+   * @generated from field: string group_key = 1;
+   */
+  groupKey: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp first_attempt_at = 2;
+   */
+  firstAttemptAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_attempt_at = 3;
+   */
+  lastAttemptAt?: Timestamp;
+
+  /**
+   * @generated from field: int32 attempt_count = 4;
+   */
+  attemptCount: number;
+
+  /**
+   * Attempts whose answer was returned, internal calls excluded.
+   *
+   * @generated from field: int32 served_count = 5;
+   */
+  servedCount: number;
+
+  /**
+   * Sum of the charged attempts' amounts (positive).
+   *
+   * @generated from field: int64 charged_micros = 6;
+   */
+  chargedMicros: bigint;
+
+  /**
+   * @generated from field: repeated everstack.billing.v1.InferenceAttempt attempts = 7;
+   */
+  attempts: InferenceAttempt[];
+};
+
+/**
+ * InferenceRequestAttempts is every attempt of one request, oldest first.
+ *
+ * @generated from message everstack.billing.v1.InferenceRequestAttempts
+ */
+export declare type InferenceRequestAttemptsJson = {
+  /**
+   * Opaque key, stable across pages, for UI state such as which groups are
+   * expanded. Not an identifier to show.
+   *
+   * @generated from field: string group_key = 1;
+   */
+  groupKey?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp first_attempt_at = 2;
+   */
+  firstAttemptAt?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_attempt_at = 3;
+   */
+  lastAttemptAt?: TimestampJson;
+
+  /**
+   * @generated from field: int32 attempt_count = 4;
+   */
+  attemptCount?: number;
+
+  /**
+   * Attempts whose answer was returned, internal calls excluded.
+   *
+   * @generated from field: int32 served_count = 5;
+   */
+  servedCount?: number;
+
+  /**
+   * Sum of the charged attempts' amounts (positive).
+   *
+   * @generated from field: int64 charged_micros = 6;
+   */
+  chargedMicros?: string;
+
+  /**
+   * @generated from field: repeated everstack.billing.v1.InferenceAttempt attempts = 7;
+   */
+  attempts?: InferenceAttemptJson[];
+};
+
+/**
+ * Describes the message everstack.billing.v1.InferenceRequestAttempts.
+ * Use `create(InferenceRequestAttemptsSchema)` to create a new message.
+ */
+export declare const InferenceRequestAttemptsSchema: GenMessage<InferenceRequestAttempts, InferenceRequestAttemptsJson>;
+
+/**
+ * @generated from message everstack.billing.v1.ListInferenceAttemptsRequest
+ */
+export declare type ListInferenceAttemptsRequest = Message<"everstack.billing.v1.ListInferenceAttemptsRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * Request groups per page: 1 to 50; 0 means the default of 20.
+   *
+   * @generated from field: int32 page_size = 2;
+   */
+  pageSize: number;
+
+  /**
+   * Opaque token from a previous response's next_page_token.
+   *
+   * @generated from field: string page_token = 3;
+   */
+  pageToken: string;
+
+  /**
+   * Inclusive lower bound on the group's latest attempt.
+   *
+   * @generated from field: google.protobuf.Timestamp start_time = 4;
+   */
+  startTime?: Timestamp;
+
+  /**
+   * Exclusive upper bound on the group's latest attempt.
+   *
+   * @generated from field: google.protobuf.Timestamp end_time = 5;
+   */
+  endTime?: Timestamp;
+};
+
+/**
+ * @generated from message everstack.billing.v1.ListInferenceAttemptsRequest
+ */
+export declare type ListInferenceAttemptsRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+
+  /**
+   * Request groups per page: 1 to 50; 0 means the default of 20.
+   *
+   * @generated from field: int32 page_size = 2;
+   */
+  pageSize?: number;
+
+  /**
+   * Opaque token from a previous response's next_page_token.
+   *
+   * @generated from field: string page_token = 3;
+   */
+  pageToken?: string;
+
+  /**
+   * Inclusive lower bound on the group's latest attempt.
+   *
+   * @generated from field: google.protobuf.Timestamp start_time = 4;
+   */
+  startTime?: TimestampJson;
+
+  /**
+   * Exclusive upper bound on the group's latest attempt.
+   *
+   * @generated from field: google.protobuf.Timestamp end_time = 5;
+   */
+  endTime?: TimestampJson;
+};
+
+/**
+ * Describes the message everstack.billing.v1.ListInferenceAttemptsRequest.
+ * Use `create(ListInferenceAttemptsRequestSchema)` to create a new message.
+ */
+export declare const ListInferenceAttemptsRequestSchema: GenMessage<ListInferenceAttemptsRequest, ListInferenceAttemptsRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.ListInferenceAttemptsResponse
+ */
+export declare type ListInferenceAttemptsResponse = Message<"everstack.billing.v1.ListInferenceAttemptsResponse"> & {
+  /**
+   * Newest request first.
+   *
+   * @generated from field: repeated everstack.billing.v1.InferenceRequestAttempts requests = 1;
+   */
+  requests: InferenceRequestAttempts[];
+
+  /**
+   * Empty when there are no more requests.
+   *
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.ListInferenceAttemptsResponse
+ */
+export declare type ListInferenceAttemptsResponseJson = {
+  /**
+   * Newest request first.
+   *
+   * @generated from field: repeated everstack.billing.v1.InferenceRequestAttempts requests = 1;
+   */
+  requests?: InferenceRequestAttemptsJson[];
+
+  /**
+   * Empty when there are no more requests.
+   *
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.ListInferenceAttemptsResponse.
+ * Use `create(ListInferenceAttemptsResponseSchema)` to create a new message.
+ */
+export declare const ListInferenceAttemptsResponseSchema: GenMessage<ListInferenceAttemptsResponse, ListInferenceAttemptsResponseJson>;
+
+/**
+ * SpendTotals is estimated inference spend over one window.
+ *
+ * @generated from message everstack.billing.v1.SpendTotals
+ */
+export declare type SpendTotals = Message<"everstack.billing.v1.SpendTotals"> & {
+  /**
+   * Inclusive window start (00:00 UTC of the day, or of the 1st of the month).
+   *
+   * @generated from field: google.protobuf.Timestamp start = 1;
+   */
+  start?: Timestamp;
+
+  /**
+   * Exclusive window end: when the window resets (00:00 UTC).
+   *
+   * @generated from field: google.protobuf.Timestamp resets_at = 2;
+   */
+  resetsAt?: Timestamp;
+
+  /**
+   * platform_micros + byok_estimated_micros, in USD micros.
+   *
+   * @generated from field: int64 spent_micros = 3;
+   */
+  spentMicros: bigint;
+
+  /**
+   * Everstack credit charged, as billed (with markup).
+   *
+   * @generated from field: int64 platform_micros = 4;
+   */
+  platformMicros: bigint;
+
+  /**
+   * Traffic on the organization's own provider keys at catalog list price,
+   * no markup. An estimate: the provider's invoice is authoritative.
+   *
+   * @generated from field: int64 byok_estimated_micros = 5;
+   */
+  byokEstimatedMicros: bigint;
+
+  /**
+   * Provider attempts in the window, priced or not.
+   *
+   * @generated from field: int64 attempts = 6;
+   */
+  attempts: bigint;
+
+  /**
+   * Attempts on the organization's own keys for models without a list
+   * price. They count $0 and are not in spent_micros.
+   *
+   * @generated from field: int64 unpriced_attempts = 7;
+   */
+  unpricedAttempts: bigint;
+
+  /**
+   * True when spent_micros includes an estimate (byok_estimated_micros > 0).
+   *
+   * @generated from field: bool estimated = 8;
+   */
+  estimated: boolean;
+};
+
+/**
+ * SpendTotals is estimated inference spend over one window.
+ *
+ * @generated from message everstack.billing.v1.SpendTotals
+ */
+export declare type SpendTotalsJson = {
+  /**
+   * Inclusive window start (00:00 UTC of the day, or of the 1st of the month).
+   *
+   * @generated from field: google.protobuf.Timestamp start = 1;
+   */
+  start?: TimestampJson;
+
+  /**
+   * Exclusive window end: when the window resets (00:00 UTC).
+   *
+   * @generated from field: google.protobuf.Timestamp resets_at = 2;
+   */
+  resetsAt?: TimestampJson;
+
+  /**
+   * platform_micros + byok_estimated_micros, in USD micros.
+   *
+   * @generated from field: int64 spent_micros = 3;
+   */
+  spentMicros?: string;
+
+  /**
+   * Everstack credit charged, as billed (with markup).
+   *
+   * @generated from field: int64 platform_micros = 4;
+   */
+  platformMicros?: string;
+
+  /**
+   * Traffic on the organization's own provider keys at catalog list price,
+   * no markup. An estimate: the provider's invoice is authoritative.
+   *
+   * @generated from field: int64 byok_estimated_micros = 5;
+   */
+  byokEstimatedMicros?: string;
+
+  /**
+   * Provider attempts in the window, priced or not.
+   *
+   * @generated from field: int64 attempts = 6;
+   */
+  attempts?: string;
+
+  /**
+   * Attempts on the organization's own keys for models without a list
+   * price. They count $0 and are not in spent_micros.
+   *
+   * @generated from field: int64 unpriced_attempts = 7;
+   */
+  unpricedAttempts?: string;
+
+  /**
+   * True when spent_micros includes an estimate (byok_estimated_micros > 0).
+   *
+   * @generated from field: bool estimated = 8;
+   */
+  estimated?: boolean;
+};
+
+/**
+ * Describes the message everstack.billing.v1.SpendTotals.
+ * Use `create(SpendTotalsSchema)` to create a new message.
+ */
+export declare const SpendTotalsSchema: GenMessage<SpendTotals, SpendTotalsJson>;
+
+/**
+ * ApiKeySpend is one gateway API key's spend this month.
+ *
+ * @generated from message everstack.billing.v1.ApiKeySpend
+ */
+export declare type ApiKeySpend = Message<"everstack.billing.v1.ApiKeySpend"> & {
+  /**
+   * The gateway API key id. Empty for traffic that used no API key
+   * (dashboard sessions, agent triggers, workflows, internal calls).
+   *
+   * @generated from field: string api_key_id = 1;
+   */
+  apiKeyId: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.SpendTotals today = 2;
+   */
+  today?: SpendTotals;
+
+  /**
+   * @generated from field: everstack.billing.v1.SpendTotals month = 3;
+   */
+  month?: SpendTotals;
+};
+
+/**
+ * ApiKeySpend is one gateway API key's spend this month.
+ *
+ * @generated from message everstack.billing.v1.ApiKeySpend
+ */
+export declare type ApiKeySpendJson = {
+  /**
+   * The gateway API key id. Empty for traffic that used no API key
+   * (dashboard sessions, agent triggers, workflows, internal calls).
+   *
+   * @generated from field: string api_key_id = 1;
+   */
+  apiKeyId?: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.SpendTotals today = 2;
+   */
+  today?: SpendTotalsJson;
+
+  /**
+   * @generated from field: everstack.billing.v1.SpendTotals month = 3;
+   */
+  month?: SpendTotalsJson;
+};
+
+/**
+ * Describes the message everstack.billing.v1.ApiKeySpend.
+ * Use `create(ApiKeySpendSchema)` to create a new message.
+ */
+export declare const ApiKeySpendSchema: GenMessage<ApiKeySpend, ApiKeySpendJson>;
+
+/**
+ * @generated from message everstack.billing.v1.GetSpendStatusRequest
+ */
+export declare type GetSpendStatusRequest = Message<"everstack.billing.v1.GetSpendStatusRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.GetSpendStatusRequest
+ */
+export declare type GetSpendStatusRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.GetSpendStatusRequest.
+ * Use `create(GetSpendStatusRequestSchema)` to create a new message.
+ */
+export declare const GetSpendStatusRequestSchema: GenMessage<GetSpendStatusRequest, GetSpendStatusRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.GetSpendStatusResponse
+ */
+export declare type GetSpendStatusResponse = Message<"everstack.billing.v1.GetSpendStatusResponse"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * The current UTC day and UTC month, for the whole organization.
+   *
+   * @generated from field: everstack.billing.v1.SpendTotals today = 2;
+   */
+  today?: SpendTotals;
+
+  /**
+   * @generated from field: everstack.billing.v1.SpendTotals month = 3;
+   */
+  month?: SpendTotals;
+
+  /**
+   * Every API key with recorded attempts this month, highest month spend
+   * first. Sums to the organization totals.
+   *
+   * @generated from field: repeated everstack.billing.v1.ApiKeySpend api_keys = 4;
+   */
+  apiKeys: ApiKeySpend[];
+
+  /**
+   * Attempts recorded up to this time are included. Unset until the rollup
+   * job has completed its first pass.
+   *
+   * @generated from field: google.protobuf.Timestamp as_of = 5;
+   */
+  asOf?: Timestamp;
+};
+
+/**
+ * @generated from message everstack.billing.v1.GetSpendStatusResponse
+ */
+export declare type GetSpendStatusResponseJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+
+  /**
+   * The current UTC day and UTC month, for the whole organization.
+   *
+   * @generated from field: everstack.billing.v1.SpendTotals today = 2;
+   */
+  today?: SpendTotalsJson;
+
+  /**
+   * @generated from field: everstack.billing.v1.SpendTotals month = 3;
+   */
+  month?: SpendTotalsJson;
+
+  /**
+   * Every API key with recorded attempts this month, highest month spend
+   * first. Sums to the organization totals.
+   *
+   * @generated from field: repeated everstack.billing.v1.ApiKeySpend api_keys = 4;
+   */
+  apiKeys?: ApiKeySpendJson[];
+
+  /**
+   * Attempts recorded up to this time are included. Unset until the rollup
+   * job has completed its first pass.
+   *
+   * @generated from field: google.protobuf.Timestamp as_of = 5;
+   */
+  asOf?: TimestampJson;
+};
+
+/**
+ * Describes the message everstack.billing.v1.GetSpendStatusResponse.
+ * Use `create(GetSpendStatusResponseSchema)` to create a new message.
+ */
+export declare const GetSpendStatusResponseSchema: GenMessage<GetSpendStatusResponse, GetSpendStatusResponseJson>;
+
+/**
+ * CreditPurchase is one prepaid credit purchase attempt.
+ *
+ * @generated from message everstack.billing.v1.CreditPurchase
+ */
+export declare type CreditPurchase = Message<"everstack.billing.v1.CreditPurchase"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.CreditPurchaseState state = 3;
+   */
+  state: CreditPurchaseState;
+
+  /**
+   * Pre-tax credit requested, in micro-dollars (1 USD = 1,000,000).
+   *
+   * @generated from field: int64 requested_micros = 4;
+   */
+  requestedMicros: bigint;
+
+  /**
+   * Credit minted (0 until paid).
+   *
+   * @generated from field: int64 minted_micros = 5;
+   */
+  mintedMicros: bigint;
+
+  /**
+   * Credit clawed back by refunds and lost disputes.
+   *
+   * @generated from field: int64 reversed_micros = 6;
+   */
+  reversedMicros: bigint;
+
+  /**
+   * Amount charged including tax, in minor units of `currency` (0 until paid).
+   *
+   * @generated from field: int64 amount_total_minor = 7;
+   */
+  amountTotalMinor: bigint;
+
+  /**
+   * @generated from field: int64 amount_tax_minor = 8;
+   */
+  amountTaxMinor: bigint;
+
+  /**
+   * @generated from field: string currency = 9;
+   */
+  currency: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 10;
+   */
+  createdAt?: Timestamp;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp paid_at = 11;
+   */
+  paidAt?: Timestamp;
+};
+
+/**
+ * CreditPurchase is one prepaid credit purchase attempt.
+ *
+ * @generated from message everstack.billing.v1.CreditPurchase
+ */
+export declare type CreditPurchaseJson = {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId?: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.CreditPurchaseState state = 3;
+   */
+  state?: CreditPurchaseStateJson;
+
+  /**
+   * Pre-tax credit requested, in micro-dollars (1 USD = 1,000,000).
+   *
+   * @generated from field: int64 requested_micros = 4;
+   */
+  requestedMicros?: string;
+
+  /**
+   * Credit minted (0 until paid).
+   *
+   * @generated from field: int64 minted_micros = 5;
+   */
+  mintedMicros?: string;
+
+  /**
+   * Credit clawed back by refunds and lost disputes.
+   *
+   * @generated from field: int64 reversed_micros = 6;
+   */
+  reversedMicros?: string;
+
+  /**
+   * Amount charged including tax, in minor units of `currency` (0 until paid).
+   *
+   * @generated from field: int64 amount_total_minor = 7;
+   */
+  amountTotalMinor?: string;
+
+  /**
+   * @generated from field: int64 amount_tax_minor = 8;
+   */
+  amountTaxMinor?: string;
+
+  /**
+   * @generated from field: string currency = 9;
+   */
+  currency?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 10;
+   */
+  createdAt?: TimestampJson;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp paid_at = 11;
+   */
+  paidAt?: TimestampJson;
+};
+
+/**
+ * Describes the message everstack.billing.v1.CreditPurchase.
+ * Use `create(CreditPurchaseSchema)` to create a new message.
+ */
+export declare const CreditPurchaseSchema: GenMessage<CreditPurchase, CreditPurchaseJson>;
+
+/**
+ * @generated from message everstack.billing.v1.PurchaseCreditsRequest
+ */
+export declare type PurchaseCreditsRequest = Message<"everstack.billing.v1.PurchaseCreditsRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * Pre-tax credit to buy, in USD cents. Whole dollars, at least the
+   * configured minimum ($10). Tax, if any, is added on top at checkout.
+   *
+   * @generated from field: int64 amount_cents = 2;
+   */
+  amountCents: bigint;
+
+  /**
+   * Relative path in the Cloud app to return to after Checkout (for example
+   * "/acme/settings/billing?tab=overview"). The server joins it to the
+   * configured app origin; absolute URLs are rejected.
+   *
+   * @generated from field: string return_path = 3;
+   */
+  returnPath: string;
+
+  /**
+   * Set when the buyer left the pre-checked auto top-up box ticked: the
+   * terms shown next to it. Absent (unticked) writes no policy. The policy
+   * is written enabled only once this purchase is paid, and only if the
+   * organization has no auto top-up policy yet.
+   *
+   * @generated from field: optional everstack.billing.v1.AutoTopUpConsent auto_top_up = 4;
+   */
+  autoTopUp?: AutoTopUpConsent;
+};
+
+/**
+ * @generated from message everstack.billing.v1.PurchaseCreditsRequest
+ */
+export declare type PurchaseCreditsRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+
+  /**
+   * Pre-tax credit to buy, in USD cents. Whole dollars, at least the
+   * configured minimum ($10). Tax, if any, is added on top at checkout.
+   *
+   * @generated from field: int64 amount_cents = 2;
+   */
+  amountCents?: string;
+
+  /**
+   * Relative path in the Cloud app to return to after Checkout (for example
+   * "/acme/settings/billing?tab=overview"). The server joins it to the
+   * configured app origin; absolute URLs are rejected.
+   *
+   * @generated from field: string return_path = 3;
+   */
+  returnPath?: string;
+
+  /**
+   * Set when the buyer left the pre-checked auto top-up box ticked: the
+   * terms shown next to it. Absent (unticked) writes no policy. The policy
+   * is written enabled only once this purchase is paid, and only if the
+   * organization has no auto top-up policy yet.
+   *
+   * @generated from field: optional everstack.billing.v1.AutoTopUpConsent auto_top_up = 4;
+   */
+  autoTopUp?: AutoTopUpConsentJson;
+};
+
+/**
+ * Describes the message everstack.billing.v1.PurchaseCreditsRequest.
+ * Use `create(PurchaseCreditsRequestSchema)` to create a new message.
+ */
+export declare const PurchaseCreditsRequestSchema: GenMessage<PurchaseCreditsRequest, PurchaseCreditsRequestJson>;
+
+/**
+ * AutoTopUpConsent is the disclosed auto top-up terms a buyer agreed to.
+ *
+ * @generated from message everstack.billing.v1.AutoTopUpConsent
+ */
+export declare type AutoTopUpConsent = Message<"everstack.billing.v1.AutoTopUpConsent"> & {
+  /**
+   * Whole USD cents. Charge when the balance drops below this.
+   *
+   * @generated from field: int64 threshold_cents = 1;
+   */
+  thresholdCents: bigint;
+
+  /**
+   * Whole USD cents charged per top-up.
+   *
+   * @generated from field: int64 amount_cents = 2;
+   */
+  amountCents: bigint;
+
+  /**
+   * Whole USD cents; at most this much is charged per calendar month (UTC).
+   *
+   * @generated from field: int64 monthly_cap_cents = 3;
+   */
+  monthlyCapCents: bigint;
+
+  /**
+   * The consent wording version the client rendered
+   * (GetCreditPurchaseOptionsResponse.auto_top_up_consent_version).
+   *
+   * @generated from field: string consent_version = 4;
+   */
+  consentVersion: string;
+};
+
+/**
+ * AutoTopUpConsent is the disclosed auto top-up terms a buyer agreed to.
+ *
+ * @generated from message everstack.billing.v1.AutoTopUpConsent
+ */
+export declare type AutoTopUpConsentJson = {
+  /**
+   * Whole USD cents. Charge when the balance drops below this.
+   *
+   * @generated from field: int64 threshold_cents = 1;
+   */
+  thresholdCents?: string;
+
+  /**
+   * Whole USD cents charged per top-up.
+   *
+   * @generated from field: int64 amount_cents = 2;
+   */
+  amountCents?: string;
+
+  /**
+   * Whole USD cents; at most this much is charged per calendar month (UTC).
+   *
+   * @generated from field: int64 monthly_cap_cents = 3;
+   */
+  monthlyCapCents?: string;
+
+  /**
+   * The consent wording version the client rendered
+   * (GetCreditPurchaseOptionsResponse.auto_top_up_consent_version).
+   *
+   * @generated from field: string consent_version = 4;
+   */
+  consentVersion?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.AutoTopUpConsent.
+ * Use `create(AutoTopUpConsentSchema)` to create a new message.
+ */
+export declare const AutoTopUpConsentSchema: GenMessage<AutoTopUpConsent, AutoTopUpConsentJson>;
+
+/**
+ * @generated from message everstack.billing.v1.PurchaseCreditsResponse
+ */
+export declare type PurchaseCreditsResponse = Message<"everstack.billing.v1.PurchaseCreditsResponse"> & {
+  /**
+   * @generated from field: everstack.billing.v1.CreditPurchase purchase = 1;
+   */
+  purchase?: CreditPurchase;
+
+  /**
+   * Stripe Checkout URL to redirect the browser to.
+   *
+   * @generated from field: string checkout_url = 2;
+   */
+  checkoutUrl: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.PurchaseCreditsResponse
+ */
+export declare type PurchaseCreditsResponseJson = {
+  /**
+   * @generated from field: everstack.billing.v1.CreditPurchase purchase = 1;
+   */
+  purchase?: CreditPurchaseJson;
+
+  /**
+   * Stripe Checkout URL to redirect the browser to.
+   *
+   * @generated from field: string checkout_url = 2;
+   */
+  checkoutUrl?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.PurchaseCreditsResponse.
+ * Use `create(PurchaseCreditsResponseSchema)` to create a new message.
+ */
+export declare const PurchaseCreditsResponseSchema: GenMessage<PurchaseCreditsResponse, PurchaseCreditsResponseJson>;
+
+/**
+ * @generated from message everstack.billing.v1.GetCreditPurchaseRequest
+ */
+export declare type GetCreditPurchaseRequest = Message<"everstack.billing.v1.GetCreditPurchaseRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string purchase_id = 2;
+   */
+  purchaseId: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.GetCreditPurchaseRequest
+ */
+export declare type GetCreditPurchaseRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+
+  /**
+   * @generated from field: string purchase_id = 2;
+   */
+  purchaseId?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.GetCreditPurchaseRequest.
+ * Use `create(GetCreditPurchaseRequestSchema)` to create a new message.
+ */
+export declare const GetCreditPurchaseRequestSchema: GenMessage<GetCreditPurchaseRequest, GetCreditPurchaseRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.GetCreditPurchaseResponse
+ */
+export declare type GetCreditPurchaseResponse = Message<"everstack.billing.v1.GetCreditPurchaseResponse"> & {
+  /**
+   * @generated from field: everstack.billing.v1.CreditPurchase purchase = 1;
+   */
+  purchase?: CreditPurchase;
+};
+
+/**
+ * @generated from message everstack.billing.v1.GetCreditPurchaseResponse
+ */
+export declare type GetCreditPurchaseResponseJson = {
+  /**
+   * @generated from field: everstack.billing.v1.CreditPurchase purchase = 1;
+   */
+  purchase?: CreditPurchaseJson;
+};
+
+/**
+ * Describes the message everstack.billing.v1.GetCreditPurchaseResponse.
+ * Use `create(GetCreditPurchaseResponseSchema)` to create a new message.
+ */
+export declare const GetCreditPurchaseResponseSchema: GenMessage<GetCreditPurchaseResponse, GetCreditPurchaseResponseJson>;
+
+/**
+ * @generated from message everstack.billing.v1.ListCreditPurchasesRequest
+ */
+export declare type ListCreditPurchasesRequest = Message<"everstack.billing.v1.ListCreditPurchasesRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: int32 limit = 2;
+   */
+  limit: number;
+
+  /**
+   * @generated from field: int32 offset = 3;
+   */
+  offset: number;
+};
+
+/**
+ * @generated from message everstack.billing.v1.ListCreditPurchasesRequest
+ */
+export declare type ListCreditPurchasesRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+
+  /**
+   * @generated from field: int32 limit = 2;
+   */
+  limit?: number;
+
+  /**
+   * @generated from field: int32 offset = 3;
+   */
+  offset?: number;
+};
+
+/**
+ * Describes the message everstack.billing.v1.ListCreditPurchasesRequest.
+ * Use `create(ListCreditPurchasesRequestSchema)` to create a new message.
+ */
+export declare const ListCreditPurchasesRequestSchema: GenMessage<ListCreditPurchasesRequest, ListCreditPurchasesRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.ListCreditPurchasesResponse
+ */
+export declare type ListCreditPurchasesResponse = Message<"everstack.billing.v1.ListCreditPurchasesResponse"> & {
+  /**
+   * @generated from field: repeated everstack.billing.v1.CreditPurchase purchases = 1;
+   */
+  purchases: CreditPurchase[];
+};
+
+/**
+ * @generated from message everstack.billing.v1.ListCreditPurchasesResponse
+ */
+export declare type ListCreditPurchasesResponseJson = {
+  /**
+   * @generated from field: repeated everstack.billing.v1.CreditPurchase purchases = 1;
+   */
+  purchases?: CreditPurchaseJson[];
+};
+
+/**
+ * Describes the message everstack.billing.v1.ListCreditPurchasesResponse.
+ * Use `create(ListCreditPurchasesResponseSchema)` to create a new message.
+ */
+export declare const ListCreditPurchasesResponseSchema: GenMessage<ListCreditPurchasesResponse, ListCreditPurchasesResponseJson>;
+
+/**
+ * @generated from message everstack.billing.v1.GetCreditPurchaseOptionsRequest
+ */
+export declare type GetCreditPurchaseOptionsRequest = Message<"everstack.billing.v1.GetCreditPurchaseOptionsRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.GetCreditPurchaseOptionsRequest
+ */
+export declare type GetCreditPurchaseOptionsRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.GetCreditPurchaseOptionsRequest.
+ * Use `create(GetCreditPurchaseOptionsRequestSchema)` to create a new message.
+ */
+export declare const GetCreditPurchaseOptionsRequestSchema: GenMessage<GetCreditPurchaseOptionsRequest, GetCreditPurchaseOptionsRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.GetCreditPurchaseOptionsResponse
+ */
+export declare type GetCreditPurchaseOptionsResponse = Message<"everstack.billing.v1.GetCreditPurchaseOptionsResponse"> & {
+  /**
+   * False while self-serve purchase is switched off; the UI hides Buy.
+   *
+   * @generated from field: bool enabled = 1;
+   */
+  enabled: boolean;
+
+  /**
+   * Preset top-up amounts, whole USD, pre-tax.
+   *
+   * @generated from field: repeated int64 presets_usd = 2;
+   */
+  presetsUsd: bigint[];
+
+  /**
+   * @generated from field: int64 min_usd = 3;
+   */
+  minUsd: bigint;
+
+  /**
+   * @generated from field: int64 max_usd = 4;
+   */
+  maxUsd: bigint;
+
+  /**
+   * True when the Buy dialog should show the pre-checked auto top-up box:
+   * auto top-up is available and the organization has no policy yet.
+   *
+   * @generated from field: bool offer_auto_top_up = 5;
+   */
+  offerAutoTopUp: boolean;
+
+  /**
+   * Defaults for that box: the threshold, and the monthly cap as a multiple
+   * of the amount being bought (the refill amount is the amount bought).
+   *
+   * @generated from field: int64 auto_top_up_default_threshold_usd = 6;
+   */
+  autoTopUpDefaultThresholdUsd: bigint;
+
+  /**
+   * @generated from field: int64 auto_top_up_default_cap_multiple = 7;
+   */
+  autoTopUpDefaultCapMultiple: bigint;
+
+  /**
+   * Version of the consent wording; send it back in AutoTopUpConsent.
+   *
+   * @generated from field: string auto_top_up_consent_version = 8;
+   */
+  autoTopUpConsentVersion: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.GetCreditPurchaseOptionsResponse
+ */
+export declare type GetCreditPurchaseOptionsResponseJson = {
+  /**
+   * False while self-serve purchase is switched off; the UI hides Buy.
+   *
+   * @generated from field: bool enabled = 1;
+   */
+  enabled?: boolean;
+
+  /**
+   * Preset top-up amounts, whole USD, pre-tax.
+   *
+   * @generated from field: repeated int64 presets_usd = 2;
+   */
+  presetsUsd?: string[];
+
+  /**
+   * @generated from field: int64 min_usd = 3;
+   */
+  minUsd?: string;
+
+  /**
+   * @generated from field: int64 max_usd = 4;
+   */
+  maxUsd?: string;
+
+  /**
+   * True when the Buy dialog should show the pre-checked auto top-up box:
+   * auto top-up is available and the organization has no policy yet.
+   *
+   * @generated from field: bool offer_auto_top_up = 5;
+   */
+  offerAutoTopUp?: boolean;
+
+  /**
+   * Defaults for that box: the threshold, and the monthly cap as a multiple
+   * of the amount being bought (the refill amount is the amount bought).
+   *
+   * @generated from field: int64 auto_top_up_default_threshold_usd = 6;
+   */
+  autoTopUpDefaultThresholdUsd?: string;
+
+  /**
+   * @generated from field: int64 auto_top_up_default_cap_multiple = 7;
+   */
+  autoTopUpDefaultCapMultiple?: string;
+
+  /**
+   * Version of the consent wording; send it back in AutoTopUpConsent.
+   *
+   * @generated from field: string auto_top_up_consent_version = 8;
+   */
+  autoTopUpConsentVersion?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.GetCreditPurchaseOptionsResponse.
+ * Use `create(GetCreditPurchaseOptionsResponseSchema)` to create a new message.
+ */
+export declare const GetCreditPurchaseOptionsResponseSchema: GenMessage<GetCreditPurchaseOptionsResponse, GetCreditPurchaseOptionsResponseJson>;
+
+/**
+ * AutoTopUpAttempt is one auto top-up charge.
+ *
+ * @generated from message everstack.billing.v1.AutoTopUpAttempt
+ */
+export declare type AutoTopUpAttempt = Message<"everstack.billing.v1.AutoTopUpAttempt"> & {
+  /**
+   * @generated from field: everstack.billing.v1.AutoTopUpAttemptOutcome outcome = 1;
+   */
+  outcome: AutoTopUpAttemptOutcome;
+
+  /**
+   * @generated from field: int64 amount_micros = 2;
+   */
+  amountMicros: bigint;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp attempted_at = 3;
+   */
+  attemptedAt?: Timestamp;
+
+  /**
+   * Customer-safe reason and next step, for a failed attempt.
+   *
+   * @generated from field: string failure_message = 4;
+   */
+  failureMessage: string;
+};
+
+/**
+ * AutoTopUpAttempt is one auto top-up charge.
+ *
+ * @generated from message everstack.billing.v1.AutoTopUpAttempt
+ */
+export declare type AutoTopUpAttemptJson = {
+  /**
+   * @generated from field: everstack.billing.v1.AutoTopUpAttemptOutcome outcome = 1;
+   */
+  outcome?: AutoTopUpAttemptOutcomeJson;
+
+  /**
+   * @generated from field: int64 amount_micros = 2;
+   */
+  amountMicros?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp attempted_at = 3;
+   */
+  attemptedAt?: TimestampJson;
+
+  /**
+   * Customer-safe reason and next step, for a failed attempt.
+   *
+   * @generated from field: string failure_message = 4;
+   */
+  failureMessage?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.AutoTopUpAttempt.
+ * Use `create(AutoTopUpAttemptSchema)` to create a new message.
+ */
+export declare const AutoTopUpAttemptSchema: GenMessage<AutoTopUpAttempt, AutoTopUpAttemptJson>;
+
+/**
+ * @generated from message everstack.billing.v1.AutoTopUpPolicy
+ */
+export declare type AutoTopUpPolicy = Message<"everstack.billing.v1.AutoTopUpPolicy"> & {
+  /**
+   * False when the organization never set up auto top-up.
+   *
+   * @generated from field: bool configured = 1;
+   */
+  configured: boolean;
+
+  /**
+   * @generated from field: bool enabled = 2;
+   */
+  enabled: boolean;
+
+  /**
+   * @generated from field: everstack.billing.v1.AutoTopUpStatus status = 3;
+   */
+  status: AutoTopUpStatus;
+
+  /**
+   * Micro-dollars (1 USD = 1,000,000).
+   *
+   * @generated from field: int64 threshold_micros = 4;
+   */
+  thresholdMicros: bigint;
+
+  /**
+   * @generated from field: int64 amount_micros = 5;
+   */
+  amountMicros: bigint;
+
+  /**
+   * @generated from field: int64 monthly_cap_micros = 6;
+   */
+  monthlyCapMicros: bigint;
+
+  /**
+   * Charged or in flight this calendar month (UTC), and what is left.
+   *
+   * @generated from field: int64 used_this_month_micros = 7;
+   */
+  usedThisMonthMicros: bigint;
+
+  /**
+   * @generated from field: int64 remaining_this_month_micros = 8;
+   */
+  remainingThisMonthMicros: bigint;
+
+  /**
+   * Pass back as expected_version when saving.
+   *
+   * @generated from field: int64 version = 9;
+   */
+  version: bigint;
+
+  /**
+   * @generated from field: optional everstack.billing.v1.AutoTopUpAttempt last_attempt = 10;
+   */
+  lastAttempt?: AutoTopUpAttempt;
+
+  /**
+   * A charge has been sent to the card and is not settled yet.
+   *
+   * @generated from field: bool charge_in_flight = 11;
+   */
+  chargeInFlight: boolean;
+
+  /**
+   * Customer-safe explanation of ACTION_REQUIRED or PAUSED.
+   *
+   * @generated from field: string action_message = 12;
+   */
+  actionMessage: string;
+
+  /**
+   * When the next charge may happen after a failure (ACTION_REQUIRED).
+   *
+   * @generated from field: optional google.protobuf.Timestamp next_attempt_at = 13;
+   */
+  nextAttemptAt?: Timestamp;
+
+  /**
+   * The consent on record.
+   *
+   * @generated from field: string consent_text = 14;
+   */
+  consentText: string;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp consent_at = 15;
+   */
+  consentAt?: Timestamp;
+
+  /**
+   * Why it is PAUSED: "failed_payments", "dispute" or "refund". After a
+   * dispute or refund only an owner or admin turning it back on resumes it.
+   *
+   * @generated from field: string paused_reason = 16;
+   */
+  pausedReason: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.AutoTopUpPolicy
+ */
+export declare type AutoTopUpPolicyJson = {
+  /**
+   * False when the organization never set up auto top-up.
+   *
+   * @generated from field: bool configured = 1;
+   */
+  configured?: boolean;
+
+  /**
+   * @generated from field: bool enabled = 2;
+   */
+  enabled?: boolean;
+
+  /**
+   * @generated from field: everstack.billing.v1.AutoTopUpStatus status = 3;
+   */
+  status?: AutoTopUpStatusJson;
+
+  /**
+   * Micro-dollars (1 USD = 1,000,000).
+   *
+   * @generated from field: int64 threshold_micros = 4;
+   */
+  thresholdMicros?: string;
+
+  /**
+   * @generated from field: int64 amount_micros = 5;
+   */
+  amountMicros?: string;
+
+  /**
+   * @generated from field: int64 monthly_cap_micros = 6;
+   */
+  monthlyCapMicros?: string;
+
+  /**
+   * Charged or in flight this calendar month (UTC), and what is left.
+   *
+   * @generated from field: int64 used_this_month_micros = 7;
+   */
+  usedThisMonthMicros?: string;
+
+  /**
+   * @generated from field: int64 remaining_this_month_micros = 8;
+   */
+  remainingThisMonthMicros?: string;
+
+  /**
+   * Pass back as expected_version when saving.
+   *
+   * @generated from field: int64 version = 9;
+   */
+  version?: string;
+
+  /**
+   * @generated from field: optional everstack.billing.v1.AutoTopUpAttempt last_attempt = 10;
+   */
+  lastAttempt?: AutoTopUpAttemptJson;
+
+  /**
+   * A charge has been sent to the card and is not settled yet.
+   *
+   * @generated from field: bool charge_in_flight = 11;
+   */
+  chargeInFlight?: boolean;
+
+  /**
+   * Customer-safe explanation of ACTION_REQUIRED or PAUSED.
+   *
+   * @generated from field: string action_message = 12;
+   */
+  actionMessage?: string;
+
+  /**
+   * When the next charge may happen after a failure (ACTION_REQUIRED).
+   *
+   * @generated from field: optional google.protobuf.Timestamp next_attempt_at = 13;
+   */
+  nextAttemptAt?: TimestampJson;
+
+  /**
+   * The consent on record.
+   *
+   * @generated from field: string consent_text = 14;
+   */
+  consentText?: string;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp consent_at = 15;
+   */
+  consentAt?: TimestampJson;
+
+  /**
+   * Why it is PAUSED: "failed_payments", "dispute" or "refund". After a
+   * dispute or refund only an owner or admin turning it back on resumes it.
+   *
+   * @generated from field: string paused_reason = 16;
+   */
+  pausedReason?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.AutoTopUpPolicy.
+ * Use `create(AutoTopUpPolicySchema)` to create a new message.
+ */
+export declare const AutoTopUpPolicySchema: GenMessage<AutoTopUpPolicy, AutoTopUpPolicyJson>;
+
+/**
+ * @generated from message everstack.billing.v1.GetAutoTopUpPolicyRequest
+ */
+export declare type GetAutoTopUpPolicyRequest = Message<"everstack.billing.v1.GetAutoTopUpPolicyRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.GetAutoTopUpPolicyRequest
+ */
+export declare type GetAutoTopUpPolicyRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.GetAutoTopUpPolicyRequest.
+ * Use `create(GetAutoTopUpPolicyRequestSchema)` to create a new message.
+ */
+export declare const GetAutoTopUpPolicyRequestSchema: GenMessage<GetAutoTopUpPolicyRequest, GetAutoTopUpPolicyRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.GetAutoTopUpPolicyResponse
+ */
+export declare type GetAutoTopUpPolicyResponse = Message<"everstack.billing.v1.GetAutoTopUpPolicyResponse"> & {
+  /**
+   * @generated from field: everstack.billing.v1.AutoTopUpPolicy policy = 1;
+   */
+  policy?: AutoTopUpPolicy;
+
+  /**
+   * False while auto top-up is switched off for this deployment; the UI
+   * hides it.
+   *
+   * @generated from field: bool available = 2;
+   */
+  available: boolean;
+
+  /**
+   * Bounds for the edit dialog, whole USD.
+   *
+   * @generated from field: int64 min_amount_usd = 3;
+   */
+  minAmountUsd: bigint;
+
+  /**
+   * @generated from field: int64 max_amount_usd = 4;
+   */
+  maxAmountUsd: bigint;
+
+  /**
+   * @generated from field: int64 min_threshold_usd = 5;
+   */
+  minThresholdUsd: bigint;
+
+  /**
+   * @generated from field: int64 max_monthly_cap_usd = 6;
+   */
+  maxMonthlyCapUsd: bigint;
+
+  /**
+   * @generated from field: string consent_version = 7;
+   */
+  consentVersion: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.GetAutoTopUpPolicyResponse
+ */
+export declare type GetAutoTopUpPolicyResponseJson = {
+  /**
+   * @generated from field: everstack.billing.v1.AutoTopUpPolicy policy = 1;
+   */
+  policy?: AutoTopUpPolicyJson;
+
+  /**
+   * False while auto top-up is switched off for this deployment; the UI
+   * hides it.
+   *
+   * @generated from field: bool available = 2;
+   */
+  available?: boolean;
+
+  /**
+   * Bounds for the edit dialog, whole USD.
+   *
+   * @generated from field: int64 min_amount_usd = 3;
+   */
+  minAmountUsd?: string;
+
+  /**
+   * @generated from field: int64 max_amount_usd = 4;
+   */
+  maxAmountUsd?: string;
+
+  /**
+   * @generated from field: int64 min_threshold_usd = 5;
+   */
+  minThresholdUsd?: string;
+
+  /**
+   * @generated from field: int64 max_monthly_cap_usd = 6;
+   */
+  maxMonthlyCapUsd?: string;
+
+  /**
+   * @generated from field: string consent_version = 7;
+   */
+  consentVersion?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.GetAutoTopUpPolicyResponse.
+ * Use `create(GetAutoTopUpPolicyResponseSchema)` to create a new message.
+ */
+export declare const GetAutoTopUpPolicyResponseSchema: GenMessage<GetAutoTopUpPolicyResponse, GetAutoTopUpPolicyResponseJson>;
+
+/**
+ * @generated from message everstack.billing.v1.SetAutoTopUpPolicyRequest
+ */
+export declare type SetAutoTopUpPolicyRequest = Message<"everstack.billing.v1.SetAutoTopUpPolicyRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: bool enabled = 2;
+   */
+  enabled: boolean;
+
+  /**
+   * Whole USD cents. Required when enabled; ignored when turning off.
+   *
+   * @generated from field: int64 threshold_cents = 3;
+   */
+  thresholdCents: bigint;
+
+  /**
+   * @generated from field: int64 amount_cents = 4;
+   */
+  amountCents: bigint;
+
+  /**
+   * @generated from field: int64 monthly_cap_cents = 5;
+   */
+  monthlyCapCents: bigint;
+
+  /**
+   * The version the customer edited (0 when no policy existed). A stale
+   * version is refused with Aborted.
+   *
+   * @generated from field: int64 expected_version = 6;
+   */
+  expectedVersion: bigint;
+
+  /**
+   * The consent wording version the dialog showed. Required when enabled.
+   *
+   * @generated from field: string consent_version = 7;
+   */
+  consentVersion: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.SetAutoTopUpPolicyRequest
+ */
+export declare type SetAutoTopUpPolicyRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+
+  /**
+   * @generated from field: bool enabled = 2;
+   */
+  enabled?: boolean;
+
+  /**
+   * Whole USD cents. Required when enabled; ignored when turning off.
+   *
+   * @generated from field: int64 threshold_cents = 3;
+   */
+  thresholdCents?: string;
+
+  /**
+   * @generated from field: int64 amount_cents = 4;
+   */
+  amountCents?: string;
+
+  /**
+   * @generated from field: int64 monthly_cap_cents = 5;
+   */
+  monthlyCapCents?: string;
+
+  /**
+   * The version the customer edited (0 when no policy existed). A stale
+   * version is refused with Aborted.
+   *
+   * @generated from field: int64 expected_version = 6;
+   */
+  expectedVersion?: string;
+
+  /**
+   * The consent wording version the dialog showed. Required when enabled.
+   *
+   * @generated from field: string consent_version = 7;
+   */
+  consentVersion?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.SetAutoTopUpPolicyRequest.
+ * Use `create(SetAutoTopUpPolicyRequestSchema)` to create a new message.
+ */
+export declare const SetAutoTopUpPolicyRequestSchema: GenMessage<SetAutoTopUpPolicyRequest, SetAutoTopUpPolicyRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.SetAutoTopUpPolicyResponse
+ */
+export declare type SetAutoTopUpPolicyResponse = Message<"everstack.billing.v1.SetAutoTopUpPolicyResponse"> & {
+  /**
+   * @generated from field: everstack.billing.v1.AutoTopUpPolicy policy = 1;
+   */
+  policy?: AutoTopUpPolicy;
+};
+
+/**
+ * @generated from message everstack.billing.v1.SetAutoTopUpPolicyResponse
+ */
+export declare type SetAutoTopUpPolicyResponseJson = {
+  /**
+   * @generated from field: everstack.billing.v1.AutoTopUpPolicy policy = 1;
+   */
+  policy?: AutoTopUpPolicyJson;
+};
+
+/**
+ * Describes the message everstack.billing.v1.SetAutoTopUpPolicyResponse.
+ * Use `create(SetAutoTopUpPolicyResponseSchema)` to create a new message.
+ */
+export declare const SetAutoTopUpPolicyResponseSchema: GenMessage<SetAutoTopUpPolicyResponse, SetAutoTopUpPolicyResponseJson>;
+
+/**
+ * PaymentMethod is display metadata for a saved Stripe payment method. It
+ * never carries a card number or security code: those never reach Everstack.
+ *
+ * @generated from message everstack.billing.v1.PaymentMethod
+ */
+export declare type PaymentMethod = Message<"everstack.billing.v1.PaymentMethod"> & {
+  /**
+   * Everstack id of the saved method; pass it to SetDefault/Remove.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Stripe payment method type, for example "card" or "link".
+   *
+   * @generated from field: string type = 2;
+   */
+  type: string;
+
+  /**
+   * Card network, for example "visa" or "mastercard". Empty for non-cards.
+   *
+   * @generated from field: string brand = 3;
+   */
+  brand: string;
+
+  /**
+   * @generated from field: string last4 = 4;
+   */
+  last4: string;
+
+  /**
+   * @generated from field: int32 exp_month = 5;
+   */
+  expMonth: number;
+
+  /**
+   * @generated from field: int32 exp_year = 6;
+   */
+  expYear: number;
+
+  /**
+   * "credit", "debit", "prepaid" or "unknown".
+   *
+   * @generated from field: string funding = 7;
+   */
+  funding: string;
+
+  /**
+   * Issuing country, ISO 3166-1 alpha-2.
+   *
+   * @generated from field: string country = 8;
+   */
+  country: string;
+
+  /**
+   * @generated from field: bool is_default = 9;
+   */
+  isDefault: boolean;
+
+  /**
+   * True in the card's last two months of validity (this month or next).
+   *
+   * @generated from field: bool expiring_soon = 10;
+   */
+  expiringSoon: boolean;
+
+  /**
+   * True once the expiry month has passed.
+   *
+   * @generated from field: bool expired = 11;
+   */
+  expired: boolean;
+
+  /**
+   * @generated from field: string billing_name = 12;
+   */
+  billingName: string;
+
+  /**
+   * @generated from field: string billing_postal_code = 13;
+   */
+  billingPostalCode: string;
+
+  /**
+   * @generated from field: string billing_country = 14;
+   */
+  billingCountry: string;
+
+  /**
+   * Wallet the card was added through, for example "apple_pay". Empty
+   * for a card entered directly.
+   *
+   * @generated from field: string wallet = 15;
+   */
+  wallet: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 16;
+   */
+  createdAt?: Timestamp;
+
+  /**
+   * Email of the Link account, for type "link". Only returned to owners and
+   * admins; empty for other members and for every other type.
+   *
+   * @generated from field: string link_email = 17;
+   */
+  linkEmail: string;
+
+  /**
+   * Billing address lines of a card. Only returned to owners and admins, to
+   * prefill the edit form.
+   *
+   * @generated from field: string billing_address_line1 = 18;
+   */
+  billingAddressLine1: string;
+
+  /**
+   * @generated from field: string billing_address_line2 = 19;
+   */
+  billingAddressLine2: string;
+
+  /**
+   * @generated from field: string billing_address_city = 20;
+   */
+  billingAddressCity: string;
+
+  /**
+   * @generated from field: string billing_address_state = 21;
+   */
+  billingAddressState: string;
+};
+
+/**
+ * PaymentMethod is display metadata for a saved Stripe payment method. It
+ * never carries a card number or security code: those never reach Everstack.
+ *
+ * @generated from message everstack.billing.v1.PaymentMethod
+ */
+export declare type PaymentMethodJson = {
+  /**
+   * Everstack id of the saved method; pass it to SetDefault/Remove.
+   *
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * Stripe payment method type, for example "card" or "link".
+   *
+   * @generated from field: string type = 2;
+   */
+  type?: string;
+
+  /**
+   * Card network, for example "visa" or "mastercard". Empty for non-cards.
+   *
+   * @generated from field: string brand = 3;
+   */
+  brand?: string;
+
+  /**
+   * @generated from field: string last4 = 4;
+   */
+  last4?: string;
+
+  /**
+   * @generated from field: int32 exp_month = 5;
+   */
+  expMonth?: number;
+
+  /**
+   * @generated from field: int32 exp_year = 6;
+   */
+  expYear?: number;
+
+  /**
+   * "credit", "debit", "prepaid" or "unknown".
+   *
+   * @generated from field: string funding = 7;
+   */
+  funding?: string;
+
+  /**
+   * Issuing country, ISO 3166-1 alpha-2.
+   *
+   * @generated from field: string country = 8;
+   */
+  country?: string;
+
+  /**
+   * @generated from field: bool is_default = 9;
+   */
+  isDefault?: boolean;
+
+  /**
+   * True in the card's last two months of validity (this month or next).
+   *
+   * @generated from field: bool expiring_soon = 10;
+   */
+  expiringSoon?: boolean;
+
+  /**
+   * True once the expiry month has passed.
+   *
+   * @generated from field: bool expired = 11;
+   */
+  expired?: boolean;
+
+  /**
+   * @generated from field: string billing_name = 12;
+   */
+  billingName?: string;
+
+  /**
+   * @generated from field: string billing_postal_code = 13;
+   */
+  billingPostalCode?: string;
+
+  /**
+   * @generated from field: string billing_country = 14;
+   */
+  billingCountry?: string;
+
+  /**
+   * Wallet the card was added through, for example "apple_pay". Empty
+   * for a card entered directly.
+   *
+   * @generated from field: string wallet = 15;
+   */
+  wallet?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 16;
+   */
+  createdAt?: TimestampJson;
+
+  /**
+   * Email of the Link account, for type "link". Only returned to owners and
+   * admins; empty for other members and for every other type.
+   *
+   * @generated from field: string link_email = 17;
+   */
+  linkEmail?: string;
+
+  /**
+   * Billing address lines of a card. Only returned to owners and admins, to
+   * prefill the edit form.
+   *
+   * @generated from field: string billing_address_line1 = 18;
+   */
+  billingAddressLine1?: string;
+
+  /**
+   * @generated from field: string billing_address_line2 = 19;
+   */
+  billingAddressLine2?: string;
+
+  /**
+   * @generated from field: string billing_address_city = 20;
+   */
+  billingAddressCity?: string;
+
+  /**
+   * @generated from field: string billing_address_state = 21;
+   */
+  billingAddressState?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.PaymentMethod.
+ * Use `create(PaymentMethodSchema)` to create a new message.
+ */
+export declare const PaymentMethodSchema: GenMessage<PaymentMethod, PaymentMethodJson>;
+
+/**
+ * @generated from message everstack.billing.v1.CreateSetupIntentRequest
+ */
+export declare type CreateSetupIntentRequest = Message<"everstack.billing.v1.CreateSetupIntentRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.CreateSetupIntentRequest
+ */
+export declare type CreateSetupIntentRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.CreateSetupIntentRequest.
+ * Use `create(CreateSetupIntentRequestSchema)` to create a new message.
+ */
+export declare const CreateSetupIntentRequestSchema: GenMessage<CreateSetupIntentRequest, CreateSetupIntentRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.CreateSetupIntentResponse
+ */
+export declare type CreateSetupIntentResponse = Message<"everstack.billing.v1.CreateSetupIntentResponse"> & {
+  /**
+   * Stripe SetupIntent client secret for stripe.confirmSetup. Short-lived;
+   * never log or persist it.
+   *
+   * @generated from field: string client_secret = 1;
+   */
+  clientSecret: string;
+
+  /**
+   * @generated from field: string setup_intent_id = 2;
+   */
+  setupIntentId: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.CreateSetupIntentResponse
+ */
+export declare type CreateSetupIntentResponseJson = {
+  /**
+   * Stripe SetupIntent client secret for stripe.confirmSetup. Short-lived;
+   * never log or persist it.
+   *
+   * @generated from field: string client_secret = 1;
+   */
+  clientSecret?: string;
+
+  /**
+   * @generated from field: string setup_intent_id = 2;
+   */
+  setupIntentId?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.CreateSetupIntentResponse.
+ * Use `create(CreateSetupIntentResponseSchema)` to create a new message.
+ */
+export declare const CreateSetupIntentResponseSchema: GenMessage<CreateSetupIntentResponse, CreateSetupIntentResponseJson>;
+
+/**
+ * @generated from message everstack.billing.v1.ListPaymentMethodsRequest
+ */
+export declare type ListPaymentMethodsRequest = Message<"everstack.billing.v1.ListPaymentMethodsRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.ListPaymentMethodsRequest
+ */
+export declare type ListPaymentMethodsRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.ListPaymentMethodsRequest.
+ * Use `create(ListPaymentMethodsRequestSchema)` to create a new message.
+ */
+export declare const ListPaymentMethodsRequestSchema: GenMessage<ListPaymentMethodsRequest, ListPaymentMethodsRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.ListPaymentMethodsResponse
+ */
+export declare type ListPaymentMethodsResponse = Message<"everstack.billing.v1.ListPaymentMethodsResponse"> & {
+  /**
+   * @generated from field: repeated everstack.billing.v1.PaymentMethod payment_methods = 1;
+   */
+  paymentMethods: PaymentMethod[];
+};
+
+/**
+ * @generated from message everstack.billing.v1.ListPaymentMethodsResponse
+ */
+export declare type ListPaymentMethodsResponseJson = {
+  /**
+   * @generated from field: repeated everstack.billing.v1.PaymentMethod payment_methods = 1;
+   */
+  paymentMethods?: PaymentMethodJson[];
+};
+
+/**
+ * Describes the message everstack.billing.v1.ListPaymentMethodsResponse.
+ * Use `create(ListPaymentMethodsResponseSchema)` to create a new message.
+ */
+export declare const ListPaymentMethodsResponseSchema: GenMessage<ListPaymentMethodsResponse, ListPaymentMethodsResponseJson>;
+
+/**
+ * @generated from message everstack.billing.v1.SetDefaultPaymentMethodRequest
+ */
+export declare type SetDefaultPaymentMethodRequest = Message<"everstack.billing.v1.SetDefaultPaymentMethodRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string payment_method_id = 2;
+   */
+  paymentMethodId: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.SetDefaultPaymentMethodRequest
+ */
+export declare type SetDefaultPaymentMethodRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+
+  /**
+   * @generated from field: string payment_method_id = 2;
+   */
+  paymentMethodId?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.SetDefaultPaymentMethodRequest.
+ * Use `create(SetDefaultPaymentMethodRequestSchema)` to create a new message.
+ */
+export declare const SetDefaultPaymentMethodRequestSchema: GenMessage<SetDefaultPaymentMethodRequest, SetDefaultPaymentMethodRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.SetDefaultPaymentMethodResponse
+ */
+export declare type SetDefaultPaymentMethodResponse = Message<"everstack.billing.v1.SetDefaultPaymentMethodResponse"> & {
+  /**
+   * @generated from field: repeated everstack.billing.v1.PaymentMethod payment_methods = 1;
+   */
+  paymentMethods: PaymentMethod[];
+
+  /**
+   * Set when a subscription was past due or unpaid with an open invoice
+   * and the new default card was tried on it. Every live subscription is
+   * moved to the new default card either way.
+   *
+   * @generated from field: optional everstack.billing.v1.PaymentRecovery payment_recovery = 2;
+   */
+  paymentRecovery?: PaymentRecovery;
+};
+
+/**
+ * @generated from message everstack.billing.v1.SetDefaultPaymentMethodResponse
+ */
+export declare type SetDefaultPaymentMethodResponseJson = {
+  /**
+   * @generated from field: repeated everstack.billing.v1.PaymentMethod payment_methods = 1;
+   */
+  paymentMethods?: PaymentMethodJson[];
+
+  /**
+   * Set when a subscription was past due or unpaid with an open invoice
+   * and the new default card was tried on it. Every live subscription is
+   * moved to the new default card either way.
+   *
+   * @generated from field: optional everstack.billing.v1.PaymentRecovery payment_recovery = 2;
+   */
+  paymentRecovery?: PaymentRecoveryJson;
+};
+
+/**
+ * Describes the message everstack.billing.v1.SetDefaultPaymentMethodResponse.
+ * Use `create(SetDefaultPaymentMethodResponseSchema)` to create a new message.
+ */
+export declare const SetDefaultPaymentMethodResponseSchema: GenMessage<SetDefaultPaymentMethodResponse, SetDefaultPaymentMethodResponseJson>;
+
+/**
+ * @generated from message everstack.billing.v1.PaymentRecovery
+ */
+export declare type PaymentRecovery = Message<"everstack.billing.v1.PaymentRecovery"> & {
+  /**
+   * @generated from field: everstack.billing.v1.PaymentRecoveryStatus status = 1;
+   */
+  status: PaymentRecoveryStatus;
+
+  /**
+   * Smallest currency unit.
+   *
+   * @generated from field: int64 amount_due = 2;
+   */
+  amountDue: bigint;
+
+  /**
+   * @generated from field: string currency = 3;
+   */
+  currency: string;
+
+  /**
+   * @generated from field: optional everstack.billing.v1.ClientAction client_action = 4;
+   */
+  clientAction?: ClientAction;
+};
+
+/**
+ * @generated from message everstack.billing.v1.PaymentRecovery
+ */
+export declare type PaymentRecoveryJson = {
+  /**
+   * @generated from field: everstack.billing.v1.PaymentRecoveryStatus status = 1;
+   */
+  status?: PaymentRecoveryStatusJson;
+
+  /**
+   * Smallest currency unit.
+   *
+   * @generated from field: int64 amount_due = 2;
+   */
+  amountDue?: string;
+
+  /**
+   * @generated from field: string currency = 3;
+   */
+  currency?: string;
+
+  /**
+   * @generated from field: optional everstack.billing.v1.ClientAction client_action = 4;
+   */
+  clientAction?: ClientActionJson;
+};
+
+/**
+ * Describes the message everstack.billing.v1.PaymentRecovery.
+ * Use `create(PaymentRecoverySchema)` to create a new message.
+ */
+export declare const PaymentRecoverySchema: GenMessage<PaymentRecovery, PaymentRecoveryJson>;
+
+/**
+ * @generated from message everstack.billing.v1.RemovePaymentMethodRequest
+ */
+export declare type RemovePaymentMethodRequest = Message<"everstack.billing.v1.RemovePaymentMethodRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string payment_method_id = 2;
+   */
+  paymentMethodId: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.RemovePaymentMethodRequest
+ */
+export declare type RemovePaymentMethodRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+
+  /**
+   * @generated from field: string payment_method_id = 2;
+   */
+  paymentMethodId?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.RemovePaymentMethodRequest.
+ * Use `create(RemovePaymentMethodRequestSchema)` to create a new message.
+ */
+export declare const RemovePaymentMethodRequestSchema: GenMessage<RemovePaymentMethodRequest, RemovePaymentMethodRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.RemovePaymentMethodResponse
+ */
+export declare type RemovePaymentMethodResponse = Message<"everstack.billing.v1.RemovePaymentMethodResponse"> & {
+  /**
+   * @generated from field: repeated everstack.billing.v1.PaymentMethod payment_methods = 1;
+   */
+  paymentMethods: PaymentMethod[];
+};
+
+/**
+ * @generated from message everstack.billing.v1.RemovePaymentMethodResponse
+ */
+export declare type RemovePaymentMethodResponseJson = {
+  /**
+   * @generated from field: repeated everstack.billing.v1.PaymentMethod payment_methods = 1;
+   */
+  paymentMethods?: PaymentMethodJson[];
+};
+
+/**
+ * Describes the message everstack.billing.v1.RemovePaymentMethodResponse.
+ * Use `create(RemovePaymentMethodResponseSchema)` to create a new message.
+ */
+export declare const RemovePaymentMethodResponseSchema: GenMessage<RemovePaymentMethodResponse, RemovePaymentMethodResponseJson>;
+
+/**
+ * UpdatePaymentMethodRequest replaces the editable details of a saved card.
+ * Stripe never lets a card number change; to use a different card, add it
+ * and remove the old one. Every field is sent: an empty billing field clears
+ * it in Stripe.
+ *
+ * @generated from message everstack.billing.v1.UpdatePaymentMethodRequest
+ */
+export declare type UpdatePaymentMethodRequest = Message<"everstack.billing.v1.UpdatePaymentMethodRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string payment_method_id = 2;
+   */
+  paymentMethodId: string;
+
+  /**
+   * 1 to 12.
+   *
+   * @generated from field: int32 exp_month = 3;
+   */
+  expMonth: number;
+
+  /**
+   * Four digits. The expiry must not be in the past.
+   *
+   * @generated from field: int32 exp_year = 4;
+   */
+  expYear: number;
+
+  /**
+   * @generated from field: string billing_name = 5;
+   */
+  billingName: string;
+
+  /**
+   * @generated from field: string billing_address_line1 = 6;
+   */
+  billingAddressLine1: string;
+
+  /**
+   * @generated from field: string billing_address_line2 = 7;
+   */
+  billingAddressLine2: string;
+
+  /**
+   * @generated from field: string billing_address_city = 8;
+   */
+  billingAddressCity: string;
+
+  /**
+   * @generated from field: string billing_address_state = 9;
+   */
+  billingAddressState: string;
+
+  /**
+   * @generated from field: string billing_postal_code = 10;
+   */
+  billingPostalCode: string;
+
+  /**
+   * ISO 3166-1 alpha-2.
+   *
+   * @generated from field: string billing_country = 11;
+   */
+  billingCountry: string;
+};
+
+/**
+ * UpdatePaymentMethodRequest replaces the editable details of a saved card.
+ * Stripe never lets a card number change; to use a different card, add it
+ * and remove the old one. Every field is sent: an empty billing field clears
+ * it in Stripe.
+ *
+ * @generated from message everstack.billing.v1.UpdatePaymentMethodRequest
+ */
+export declare type UpdatePaymentMethodRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+
+  /**
+   * @generated from field: string payment_method_id = 2;
+   */
+  paymentMethodId?: string;
+
+  /**
+   * 1 to 12.
+   *
+   * @generated from field: int32 exp_month = 3;
+   */
+  expMonth?: number;
+
+  /**
+   * Four digits. The expiry must not be in the past.
+   *
+   * @generated from field: int32 exp_year = 4;
+   */
+  expYear?: number;
+
+  /**
+   * @generated from field: string billing_name = 5;
+   */
+  billingName?: string;
+
+  /**
+   * @generated from field: string billing_address_line1 = 6;
+   */
+  billingAddressLine1?: string;
+
+  /**
+   * @generated from field: string billing_address_line2 = 7;
+   */
+  billingAddressLine2?: string;
+
+  /**
+   * @generated from field: string billing_address_city = 8;
+   */
+  billingAddressCity?: string;
+
+  /**
+   * @generated from field: string billing_address_state = 9;
+   */
+  billingAddressState?: string;
+
+  /**
+   * @generated from field: string billing_postal_code = 10;
+   */
+  billingPostalCode?: string;
+
+  /**
+   * ISO 3166-1 alpha-2.
+   *
+   * @generated from field: string billing_country = 11;
+   */
+  billingCountry?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.UpdatePaymentMethodRequest.
+ * Use `create(UpdatePaymentMethodRequestSchema)` to create a new message.
+ */
+export declare const UpdatePaymentMethodRequestSchema: GenMessage<UpdatePaymentMethodRequest, UpdatePaymentMethodRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.UpdatePaymentMethodResponse
+ */
+export declare type UpdatePaymentMethodResponse = Message<"everstack.billing.v1.UpdatePaymentMethodResponse"> & {
+  /**
+   * @generated from field: repeated everstack.billing.v1.PaymentMethod payment_methods = 1;
+   */
+  paymentMethods: PaymentMethod[];
+};
+
+/**
+ * @generated from message everstack.billing.v1.UpdatePaymentMethodResponse
+ */
+export declare type UpdatePaymentMethodResponseJson = {
+  /**
+   * @generated from field: repeated everstack.billing.v1.PaymentMethod payment_methods = 1;
+   */
+  paymentMethods?: PaymentMethodJson[];
+};
+
+/**
+ * Describes the message everstack.billing.v1.UpdatePaymentMethodResponse.
+ * Use `create(UpdatePaymentMethodResponseSchema)` to create a new message.
+ */
+export declare const UpdatePaymentMethodResponseSchema: GenMessage<UpdatePaymentMethodResponse, UpdatePaymentMethodResponseJson>;
+
+/**
+ * SubscriptionPaymentMethod is the display summary of the card or method
+ * that pays the subscription. Never a full number.
+ *
+ * @generated from message everstack.billing.v1.SubscriptionPaymentMethod
+ */
+export declare type SubscriptionPaymentMethod = Message<"everstack.billing.v1.SubscriptionPaymentMethod"> & {
+  /**
+   * Stripe payment method type, for example "card" or "link".
+   *
+   * @generated from field: string type = 1;
+   */
+  type: string;
+
+  /**
+   * @generated from field: string brand = 2;
+   */
+  brand: string;
+
+  /**
+   * @generated from field: string last4 = 3;
+   */
+  last4: string;
+
+  /**
+   * @generated from field: int32 exp_month = 4;
+   */
+  expMonth: number;
+
+  /**
+   * @generated from field: int32 exp_year = 5;
+   */
+  expYear: number;
+
+  /**
+   * "subscription" when set on the subscription itself, "customer_default"
+   * when it falls back to the organization's default method.
+   *
+   * @generated from field: string source = 6;
+   */
+  source: string;
+};
+
+/**
+ * SubscriptionPaymentMethod is the display summary of the card or method
+ * that pays the subscription. Never a full number.
+ *
+ * @generated from message everstack.billing.v1.SubscriptionPaymentMethod
+ */
+export declare type SubscriptionPaymentMethodJson = {
+  /**
+   * Stripe payment method type, for example "card" or "link".
+   *
+   * @generated from field: string type = 1;
+   */
+  type?: string;
+
+  /**
+   * @generated from field: string brand = 2;
+   */
+  brand?: string;
+
+  /**
+   * @generated from field: string last4 = 3;
+   */
+  last4?: string;
+
+  /**
+   * @generated from field: int32 exp_month = 4;
+   */
+  expMonth?: number;
+
+  /**
+   * @generated from field: int32 exp_year = 5;
+   */
+  expYear?: number;
+
+  /**
+   * "subscription" when set on the subscription itself, "customer_default"
+   * when it falls back to the organization's default method.
+   *
+   * @generated from field: string source = 6;
+   */
+  source?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.SubscriptionPaymentMethod.
+ * Use `create(SubscriptionPaymentMethodSchema)` to create a new message.
+ */
+export declare const SubscriptionPaymentMethodSchema: GenMessage<SubscriptionPaymentMethod, SubscriptionPaymentMethodJson>;
+
+/**
+ * UpcomingInvoice is the next invoice Stripe will raise for the
+ * subscription (Stripe invoice preview, cached for a few minutes).
+ *
+ * @generated from message everstack.billing.v1.UpcomingInvoice
+ */
+export declare type UpcomingInvoice = Message<"everstack.billing.v1.UpcomingInvoice"> & {
+  /**
+   * Smallest currency unit (cents for USD), tax and credits included.
+   *
+   * @generated from field: int64 amount_due = 1;
+   */
+  amountDue: bigint;
+
+  /**
+   * @generated from field: string currency = 2;
+   */
+  currency: string;
+
+  /**
+   * When Stripe will attempt to collect it.
+   *
+   * @generated from field: google.protobuf.Timestamp date = 3;
+   */
+  date?: Timestamp;
+};
+
+/**
+ * UpcomingInvoice is the next invoice Stripe will raise for the
+ * subscription (Stripe invoice preview, cached for a few minutes).
+ *
+ * @generated from message everstack.billing.v1.UpcomingInvoice
+ */
+export declare type UpcomingInvoiceJson = {
+  /**
+   * Smallest currency unit (cents for USD), tax and credits included.
+   *
+   * @generated from field: int64 amount_due = 1;
+   */
+  amountDue?: string;
+
+  /**
+   * @generated from field: string currency = 2;
+   */
+  currency?: string;
+
+  /**
+   * When Stripe will attempt to collect it.
+   *
+   * @generated from field: google.protobuf.Timestamp date = 3;
+   */
+  date?: TimestampJson;
+};
+
+/**
+ * Describes the message everstack.billing.v1.UpcomingInvoice.
+ * Use `create(UpcomingInvoiceSchema)` to create a new message.
+ */
+export declare const UpcomingInvoiceSchema: GenMessage<UpcomingInvoice, UpcomingInvoiceJson>;
+
+/**
+ * ScheduledPlanChange is a plan or interval change that takes effect at
+ * the end of the current period.
+ *
+ * @generated from message everstack.billing.v1.ScheduledPlanChange
+ */
+export declare type ScheduledPlanChange = Message<"everstack.billing.v1.ScheduledPlanChange"> & {
+  /**
+   * @generated from field: everstack.billing.v1.PlanChoice target_plan = 1;
+   */
+  targetPlan: PlanChoice;
+
+  /**
+   * Catalog display name of the target plan ("Build").
+   *
+   * @generated from field: string target_plan_name = 2;
+   */
+  targetPlanName: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.BillingPeriod target_billing_period = 3;
+   */
+  targetBillingPeriod: BillingPeriod;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp effective_at = 4;
+   */
+  effectiveAt?: Timestamp;
+
+  /**
+   * False when the change was scheduled outside the app (for example in
+   * the Stripe portal); keep_instance_ids is then empty.
+   *
+   * @generated from field: bool scheduled_in_app = 5;
+   */
+  scheduledInApp: boolean;
+};
+
+/**
+ * ScheduledPlanChange is a plan or interval change that takes effect at
+ * the end of the current period.
+ *
+ * @generated from message everstack.billing.v1.ScheduledPlanChange
+ */
+export declare type ScheduledPlanChangeJson = {
+  /**
+   * @generated from field: everstack.billing.v1.PlanChoice target_plan = 1;
+   */
+  targetPlan?: PlanChoiceJson;
+
+  /**
+   * Catalog display name of the target plan ("Build").
+   *
+   * @generated from field: string target_plan_name = 2;
+   */
+  targetPlanName?: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.BillingPeriod target_billing_period = 3;
+   */
+  targetBillingPeriod?: BillingPeriodJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp effective_at = 4;
+   */
+  effectiveAt?: TimestampJson;
+
+  /**
+   * False when the change was scheduled outside the app (for example in
+   * the Stripe portal); keep_instance_ids is then empty.
+   *
+   * @generated from field: bool scheduled_in_app = 5;
+   */
+  scheduledInApp?: boolean;
+};
+
+/**
+ * Describes the message everstack.billing.v1.ScheduledPlanChange.
+ * Use `create(ScheduledPlanChangeSchema)` to create a new message.
+ */
+export declare const ScheduledPlanChangeSchema: GenMessage<ScheduledPlanChange, ScheduledPlanChangeJson>;
+
+/**
+ * SubscriptionAllowedActions is what the caller may do now. Server
+ * computed; the UI should not re-derive it. All false for members without
+ * org:manage_billing.
+ *
+ * @generated from message everstack.billing.v1.SubscriptionAllowedActions
+ */
+export declare type SubscriptionAllowedActions = Message<"everstack.billing.v1.SubscriptionAllowedActions"> & {
+  /**
+   * CancelSubscription (at period end).
+   *
+   * @generated from field: bool cancel = 1;
+   */
+  cancel: boolean;
+
+  /**
+   * ResumeSubscription: withdraws a scheduled cancellation or a scheduled
+   * plan change.
+   *
+   * @generated from field: bool resume = 2;
+   */
+  resume: boolean;
+
+  /**
+   * ChangePlan to another plan.
+   *
+   * @generated from field: bool change_plan = 3;
+   */
+  changePlan: boolean;
+
+  /**
+   * ChangePlan to the other billing period of the current plan.
+   *
+   * @generated from field: bool switch_interval = 4;
+   */
+  switchInterval: boolean;
+
+  /**
+   * CreateBillingPortalSession / payment method RPCs.
+   *
+   * @generated from field: bool update_payment = 5;
+   */
+  updatePayment: boolean;
+};
+
+/**
+ * SubscriptionAllowedActions is what the caller may do now. Server
+ * computed; the UI should not re-derive it. All false for members without
+ * org:manage_billing.
+ *
+ * @generated from message everstack.billing.v1.SubscriptionAllowedActions
+ */
+export declare type SubscriptionAllowedActionsJson = {
+  /**
+   * CancelSubscription (at period end).
+   *
+   * @generated from field: bool cancel = 1;
+   */
+  cancel?: boolean;
+
+  /**
+   * ResumeSubscription: withdraws a scheduled cancellation or a scheduled
+   * plan change.
+   *
+   * @generated from field: bool resume = 2;
+   */
+  resume?: boolean;
+
+  /**
+   * ChangePlan to another plan.
+   *
+   * @generated from field: bool change_plan = 3;
+   */
+  changePlan?: boolean;
+
+  /**
+   * ChangePlan to the other billing period of the current plan.
+   *
+   * @generated from field: bool switch_interval = 4;
+   */
+  switchInterval?: boolean;
+
+  /**
+   * CreateBillingPortalSession / payment method RPCs.
+   *
+   * @generated from field: bool update_payment = 5;
+   */
+  updatePayment?: boolean;
+};
+
+/**
+ * Describes the message everstack.billing.v1.SubscriptionAllowedActions.
+ * Use `create(SubscriptionAllowedActionsSchema)` to create a new message.
+ */
+export declare const SubscriptionAllowedActionsSchema: GenMessage<SubscriptionAllowedActions, SubscriptionAllowedActionsJson>;
+
+/**
+ * SubscriptionSummary is the plan summary view. Fields marked "manager
+ * only" are left unset for members without org:manage_billing.
+ *
+ * @generated from message everstack.billing.v1.SubscriptionSummary
+ */
+export declare type SubscriptionSummary = Message<"everstack.billing.v1.SubscriptionSummary"> & {
+  /**
+   * Internal tier for logic ("free", "basic", "pro", "enterprise").
+   *
+   * @generated from field: string plan_tier = 1;
+   */
+  planTier: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.PlanChoice plan = 2;
+   */
+  plan: PlanChoice;
+
+  /**
+   * Catalog display name ("Starter", "Build", "Scale"); never the tier.
+   *
+   * @generated from field: string plan_name = 3;
+   */
+  planName: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.SubscriptionStatus status = 4;
+   */
+  status: SubscriptionStatus;
+
+  /**
+   * @generated from field: everstack.billing.v1.BillingPeriod billing_period = 5;
+   */
+  billingPeriod: BillingPeriod;
+
+  /**
+   * The real period: Stripe's license item when it could be read, else the
+   * stored row. Never projected.
+   *
+   * @generated from field: google.protobuf.Timestamp current_period_start = 6;
+   */
+  currentPeriodStart?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp current_period_end = 7;
+   */
+  currentPeriodEnd?: Timestamp;
+
+  /**
+   * Next renewal; unset when a cancellation is scheduled or the
+   * subscription has ended.
+   *
+   * @generated from field: optional google.protobuf.Timestamp renews_at = 8;
+   */
+  renewsAt?: Timestamp;
+
+  /**
+   * When a scheduled cancellation takes effect.
+   *
+   * @generated from field: optional google.protobuf.Timestamp cancels_at = 9;
+   */
+  cancelsAt?: Timestamp;
+
+  /**
+   * @generated from field: bool cancel_at_period_end = 10;
+   */
+  cancelAtPeriodEnd: boolean;
+
+  /**
+   * @generated from field: optional everstack.billing.v1.ScheduledPlanChange scheduled_change = 11;
+   */
+  scheduledChange?: ScheduledPlanChange;
+
+  /**
+   * End of the past-due grace window. Reserved for the dunning slice; not
+   * set yet.
+   *
+   * @generated from field: optional google.protobuf.Timestamp past_due_grace_ends_at = 12;
+   */
+  pastDueGraceEndsAt?: Timestamp;
+
+  /**
+   * Manager only. Unset when nothing is due (cancellation scheduled,
+   * ended) or Stripe could not be read.
+   *
+   * @generated from field: optional everstack.billing.v1.UpcomingInvoice next_invoice = 13;
+   */
+  nextInvoice?: UpcomingInvoice;
+
+  /**
+   * Manager only.
+   *
+   * @generated from field: optional everstack.billing.v1.SubscriptionPaymentMethod payment_method = 14;
+   */
+  paymentMethod?: SubscriptionPaymentMethod;
+
+  /**
+   * @generated from field: everstack.billing.v1.SubscriptionAllowedActions allowed_actions = 15;
+   */
+  allowedActions?: SubscriptionAllowedActions;
+
+  /**
+   * True when the stored subscription disagrees with Stripe or with
+   * itself and someone should look (see review_reasons).
+   *
+   * @generated from field: bool needs_review = 16;
+   */
+  needsReview: boolean;
+
+  /**
+   * Machine-readable reasons: "stripe_subscription_missing",
+   * "stripe_status_mismatch", "period_ended", "unknown_price",
+   * "org_tier_mismatch".
+   *
+   * @generated from field: repeated string review_reasons = 17;
+   */
+  reviewReasons: string[];
+
+  /**
+   * Manager only. Instances chosen to keep when the scheduled cancellation
+   * or downgrade takes effect; the rest pause then. Empty means "keep the
+   * most recently active".
+   *
+   * @generated from field: repeated string keep_instance_ids = 18;
+   */
+  keepInstanceIds: string[];
+
+  /**
+   * False when the caller lacks org:manage_billing and manager-only fields
+   * were withheld.
+   *
+   * @generated from field: bool manager_view = 19;
+   */
+  managerView: boolean;
+};
+
+/**
+ * SubscriptionSummary is the plan summary view. Fields marked "manager
+ * only" are left unset for members without org:manage_billing.
+ *
+ * @generated from message everstack.billing.v1.SubscriptionSummary
+ */
+export declare type SubscriptionSummaryJson = {
+  /**
+   * Internal tier for logic ("free", "basic", "pro", "enterprise").
+   *
+   * @generated from field: string plan_tier = 1;
+   */
+  planTier?: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.PlanChoice plan = 2;
+   */
+  plan?: PlanChoiceJson;
+
+  /**
+   * Catalog display name ("Starter", "Build", "Scale"); never the tier.
+   *
+   * @generated from field: string plan_name = 3;
+   */
+  planName?: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.SubscriptionStatus status = 4;
+   */
+  status?: SubscriptionStatusJson;
+
+  /**
+   * @generated from field: everstack.billing.v1.BillingPeriod billing_period = 5;
+   */
+  billingPeriod?: BillingPeriodJson;
+
+  /**
+   * The real period: Stripe's license item when it could be read, else the
+   * stored row. Never projected.
+   *
+   * @generated from field: google.protobuf.Timestamp current_period_start = 6;
+   */
+  currentPeriodStart?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp current_period_end = 7;
+   */
+  currentPeriodEnd?: TimestampJson;
+
+  /**
+   * Next renewal; unset when a cancellation is scheduled or the
+   * subscription has ended.
+   *
+   * @generated from field: optional google.protobuf.Timestamp renews_at = 8;
+   */
+  renewsAt?: TimestampJson;
+
+  /**
+   * When a scheduled cancellation takes effect.
+   *
+   * @generated from field: optional google.protobuf.Timestamp cancels_at = 9;
+   */
+  cancelsAt?: TimestampJson;
+
+  /**
+   * @generated from field: bool cancel_at_period_end = 10;
+   */
+  cancelAtPeriodEnd?: boolean;
+
+  /**
+   * @generated from field: optional everstack.billing.v1.ScheduledPlanChange scheduled_change = 11;
+   */
+  scheduledChange?: ScheduledPlanChangeJson;
+
+  /**
+   * End of the past-due grace window. Reserved for the dunning slice; not
+   * set yet.
+   *
+   * @generated from field: optional google.protobuf.Timestamp past_due_grace_ends_at = 12;
+   */
+  pastDueGraceEndsAt?: TimestampJson;
+
+  /**
+   * Manager only. Unset when nothing is due (cancellation scheduled,
+   * ended) or Stripe could not be read.
+   *
+   * @generated from field: optional everstack.billing.v1.UpcomingInvoice next_invoice = 13;
+   */
+  nextInvoice?: UpcomingInvoiceJson;
+
+  /**
+   * Manager only.
+   *
+   * @generated from field: optional everstack.billing.v1.SubscriptionPaymentMethod payment_method = 14;
+   */
+  paymentMethod?: SubscriptionPaymentMethodJson;
+
+  /**
+   * @generated from field: everstack.billing.v1.SubscriptionAllowedActions allowed_actions = 15;
+   */
+  allowedActions?: SubscriptionAllowedActionsJson;
+
+  /**
+   * True when the stored subscription disagrees with Stripe or with
+   * itself and someone should look (see review_reasons).
+   *
+   * @generated from field: bool needs_review = 16;
+   */
+  needsReview?: boolean;
+
+  /**
+   * Machine-readable reasons: "stripe_subscription_missing",
+   * "stripe_status_mismatch", "period_ended", "unknown_price",
+   * "org_tier_mismatch".
+   *
+   * @generated from field: repeated string review_reasons = 17;
+   */
+  reviewReasons?: string[];
+
+  /**
+   * Manager only. Instances chosen to keep when the scheduled cancellation
+   * or downgrade takes effect; the rest pause then. Empty means "keep the
+   * most recently active".
+   *
+   * @generated from field: repeated string keep_instance_ids = 18;
+   */
+  keepInstanceIds?: string[];
+
+  /**
+   * False when the caller lacks org:manage_billing and manager-only fields
+   * were withheld.
+   *
+   * @generated from field: bool manager_view = 19;
+   */
+  managerView?: boolean;
+};
+
+/**
+ * Describes the message everstack.billing.v1.SubscriptionSummary.
+ * Use `create(SubscriptionSummarySchema)` to create a new message.
+ */
+export declare const SubscriptionSummarySchema: GenMessage<SubscriptionSummary, SubscriptionSummaryJson>;
+
+/**
+ * PlanLimitsSummary is the part of a plan's limits a change affects.
+ *
+ * @generated from message everstack.billing.v1.PlanLimitsSummary
+ */
+export declare type PlanLimitsSummary = Message<"everstack.billing.v1.PlanLimitsSummary"> & {
+  /**
+   * 0 means unlimited.
+   *
+   * @generated from field: int32 instance_limit = 1;
+   */
+  instanceLimit: number;
+
+  /**
+   * @generated from field: int32 seat_limit = 2;
+   */
+  seatLimit: number;
+
+  /**
+   * Named usage limits from the catalog (-1 = unlimited).
+   *
+   * @generated from field: repeated everstack.billing.v1.PlanUsageLimit usage_limits = 3;
+   */
+  usageLimits: PlanUsageLimit[];
+};
+
+/**
+ * PlanLimitsSummary is the part of a plan's limits a change affects.
+ *
+ * @generated from message everstack.billing.v1.PlanLimitsSummary
+ */
+export declare type PlanLimitsSummaryJson = {
+  /**
+   * 0 means unlimited.
+   *
+   * @generated from field: int32 instance_limit = 1;
+   */
+  instanceLimit?: number;
+
+  /**
+   * @generated from field: int32 seat_limit = 2;
+   */
+  seatLimit?: number;
+
+  /**
+   * Named usage limits from the catalog (-1 = unlimited).
+   *
+   * @generated from field: repeated everstack.billing.v1.PlanUsageLimit usage_limits = 3;
+   */
+  usageLimits?: PlanUsageLimitJson[];
+};
+
+/**
+ * Describes the message everstack.billing.v1.PlanLimitsSummary.
+ * Use `create(PlanLimitsSummarySchema)` to create a new message.
+ */
+export declare const PlanLimitsSummarySchema: GenMessage<PlanLimitsSummary, PlanLimitsSummaryJson>;
+
+/**
+ * @generated from message everstack.billing.v1.PlanUsageLimit
+ */
+export declare type PlanUsageLimit = Message<"everstack.billing.v1.PlanUsageLimit"> & {
+  /**
+   * @generated from field: string type = 1;
+   */
+  type: string;
+
+  /**
+   * @generated from field: int64 value = 2;
+   */
+  value: bigint;
+};
+
+/**
+ * @generated from message everstack.billing.v1.PlanUsageLimit
+ */
+export declare type PlanUsageLimitJson = {
+  /**
+   * @generated from field: string type = 1;
+   */
+  type?: string;
+
+  /**
+   * @generated from field: int64 value = 2;
+   */
+  value?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.PlanUsageLimit.
+ * Use `create(PlanUsageLimitSchema)` to create a new message.
+ */
+export declare const PlanUsageLimitSchema: GenMessage<PlanUsageLimit, PlanUsageLimitJson>;
+
+/**
+ * PlanChangeInstance is one managed instance that holds a plan slot.
+ *
+ * @generated from message everstack.billing.v1.PlanChangeInstance
+ */
+export declare type PlanChangeInstance = Message<"everstack.billing.v1.PlanChangeInstance"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string slug = 2;
+   */
+  slug: string;
+
+  /**
+   * @generated from field: string status = 3;
+   */
+  status: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_active_at = 4;
+   */
+  lastActiveAt?: Timestamp;
+
+  /**
+   * True when it would pause at the switch under the given (or default)
+   * keep choice.
+   *
+   * @generated from field: bool would_pause = 5;
+   */
+  wouldPause: boolean;
+
+  /**
+   * True when it already runs as a paid extra instance (credit-funded fee)
+   * and holds no plan slot.
+   *
+   * @generated from field: bool paid_extra = 6;
+   */
+  paidExtra: boolean;
+};
+
+/**
+ * PlanChangeInstance is one managed instance that holds a plan slot.
+ *
+ * @generated from message everstack.billing.v1.PlanChangeInstance
+ */
+export declare type PlanChangeInstanceJson = {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * @generated from field: string slug = 2;
+   */
+  slug?: string;
+
+  /**
+   * @generated from field: string status = 3;
+   */
+  status?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_active_at = 4;
+   */
+  lastActiveAt?: TimestampJson;
+
+  /**
+   * True when it would pause at the switch under the given (or default)
+   * keep choice.
+   *
+   * @generated from field: bool would_pause = 5;
+   */
+  wouldPause?: boolean;
+
+  /**
+   * True when it already runs as a paid extra instance (credit-funded fee)
+   * and holds no plan slot.
+   *
+   * @generated from field: bool paid_extra = 6;
+   */
+  paidExtra?: boolean;
+};
+
+/**
+ * Describes the message everstack.billing.v1.PlanChangeInstance.
+ * Use `create(PlanChangeInstanceSchema)` to create a new message.
+ */
+export declare const PlanChangeInstanceSchema: GenMessage<PlanChangeInstance, PlanChangeInstanceJson>;
+
+/**
+ * PreviewPlanChangeRequest previews a change to plan + billing_period.
+ * PLAN_CHOICE_STARTER previews a cancellation.
+ *
+ * @generated from message everstack.billing.v1.PreviewPlanChangeRequest
+ */
+export declare type PreviewPlanChangeRequest = Message<"everstack.billing.v1.PreviewPlanChangeRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.PlanChoice plan = 2;
+   */
+  plan: PlanChoice;
+
+  /**
+   * @generated from field: everstack.billing.v1.BillingPeriod billing_period = 3;
+   */
+  billingPeriod: BillingPeriod;
+
+  /**
+   * Optional keep choice to evaluate; empty uses the default (most
+   * recently active), which ChangePlan and CancelSubscription also apply
+   * when they get no choice.
+   *
+   * @generated from field: repeated string keep_instance_ids = 4;
+   */
+  keepInstanceIds: string[];
+};
+
+/**
+ * PreviewPlanChangeRequest previews a change to plan + billing_period.
+ * PLAN_CHOICE_STARTER previews a cancellation.
+ *
+ * @generated from message everstack.billing.v1.PreviewPlanChangeRequest
+ */
+export declare type PreviewPlanChangeRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.PlanChoice plan = 2;
+   */
+  plan?: PlanChoiceJson;
+
+  /**
+   * @generated from field: everstack.billing.v1.BillingPeriod billing_period = 3;
+   */
+  billingPeriod?: BillingPeriodJson;
+
+  /**
+   * Optional keep choice to evaluate; empty uses the default (most
+   * recently active), which ChangePlan and CancelSubscription also apply
+   * when they get no choice.
+   *
+   * @generated from field: repeated string keep_instance_ids = 4;
+   */
+  keepInstanceIds?: string[];
+};
+
+/**
+ * Describes the message everstack.billing.v1.PreviewPlanChangeRequest.
+ * Use `create(PreviewPlanChangeRequestSchema)` to create a new message.
+ */
+export declare const PreviewPlanChangeRequestSchema: GenMessage<PreviewPlanChangeRequest, PreviewPlanChangeRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.PreviewPlanChangeResponse
+ */
+export declare type PreviewPlanChangeResponse = Message<"everstack.billing.v1.PreviewPlanChangeResponse"> & {
+  /**
+   * @generated from field: everstack.billing.v1.PlanChangeDirection direction = 1;
+   */
+  direction: PlanChangeDirection;
+
+  /**
+   * @generated from field: everstack.billing.v1.PlanChangeTiming timing = 2;
+   */
+  timing: PlanChangeTiming;
+
+  /**
+   * @generated from field: everstack.billing.v1.PlanChoice target_plan = 3;
+   */
+  targetPlan: PlanChoice;
+
+  /**
+   * @generated from field: string target_plan_name = 4;
+   */
+  targetPlanName: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.BillingPeriod target_billing_period = 5;
+   */
+  targetBillingPeriod: BillingPeriod;
+
+  /**
+   * Now for an immediate change; the end of the current period otherwise.
+   *
+   * @generated from field: google.protobuf.Timestamp effective_at = 6;
+   */
+  effectiveAt?: Timestamp;
+
+  /**
+   * @generated from field: everstack.billing.v1.PlanLimitsSummary current_limits = 7;
+   */
+  currentLimits?: PlanLimitsSummary;
+
+  /**
+   * @generated from field: everstack.billing.v1.PlanLimitsSummary new_limits = 8;
+   */
+  newLimits?: PlanLimitsSummary;
+
+  /**
+   * Every instance holding a slot under the current plan.
+   *
+   * @generated from field: repeated everstack.billing.v1.PlanChangeInstance instances = 9;
+   */
+  instances: PlanChangeInstance[];
+
+  /**
+   * The instances that exceed the new limit and would pause at the switch
+   * (would_pause = true), under keep_instance_ids or the default.
+   *
+   * @generated from field: repeated everstack.billing.v1.PlanChangeInstance over_limit_instances = 10;
+   */
+  overLimitInstances: PlanChangeInstance[];
+
+  /**
+   * True when the new limit leaves instances to pause, so the UI should
+   * offer a keep choice (preselect the instances with would_pause = false).
+   * Not required: without one, the most recently active are kept.
+   *
+   * @generated from field: bool keep_choice_required = 11;
+   */
+  keepChoiceRequired: boolean;
+
+  /**
+   * How many instances keep_instance_ids may name (the new instance limit).
+   *
+   * @generated from field: int32 max_keep = 12;
+   */
+  maxKeep: number;
+
+  /**
+   * Immediate changes: the prorated amount charged now, smallest currency
+   * unit (Stripe invoice preview). Unset for scheduled changes or when
+   * Stripe could not price it.
+   *
+   * @generated from field: optional int64 proration_amount_due = 13;
+   */
+  prorationAmountDue?: bigint;
+
+  /**
+   * @generated from field: string currency = 14;
+   */
+  currency: string;
+
+  /**
+   * The recurring price of the target plan and period, smallest unit.
+   *
+   * @generated from field: int64 target_price_amount = 15;
+   */
+  targetPriceAmount: bigint;
+
+  /**
+   * Credit-funded extra instances: the monthly wallet fee per instance
+   * beyond the plan limit, and what keeping every over-limit instance as an
+   * extra would cost per month. Both 0 when the option is unavailable.
+   *
+   * @generated from field: int64 extra_instance_monthly_cents = 16;
+   */
+  extraInstanceMonthlyCents: bigint;
+
+  /**
+   * @generated from field: int64 over_limit_extras_monthly_cents = 17;
+   */
+  overLimitExtrasMonthlyCents: bigint;
+
+  /**
+   * Upgrades charge the default saved card. False means ChangePlan will
+   * return an ADD_PAYMENT_METHOD action instead of charging.
+   *
+   * @generated from field: bool has_payment_method = 18;
+   */
+  hasPaymentMethod: boolean;
+
+  /**
+   * Set when ChangePlan would refuse: "past_due", "cancel_scheduled",
+   * "no_subscription", "not_self_serve", "same_plan".
+   *
+   * @generated from field: string blocked_reason = 19;
+   */
+  blockedReason: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.PreviewPlanChangeResponse
+ */
+export declare type PreviewPlanChangeResponseJson = {
+  /**
+   * @generated from field: everstack.billing.v1.PlanChangeDirection direction = 1;
+   */
+  direction?: PlanChangeDirectionJson;
+
+  /**
+   * @generated from field: everstack.billing.v1.PlanChangeTiming timing = 2;
+   */
+  timing?: PlanChangeTimingJson;
+
+  /**
+   * @generated from field: everstack.billing.v1.PlanChoice target_plan = 3;
+   */
+  targetPlan?: PlanChoiceJson;
+
+  /**
+   * @generated from field: string target_plan_name = 4;
+   */
+  targetPlanName?: string;
+
+  /**
+   * @generated from field: everstack.billing.v1.BillingPeriod target_billing_period = 5;
+   */
+  targetBillingPeriod?: BillingPeriodJson;
+
+  /**
+   * Now for an immediate change; the end of the current period otherwise.
+   *
+   * @generated from field: google.protobuf.Timestamp effective_at = 6;
+   */
+  effectiveAt?: TimestampJson;
+
+  /**
+   * @generated from field: everstack.billing.v1.PlanLimitsSummary current_limits = 7;
+   */
+  currentLimits?: PlanLimitsSummaryJson;
+
+  /**
+   * @generated from field: everstack.billing.v1.PlanLimitsSummary new_limits = 8;
+   */
+  newLimits?: PlanLimitsSummaryJson;
+
+  /**
+   * Every instance holding a slot under the current plan.
+   *
+   * @generated from field: repeated everstack.billing.v1.PlanChangeInstance instances = 9;
+   */
+  instances?: PlanChangeInstanceJson[];
+
+  /**
+   * The instances that exceed the new limit and would pause at the switch
+   * (would_pause = true), under keep_instance_ids or the default.
+   *
+   * @generated from field: repeated everstack.billing.v1.PlanChangeInstance over_limit_instances = 10;
+   */
+  overLimitInstances?: PlanChangeInstanceJson[];
+
+  /**
+   * True when the new limit leaves instances to pause, so the UI should
+   * offer a keep choice (preselect the instances with would_pause = false).
+   * Not required: without one, the most recently active are kept.
+   *
+   * @generated from field: bool keep_choice_required = 11;
+   */
+  keepChoiceRequired?: boolean;
+
+  /**
+   * How many instances keep_instance_ids may name (the new instance limit).
+   *
+   * @generated from field: int32 max_keep = 12;
+   */
+  maxKeep?: number;
+
+  /**
+   * Immediate changes: the prorated amount charged now, smallest currency
+   * unit (Stripe invoice preview). Unset for scheduled changes or when
+   * Stripe could not price it.
+   *
+   * @generated from field: optional int64 proration_amount_due = 13;
+   */
+  prorationAmountDue?: string;
+
+  /**
+   * @generated from field: string currency = 14;
+   */
+  currency?: string;
+
+  /**
+   * The recurring price of the target plan and period, smallest unit.
+   *
+   * @generated from field: int64 target_price_amount = 15;
+   */
+  targetPriceAmount?: string;
+
+  /**
+   * Credit-funded extra instances: the monthly wallet fee per instance
+   * beyond the plan limit, and what keeping every over-limit instance as an
+   * extra would cost per month. Both 0 when the option is unavailable.
+   *
+   * @generated from field: int64 extra_instance_monthly_cents = 16;
+   */
+  extraInstanceMonthlyCents?: string;
+
+  /**
+   * @generated from field: int64 over_limit_extras_monthly_cents = 17;
+   */
+  overLimitExtrasMonthlyCents?: string;
+
+  /**
+   * Upgrades charge the default saved card. False means ChangePlan will
+   * return an ADD_PAYMENT_METHOD action instead of charging.
+   *
+   * @generated from field: bool has_payment_method = 18;
+   */
+  hasPaymentMethod?: boolean;
+
+  /**
+   * Set when ChangePlan would refuse: "past_due", "cancel_scheduled",
+   * "no_subscription", "not_self_serve", "same_plan".
+   *
+   * @generated from field: string blocked_reason = 19;
+   */
+  blockedReason?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.PreviewPlanChangeResponse.
+ * Use `create(PreviewPlanChangeResponseSchema)` to create a new message.
+ */
+export declare const PreviewPlanChangeResponseSchema: GenMessage<PreviewPlanChangeResponse, PreviewPlanChangeResponseJson>;
+
+/**
+ * @generated from message everstack.billing.v1.ClientAction
+ */
+export declare type ClientAction = Message<"everstack.billing.v1.ClientAction"> & {
+  /**
+   * @generated from field: everstack.billing.v1.ClientActionKind kind = 1;
+   */
+  kind: ClientActionKind;
+
+  /**
+   * Stripe-hosted URL to open.
+   *
+   * @generated from field: string url = 2;
+   */
+  url: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.ClientAction
+ */
+export declare type ClientActionJson = {
+  /**
+   * @generated from field: everstack.billing.v1.ClientActionKind kind = 1;
+   */
+  kind?: ClientActionKindJson;
+
+  /**
+   * Stripe-hosted URL to open.
+   *
+   * @generated from field: string url = 2;
+   */
+  url?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.ClientAction.
+ * Use `create(ClientActionSchema)` to create a new message.
+ */
+export declare const ClientActionSchema: GenMessage<ClientAction, ClientActionJson>;
+
+/**
+ * @generated from message everstack.billing.v1.ChangePlanRequest
+ */
+export declare type ChangePlanRequest = Message<"everstack.billing.v1.ChangePlanRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * PLAN_CHOICE_BUILD or PLAN_CHOICE_SCALE.
+   *
+   * @generated from field: everstack.billing.v1.PlanChoice plan = 2;
+   */
+  plan: PlanChoice;
+
+  /**
+   * @generated from field: everstack.billing.v1.BillingPeriod billing_period = 3;
+   */
+  billingPeriod: BillingPeriod;
+
+  /**
+   * Instances to keep on a downgrade that leaves the organization over the
+   * new instance limit (at most max_keep). Empty keeps the most recently
+   * active.
+   *
+   * @generated from field: repeated string keep_instance_ids = 4;
+   */
+  keepInstanceIds: string[];
+
+  /**
+   * App-relative path ("/acme/settings/billing") Stripe sends the customer
+   * back to after a client action, joined onto the configured app origin.
+   * Defaults to "/".
+   *
+   * @generated from field: string return_path = 5;
+   */
+  returnPath: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.ChangePlanRequest
+ */
+export declare type ChangePlanRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+
+  /**
+   * PLAN_CHOICE_BUILD or PLAN_CHOICE_SCALE.
+   *
+   * @generated from field: everstack.billing.v1.PlanChoice plan = 2;
+   */
+  plan?: PlanChoiceJson;
+
+  /**
+   * @generated from field: everstack.billing.v1.BillingPeriod billing_period = 3;
+   */
+  billingPeriod?: BillingPeriodJson;
+
+  /**
+   * Instances to keep on a downgrade that leaves the organization over the
+   * new instance limit (at most max_keep). Empty keeps the most recently
+   * active.
+   *
+   * @generated from field: repeated string keep_instance_ids = 4;
+   */
+  keepInstanceIds?: string[];
+
+  /**
+   * App-relative path ("/acme/settings/billing") Stripe sends the customer
+   * back to after a client action, joined onto the configured app origin.
+   * Defaults to "/".
+   *
+   * @generated from field: string return_path = 5;
+   */
+  returnPath?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.ChangePlanRequest.
+ * Use `create(ChangePlanRequestSchema)` to create a new message.
+ */
+export declare const ChangePlanRequestSchema: GenMessage<ChangePlanRequest, ChangePlanRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.ChangePlanResponse
+ */
+export declare type ChangePlanResponse = Message<"everstack.billing.v1.ChangePlanResponse"> & {
+  /**
+   * @generated from field: everstack.billing.v1.PlanChangeOutcome outcome = 1;
+   */
+  outcome: PlanChangeOutcome;
+
+  /**
+   * @generated from field: everstack.billing.v1.PlanChangeTiming timing = 2;
+   */
+  timing: PlanChangeTiming;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp effective_at = 3;
+   */
+  effectiveAt?: Timestamp;
+
+  /**
+   * @generated from field: optional everstack.billing.v1.ClientAction client_action = 4;
+   */
+  clientAction?: ClientAction;
+
+  /**
+   * @generated from field: everstack.billing.v1.SubscriptionSummary summary = 5;
+   */
+  summary?: SubscriptionSummary;
+
+  /**
+   * A scheduled downgrade: the instances that keep running and the ones
+   * that pause at the switch.
+   *
+   * @generated from field: repeated everstack.billing.v1.PlanChangeInstance kept_instances = 6;
+   */
+  keptInstances: PlanChangeInstance[];
+
+  /**
+   * @generated from field: repeated everstack.billing.v1.PlanChangeInstance paused_instances = 7;
+   */
+  pausedInstances: PlanChangeInstance[];
+};
+
+/**
+ * @generated from message everstack.billing.v1.ChangePlanResponse
+ */
+export declare type ChangePlanResponseJson = {
+  /**
+   * @generated from field: everstack.billing.v1.PlanChangeOutcome outcome = 1;
+   */
+  outcome?: PlanChangeOutcomeJson;
+
+  /**
+   * @generated from field: everstack.billing.v1.PlanChangeTiming timing = 2;
+   */
+  timing?: PlanChangeTimingJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp effective_at = 3;
+   */
+  effectiveAt?: TimestampJson;
+
+  /**
+   * @generated from field: optional everstack.billing.v1.ClientAction client_action = 4;
+   */
+  clientAction?: ClientActionJson;
+
+  /**
+   * @generated from field: everstack.billing.v1.SubscriptionSummary summary = 5;
+   */
+  summary?: SubscriptionSummaryJson;
+
+  /**
+   * A scheduled downgrade: the instances that keep running and the ones
+   * that pause at the switch.
+   *
+   * @generated from field: repeated everstack.billing.v1.PlanChangeInstance kept_instances = 6;
+   */
+  keptInstances?: PlanChangeInstanceJson[];
+
+  /**
+   * @generated from field: repeated everstack.billing.v1.PlanChangeInstance paused_instances = 7;
+   */
+  pausedInstances?: PlanChangeInstanceJson[];
+};
+
+/**
+ * Describes the message everstack.billing.v1.ChangePlanResponse.
+ * Use `create(ChangePlanResponseSchema)` to create a new message.
+ */
+export declare const ChangePlanResponseSchema: GenMessage<ChangePlanResponse, ChangePlanResponseJson>;
+
+/**
+ * RegisterApiKeyRequest - the managed gateway reports a key it created.
+ *
+ * @generated from message everstack.billing.v1.RegisterApiKeyRequest
+ */
+export declare type RegisterApiKeyRequest = Message<"everstack.billing.v1.RegisterApiKeyRequest"> & {
+  /**
+   * The tenant the gateway stored on the key (api_keys.org_id): an
+   * organization id or a managed instance id.
+   *
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * The gateway API key id (api_keys.id).
+   *
+   * @generated from field: string api_key_id = 2;
+   */
+  apiKeyId: string;
+};
+
+/**
+ * RegisterApiKeyRequest - the managed gateway reports a key it created.
+ *
+ * @generated from message everstack.billing.v1.RegisterApiKeyRequest
+ */
+export declare type RegisterApiKeyRequestJson = {
+  /**
+   * The tenant the gateway stored on the key (api_keys.org_id): an
+   * organization id or a managed instance id.
+   *
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId?: string;
+
+  /**
+   * The gateway API key id (api_keys.id).
+   *
+   * @generated from field: string api_key_id = 2;
+   */
+  apiKeyId?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.RegisterApiKeyRequest.
+ * Use `create(RegisterApiKeyRequestSchema)` to create a new message.
+ */
+export declare const RegisterApiKeyRequestSchema: GenMessage<RegisterApiKeyRequest, RegisterApiKeyRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.RegisterApiKeyResponse
+ */
+export declare type RegisterApiKeyResponse = Message<"everstack.billing.v1.RegisterApiKeyResponse"> & {
+};
+
+/**
+ * @generated from message everstack.billing.v1.RegisterApiKeyResponse
+ */
+export declare type RegisterApiKeyResponseJson = {
+};
+
+/**
+ * Describes the message everstack.billing.v1.RegisterApiKeyResponse.
+ * Use `create(RegisterApiKeyResponseSchema)` to create a new message.
+ */
+export declare const RegisterApiKeyResponseSchema: GenMessage<RegisterApiKeyResponse, RegisterApiKeyResponseJson>;
+
+/**
+ * UnregisterApiKeyRequest - the managed gateway reports a key it deleted.
+ *
+ * @generated from message everstack.billing.v1.UnregisterApiKeyRequest
+ */
+export declare type UnregisterApiKeyRequest = Message<"everstack.billing.v1.UnregisterApiKeyRequest"> & {
+  /**
+   * The tenant the deleting caller is authenticated as on the gateway: an
+   * organization id or a managed instance id. Only a registry row owned by
+   * the organization this tenant resolves to is removed.
+   *
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * The gateway API key id (api_keys.id).
+   *
+   * @generated from field: string api_key_id = 2;
+   */
+  apiKeyId: string;
+};
+
+/**
+ * UnregisterApiKeyRequest - the managed gateway reports a key it deleted.
+ *
+ * @generated from message everstack.billing.v1.UnregisterApiKeyRequest
+ */
+export declare type UnregisterApiKeyRequestJson = {
+  /**
+   * The tenant the deleting caller is authenticated as on the gateway: an
+   * organization id or a managed instance id. Only a registry row owned by
+   * the organization this tenant resolves to is removed.
+   *
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId?: string;
+
+  /**
+   * The gateway API key id (api_keys.id).
+   *
+   * @generated from field: string api_key_id = 2;
+   */
+  apiKeyId?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.UnregisterApiKeyRequest.
+ * Use `create(UnregisterApiKeyRequestSchema)` to create a new message.
+ */
+export declare const UnregisterApiKeyRequestSchema: GenMessage<UnregisterApiKeyRequest, UnregisterApiKeyRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.UnregisterApiKeyResponse
+ */
+export declare type UnregisterApiKeyResponse = Message<"everstack.billing.v1.UnregisterApiKeyResponse"> & {
+};
+
+/**
+ * @generated from message everstack.billing.v1.UnregisterApiKeyResponse
+ */
+export declare type UnregisterApiKeyResponseJson = {
+};
+
+/**
+ * Describes the message everstack.billing.v1.UnregisterApiKeyResponse.
+ * Use `create(UnregisterApiKeyResponseSchema)` to create a new message.
+ */
+export declare const UnregisterApiKeyResponseSchema: GenMessage<UnregisterApiKeyResponse, UnregisterApiKeyResponseJson>;
+
+/**
+ * @generated from message everstack.billing.v1.GetModelTrialRequest
+ */
+export declare type GetModelTrialRequest = Message<"everstack.billing.v1.GetModelTrialRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+};
+
+/**
+ * @generated from message everstack.billing.v1.GetModelTrialRequest
+ */
+export declare type GetModelTrialRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+};
+
+/**
+ * Describes the message everstack.billing.v1.GetModelTrialRequest.
+ * Use `create(GetModelTrialRequestSchema)` to create a new message.
+ */
+export declare const GetModelTrialRequestSchema: GenMessage<GetModelTrialRequest, GetModelTrialRequestJson>;
+
+/**
+ * @generated from message everstack.billing.v1.GetModelTrialResponse
+ */
+export declare type GetModelTrialResponse = Message<"everstack.billing.v1.GetModelTrialResponse"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: bool eligible = 2;
+   */
+  eligible: boolean;
+
+  /**
+   * @generated from field: int32 granted = 3;
+   */
+  granted: number;
+
+  /**
+   * @generated from field: int32 used = 4;
+   */
+  used: number;
+
+  /**
+   * @generated from field: int32 remaining = 5;
+   */
+  remaining: number;
+
+  /**
+   * @generated from field: everstack.billing.v1.ModelTrialState state = 6;
+   */
+  state: ModelTrialState;
+
+  /**
+   * Unset until the free requests are granted (on first use); they expire a
+   * fixed number of days after the grant.
+   *
+   * @generated from field: google.protobuf.Timestamp expires_at = 7;
+   */
+  expiresAt?: Timestamp;
+
+  /**
+   * Set when paused by today's limit: the next 00:00 UTC.
+   *
+   * @generated from field: google.protobuf.Timestamp resumes_at = 8;
+   */
+  resumesAt?: Timestamp;
+
+  /**
+   * The one model free requests are served on, and the output cap per
+   * request.
+   *
+   * @generated from field: string model = 9;
+   */
+  model: string;
+
+  /**
+   * @generated from field: int32 max_output_tokens = 10;
+   */
+  maxOutputTokens: number;
+};
+
+/**
+ * @generated from message everstack.billing.v1.GetModelTrialResponse
+ */
+export declare type GetModelTrialResponseJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+
+  /**
+   * @generated from field: bool eligible = 2;
+   */
+  eligible?: boolean;
+
+  /**
+   * @generated from field: int32 granted = 3;
+   */
+  granted?: number;
+
+  /**
+   * @generated from field: int32 used = 4;
+   */
+  used?: number;
+
+  /**
+   * @generated from field: int32 remaining = 5;
+   */
+  remaining?: number;
+
+  /**
+   * @generated from field: everstack.billing.v1.ModelTrialState state = 6;
+   */
+  state?: ModelTrialStateJson;
+
+  /**
+   * Unset until the free requests are granted (on first use); they expire a
+   * fixed number of days after the grant.
+   *
+   * @generated from field: google.protobuf.Timestamp expires_at = 7;
+   */
+  expiresAt?: TimestampJson;
+
+  /**
+   * Set when paused by today's limit: the next 00:00 UTC.
+   *
+   * @generated from field: google.protobuf.Timestamp resumes_at = 8;
+   */
+  resumesAt?: TimestampJson;
+
+  /**
+   * The one model free requests are served on, and the output cap per
+   * request.
+   *
+   * @generated from field: string model = 9;
+   */
+  model?: string;
+
+  /**
+   * @generated from field: int32 max_output_tokens = 10;
+   */
+  maxOutputTokens?: number;
+};
+
+/**
+ * Describes the message everstack.billing.v1.GetModelTrialResponse.
+ * Use `create(GetModelTrialResponseSchema)` to create a new message.
+ */
+export declare const GetModelTrialResponseSchema: GenMessage<GetModelTrialResponse, GetModelTrialResponseJson>;
+
+/**
  * SubscriptionStatus represents the current state of a subscription
  *
  * @generated from enum everstack.billing.v1.SubscriptionStatus
@@ -3779,6 +8941,49 @@ export declare type BillingPeriodJson = "BILLING_PERIOD_UNSPECIFIED" | "BILLING_
  * Describes the enum everstack.billing.v1.BillingPeriod.
  */
 export declare const BillingPeriodSchema: GenEnum<BillingPeriod, BillingPeriodJson>;
+
+/**
+ * UsageMetering says whether billing has a producer for a usage metric, so a
+ * client can tell a measured zero from a metric nobody reports yet.
+ *
+ * @generated from enum everstack.billing.v1.UsageMetering
+ */
+export enum UsageMetering {
+  /**
+   * Sent by servers older than this field. Clients render the value as before.
+   *
+   * @generated from enum value: USAGE_METERING_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * A producer reports this metric for the organization; used is a measurement.
+   *
+   * @generated from enum value: USAGE_METERING_METERED = 1;
+   */
+  METERED = 1,
+
+  /**
+   * Nothing reports this metric for the organization yet. used is 0 because
+   * there is no data, not because nothing was used.
+   *
+   * @generated from enum value: USAGE_METERING_NOT_METERED = 2;
+   */
+  NOT_METERED = 2,
+}
+
+/**
+ * UsageMetering says whether billing has a producer for a usage metric, so a
+ * client can tell a measured zero from a metric nobody reports yet.
+ *
+ * @generated from enum everstack.billing.v1.UsageMetering
+ */
+export declare type UsageMeteringJson = "USAGE_METERING_UNSPECIFIED" | "USAGE_METERING_METERED" | "USAGE_METERING_NOT_METERED";
+
+/**
+ * Describes the enum everstack.billing.v1.UsageMetering.
+ */
+export declare const UsageMeteringSchema: GenEnum<UsageMetering, UsageMeteringJson>;
 
 /**
  * SpendLimitType represents the type of spend limit
@@ -3886,4 +9091,723 @@ export declare type SpendLimitActionJson = "SPEND_LIMIT_ACTION_UNSPECIFIED" | "S
  * Describes the enum everstack.billing.v1.SpendLimitAction.
  */
 export declare const SpendLimitActionSchema: GenEnum<SpendLimitAction, SpendLimitActionJson>;
+
+/**
+ * SpendBasis is what a spend limit counts (docs/design/spend-limits-v2.md
+ * 4.1). UNSPECIFIED on a write keeps an existing limit's basis and creates
+ * a PLATFORM_CREDIT limit, so callers that predate it are unchanged.
+ *
+ * @generated from enum everstack.billing.v1.SpendBasis
+ */
+export enum SpendBasis {
+  /**
+   * @generated from enum value: SPEND_BASIS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Everstack credit only: limits written before spend limits v2.
+   *
+   * @generated from enum value: SPEND_BASIS_PLATFORM_CREDIT = 1;
+   */
+  PLATFORM_CREDIT = 1,
+
+  /**
+   * Everstack credit charged plus traffic on the organization's own provider
+   * keys at catalog list price: one combined budget.
+   *
+   * @generated from enum value: SPEND_BASIS_ALL_INFERENCE = 2;
+   */
+  ALL_INFERENCE = 2,
+}
+
+/**
+ * SpendBasis is what a spend limit counts (docs/design/spend-limits-v2.md
+ * 4.1). UNSPECIFIED on a write keeps an existing limit's basis and creates
+ * a PLATFORM_CREDIT limit, so callers that predate it are unchanged.
+ *
+ * @generated from enum everstack.billing.v1.SpendBasis
+ */
+export declare type SpendBasisJson = "SPEND_BASIS_UNSPECIFIED" | "SPEND_BASIS_PLATFORM_CREDIT" | "SPEND_BASIS_ALL_INFERENCE";
+
+/**
+ * Describes the enum everstack.billing.v1.SpendBasis.
+ */
+export declare const SpendBasisSchema: GenEnum<SpendBasis, SpendBasisJson>;
+
+/**
+ * CreditEntryType is the kind of one credit ledger entry.
+ *
+ * @generated from enum everstack.billing.v1.CreditEntryType
+ */
+export enum CreditEntryType {
+  /**
+   * @generated from enum value: CREDIT_ENTRY_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Credit issued by Everstack (signup grant, promotion, ops grant).
+   *
+   * @generated from enum value: CREDIT_ENTRY_TYPE_GRANT = 1;
+   */
+  GRANT = 1,
+
+  /**
+   * Credit bought by the customer.
+   *
+   * @generated from enum value: CREDIT_ENTRY_TYPE_PURCHASE = 2;
+   */
+  PURCHASE = 2,
+
+  /**
+   * Usage that consumed credit.
+   *
+   * @generated from enum value: CREDIT_ENTRY_TYPE_DEBIT = 3;
+   */
+  DEBIT = 3,
+
+  /**
+   * Reversal of a debit.
+   *
+   * @generated from enum value: CREDIT_ENTRY_TYPE_REFUND = 4;
+   */
+  REFUND = 4,
+
+  /**
+   * Unused granted credit removed when it expired.
+   *
+   * @generated from enum value: CREDIT_ENTRY_TYPE_EXPIRY = 5;
+   */
+  EXPIRY = 5,
+
+  /**
+   * Correction in either direction.
+   *
+   * @generated from enum value: CREDIT_ENTRY_TYPE_ADJUSTMENT = 6;
+   */
+  ADJUSTMENT = 6,
+}
+
+/**
+ * CreditEntryType is the kind of one credit ledger entry.
+ *
+ * @generated from enum everstack.billing.v1.CreditEntryType
+ */
+export declare type CreditEntryTypeJson = "CREDIT_ENTRY_TYPE_UNSPECIFIED" | "CREDIT_ENTRY_TYPE_GRANT" | "CREDIT_ENTRY_TYPE_PURCHASE" | "CREDIT_ENTRY_TYPE_DEBIT" | "CREDIT_ENTRY_TYPE_REFUND" | "CREDIT_ENTRY_TYPE_EXPIRY" | "CREDIT_ENTRY_TYPE_ADJUSTMENT";
+
+/**
+ * Describes the enum everstack.billing.v1.CreditEntryType.
+ */
+export declare const CreditEntryTypeSchema: GenEnum<CreditEntryType, CreditEntryTypeJson>;
+
+/**
+ * CreditWalletState summarises whether the wallet can pay for new usage.
+ *
+ * @generated from enum everstack.billing.v1.CreditWalletState
+ */
+export enum CreditWalletState {
+  /**
+   * @generated from enum value: CREDIT_WALLET_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Available credit is positive.
+   *
+   * @generated from enum value: CREDIT_WALLET_STATE_ACTIVE = 1;
+   */
+  ACTIVE = 1,
+
+  /**
+   * Available credit is zero or negative.
+   *
+   * @generated from enum value: CREDIT_WALLET_STATE_EXHAUSTED = 2;
+   */
+  EXHAUSTED = 2,
+}
+
+/**
+ * CreditWalletState summarises whether the wallet can pay for new usage.
+ *
+ * @generated from enum everstack.billing.v1.CreditWalletState
+ */
+export declare type CreditWalletStateJson = "CREDIT_WALLET_STATE_UNSPECIFIED" | "CREDIT_WALLET_STATE_ACTIVE" | "CREDIT_WALLET_STATE_EXHAUSTED";
+
+/**
+ * Describes the enum everstack.billing.v1.CreditWalletState.
+ */
+export declare const CreditWalletStateSchema: GenEnum<CreditWalletState, CreditWalletStateJson>;
+
+/**
+ * InferenceAttemptRole is why an attempt was made and how it ended.
+ *
+ * @generated from enum everstack.billing.v1.InferenceAttemptRole
+ */
+export enum InferenceAttemptRole {
+  /**
+   * Not recorded (history from before attempts were recorded).
+   *
+   * @generated from enum value: INFERENCE_ATTEMPT_ROLE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Its response was returned to the caller.
+   *
+   * @generated from enum value: INFERENCE_ATTEMPT_ROLE_SERVED = 1;
+   */
+  SERVED = 1,
+
+  /**
+   * A leg of a parallel race that another leg won.
+   *
+   * @generated from enum value: INFERENCE_ATTEMPT_ROLE_RACE_LOSER = 2;
+   */
+  RACE_LOSER = 2,
+
+  /**
+   * Failed, after which fallback tried the next provider.
+   *
+   * @generated from enum value: INFERENCE_ATTEMPT_ROLE_FAILED_FALLBACK = 3;
+   */
+  FAILED_FALLBACK = 3,
+
+  /**
+   * A repeat of the same target that the routing configuration asked for.
+   *
+   * @generated from enum value: INFERENCE_ATTEMPT_ROLE_RETRY = 4;
+   */
+  RETRY = 4,
+
+  /**
+   * A repeat Everstack made for its own reasons. Never charged.
+   *
+   * @generated from enum value: INFERENCE_ATTEMPT_ROLE_PLATFORM_RETRY = 5;
+   */
+  PLATFORM_RETRY = 5,
+
+  /**
+   * Broke off part way (for example a stream that failed) with nothing
+   * configured to take over. Charged for the tokens it generated.
+   *
+   * @generated from enum value: INFERENCE_ATTEMPT_ROLE_INTERRUPTED = 6;
+   */
+  INTERRUPTED = 6,
+}
+
+/**
+ * InferenceAttemptRole is why an attempt was made and how it ended.
+ *
+ * @generated from enum everstack.billing.v1.InferenceAttemptRole
+ */
+export declare type InferenceAttemptRoleJson = "INFERENCE_ATTEMPT_ROLE_UNSPECIFIED" | "INFERENCE_ATTEMPT_ROLE_SERVED" | "INFERENCE_ATTEMPT_ROLE_RACE_LOSER" | "INFERENCE_ATTEMPT_ROLE_FAILED_FALLBACK" | "INFERENCE_ATTEMPT_ROLE_RETRY" | "INFERENCE_ATTEMPT_ROLE_PLATFORM_RETRY" | "INFERENCE_ATTEMPT_ROLE_INTERRUPTED";
+
+/**
+ * Describes the enum everstack.billing.v1.InferenceAttemptRole.
+ */
+export declare const InferenceAttemptRoleSchema: GenEnum<InferenceAttemptRole, InferenceAttemptRoleJson>;
+
+/**
+ * CreditPurchaseState mirrors billing.credit_purchases.state.
+ *
+ * @generated from enum everstack.billing.v1.CreditPurchaseState
+ */
+export enum CreditPurchaseState {
+  /**
+   * @generated from enum value: CREDIT_PURCHASE_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Created; the customer is on (or left) the Stripe Checkout page.
+   *
+   * @generated from enum value: CREDIT_PURCHASE_STATE_PENDING = 1;
+   */
+  PENDING = 1,
+
+  /**
+   * Paid and minted. The only state that means the credit is available.
+   *
+   * @generated from enum value: CREDIT_PURCHASE_STATE_PAID = 2;
+   */
+  PAID = 2,
+
+  /**
+   * A delayed payment method failed.
+   *
+   * @generated from enum value: CREDIT_PURCHASE_STATE_FAILED = 3;
+   */
+  FAILED = 3,
+
+  /**
+   * The Checkout session expired unpaid.
+   *
+   * @generated from enum value: CREDIT_PURCHASE_STATE_EXPIRED = 4;
+   */
+  EXPIRED = 4,
+
+  /**
+   * @generated from enum value: CREDIT_PURCHASE_STATE_CANCELED = 5;
+   */
+  CANCELED = 5,
+
+  /**
+   * Checkout completed; the payment is still processing.
+   *
+   * @generated from enum value: CREDIT_PURCHASE_STATE_ACTION_REQUIRED = 6;
+   */
+  ACTION_REQUIRED = 6,
+
+  /**
+   * Fully refunded; the credit was clawed back.
+   *
+   * @generated from enum value: CREDIT_PURCHASE_STATE_REFUNDED = 7;
+   */
+  REFUNDED = 7,
+
+  /**
+   * A chargeback is open or was lost.
+   *
+   * @generated from enum value: CREDIT_PURCHASE_STATE_DISPUTED = 8;
+   */
+  DISPUTED = 8,
+
+  /**
+   * Paid but held for manual review (for example a non-USD payment).
+   *
+   * @generated from enum value: CREDIT_PURCHASE_STATE_NEEDS_REVIEW = 9;
+   */
+  NEEDS_REVIEW = 9,
+}
+
+/**
+ * CreditPurchaseState mirrors billing.credit_purchases.state.
+ *
+ * @generated from enum everstack.billing.v1.CreditPurchaseState
+ */
+export declare type CreditPurchaseStateJson = "CREDIT_PURCHASE_STATE_UNSPECIFIED" | "CREDIT_PURCHASE_STATE_PENDING" | "CREDIT_PURCHASE_STATE_PAID" | "CREDIT_PURCHASE_STATE_FAILED" | "CREDIT_PURCHASE_STATE_EXPIRED" | "CREDIT_PURCHASE_STATE_CANCELED" | "CREDIT_PURCHASE_STATE_ACTION_REQUIRED" | "CREDIT_PURCHASE_STATE_REFUNDED" | "CREDIT_PURCHASE_STATE_DISPUTED" | "CREDIT_PURCHASE_STATE_NEEDS_REVIEW";
+
+/**
+ * Describes the enum everstack.billing.v1.CreditPurchaseState.
+ */
+export declare const CreditPurchaseStateSchema: GenEnum<CreditPurchaseState, CreditPurchaseStateJson>;
+
+/**
+ * @generated from enum everstack.billing.v1.AutoTopUpStatus
+ */
+export enum AutoTopUpStatus {
+  /**
+   * @generated from enum value: AUTO_TOP_UP_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Not set up, or turned off.
+   *
+   * @generated from enum value: AUTO_TOP_UP_STATUS_OFF = 1;
+   */
+  OFF = 1,
+
+  /**
+   * On and healthy.
+   *
+   * @generated from enum value: AUTO_TOP_UP_STATUS_ACTIVE = 2;
+   */
+  ACTIVE = 2,
+
+  /**
+   * On, but the last charge failed; retried automatically after a wait.
+   *
+   * @generated from enum value: AUTO_TOP_UP_STATUS_ACTION_REQUIRED = 3;
+   */
+  ACTION_REQUIRED = 3,
+
+  /**
+   * Stopped after repeated failed charges. Saving the settings resumes it.
+   *
+   * @generated from enum value: AUTO_TOP_UP_STATUS_PAUSED = 4;
+   */
+  PAUSED = 4,
+}
+
+/**
+ * @generated from enum everstack.billing.v1.AutoTopUpStatus
+ */
+export declare type AutoTopUpStatusJson = "AUTO_TOP_UP_STATUS_UNSPECIFIED" | "AUTO_TOP_UP_STATUS_OFF" | "AUTO_TOP_UP_STATUS_ACTIVE" | "AUTO_TOP_UP_STATUS_ACTION_REQUIRED" | "AUTO_TOP_UP_STATUS_PAUSED";
+
+/**
+ * Describes the enum everstack.billing.v1.AutoTopUpStatus.
+ */
+export declare const AutoTopUpStatusSchema: GenEnum<AutoTopUpStatus, AutoTopUpStatusJson>;
+
+/**
+ * @generated from enum everstack.billing.v1.AutoTopUpAttemptOutcome
+ */
+export enum AutoTopUpAttemptOutcome {
+  /**
+   * @generated from enum value: AUTO_TOP_UP_ATTEMPT_OUTCOME_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Charge sent to the card, not confirmed yet.
+   *
+   * @generated from enum value: AUTO_TOP_UP_ATTEMPT_OUTCOME_PENDING = 1;
+   */
+  PENDING = 1,
+
+  /**
+   * @generated from enum value: AUTO_TOP_UP_ATTEMPT_OUTCOME_SUCCEEDED = 2;
+   */
+  SUCCEEDED = 2,
+
+  /**
+   * @generated from enum value: AUTO_TOP_UP_ATTEMPT_OUTCOME_FAILED = 3;
+   */
+  FAILED = 3,
+}
+
+/**
+ * @generated from enum everstack.billing.v1.AutoTopUpAttemptOutcome
+ */
+export declare type AutoTopUpAttemptOutcomeJson = "AUTO_TOP_UP_ATTEMPT_OUTCOME_UNSPECIFIED" | "AUTO_TOP_UP_ATTEMPT_OUTCOME_PENDING" | "AUTO_TOP_UP_ATTEMPT_OUTCOME_SUCCEEDED" | "AUTO_TOP_UP_ATTEMPT_OUTCOME_FAILED";
+
+/**
+ * Describes the enum everstack.billing.v1.AutoTopUpAttemptOutcome.
+ */
+export declare const AutoTopUpAttemptOutcomeSchema: GenEnum<AutoTopUpAttemptOutcome, AutoTopUpAttemptOutcomeJson>;
+
+/**
+ * PaymentRecoveryStatus is the outcome of paying an overdue subscription
+ * invoice with a newly chosen default card.
+ *
+ * @generated from enum everstack.billing.v1.PaymentRecoveryStatus
+ */
+export enum PaymentRecoveryStatus {
+  /**
+   * @generated from enum value: PAYMENT_RECOVERY_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Paid; the subscription returns to active through the usual webhooks.
+   *
+   * @generated from enum value: PAYMENT_RECOVERY_STATUS_PAID = 1;
+   */
+  PAID = 1,
+
+  /**
+   * The bank requires authentication: send the customer to client_action
+   * (CONFIRM_PAYMENT, Stripe's hosted invoice).
+   *
+   * @generated from enum value: PAYMENT_RECOVERY_STATUS_ACTION_REQUIRED = 2;
+   */
+  ACTION_REQUIRED = 2,
+
+  /**
+   * The card was declined or Stripe failed. The card stays the default and
+   * Stripe keeps retrying; client_action points at the hosted invoice to
+   * pay another way.
+   *
+   * @generated from enum value: PAYMENT_RECOVERY_STATUS_FAILED = 3;
+   */
+  FAILED = 3,
+}
+
+/**
+ * PaymentRecoveryStatus is the outcome of paying an overdue subscription
+ * invoice with a newly chosen default card.
+ *
+ * @generated from enum everstack.billing.v1.PaymentRecoveryStatus
+ */
+export declare type PaymentRecoveryStatusJson = "PAYMENT_RECOVERY_STATUS_UNSPECIFIED" | "PAYMENT_RECOVERY_STATUS_PAID" | "PAYMENT_RECOVERY_STATUS_ACTION_REQUIRED" | "PAYMENT_RECOVERY_STATUS_FAILED";
+
+/**
+ * Describes the enum everstack.billing.v1.PaymentRecoveryStatus.
+ */
+export declare const PaymentRecoveryStatusSchema: GenEnum<PaymentRecoveryStatus, PaymentRecoveryStatusJson>;
+
+/**
+ * PlanChoice names a self-serve plan. The server maps it (with a
+ * BillingPeriod) to the Stripe price; clients never send price ids.
+ *
+ * @generated from enum everstack.billing.v1.PlanChoice
+ */
+export enum PlanChoice {
+  /**
+   * @generated from enum value: PLAN_CHOICE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Starter (tier "free"). Reached by cancelling; ChangePlan rejects it.
+   *
+   * @generated from enum value: PLAN_CHOICE_STARTER = 1;
+   */
+  STARTER = 1,
+
+  /**
+   * Build (tier "basic").
+   *
+   * @generated from enum value: PLAN_CHOICE_BUILD = 2;
+   */
+  BUILD = 2,
+
+  /**
+   * Scale (tier "pro").
+   *
+   * @generated from enum value: PLAN_CHOICE_SCALE = 3;
+   */
+  SCALE = 3,
+}
+
+/**
+ * PlanChoice names a self-serve plan. The server maps it (with a
+ * BillingPeriod) to the Stripe price; clients never send price ids.
+ *
+ * @generated from enum everstack.billing.v1.PlanChoice
+ */
+export declare type PlanChoiceJson = "PLAN_CHOICE_UNSPECIFIED" | "PLAN_CHOICE_STARTER" | "PLAN_CHOICE_BUILD" | "PLAN_CHOICE_SCALE";
+
+/**
+ * Describes the enum everstack.billing.v1.PlanChoice.
+ */
+export declare const PlanChoiceSchema: GenEnum<PlanChoice, PlanChoiceJson>;
+
+/**
+ * PlanChangeTiming says when a plan change takes effect.
+ *
+ * @generated from enum everstack.billing.v1.PlanChangeTiming
+ */
+export enum PlanChangeTiming {
+  /**
+   * @generated from enum value: PLAN_CHANGE_TIMING_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Applied now, with a prorated charge for the rest of the period.
+   *
+   * @generated from enum value: PLAN_CHANGE_TIMING_IMMEDIATE = 1;
+   */
+  IMMEDIATE = 1,
+
+  /**
+   * Scheduled for the end of the current period (downgrades, cheaper
+   * intervals, cancellation).
+   *
+   * @generated from enum value: PLAN_CHANGE_TIMING_PERIOD_END = 2;
+   */
+  PERIOD_END = 2,
+}
+
+/**
+ * PlanChangeTiming says when a plan change takes effect.
+ *
+ * @generated from enum everstack.billing.v1.PlanChangeTiming
+ */
+export declare type PlanChangeTimingJson = "PLAN_CHANGE_TIMING_UNSPECIFIED" | "PLAN_CHANGE_TIMING_IMMEDIATE" | "PLAN_CHANGE_TIMING_PERIOD_END";
+
+/**
+ * Describes the enum everstack.billing.v1.PlanChangeTiming.
+ */
+export declare const PlanChangeTimingSchema: GenEnum<PlanChangeTiming, PlanChangeTimingJson>;
+
+/**
+ * PlanChangeDirection classifies a change: tier rank first, then the price
+ * of the target interval for a same-plan interval switch.
+ *
+ * @generated from enum everstack.billing.v1.PlanChangeDirection
+ */
+export enum PlanChangeDirection {
+  /**
+   * @generated from enum value: PLAN_CHANGE_DIRECTION_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: PLAN_CHANGE_DIRECTION_UPGRADE = 1;
+   */
+  UPGRADE = 1,
+
+  /**
+   * @generated from enum value: PLAN_CHANGE_DIRECTION_DOWNGRADE = 2;
+   */
+  DOWNGRADE = 2,
+
+  /**
+   * Target equals the current plan and interval. ChangePlan with no change
+   * withdraws any scheduled change instead.
+   *
+   * @generated from enum value: PLAN_CHANGE_DIRECTION_NONE = 3;
+   */
+  NONE = 3,
+}
+
+/**
+ * PlanChangeDirection classifies a change: tier rank first, then the price
+ * of the target interval for a same-plan interval switch.
+ *
+ * @generated from enum everstack.billing.v1.PlanChangeDirection
+ */
+export declare type PlanChangeDirectionJson = "PLAN_CHANGE_DIRECTION_UNSPECIFIED" | "PLAN_CHANGE_DIRECTION_UPGRADE" | "PLAN_CHANGE_DIRECTION_DOWNGRADE" | "PLAN_CHANGE_DIRECTION_NONE";
+
+/**
+ * Describes the enum everstack.billing.v1.PlanChangeDirection.
+ */
+export declare const PlanChangeDirectionSchema: GenEnum<PlanChangeDirection, PlanChangeDirectionJson>;
+
+/**
+ * ClientActionKind is a step the customer must finish in Stripe.
+ *
+ * @generated from enum everstack.billing.v1.ClientActionKind
+ */
+export enum ClientActionKind {
+  /**
+   * @generated from enum value: CLIENT_ACTION_KIND_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Pay or authenticate (SCA) the upgrade invoice on Stripe's hosted page.
+   * The change applies once it is paid; Stripe drops it if it is not paid
+   * within about a day.
+   *
+   * @generated from enum value: CLIENT_ACTION_KIND_CONFIRM_PAYMENT = 1;
+   */
+  CONFIRM_PAYMENT = 1,
+
+  /**
+   * Add a payment method in the Stripe portal, then retry ChangePlan.
+   * Nothing was changed.
+   *
+   * @generated from enum value: CLIENT_ACTION_KIND_ADD_PAYMENT_METHOD = 2;
+   */
+  ADD_PAYMENT_METHOD = 2,
+}
+
+/**
+ * ClientActionKind is a step the customer must finish in Stripe.
+ *
+ * @generated from enum everstack.billing.v1.ClientActionKind
+ */
+export declare type ClientActionKindJson = "CLIENT_ACTION_KIND_UNSPECIFIED" | "CLIENT_ACTION_KIND_CONFIRM_PAYMENT" | "CLIENT_ACTION_KIND_ADD_PAYMENT_METHOD";
+
+/**
+ * Describes the enum everstack.billing.v1.ClientActionKind.
+ */
+export declare const ClientActionKindSchema: GenEnum<ClientActionKind, ClientActionKindJson>;
+
+/**
+ * PlanChangeOutcome is what ChangePlan did.
+ *
+ * @generated from enum everstack.billing.v1.PlanChangeOutcome
+ */
+export enum PlanChangeOutcome {
+  /**
+   * @generated from enum value: PLAN_CHANGE_OUTCOME_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Upgrade applied and paid.
+   *
+   * @generated from enum value: PLAN_CHANGE_OUTCOME_APPLIED = 1;
+   */
+  APPLIED = 1,
+
+  /**
+   * Downgrade or cheaper interval scheduled for the period end.
+   *
+   * @generated from enum value: PLAN_CHANGE_OUTCOME_SCHEDULED = 2;
+   */
+  SCHEDULED = 2,
+
+  /**
+   * Already on the target (a scheduled change, if any, was withdrawn).
+   *
+   * @generated from enum value: PLAN_CHANGE_OUTCOME_UNCHANGED = 3;
+   */
+  UNCHANGED = 3,
+
+  /**
+   * The customer must finish client_action.
+   *
+   * @generated from enum value: PLAN_CHANGE_OUTCOME_ACTION_REQUIRED = 4;
+   */
+  ACTION_REQUIRED = 4,
+}
+
+/**
+ * PlanChangeOutcome is what ChangePlan did.
+ *
+ * @generated from enum everstack.billing.v1.PlanChangeOutcome
+ */
+export declare type PlanChangeOutcomeJson = "PLAN_CHANGE_OUTCOME_UNSPECIFIED" | "PLAN_CHANGE_OUTCOME_APPLIED" | "PLAN_CHANGE_OUTCOME_SCHEDULED" | "PLAN_CHANGE_OUTCOME_UNCHANGED" | "PLAN_CHANGE_OUTCOME_ACTION_REQUIRED";
+
+/**
+ * Describes the enum everstack.billing.v1.PlanChangeOutcome.
+ */
+export declare const PlanChangeOutcomeSchema: GenEnum<PlanChangeOutcome, PlanChangeOutcomeJson>;
+
+/**
+ * ModelTrialState is the state of an organization's free model requests.
+ *
+ * @generated from enum everstack.billing.v1.ModelTrialState
+ */
+export enum ModelTrialState {
+  /**
+   * @generated from enum value: MODEL_TRIAL_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Free requests can be used now.
+   *
+   * @generated from enum value: MODEL_TRIAL_STATE_ACTIVE = 1;
+   */
+  ACTIVE = 1,
+
+  /**
+   * Every free request is used.
+   *
+   * @generated from enum value: MODEL_TRIAL_STATE_EXHAUSTED = 2;
+   */
+  EXHAUSTED = 2,
+
+  /**
+   * The free requests expired (see expires_at).
+   *
+   * @generated from enum value: MODEL_TRIAL_STATE_EXPIRED = 3;
+   */
+  EXPIRED = 3,
+
+  /**
+   * Free requests are paused for everyone: until resumes_at when set,
+   * otherwise until further notice.
+   *
+   * @generated from enum value: MODEL_TRIAL_STATE_PAUSED = 4;
+   */
+  PAUSED = 4,
+
+  /**
+   * The organization has no free requests.
+   *
+   * @generated from enum value: MODEL_TRIAL_STATE_NOT_ELIGIBLE = 5;
+   */
+  NOT_ELIGIBLE = 5,
+}
+
+/**
+ * ModelTrialState is the state of an organization's free model requests.
+ *
+ * @generated from enum everstack.billing.v1.ModelTrialState
+ */
+export declare type ModelTrialStateJson = "MODEL_TRIAL_STATE_UNSPECIFIED" | "MODEL_TRIAL_STATE_ACTIVE" | "MODEL_TRIAL_STATE_EXHAUSTED" | "MODEL_TRIAL_STATE_EXPIRED" | "MODEL_TRIAL_STATE_PAUSED" | "MODEL_TRIAL_STATE_NOT_ELIGIBLE";
+
+/**
+ * Describes the enum everstack.billing.v1.ModelTrialState.
+ */
+export declare const ModelTrialStateSchema: GenEnum<ModelTrialState, ModelTrialStateJson>;
 

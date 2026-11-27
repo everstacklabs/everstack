@@ -2,8 +2,8 @@
 # Auto-generated - DO NOT EDIT MANUALLY
 # Run: ./scripts/generate-manifest.sh to regenerate
 
-version: "2.8.0"
-generated_at: "2026-09-04T08:52:00Z"
+version: "2.13.0"
+generated_at: "2026-11-26T13:39:31Z"
 schema_version: "1.0"
 
 providers:
@@ -24,9 +24,11 @@ providers:
       - providers/anthropic/models/claude-3-opus-20240229.yaml
       - providers/anthropic/models/claude-3-sonnet-20240229.yaml
       - providers/anthropic/models/claude-fable-5-1.yaml
+      - providers/anthropic/models/claude-fable-5-2.yaml
       - providers/anthropic/models/claude-fable-5.yaml
       - providers/anthropic/models/claude-haiku-4-5-20251001.yaml
       - providers/anthropic/models/claude-haiku-4-5.yaml
+      - providers/anthropic/models/claude-haiku-5-5.yaml
       - providers/anthropic/models/claude-instant-1.2.yaml
       - providers/anthropic/models/claude-opus-4-1-20250805.yaml
       - providers/anthropic/models/claude-opus-4-1.yaml
@@ -37,12 +39,14 @@ providers:
       - providers/anthropic/models/claude-opus-4-7.yaml
       - providers/anthropic/models/claude-opus-4-8.yaml
       - providers/anthropic/models/claude-opus-4-latest.yaml
+      - providers/anthropic/models/claude-opus-5-5.yaml
       - providers/anthropic/models/claude-opus-5.yaml
       - providers/anthropic/models/claude-sonnet-4-20250514.yaml
       - providers/anthropic/models/claude-sonnet-4-5-20250929.yaml
       - providers/anthropic/models/claude-sonnet-4-5.yaml
       - providers/anthropic/models/claude-sonnet-4-6.yaml
       - providers/anthropic/models/claude-sonnet-4-latest.yaml
+      - providers/anthropic/models/claude-sonnet-5-5.yaml
       - providers/anthropic/models/claude-sonnet-5.yaml
 
   - name: aws-bedrock
@@ -53,8 +57,10 @@ providers:
     models:
       - providers/aws-bedrock/models/amazon.nova-pro-v1:0.yaml
       - providers/aws-bedrock/models/anthropic.claude-3-7-sonnet-20250219-v1:0.yaml
+      - providers/aws-bedrock/models/anthropic.claude-fable-5-2.yaml
       - providers/aws-bedrock/models/anthropic.claude-fable-5.yaml
       - providers/aws-bedrock/models/anthropic.claude-haiku-4-5-20251001-v1:0.yaml
+      - providers/aws-bedrock/models/anthropic.claude-haiku-5-5.yaml
       - providers/aws-bedrock/models/anthropic.claude-opus-4-1-20250805-v1:0.yaml
       - providers/aws-bedrock/models/anthropic.claude-opus-4-5-20251101-v1:0.yaml
       - providers/aws-bedrock/models/anthropic.claude-opus-4-6-v1.yaml
@@ -66,10 +72,20 @@ providers:
       - providers/aws-bedrock/models/anthropic.claude-sonnet-4-6.yaml
       - providers/aws-bedrock/models/anthropic.claude-sonnet-5.yaml
       - providers/aws-bedrock/models/deepseek.v3.2.yaml
+      - providers/aws-bedrock/models/global.anthropic.claude-fable-5-2.yaml
+      - providers/aws-bedrock/models/global.moonshotai.kimi-k3.1.yaml
+      - providers/aws-bedrock/models/global.openai.gpt-6.1-terra.yaml
+      - providers/aws-bedrock/models/global.openai.gpt-6.2-astra.yaml
+      - providers/aws-bedrock/models/global.openai.gpt-6.2-sol.yaml
       - providers/aws-bedrock/models/meta.llama3-1-70b-instruct-v1:0.yaml
       - providers/aws-bedrock/models/meta.llama3-3-70b-instruct-v1:0.yaml
       - providers/aws-bedrock/models/mistral.mistral-large-2407-v1:0.yaml
       - providers/aws-bedrock/models/mistral.mistral-large-3-675b-instruct.yaml
+      - providers/aws-bedrock/models/us.anthropic.claude-fable-5-2.yaml
+      - providers/aws-bedrock/models/us.moonshotai.kimi-k3.1.yaml
+      - providers/aws-bedrock/models/us.openai.gpt-6.1-terra.yaml
+      - providers/aws-bedrock/models/us.openai.gpt-6.2-astra.yaml
+      - providers/aws-bedrock/models/us.openai.gpt-6.2-sol.yaml
       - providers/aws-bedrock/models/xai.grok-4.6.yaml
 
   - name: azure-openai
@@ -78,6 +94,8 @@ providers:
       - providers/azure-openai/categories.yaml
       - providers/azure-openai/templates.yaml
     models:
+      - providers/azure-openai/models/claude-fable-5-2.yaml
+      - providers/azure-openai/models/claude-haiku-5-5.yaml
       - providers/azure-openai/models/gpt-4.1-mini.yaml
       - providers/azure-openai/models/gpt-4.1-nano.yaml
       - providers/azure-openai/models/gpt-4.1.yaml
@@ -92,11 +110,36 @@ providers:
       - providers/azure-openai/models/gpt-5.6-sol.yaml
       - providers/azure-openai/models/gpt-5.6-terra.yaml
       - providers/azure-openai/models/gpt-5.yaml
+      - providers/azure-openai/models/gpt-6.1-terra.yaml
+      - providers/azure-openai/models/gpt-6.2-astra.yaml
+      - providers/azure-openai/models/gpt-6.2-sol.yaml
       - providers/azure-openai/models/o3-mini.yaml
       - providers/azure-openai/models/o3.yaml
       - providers/azure-openai/models/o4-mini.yaml
       - providers/azure-openai/models/text-embedding-3-large.yaml
       - providers/azure-openai/models/text-embedding-3-small.yaml
+
+  - name: baseten
+    files:
+      - providers/baseten/provider.yaml
+      - providers/baseten/categories.yaml
+      - providers/baseten/templates.yaml
+    models:
+      - providers/baseten/models/deepseek-ai__DeepSeek-V4-Flash-0731.yaml
+      - providers/baseten/models/deepseek-ai__DeepSeek-V4-Pro-0813.yaml
+      - providers/baseten/models/deepseek-ai__DeepSeek-V4.1-Flash-1017-Fast.yaml
+      - providers/baseten/models/deepseek-ai__DeepSeek-V4.1-Flash-1017.yaml
+      - providers/baseten/models/deepseek-ai__DeepSeek-V4.1-Flash-Fast.yaml
+      - providers/baseten/models/deepseek-ai__DeepSeek-V4.1-Flash.yaml
+      - providers/baseten/models/moonshotai__Kimi-K3.1-Pro.yaml
+      - providers/baseten/models/moonshotai__Kimi-K3.yaml
+      - providers/baseten/models/nvidia__NVIDIA-Nemotron-3-Ultra-550B-A55B.yaml
+      - providers/baseten/models/openai__gpt-oss-120b.yaml
+      - providers/baseten/models/zai-org__GLM-5.2-Fast.yaml
+      - providers/baseten/models/zai-org__GLM-5.2.yaml
+      - providers/baseten/models/zai-org__GLM-5.3-Fast.yaml
+      - providers/baseten/models/zai-org__GLM-5.3-Flash.yaml
+      - providers/baseten/models/zai-org__GLM-5.3.yaml
 
   - name: cerebras
     files:
@@ -112,7 +155,35 @@ providers:
       - providers/cerebras/models/llama3.1-8b.yaml
       - providers/cerebras/models/qwen-3-235b-a22b-instruct-2507.yaml
       - providers/cerebras/models/qwen-3-32b.yaml
+      - providers/cerebras/models/qwen-3.8-27b.yaml
       - providers/cerebras/models/zai-glm-4.7.yaml
+
+  - name: chutes
+    files:
+      - providers/chutes/provider.yaml
+      - providers/chutes/categories.yaml
+      - providers/chutes/templates.yaml
+    models:
+      - providers/chutes/models/Qwen__Qwen3.5-27B-TEE.yaml
+      - providers/chutes/models/Qwen__Qwen3.5-397B-A17B-TEE.yaml
+      - providers/chutes/models/Qwen__Qwen3.6-27B-TEE.yaml
+      - providers/chutes/models/Qwen__Qwen3.8-2.4T-A95B.yaml
+      - providers/chutes/models/Qwen__Qwen3.8-27B-TEE.yaml
+      - providers/chutes/models/Qwen__Qwen3.8-Max-0902.yaml
+      - providers/chutes/models/Qwen__Qwen4-Max.yaml
+      - providers/chutes/models/deepseek-ai__DeepSeek-V3.2-TEE.yaml
+      - providers/chutes/models/deepseek-ai__DeepSeek-V4-Flash-0731-TEE.yaml
+      - providers/chutes/models/deepseek-ai__DeepSeek-V4-Pro-0813.yaml
+      - providers/chutes/models/deepseek-ai__DeepSeek-V4.1-Flash-1017.yaml
+      - providers/chutes/models/google__gemma-4-31B-turbo-TEE.yaml
+      - providers/chutes/models/moonshotai__Kimi-K2.6-TEE.yaml
+      - providers/chutes/models/moonshotai__Kimi-K2.7-Code.yaml
+      - providers/chutes/models/moonshotai__Kimi-K3-TEE.yaml
+      - providers/chutes/models/tencent__Hy4.yaml
+      - providers/chutes/models/zai-org__GLM-5.1-TEE.yaml
+      - providers/chutes/models/zai-org__GLM-5.2-Fast.yaml
+      - providers/chutes/models/zai-org__GLM-5.2-TEE.yaml
+      - providers/chutes/models/zai-org__GLM-5.3.yaml
 
   - name: cohere
     files:
@@ -142,6 +213,38 @@ providers:
       - providers/cohere/models/north-mini-code-1-0.yaml
       - providers/cohere/models/rerank-v3.5.yaml
 
+  - name: deepinfra
+    files:
+      - providers/deepinfra/provider.yaml
+      - providers/deepinfra/categories.yaml
+      - providers/deepinfra/templates.yaml
+    models:
+      - providers/deepinfra/models/MiniMaxAI__MiniMax-M3.yaml
+      - providers/deepinfra/models/Qwen__Qwen3-Coder-480B-A35B-Instruct-Turbo.yaml
+      - providers/deepinfra/models/Qwen__Qwen3.8-27B.yaml
+      - providers/deepinfra/models/Qwen__Qwen3.8-Flash.yaml
+      - providers/deepinfra/models/Qwen__Qwen3.8-Max.yaml
+      - providers/deepinfra/models/Qwen__Qwen4-Max.yaml
+      - providers/deepinfra/models/XiaomiMiMo__MiMo-V2.6-Flash.yaml
+      - providers/deepinfra/models/XiaomiMiMo__MiMo-V2.6-Pro.yaml
+      - providers/deepinfra/models/deepseek-ai__DeepSeek-V4-Flash-0731.yaml
+      - providers/deepinfra/models/deepseek-ai__DeepSeek-V4-Pro-0813.yaml
+      - providers/deepinfra/models/deepseek-ai__DeepSeek-V4-Pro.yaml
+      - providers/deepinfra/models/deepseek-ai__DeepSeek-V4.1-Flash-1017.yaml
+      - providers/deepinfra/models/deepseek-ai__DeepSeek-V4.1-Flash.yaml
+      - providers/deepinfra/models/google__gemma-4-31B-it.yaml
+      - providers/deepinfra/models/meta-llama__Llama-3.3-70B-Instruct-Turbo.yaml
+      - providers/deepinfra/models/moonshotai__Kimi-K2.6.yaml
+      - providers/deepinfra/models/moonshotai__Kimi-K3.1-Pro.yaml
+      - providers/deepinfra/models/moonshotai__Kimi-K3.yaml
+      - providers/deepinfra/models/openai__gpt-oss-120b.yaml
+      - providers/deepinfra/models/openai__gpt-oss-20b.yaml
+      - providers/deepinfra/models/tencent__Hy4.yaml
+      - providers/deepinfra/models/thinkingmachines__Inkling-2-Small.yaml
+      - providers/deepinfra/models/zai-org__GLM-5.2.yaml
+      - providers/deepinfra/models/zai-org__GLM-5.3-Flash.yaml
+      - providers/deepinfra/models/zai-org__GLM-5.3.yaml
+
   - name: deepseek
     files:
       - providers/deepseek/provider.yaml
@@ -149,6 +252,7 @@ providers:
       - providers/deepseek/templates.yaml
     models:
       - providers/deepseek/models/deepseek-chat.yaml
+      - providers/deepseek/models/deepseek-flash.yaml
       - providers/deepseek/models/deepseek-r1.yaml
       - providers/deepseek/models/deepseek-reasoner.yaml
       - providers/deepseek/models/deepseek-v3-0324.yaml
@@ -169,6 +273,7 @@ providers:
       - providers/fireworks/models/accounts__fireworks__models__deepseek-v4-flash-0731.yaml
       - providers/fireworks/models/accounts__fireworks__models__deepseek-v4-pro-0813.yaml
       - providers/fireworks/models/accounts__fireworks__models__deepseek-v4-pro.yaml
+      - providers/fireworks/models/accounts__fireworks__models__deepseek-v4p1-flash-1017.yaml
       - providers/fireworks/models/accounts__fireworks__models__glm-4p5-air.yaml
       - providers/fireworks/models/accounts__fireworks__models__glm-4p5.yaml
       - providers/fireworks/models/accounts__fireworks__models__glm-4p7.yaml
@@ -177,6 +282,7 @@ providers:
       - providers/fireworks/models/accounts__fireworks__models__glm-5p2.yaml
       - providers/fireworks/models/accounts__fireworks__models__gpt-oss-120b.yaml
       - providers/fireworks/models/accounts__fireworks__models__gpt-oss-20b.yaml
+      - providers/fireworks/models/accounts__fireworks__models__hy4-flash.yaml
       - providers/fireworks/models/accounts__fireworks__models__inkling.yaml
       - providers/fireworks/models/accounts__fireworks__models__kimi-k2-instruct.yaml
       - providers/fireworks/models/accounts__fireworks__models__kimi-k2-thinking.yaml
@@ -184,6 +290,7 @@ providers:
       - providers/fireworks/models/accounts__fireworks__models__kimi-k2p6.yaml
       - providers/fireworks/models/accounts__fireworks__models__kimi-k2p7-code.yaml
       - providers/fireworks/models/accounts__fireworks__models__kimi-k3.yaml
+      - providers/fireworks/models/accounts__fireworks__models__kimi-k3p1-pro.yaml
       - providers/fireworks/models/accounts__fireworks__models__llama-v3p1-8b-instruct.yaml
       - providers/fireworks/models/accounts__fireworks__models__llama-v3p2-90b-vision-instruct.yaml
       - providers/fireworks/models/accounts__fireworks__models__llama-v3p3-70b-instruct.yaml
@@ -191,16 +298,27 @@ providers:
       - providers/fireworks/models/accounts__fireworks__models__minimax-m2p5.yaml
       - providers/fireworks/models/accounts__fireworks__models__minimax-m2p7.yaml
       - providers/fireworks/models/accounts__fireworks__models__minimax-m3.yaml
+      - providers/fireworks/models/accounts__fireworks__models__minimax-m3p1-flash.yaml
       - providers/fireworks/models/accounts__fireworks__models__muse-glimmer-30b.yaml
+      - providers/fireworks/models/accounts__fireworks__models__muse-spark-open.yaml
       - providers/fireworks/models/accounts__fireworks__models__nemotron-lightning-3p5-30b-a3b.yaml
       - providers/fireworks/models/accounts__fireworks__models__nomic-embed-text-v1.5.yaml
       - providers/fireworks/models/accounts__fireworks__models__qwen2p5-72b-instruct.yaml
       - providers/fireworks/models/accounts__fireworks__models__qwen3p6-plus.yaml
       - providers/fireworks/models/accounts__fireworks__models__qwen3p7-plus.yaml
       - providers/fireworks/models/accounts__fireworks__models__qwen3p8-max.yaml
+      - providers/fireworks/models/accounts__fireworks__models__qwen4-max.yaml
+      - providers/fireworks/models/accounts__fireworks__models__ultramarine-1-flash-us.yaml
+      - providers/fireworks/models/accounts__fireworks__routers__deepseek-flash-latest.yaml
+      - providers/fireworks/models/accounts__fireworks__routers__deepseek-v4p1-flash-1017-flex.yaml
+      - providers/fireworks/models/accounts__fireworks__routers__deepseek-v4p1-flash-1017-spot.yaml
+      - providers/fireworks/models/accounts__fireworks__routers__deepseek-v4p1-flash-1017-ultrafast.yaml
+      - providers/fireworks/models/accounts__fireworks__routers__deepseek-v4p1-flash-1017-us.yaml
       - providers/fireworks/models/accounts__fireworks__routers__glm-5p2-fast.yaml
       - providers/fireworks/models/accounts__fireworks__routers__kimi-k2p7-code-fast.yaml
       - providers/fireworks/models/accounts__fireworks__routers__kimi-k3-fast.yaml
+      - providers/fireworks/models/accounts__fireworks__routers__kimi-k3p1-pro-us.yaml
+      - providers/fireworks/models/accounts__fireworks__routers__kimi-latest.yaml
 
   - name: google
     files:
@@ -226,6 +344,11 @@ providers:
       - providers/google/models/gemini-3.5-flash.yaml
       - providers/google/models/gemini-3.6-flash.yaml
       - providers/google/models/gemini-3.7-flash.yaml
+      - providers/google/models/gemini-3.8-flash.yaml
+      - providers/google/models/gemini-4-argon.yaml
+      - providers/google/models/gemini-4-carbon.yaml
+      - providers/google/models/gemini-4-hydrogen.yaml
+      - providers/google/models/gemini-4-neon.yaml
       - providers/google/models/gemini-flash-latest.yaml
       - providers/google/models/gemini-flash-lite-latest.yaml
       - providers/google/models/gemini-pro.yaml
@@ -253,6 +376,7 @@ providers:
       - providers/groq/models/qwen-qwq-32b.yaml
       - providers/groq/models/qwen__qwen3-32b.yaml
       - providers/groq/models/qwen__qwen3.6-27b.yaml
+      - providers/groq/models/qwen__qwen3.8-27b.yaml
 
   - name: huggingface
     files:
@@ -260,6 +384,7 @@ providers:
       - providers/huggingface/categories.yaml
       - providers/huggingface/templates.yaml
     models:
+      - providers/huggingface/models/MiniMaxAI__MiniMax-M3.1-Flash.yaml
       - providers/huggingface/models/MiniMaxAI__MiniMax-M3.yaml
       - providers/huggingface/models/Qwen__Qwen3-Coder-480B-A35B-Instruct.yaml
       - providers/huggingface/models/Qwen__Qwen3-Next-80B-A3B-Instruct.yaml
@@ -267,20 +392,59 @@ providers:
       - providers/huggingface/models/deepseek-ai__DeepSeek-V4-Flash-0731.yaml
       - providers/huggingface/models/deepseek-ai__DeepSeek-V4-Pro-0813.yaml
       - providers/huggingface/models/deepseek-ai__DeepSeek-V4-Pro.yaml
+      - providers/huggingface/models/deepseek-ai__DeepSeek-V4.1-Flash-1017.yaml
       - providers/huggingface/models/huggingface-gpt-3.5-turbo.yaml
       - providers/huggingface/models/huggingface-gpt-4-turbo.yaml
       - providers/huggingface/models/huggingface-gpt-4.yaml
       - providers/huggingface/models/huggingface-gpt-4o-mini.yaml
       - providers/huggingface/models/huggingface-gpt-4o.yaml
       - providers/huggingface/models/huggingface-text-embedding-ada-002.yaml
+      - providers/huggingface/models/meta-models__Muse-Spark-Open-816B-A42B.yaml
+      - providers/huggingface/models/mistralai__Mistral-Large-4-1T-A52B.yaml
       - providers/huggingface/models/moonshotai__Kimi-K2.6.yaml
       - providers/huggingface/models/moonshotai__Kimi-K2.7-Code.yaml
+      - providers/huggingface/models/moonshotai__Kimi-K3.1-Pro.yaml
       - providers/huggingface/models/moonshotai__Kimi-K3.yaml
+      - providers/huggingface/models/nvidia__NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16.yaml
+      - providers/huggingface/models/nvidia__NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4.yaml
+      - providers/huggingface/models/reflection__Beam-1.0-501B-A23B.yaml
       - providers/huggingface/models/stepfun-ai__Step-3.7-Flash.yaml
+      - providers/huggingface/models/tencent__Hy4-flash.yaml
+      - providers/huggingface/models/tencent__Hy4.yaml
+      - providers/huggingface/models/thinkingmachines__Inkling-2-Mini.yaml
+      - providers/huggingface/models/thinkingmachines__Inkling-2-Small.yaml
       - providers/huggingface/models/thinkingmachines__Inkling-Small.yaml
       - providers/huggingface/models/thinkingmachines__Inkling.yaml
       - providers/huggingface/models/zai-org__GLM-5.1.yaml
       - providers/huggingface/models/zai-org__GLM-5.2.yaml
+
+  - name: kev
+    files:
+      - providers/kev/provider.yaml
+    models:
+      - providers/kev/models/kev-latest.yaml
+
+  - name: laya
+    files:
+      - providers/laya/provider.yaml
+    models:
+      - providers/laya/models/english.yaml
+      - providers/laya/models/multilingual.yaml
+      - providers/laya/models/typed-decisions.yaml
+
+  - name: meta
+    files:
+      - providers/meta/provider.yaml
+      - providers/meta/categories.yaml
+      - providers/meta/templates.yaml
+    models:
+      - providers/meta/models/muse-ember-1.0.yaml
+      - providers/meta/models/muse-spark-1.1.yaml
+      - providers/meta/models/muse-spark-1.2-contributor.yaml
+      - providers/meta/models/muse-spark-1.2.yaml
+      - providers/meta/models/muse-spark-1.3-contributor.yaml
+      - providers/meta/models/muse-spark-1.3.yaml
+      - providers/meta/models/muse-wonder-1.0.yaml
 
   - name: minimax
     files:
@@ -296,6 +460,7 @@ providers:
       - providers/minimax/models/MiniMax-M2.7-highspeed.yaml
       - providers/minimax/models/MiniMax-M2.7.yaml
       - providers/minimax/models/MiniMax-M2.yaml
+      - providers/minimax/models/MiniMax-M3.1-Flash.yaml
       - providers/minimax/models/MiniMax-M3.yaml
 
   - name: mistral
@@ -305,6 +470,7 @@ providers:
       - providers/mistral/templates.yaml
     models:
       - providers/mistral/models/codestral-latest.yaml
+      - providers/mistral/models/deepseek-v4-1-flash-1017.yaml
       - providers/mistral/models/devstral-2512.yaml
       - providers/mistral/models/devstral-latest.yaml
       - providers/mistral/models/devstral-medium-2507.yaml
@@ -320,6 +486,8 @@ providers:
       - providers/mistral/models/mistral-embed.yaml
       - providers/mistral/models/mistral-large-2411.yaml
       - providers/mistral/models/mistral-large-2512.yaml
+      - providers/mistral/models/mistral-large-4-0.yaml
+      - providers/mistral/models/mistral-large-4.yaml
       - providers/mistral/models/mistral-large-latest.yaml
       - providers/mistral/models/mistral-medium-2505.yaml
       - providers/mistral/models/mistral-medium-2508.yaml
@@ -337,6 +505,8 @@ providers:
       - providers/mistral/models/pixtral-large-latest.yaml
       - providers/mistral/models/voxtral-small-2507.yaml
       - providers/mistral/models/voxtral-small-latest.yaml
+      - providers/mistral/models/zai-glm-5-3-flash.yaml
+      - providers/mistral/models/zai-glm-5-3.yaml
 
   - name: moonshot
     files:
@@ -353,10 +523,74 @@ providers:
       - providers/moonshot/models/kimi-k2.6.yaml
       - providers/moonshot/models/kimi-k2.7-code-highspeed.yaml
       - providers/moonshot/models/kimi-k2.7-code.yaml
+      - providers/moonshot/models/kimi-k3.1-pro-highspeed.yaml
+      - providers/moonshot/models/kimi-k3.1-pro.yaml
       - providers/moonshot/models/kimi-k3.yaml
       - providers/moonshot/models/moonshot-v1-128k.yaml
       - providers/moonshot/models/moonshot-v1-32k.yaml
       - providers/moonshot/models/moonshot-v1-8k.yaml
+
+  - name: nebius
+    files:
+      - providers/nebius/provider.yaml
+      - providers/nebius/categories.yaml
+      - providers/nebius/templates.yaml
+    models:
+      - providers/nebius/models/MiniMaxAI__MiniMax-M3.1-Flash.yaml
+      - providers/nebius/models/MiniMaxAI__MiniMax-M3.yaml
+      - providers/nebius/models/NousResearch__Hermes-4-405B.yaml
+      - providers/nebius/models/Qwen__Qwen3-235B-A22B-Instruct-2507.yaml
+      - providers/nebius/models/Qwen__Qwen3-30B-A3B-Instruct-2507.yaml
+      - providers/nebius/models/Qwen__Qwen3.8-27B.yaml
+      - providers/nebius/models/deepseek-ai__DeepSeek-V4-Pro-0813.yaml
+      - providers/nebius/models/deepseek-ai__DeepSeek-V4.1-Flash-1017.yaml
+      - providers/nebius/models/google__gemma-3-27b-it.yaml
+      - providers/nebius/models/meta-models__muse-spark-open.yaml
+      - providers/nebius/models/moonshotai__Kimi-K3.1-Pro.yaml
+      - providers/nebius/models/moonshotai__Kimi-K3.yaml
+      - providers/nebius/models/nvidia__NVIDIA-Nemotron-3-Nano-30B-A3B.yaml
+      - providers/nebius/models/nvidia__Nemotron-3-Ultra-550b-a55b.yaml
+      - providers/nebius/models/nvidia__Nemotron-3.5-Super-VL.yaml
+      - providers/nebius/models/nvidia__Nemotron-3_5-Lightning.yaml
+      - providers/nebius/models/nvidia__nemotron-3-super-120b-a12b.yaml
+      - providers/nebius/models/openai__gpt-oss-120b.yaml
+      - providers/nebius/models/reflection__beam.yaml
+      - providers/nebius/models/thinkingmachines__Inkling-2-Small.yaml
+      - providers/nebius/models/zai-org__GLM-5.2.yaml
+      - providers/nebius/models/zai-org__GLM-5.3-Flash.yaml
+      - providers/nebius/models/zai-org__GLM-5.3.yaml
+
+  - name: novita
+    files:
+      - providers/novita/provider.yaml
+      - providers/novita/categories.yaml
+      - providers/novita/templates.yaml
+    models:
+      - providers/novita/models/deepseek__deepseek-v4-flash-0731.yaml
+      - providers/novita/models/deepseek__deepseek-v4-pro-0813.yaml
+      - providers/novita/models/deepseek__deepseek-v4-pro.yaml
+      - providers/novita/models/deepseek__deepseek-v4.1-flash-1017.yaml
+      - providers/novita/models/deepseek__deepseek-v4.1-flash.yaml
+      - providers/novita/models/google__gemma-4-31b-it.yaml
+      - providers/novita/models/meta-llama__llama-3.3-70b-instruct.yaml
+      - providers/novita/models/moonshotai__kimi-k2.6.yaml
+      - providers/novita/models/moonshotai__kimi-k2.7-code.yaml
+      - providers/novita/models/moonshotai__kimi-k3.1-pro-highspeed.yaml
+      - providers/novita/models/moonshotai__kimi-k3.1-pro.yaml
+      - providers/novita/models/moonshotai__kimi-k3.yaml
+      - providers/novita/models/openai__gpt-oss-120b.yaml
+      - providers/novita/models/qwen__qwen3.8-27b.yaml
+      - providers/novita/models/qwen__qwen3.8-flash.yaml
+      - providers/novita/models/qwen__qwen3.8-max.yaml
+      - providers/novita/models/qwen__qwen4-max.yaml
+      - providers/novita/models/tencent__hy4-flash.yaml
+      - providers/novita/models/tencent__hy4.yaml
+      - providers/novita/models/xiaomimimo__mimo-v2.6-flash.yaml
+      - providers/novita/models/xiaomimimo__mimo-v2.6-pro.yaml
+      - providers/novita/models/zai-org__glm-5.1.yaml
+      - providers/novita/models/zai-org__glm-5.2.yaml
+      - providers/novita/models/zai-org__glm-5.3-flash.yaml
+      - providers/novita/models/zai-org__glm-5.3.yaml
 
   - name: nvidia-nim
     files:
@@ -373,11 +607,13 @@ providers:
       - providers/nvidia-nim/models/meta__llama-4-maverick-17b-128e-instruct.yaml
       - providers/nvidia-nim/models/meta__llama-4-scout-17b-16e-instruct.yaml
       - providers/nvidia-nim/models/meta__muse-glimmer-30b.yaml
+      - providers/nvidia-nim/models/minimaxai__minimax-m3.1-flash.yaml
       - providers/nvidia-nim/models/minimaxai__minimax-m3.yaml
       - providers/nvidia-nim/models/moonshotai__kimi-k3.yaml
       - providers/nvidia-nim/models/nvidia__llama-3.1-nemotron-70b-instruct.yaml
       - providers/nvidia-nim/models/nvidia__nemotron-3-ultra-550b-a55b.yaml
       - providers/nvidia-nim/models/nvidia__nemotron-3.5-lightning-30b-a3b.yaml
+      - providers/nvidia-nim/models/nvidia__nemotron-3.5-super-vl-120b-a12b.yaml
       - providers/nvidia-nim/models/nvidia__nv-embedqa-e5-v5.yaml
       - providers/nvidia-nim/models/stepfun-ai__step-3.7-flash.yaml
       - providers/nvidia-nim/models/thinkingmachines__inkling.yaml
@@ -478,6 +714,12 @@ providers:
       - providers/openai/models/gpt-5.6.yaml
       - providers/openai/models/gpt-5.yaml
       - providers/openai/models/gpt-6-astra.yaml
+      - providers/openai/models/gpt-6-luna.yaml
+      - providers/openai/models/gpt-6-sol.yaml
+      - providers/openai/models/gpt-6.1-sol.yaml
+      - providers/openai/models/gpt-6.1-terra.yaml
+      - providers/openai/models/gpt-6.2-astra.yaml
+      - providers/openai/models/gpt-6.2-sol.yaml
       - providers/openai/models/gpt-audio-2025-08-28.yaml
       - providers/openai/models/gpt-audio-mini-2025-10-06.yaml
       - providers/openai/models/gpt-audio-mini-2025-12-15.yaml
@@ -520,38 +762,84 @@ providers:
       - providers/openrouter/categories.yaml
       - providers/openrouter/templates.yaml
     models:
+      - providers/openrouter/models/aion-labs-aion-3.5-mini.yaml
+      - providers/openrouter/models/aion-labs-aion-3.5.yaml
+      - providers/openrouter/models/anthropic-claude-fable-5.1.yaml
+      - providers/openrouter/models/anthropic-claude-fable-5.2.yaml
       - providers/openrouter/models/anthropic-claude-fable-5.yaml
       - providers/openrouter/models/anthropic-claude-haiku-4.5.yaml
+      - providers/openrouter/models/anthropic-claude-haiku-5.5.yaml
       - providers/openrouter/models/anthropic-claude-opus-4.7.yaml
       - providers/openrouter/models/anthropic-claude-opus-4.8-fast.yaml
       - providers/openrouter/models/anthropic-claude-opus-4.8.yaml
       - providers/openrouter/models/anthropic-claude-opus-5-fast.yaml
+      - providers/openrouter/models/anthropic-claude-opus-5.5.yaml
       - providers/openrouter/models/anthropic-claude-opus-5.yaml
       - providers/openrouter/models/anthropic-claude-sonnet-4.6.yaml
       - providers/openrouter/models/anthropic-claude-sonnet-4.yaml
+      - providers/openrouter/models/anthropic-claude-sonnet-5.5.yaml
       - providers/openrouter/models/anthropic-claude-sonnet-5.yaml
+      - providers/openrouter/models/baidu-ernie-5.5-flash-preview-free.yaml
+      - providers/openrouter/models/baidu-ernie-light-dt-1.0-intl.yaml
       - providers/openrouter/models/bytedance-seed-seed-2-1-turbo.yaml
+      - providers/openrouter/models/cohere-command-a-plus.yaml
       - providers/openrouter/models/deepseek-deepseek-r1.yaml
       - providers/openrouter/models/deepseek-deepseek-v4-flash-0731.yaml
       - providers/openrouter/models/deepseek-deepseek-v4-flash-vision-exp.yaml
       - providers/openrouter/models/deepseek-deepseek-v4-pro-0813.yaml
       - providers/openrouter/models/deepseek-deepseek-v4-pro.yaml
+      - providers/openrouter/models/deepseek-deepseek-v4.1-flash-1017.yaml
+      - providers/openrouter/models/deepseek-deepseek-v4.1-flash.yaml
+      - providers/openrouter/models/elorian-glimpse.yaml
+      - providers/openrouter/models/fireworks-ember-1.yaml
       - providers/openrouter/models/google-gemini-2.5-pro.yaml
       - providers/openrouter/models/google-gemini-3-pro-preview.yaml
       - providers/openrouter/models/google-gemini-3.5-flash-lite.yaml
       - providers/openrouter/models/google-gemini-3.5-flash.yaml
       - providers/openrouter/models/google-gemini-3.6-flash.yaml
       - providers/openrouter/models/google-gemini-3.7-flash.yaml
+      - providers/openrouter/models/google-gemini-3.8-flash.yaml
+      - providers/openrouter/models/google-gemini-4-argon.yaml
+      - providers/openrouter/models/google-gemini-4-carbon.yaml
+      - providers/openrouter/models/google-gemini-4-hydrogen.yaml
+      - providers/openrouter/models/google-gemini-4-neon.yaml
+      - providers/openrouter/models/inception-mercury-2.5.yaml
+      - providers/openrouter/models/inclusionai-ling-3.0-flash-sante-free.yaml
+      - providers/openrouter/models/inclusionai-ling-3.0-flash-vl.yaml
+      - providers/openrouter/models/inclusionai-ling-3.1-flash.yaml
+      - providers/openrouter/models/inclusionai-ling-3.2-flash-free.yaml
+      - providers/openrouter/models/inference-net-schematron-v2-small.yaml
+      - providers/openrouter/models/inference-net-schematron-v2-turbo.yaml
+      - providers/openrouter/models/kt-midm-k-3.0-pro.yaml
+      - providers/openrouter/models/liquid-lfm-2.5-24b-a2b.yaml
+      - providers/openrouter/models/liquid-lfm-3-1.7b-free.yaml
+      - providers/openrouter/models/liquid-lfm-3-1.7b.yaml
       - providers/openrouter/models/meta-llama-llama-3.3-70b-instruct.yaml
+      - providers/openrouter/models/meta-muse-ember.yaml
       - providers/openrouter/models/meta-muse-glimmer-30b.yaml
       - providers/openrouter/models/meta-muse-spark-1.2.yaml
+      - providers/openrouter/models/meta-muse-spark-1.3.yaml
+      - providers/openrouter/models/meta-muse-spark-open.yaml
+      - providers/openrouter/models/meta-muse-wonder.yaml
+      - providers/openrouter/models/minimax-minimax-m3.1-flash.yaml
       - providers/openrouter/models/minimax-minimax-m3.yaml
+      - providers/openrouter/models/mistralai-mistral-large-4-0.yaml
       - providers/openrouter/models/mistralai-mistral-large.yaml
+      - providers/openrouter/models/mistralai-pixtral-large-2502.yaml
+      - providers/openrouter/models/moondream-moondream3-preview.yaml
+      - providers/openrouter/models/moondream-moondream3.1-9b-a2b.yaml
       - providers/openrouter/models/moonshotai-kimi-k2.6.yaml
       - providers/openrouter/models/moonshotai-kimi-k2.7-code.yaml
+      - providers/openrouter/models/moonshotai-kimi-k3.1-pro.yaml
       - providers/openrouter/models/moonshotai-kimi-k3.yaml
+      - providers/openrouter/models/motif-technologies-motif-3.yaml
+      - providers/openrouter/models/nex-agi-nex-n2.5-mini.yaml
+      - providers/openrouter/models/nex-agi-nex-n2.5-pro.yaml
+      - providers/openrouter/models/nex-agi-nex-n2.6.yaml
       - providers/openrouter/models/nvidia-nemotron-3-ultra-550b-a55b.yaml
       - providers/openrouter/models/nvidia-nemotron-3.5-lightning.yaml
+      - providers/openrouter/models/nvidia-nemotron-3.5-super-vl-free.yaml
+      - providers/openrouter/models/nvidia-nemotron-3.5-super-vl.yaml
       - providers/openrouter/models/openai-gpt-3.5-turbo.yaml
       - providers/openrouter/models/openai-gpt-4-turbo.yaml
       - providers/openrouter/models/openai-gpt-4.yaml
@@ -565,24 +853,70 @@ providers:
       - providers/openrouter/models/openai-gpt-5.6-terra-pro.yaml
       - providers/openrouter/models/openai-gpt-5.6-terra.yaml
       - providers/openrouter/models/openai-gpt-5.yaml
+      - providers/openrouter/models/openai-gpt-6-astra-pro.yaml
+      - providers/openrouter/models/openai-gpt-6-astra.yaml
+      - providers/openrouter/models/openai-gpt-6-luna-pro.yaml
+      - providers/openrouter/models/openai-gpt-6-luna.yaml
+      - providers/openrouter/models/openai-gpt-6-sol-pro.yaml
+      - providers/openrouter/models/openai-gpt-6-sol.yaml
+      - providers/openrouter/models/openai-gpt-6.1-terra-pro.yaml
+      - providers/openrouter/models/openai-gpt-6.1-terra.yaml
+      - providers/openrouter/models/openai-gpt-6.2-astra-pro.yaml
+      - providers/openrouter/models/openai-gpt-6.2-astra.yaml
+      - providers/openrouter/models/openai-gpt-6.2-sol-pro.yaml
+      - providers/openrouter/models/openai-gpt-6.2-sol.yaml
       - providers/openrouter/models/openai-text-embedding-3-large.yaml
       - providers/openrouter/models/openai-text-embedding-ada-002.yaml
+      - providers/openrouter/models/particle-ai-particle-1-free.yaml
+      - providers/openrouter/models/particle-ai-particle-1.yaml
+      - providers/openrouter/models/perceptron-perceptron-mk1.5.yaml
+      - providers/openrouter/models/prism-ml-ternary-bonsai-2-27b.yaml
+      - providers/openrouter/models/prism-ml-ternary-bonsai-2-9b.yaml
       - providers/openrouter/models/qwen-qwen3.7-max.yaml
       - providers/openrouter/models/qwen-qwen3.7-plus.yaml
       - providers/openrouter/models/qwen-qwen3.8-2.4t-a95b.yaml
       - providers/openrouter/models/qwen-qwen3.8-27b.yaml
+      - providers/openrouter/models/qwen-qwen3.8-max-0902.yaml
+      - providers/openrouter/models/qwen-qwen3.8-max-prime.yaml
       - providers/openrouter/models/qwen-qwen3.8-max.yaml
+      - providers/openrouter/models/qwen-qwen3.8-omni-flash.yaml
+      - providers/openrouter/models/qwen-qwen4-max.yaml
+      - providers/openrouter/models/radixark-daisyrose-27b.yaml
+      - providers/openrouter/models/recursive-flint-v1.0-free.yaml
+      - providers/openrouter/models/reflection-beam-1.0-501b-a23b.yaml
+      - providers/openrouter/models/ricursiveai-ripple-65b-preview.yaml
+      - providers/openrouter/models/sakana-fugu-max.yaml
+      - providers/openrouter/models/sakana-fugu-ultra-v2.yaml
       - providers/openrouter/models/sakana-sakana-namazu.yaml
       - providers/openrouter/models/stepfun-step-3.7-flash.yaml
+      - providers/openrouter/models/stepfun-step-5-preview.yaml
       - providers/openrouter/models/tencent-hy-mt2-30b-a3b.yaml
+      - providers/openrouter/models/tencent-hy4-flash.yaml
+      - providers/openrouter/models/tencent-hy4.yaml
+      - providers/openrouter/models/thinkingmachines-inkling-2-mini.yaml
+      - providers/openrouter/models/thinkingmachines-inkling-2-small.yaml
       - providers/openrouter/models/thinkingmachines-inkling-small.yaml
       - providers/openrouter/models/thinkingmachines-inkling.yaml
+      - providers/openrouter/models/unbiased-pareto-26.10-preview.yaml
+      - providers/openrouter/models/unbiased-pareto-26.10.yaml
+      - providers/openrouter/models/unbiased-pareto-26.9.yaml
+      - providers/openrouter/models/unbiased-pareto.yaml
+      - providers/openrouter/models/upstage-solar-mini-4-5.yaml
+      - providers/openrouter/models/upstage-solar-mini4.yaml
       - providers/openrouter/models/upstage-solar-pro4.yaml
       - providers/openrouter/models/x-ai-grok-3-beta.yaml
       - providers/openrouter/models/x-ai-grok-4.5.yaml
       - providers/openrouter/models/x-ai-grok-4.6.yaml
+      - providers/openrouter/models/x-ai-grok-4.7.yaml
       - providers/openrouter/models/x-ai-grok-4.yaml
+      - providers/openrouter/models/xiaomi-mimo-v2.6-flash-mopd.yaml
+      - providers/openrouter/models/xiaomi-mimo-v2.6-flash.yaml
+      - providers/openrouter/models/xiaomi-mimo-v2.6-pro-ultraspeed.yaml
+      - providers/openrouter/models/xiaomi-mimo-v2.6-pro.yaml
       - providers/openrouter/models/z-ai-glm-5.2.yaml
+      - providers/openrouter/models/z-ai-glm-5.3-flashx-legal.yaml
+      - providers/openrouter/models/z-ai-glm-5.3-flashx.yaml
+      - providers/openrouter/models/z-ai-glm-5.3-prime.yaml
       - providers/openrouter/models/z-ai-glm-5.3.yaml
 
   - name: perplexity
@@ -605,6 +939,8 @@ providers:
     models:
       - providers/qwen/models/deepseek-v4-flash-0731.yaml
       - providers/qwen/models/glm-5.2.yaml
+      - providers/qwen/models/kimi-k3.1-pro-prime.yaml
+      - providers/qwen/models/kimi-k3.1-pro.yaml
       - providers/qwen/models/qvq-max.yaml
       - providers/qwen/models/qwen-flash.yaml
       - providers/qwen/models/qwen-max.yaml
@@ -651,9 +987,34 @@ providers:
       - providers/qwen/models/qwen3.6-plus.yaml
       - providers/qwen/models/qwen3.7-max.yaml
       - providers/qwen/models/qwen3.7-plus.yaml
+      - providers/qwen/models/qwen3.7-text-embedding.yaml
+      - providers/qwen/models/qwen3.8-flash.yaml
       - providers/qwen/models/qwen3.8-max.yaml
+      - providers/qwen/models/qwen4-max.yaml
       - providers/qwen/models/qwq-plus.yaml
       - providers/qwen/models/text-embedding-v3.yaml
+
+  - name: sambanova
+    files:
+      - providers/sambanova/provider.yaml
+      - providers/sambanova/categories.yaml
+      - providers/sambanova/templates.yaml
+    models:
+      - providers/sambanova/models/GLM-5.3.yaml
+      - providers/sambanova/models/MiniMax-M3.1-Flash.yaml
+      - providers/sambanova/models/gemma-4-31B-it.yaml
+      - providers/sambanova/models/gpt-oss-120b.yaml
+
+  - name: tencent
+    files:
+      - providers/tencent/provider.yaml
+      - providers/tencent/categories.yaml
+      - providers/tencent/templates.yaml
+    models:
+      - providers/tencent/models/hy3.yaml
+      - providers/tencent/models/hy4-flash.yaml
+      - providers/tencent/models/hy4-preview.yaml
+      - providers/tencent/models/hy4.yaml
 
   - name: together
     files:
@@ -661,25 +1022,43 @@ providers:
       - providers/together/categories.yaml
       - providers/together/templates.yaml
     models:
+      - providers/together/models/MiniMaxAI__MiniMax-M3.1-Flash.yaml
       - providers/together/models/MiniMaxAI__MiniMax-M3.yaml
       - providers/together/models/Qwen__Qwen2.5-72B-Instruct-Turbo.yaml
       - providers/together/models/Qwen__Qwen3-Coder-480B-A35B-Instruct-FP8.yaml
       - providers/together/models/Qwen__Qwen3.7-Max.yaml
+      - providers/together/models/Qwen__Qwen4-Max.yaml
       - providers/together/models/deepseek-ai__DeepSeek-V3.yaml
       - providers/together/models/deepseek-ai__DeepSeek-V4-Flash-0731.yaml
       - providers/together/models/deepseek-ai__DeepSeek-V4-Pro-0813.yaml
       - providers/together/models/deepseek-ai__DeepSeek-V4-Pro.yaml
+      - providers/together/models/deepseek-ai__DeepSeek-V4.1-Flash-1017-fast.yaml
+      - providers/together/models/deepseek-ai__DeepSeek-V4.1-Flash-1017.yaml
+      - providers/together/models/elorian-labs__glimpse-1.0.yaml
       - providers/together/models/meta-llama__Llama-3.1-8B-Instruct-Turbo.yaml
       - providers/together/models/meta-llama__Llama-3.2-11B-Vision-Instruct-Turbo.yaml
       - providers/together/models/meta-llama__Llama-3.3-70B-Instruct-Turbo.yaml
+      - providers/together/models/meta-models__Muse-Spark-Open-816B-A42B.yaml
       - providers/together/models/moonshotai__Kimi-K2.6.yaml
       - providers/together/models/moonshotai__Kimi-K2.7-Code.yaml
+      - providers/together/models/moonshotai__Kimi-K3.1-Pro.yaml
+      - providers/together/models/nvidia__NVIDIA-Nemotron-3.5-Super-VL.yaml
       - providers/together/models/nvidia__nemotron-3-ultra-550b-a55b.yaml
       - providers/together/models/openai__gpt-oss-120b.yaml
+      - providers/together/models/reflection__Beam-1.0-501B-A23B.yaml
+      - providers/together/models/ricursive-ai__Ripple-65B-Preview.yaml
+      - providers/together/models/tencent__Hy4.yaml
+      - providers/together/models/thinkingmachines__Inkling-2-Small.yaml
       - providers/together/models/thinkingmachines__Inkling.yaml
       - providers/together/models/togethercomputer__m2-bert-80M-8k-retrieval.yaml
       - providers/together/models/zai-org__GLM-5.1.yaml
       - providers/together/models/zai-org__GLM-5.2.yaml
+
+  - name: typesafe
+    files:
+      - providers/typesafe/provider.yaml
+    models:
+      - providers/typesafe/models/jev-1.13.0.yaml
 
   - name: vertex-ai
     files:
@@ -688,8 +1067,10 @@ providers:
       - providers/vertex-ai/templates.yaml
     models:
       - providers/vertex-ai/models/claude-3-7-sonnet@20250219.yaml
+      - providers/vertex-ai/models/claude-fable-5-2@default.yaml
       - providers/vertex-ai/models/claude-fable-5@default.yaml
       - providers/vertex-ai/models/claude-haiku-4-5@20251001.yaml
+      - providers/vertex-ai/models/claude-haiku-5-5@default.yaml
       - providers/vertex-ai/models/claude-opus-4-5@20251101.yaml
       - providers/vertex-ai/models/claude-opus-4-6@default.yaml
       - providers/vertex-ai/models/claude-opus-4-7@default.yaml
@@ -708,6 +1089,10 @@ providers:
       - providers/vertex-ai/models/gemini-3.5-flash.yaml
       - providers/vertex-ai/models/gemini-3.6-flash.yaml
       - providers/vertex-ai/models/gemini-3.7-flash.yaml
+      - providers/vertex-ai/models/gemini-4-argon.yaml
+      - providers/vertex-ai/models/gemini-4-carbon.yaml
+      - providers/vertex-ai/models/gemini-4-hydrogen.yaml
+      - providers/vertex-ai/models/gemini-4-neon.yaml
       - providers/vertex-ai/models/gemini-flash-latest.yaml
       - providers/vertex-ai/models/llama-3.1-70b-instruct-maas.yaml
       - providers/vertex-ai/models/mistral-large-2411.yaml
@@ -744,6 +1129,7 @@ providers:
       - providers/xai/models/grok-4.3.yaml
       - providers/xai/models/grok-4.5.yaml
       - providers/xai/models/grok-4.6.yaml
+      - providers/xai/models/grok-4.7.yaml
       - providers/xai/models/grok-4.yaml
       - providers/xai/models/grok-build-0.1.yaml
       - providers/xai/models/grok-code-fast-1.yaml
@@ -766,13 +1152,16 @@ providers:
       - providers/zai/models/glm-5-turbo.yaml
       - providers/zai/models/glm-5.1.yaml
       - providers/zai/models/glm-5.2.yaml
+      - providers/zai/models/glm-5.3-flash.yaml
+      - providers/zai/models/glm-5.3-flashx-legal.yaml
+      - providers/zai/models/glm-5.3-flashx.yaml
       - providers/zai/models/glm-5.3.yaml
       - providers/zai/models/glm-5.yaml
       - providers/zai/models/glm-5v-turbo.yaml
 
 # Statistics
 stats:
-  total_providers: 24
-  total_models: 594
-  static_providers: 17
-  meta_providers: 7
+  total_providers: 35
+  total_models: 912
+  static_providers: 22
+  meta_providers: 13

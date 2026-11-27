@@ -12,6 +12,7 @@ import {
   Textarea,
 } from '@everstack/ui/components'
 import { Icon } from '@iconify/react'
+import { browserRuntimePricing } from '@everstack/admin-core'
 import { useAgents } from '@/hooks/deployments/use-agents'
 import { useFunctions } from '@/hooks/deployments/use-functions'
 import { useGatewayModels } from '@/hooks/deployments/use-gateway-models'
@@ -309,7 +310,7 @@ export function AgentConfigForm({ config, onChange }: Props) {
             <span
               className={`mt-1 shrink-0 rounded border px-2 py-0.5 text-[11px] ${
                 selectedAgentBrowser?.enabled
-                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                  ? 'border-success-border bg-success-surface text-success'
                   : 'border-brand-main-600 bg-brand-main-900 text-brand-main-300'
               }`}
             >
@@ -348,8 +349,10 @@ export function AgentConfigForm({ config, onChange }: Props) {
         <div className="flex items-center gap-2 border-t border-brand-main-600/70 pt-2 text-[11px] text-brand-main-400">
           <Icon icon="lucide:clock-3" className="size-3.5" />
           <span>
-            $0.01 per active browser hour · 60 second minimum · idle pool time
-            is not billed
+            ${browserRuntimePricing.browserHour.toFixed(2)} per active browser
+            hour beyond your plan's included hours ·{' '}
+            {browserRuntimePricing.minimumSessionSeconds} second minimum · idle
+            pool time is not billed
           </span>
         </div>
       </div>

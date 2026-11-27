@@ -36,10 +36,18 @@ func TestMessageCeiling(t *testing.T) {
 			want:      meterWarn,
 		},
 		{
-			name:      "managed plan on a paid tier warns too",
+			// Owner decision 2026-10-06: Cloud count limits block at the cap
+			// on every tier; credit does not buy more messages.
+			name:      "managed plan blocks at the cap on a paid tier",
 			ent:       enterprise.Entitlements{Tier: "pro", Source: "managed-plan", Limits: limits(100_000)},
 			wantLimit: 100_000,
-			want:      meterWarn,
+			want:      meterBlock,
+		},
+		{
+			name:      "managed free plan blocks",
+			ent:       enterprise.Entitlements{Tier: "free", Source: "managed-plan", Limits: limits(1_000)},
+			wantLimit: 1_000,
+			want:      meterBlock,
 		},
 		{
 			name: "self-hosted CE is silent even if the map carries a limit",
@@ -115,12 +123,21 @@ func TestChannelMessageMeterTenantGuards(t *testing.T) {
 // countingStore records how often the meter actually hits the database.
 type countingStore struct {
 	ChannelStore
-	calls int
-	count int64
+	calls     int
+	count     int64
+	lastIDs   []string
+	lastSince time.Time
 }
 
 func (s *countingStore) CountChannelMessagesThisMonth(context.Context, string) (int64, error) {
 	s.calls++
+	return s.count, nil
+}
+
+func (s *countingStore) CountChannelMessagesSince(_ context.Context, tenantIDs []string, since time.Time) (int64, error) {
+	s.calls++
+	s.lastIDs = append([]string(nil), tenantIDs...)
+	s.lastSince = since
 	return s.count, nil
 }
 
@@ -170,4 +187,42 @@ func TestMonthlyMessageCountCache(t *testing.T) {
 	if got, _ = m.monthlyMessageCount(ctx, "t2"); got != 42 {
 		t.Errorf("second tenant read t1's cached count: %d", got)
 	}
+}
+
+// On a managed gateway MESSAGES_MONTHLY counts the whole organization: the
+// meter asks the store for every id the organization owns, from the start of
+// the UTC month, and caches per organization so two instances of one
+// organization share one count.
+func TestMonthlyMessageCountCoversTheOrganization(t *testing.T) {
+	enterprise.SetManagedGateway(true)
+	enterprise.SetPlanTierResolver(scopeStub{})
+	t.Cleanup(func() {
+		enterprise.SetManagedGateway(false)
+		enterprise.SetPlanTierResolver(nil)
+	})
+
+	store := &countingStore{count: 7}
+	m := &ChannelManager{store: store, messageCounts: make(map[string]*cachedMessageCount)}
+	ctx := context.Background()
+
+	if got, err := m.monthlyMessageCount(ctx, "inst-a1"); err != nil || got != 7 {
+		t.Fatalf("count = %d, %v; want 7", got, err)
+	}
+	if len(store.lastIDs) != 2 || store.lastIDs[0] != "org-a" || store.lastIDs[1] != "inst-a1" {
+		t.Fatalf("counted ids = %v, want the organization's ids", store.lastIDs)
+	}
+	if want := enterprise.MonthStartUTC(time.Now()); !store.lastSince.Equal(want) {
+		t.Fatalf("since = %v, want UTC month start %v", store.lastSince, want)
+	}
+	if _, err := m.monthlyMessageCount(ctx, "org-a"); err != nil || store.calls != 1 {
+		t.Fatalf("a second id of the same organization requeried: calls=%d", store.calls)
+	}
+}
+
+type scopeStub struct{}
+
+func (scopeStub) PlanTier(context.Context, string) (string, bool) { return "free", true }
+
+func (scopeStub) ResolveOrgScope(_ context.Context, tenantID string) (enterprise.OrgScope, error) {
+	return enterprise.OrgScope{OrganizationID: "a", Tier: "free", Aliases: []string{"org-a", "inst-a1"}}, nil
 }

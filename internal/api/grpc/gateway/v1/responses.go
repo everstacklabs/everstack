@@ -2,12 +2,16 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/everstacklabs/everstack/internal/billingmeter"
 	"github.com/everstacklabs/everstack/internal/functions/toolloop"
+	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 	"github.com/everstacklabs/everstack/internal/lib/handlers/gateway/cacheexec"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
@@ -15,56 +19,388 @@ import (
 	attrs "github.com/everstacklabs/everstack/internal/telemetry/attributes"
 	"github.com/everstacklabs/everstack/internal/telemetry/metrics"
 	gatewaypb "github.com/everstacklabs/everstack/pkg/grpc/everstack/gateway/v1"
+	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
-// responseStore is an in-memory store for responses.
-// In production, this should be backed by a database.
+// responseStore is an in-memory store for responses, partitioned by the
+// owning tenant. Every read and write names the owner, so a response stored
+// by one tenant is indistinguishable from a nonexistent one for any other
+// tenant: Get/Delete miss and List never returns it.
+//
+// The store is per-process and not persisted, so there are no pre-existing
+// unowned rows to migrate: a deploy restarts the process with an empty map.
+// An entry expires responseStoreTTL after it was last written; expired
+// entries read as missing and are swept out on a later write.
 type responseStore struct {
 	mu        sync.RWMutex
-	responses map[string]*gw.CreateResponseResponse
+	responses map[string]map[string]*storedResponse // owner -> id -> entry
+	// now is the store's clock (time.Now outside tests).
+	now       func() time.Time
+	lastSweep time.Time
 }
 
-var globalResponseStore = &responseStore{
-	responses: make(map[string]*gw.CreateResponseResponse),
+// storedResponse is one stored response. history is, for a response made by
+// the chat-based fallback, the conversation the model was given before that
+// response's output (the earlier turns and the request's input, without
+// instructions), so a request chained to it with previous_response_id
+// replays the question along with the answer. refused, when set, marks a
+// response that was too large to keep: only the reason is held, and a chain
+// to it fails with that reason instead of silently losing the conversation.
+type storedResponse struct {
+	resp     *gw.CreateResponseResponse
+	history  []gw.Message
+	refused  error
+	storedAt time.Time
 }
 
-func (rs *responseStore) Set(id string, resp *gw.CreateResponseResponse) {
-	rs.mu.Lock()
-	defer rs.mu.Unlock()
-	rs.responses[id] = resp
-}
+// responseStoreTTL is how long a stored response stays retrievable and
+// chainable after its last write. OpenAI keeps responses for 30 days; this
+// store is in process memory and lost on every deploy anyway, so it keeps
+// them for a day: long enough for any tool round trip or conversation in
+// progress, short enough that memory tracks recent traffic.
+const responseStoreTTL = 24 * time.Hour
 
-func (rs *responseStore) Get(id string) (*gw.CreateResponseResponse, bool) {
-	rs.mu.RLock()
-	defer rs.mu.RUnlock()
-	resp, ok := rs.responses[id]
-	return resp, ok
-}
+// responseSweepInterval bounds how often a write scans for expired entries.
+const responseSweepInterval = time.Minute
 
-func (rs *responseStore) Delete(id string) bool {
-	rs.mu.Lock()
-	defer rs.mu.Unlock()
-	if _, ok := rs.responses[id]; ok {
-		delete(rs.responses, id)
-		return true
+// Per-response storage caps, checked when a conversation is written. A
+// response over a cap is not kept (see storeConversation). Variables so
+// tests can lower them.
+var (
+	// maxStoredToolOutputBytes caps one tool output in the stored
+	// conversation or output.
+	maxStoredToolOutputBytes = 1 << 20 // 1 MiB
+	// maxStoredConversationBytes caps the stored conversation and output of
+	// one response, as JSON.
+	maxStoredConversationBytes = 8 << 20 // 8 MiB
+)
+
+var globalResponseStore = newResponseStore()
+
+func newResponseStore() *responseStore {
+	return &responseStore{
+		responses: make(map[string]map[string]*storedResponse),
+		now:       time.Now,
 	}
-	return false
 }
 
-func (rs *responseStore) List(limit int, after, before string) []*gw.CreateResponseResponse {
+// put writes entry under owner/id, stamping it and sweeping expired
+// entries when one is due. Caller holds rs.mu.
+func (rs *responseStore) put(owner, id string, entry *storedResponse) {
+	now := rs.now()
+	if now.Sub(rs.lastSweep) >= responseSweepInterval {
+		rs.sweep(now)
+	}
+	entry.storedAt = now
+	bucket, ok := rs.responses[owner]
+	if !ok {
+		bucket = make(map[string]*storedResponse)
+		rs.responses[owner] = bucket
+	}
+	bucket[id] = entry
+}
+
+// sweep deletes every expired entry. Caller holds rs.mu.
+func (rs *responseStore) sweep(now time.Time) {
+	rs.lastSweep = now
+	for owner, bucket := range rs.responses {
+		for id, entry := range bucket {
+			if rs.expired(entry, now) {
+				delete(bucket, id)
+			}
+		}
+		if len(bucket) == 0 {
+			delete(rs.responses, owner)
+		}
+	}
+}
+
+func (rs *responseStore) expired(entry *storedResponse, now time.Time) bool {
+	return now.Sub(entry.storedAt) >= responseStoreTTL
+}
+
+// lookup returns the live entry for owner/id, refused or not. Caller holds
+// rs.mu.
+func (rs *responseStore) lookup(owner, id string) (*storedResponse, bool) {
+	entry, ok := rs.responses[owner][id]
+	if !ok || rs.expired(entry, rs.now()) {
+		return nil, false
+	}
+	return entry, true
+}
+
+// Set stores resp, keeping the conversation already recorded for id.
+func (rs *responseStore) Set(owner, id string, resp *gw.CreateResponseResponse) {
+	rs.mu.Lock()
+	defer rs.mu.Unlock()
+	entry := &storedResponse{resp: resp}
+	if prev, ok := rs.lookup(owner, id); ok && prev.refused == nil {
+		entry.history = prev.history
+	}
+	rs.put(owner, id, entry)
+}
+
+// SetConversation stores resp with the conversation that preceded its
+// output.
+func (rs *responseStore) SetConversation(owner, id string, resp *gw.CreateResponseResponse, history []gw.Message) {
+	rs.mu.Lock()
+	defer rs.mu.Unlock()
+	rs.put(owner, id, &storedResponse{resp: resp, history: history})
+}
+
+// Refuse records that response id was not kept, and why. Anything stored
+// for it before is dropped.
+func (rs *responseStore) Refuse(owner, id string, reason error) {
+	rs.mu.Lock()
+	defer rs.mu.Unlock()
+	rs.put(owner, id, &storedResponse{refused: reason})
+}
+
+// Get returns a stored response. A refused response reads as missing.
+func (rs *responseStore) Get(owner, id string) (*gw.CreateResponseResponse, bool) {
+	rs.mu.RLock()
+	defer rs.mu.RUnlock()
+	entry, ok := rs.lookup(owner, id)
+	if !ok || entry.refused != nil {
+		return nil, false
+	}
+	return entry.resp, true
+}
+
+// Previous returns what a request chained to id needs: the response, the
+// conversation before its output, and, for a refused response, the reason.
+func (rs *responseStore) Previous(owner, id string) (resp *gw.CreateResponseResponse, history []gw.Message, refused error, ok bool) {
+	rs.mu.RLock()
+	defer rs.mu.RUnlock()
+	entry, ok := rs.lookup(owner, id)
+	if !ok {
+		return nil, nil, nil, false
+	}
+	return entry.resp, entry.history, entry.refused, true
+}
+
+func (rs *responseStore) Delete(owner, id string) bool {
+	rs.mu.Lock()
+	defer rs.mu.Unlock()
+	entry, ok := rs.lookup(owner, id)
+	if !ok {
+		return false
+	}
+	bucket := rs.responses[owner]
+	delete(bucket, id)
+	if len(bucket) == 0 {
+		delete(rs.responses, owner)
+	}
+	return entry.refused == nil
+}
+
+func (rs *responseStore) List(owner string, limit int, after, before string) []*gw.CreateResponseResponse {
 	rs.mu.RLock()
 	defer rs.mu.RUnlock()
 
+	now := rs.now()
 	var results []*gw.CreateResponseResponse
-	for _, resp := range rs.responses {
-		results = append(results, resp)
+	for _, entry := range rs.responses[owner] {
+		if entry.refused != nil || rs.expired(entry, now) {
+			continue
+		}
+		results = append(results, entry.resp)
 		if limit > 0 && len(results) >= limit {
 			break
 		}
 	}
 	return results
+}
+
+// singleTenantResponseOwner is the one bucket a non-shared (self-hosted)
+// gateway uses. Such a gateway serves a single tenant, and its callers do not
+// carry one uniform tenant id (an API key can carry the instance id while the
+// operator session carries the organization id), so partitioning there would
+// only hide a tenant's own responses from itself.
+const singleTenantResponseOwner = ""
+
+// responseOwnerCache memoizes tenant id -> owning organization id on the
+// shared gateway. The mapping (an organization is its own owner; a managed
+// instance belongs to exactly one organization) does not change, so only
+// successful resolutions are cached.
+var responseOwnerCache sync.Map
+
+// responseOwner returns the owner bucket for this request. On a non-shared
+// gateway it is always the single-tenant bucket. On the shared gateway it is
+// the caller's organization: API-key callers can carry a managed instance id
+// or an organization id, session callers the organization id, so both are
+// resolved to the owning organization so the same tenant reads what it wrote.
+// ok is false when the shared gateway cannot attribute the request to an
+// authenticated tenant principal (API key or user session); such a request
+// must neither store nor see any response.
+func (s *Server) responseOwner(ctx context.Context) (owner string, ok bool) {
+	if !s.isSharedMode() {
+		return singleTenantResponseOwner, true
+	}
+	tenantID := contextkeys.GetTenantID(ctx)
+	if tenantID == "" {
+		tenantID = tenantKeyFromContext(ctx)
+	}
+	if tenantID == "" || !contextkeys.HasVerifiedTenantPrincipal(ctx) {
+		return "", false
+	}
+	return s.canonicalResponseOwner(ctx, tenantID), true
+}
+
+// canonicalResponseOwner maps a tenant id (organization or managed instance)
+// to its owning organization id. When the mapping cannot be resolved (no
+// platform DB, unknown id, lookup error) it falls back to the tenant id
+// itself: still that tenant's own identity, so isolation holds, only the
+// instance/organization aliasing is lost.
+func (s *Server) canonicalResponseOwner(ctx context.Context, tenantID string) string {
+	if cached, ok := responseOwnerCache.Load(tenantID); ok {
+		return cached.(string)
+	}
+	// The platform DB (organizations, managed_instances). On the shared
+	// gateway PrimaryDB is a per-tenant gateway DB without those tables.
+	db, _ := s.ctx.Value(contextkeys.BillingDB).(*sqlx.DB)
+	if db == nil {
+		return tenantID
+	}
+	org, found, err := billingmeter.ResolveOrg(ctx, db, tenantID)
+	if err != nil {
+		logger.WithFields("error", err.Error()).Warn("gateway: responses owner resolution failed; using tenant id")
+		return tenantID
+	}
+	if !found || org == "" {
+		return tenantID
+	}
+	responseOwnerCache.Store(tenantID, org)
+	return org
+}
+
+// storeResponse records resp under the caller's tenant. It is a no-op when
+// the caller has no tenant on the shared gateway.
+func (s *Server) storeResponse(ctx context.Context, id string, resp *gw.CreateResponseResponse) {
+	if id == "" || resp == nil {
+		return
+	}
+	owner, ok := s.responseOwner(ctx)
+	if !ok {
+		return
+	}
+	globalResponseStore.Set(owner, id, resp)
+}
+
+// lookupResponse returns the caller's stored response. Another tenant's id
+// is reported exactly like a nonexistent one.
+func (s *Server) lookupResponse(ctx context.Context, id string) (*gw.CreateResponseResponse, bool) {
+	owner, ok := s.responseOwner(ctx)
+	if !ok {
+		return nil, false
+	}
+	return globalResponseStore.Get(owner, id)
+}
+
+// storeConversation records resp, with the conversation that preceded its
+// output, under the caller's tenant (a no-op without one on the shared
+// gateway, like storeResponse). A response whose tool outputs or whole
+// conversation exceed the storage caps is not kept: the request that made
+// it has already been answered, so it is not failed; instead a marker under
+// the same owner makes a later chain to it fail with the reason, rather
+// than continue with the conversation silently missing.
+func (s *Server) storeConversation(ctx context.Context, id string, resp *gw.CreateResponseResponse, history []gw.Message) {
+	if id == "" || resp == nil {
+		return
+	}
+	owner, ok := s.responseOwner(ctx)
+	if !ok {
+		return
+	}
+	if reason := conversationOverCap(history, resp.Output); reason != "" {
+		logger.WithFields("response_id", id, "reason", reason).Warn("gateway: response not stored: over the storage cap")
+		globalResponseStore.Refuse(owner, id, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf(
+			"previous response %s was not stored: %s; send the conversation as input items instead of previous_response_id", id, reason)))
+		return
+	}
+	globalResponseStore.SetConversation(owner, id, resp, append([]gw.Message(nil), history...))
+}
+
+// conversationOverCap reports why a conversation and output are too large
+// to store, or "" when they fit.
+func conversationOverCap(history []gw.Message, output []gw.ResponseOutputItem) string {
+	toolOutputOver := func(n int) string {
+		return fmt.Sprintf("a tool output is %d bytes, over the %d-byte limit", n, maxStoredToolOutputBytes)
+	}
+	for _, m := range history {
+		if m.Role != gw.RoleTool {
+			continue
+		}
+		n := 0
+		for _, c := range m.Content {
+			if c.Text != nil {
+				n += len(*c.Text)
+			}
+		}
+		if n > maxStoredToolOutputBytes {
+			return toolOutputOver(n)
+		}
+	}
+	for _, item := range output {
+		if item.Type == "function_call_output" && len(item.Output) > maxStoredToolOutputBytes {
+			return toolOutputOver(len(item.Output))
+		}
+	}
+	h, _ := json.Marshal(history)
+	o, _ := json.Marshal(output)
+	if n := len(h) + len(o); n > maxStoredConversationBytes {
+		return fmt.Sprintf("its conversation is %d bytes, over the %d-byte limit", n, maxStoredConversationBytes)
+	}
+	return ""
+}
+
+// previousResponse returns the caller's response id and the conversation
+// before its output, for a request chained to it. A missing, expired or
+// foreign id is errPreviousResponseNotFound; a response that was too large
+// to store fails with the reason it was not kept.
+func (s *Server) previousResponse(ctx context.Context, id string) (*gw.CreateResponseResponse, []gw.Message, error) {
+	owner, ok := s.responseOwner(ctx)
+	if !ok {
+		return nil, nil, errPreviousResponseNotFound()
+	}
+	resp, history, refused, ok := globalResponseStore.Previous(owner, id)
+	if !ok {
+		return nil, nil, errPreviousResponseNotFound()
+	}
+	if refused != nil {
+		return nil, nil, refused
+	}
+	return resp, history, nil
+}
+
+// shouldStoreResponse reports whether a response is kept for retrieval and
+// chaining: unless the caller sent store:false, as in OpenAI's API.
+func shouldStoreResponse(req gw.CreateResponseRequest) bool {
+	return !req.StoreConfigured || req.Store
+}
+
+// errPreviousResponseNotFound is returned when previous_response_id does not
+// name a response the caller owns. A foreign id and a nonexistent id both
+// take this path, so the two are indistinguishable to the caller.
+func errPreviousResponseNotFound() error {
+	return connect.NewError(connect.CodeNotFound, gw.ErrNotImplemented("previous response not found"))
+}
+
+// authorizePreviousResponse gates previous_response_id chaining. On the
+// shared gateway the upstream provider account can be shared across tenants
+// (platform-managed keys), so forwarding a foreign provider response id would
+// let the upstream hydrate another tenant's conversation. The id must name a
+// response this tenant stored. Single-tenant gateways keep the previous
+// behaviour for the native path (the upstream account is theirs, and chaining
+// must keep working across a restart of the in-memory store).
+func (s *Server) authorizePreviousResponse(ctx context.Context, previousResponseID string) error {
+	if previousResponseID == "" || !s.isSharedMode() {
+		return nil
+	}
+	_, _, err := s.previousResponse(ctx, previousResponseID)
+	return err
 }
 
 // CreateResponse implements the Responses API create endpoint.
@@ -74,6 +410,12 @@ func (s *Server) CreateResponse(ctx context.Context, req *connect.Request[gatewa
 	// Convert proto to gateway request
 	gwReq := convertProtoToResponseRequest(req.Msg)
 
+	// previous_response_id must name a response this tenant owns; a foreign
+	// id fails exactly like a nonexistent one, before any provider sees it.
+	if err := s.authorizePreviousResponse(ctx, gwReq.PreviousResponseID); err != nil {
+		return err
+	}
+
 	if err := s.EnsureProvidersForRequest(ctx); err != nil {
 		logger.WithFields("error", err.Error()).Warn("gateway: failed to ensure providers for response request")
 	}
@@ -81,10 +423,41 @@ func (s *Server) CreateResponse(ctx context.Context, req *connect.Request[gatewa
 	if bundle == nil {
 		return connect.NewError(connect.CodeFailedPrecondition, gw.ErrNotImplemented("response: no providers configured for this tenant"))
 	}
+	automaticallyRouted := gwReq.Model == "auto"
+	if automaticallyRouted {
+		messages := s.convertInputsToMessages(gwReq)
+		if gwReq.Instructions != "" {
+			text := gwReq.Instructions
+			messages = append([]gw.Message{{Role: gw.RoleSystem, Content: []gw.ContentPart{{Type: "text", Text: &text}}}}, messages...)
+		}
+		hasReferences := gwReq.PreviousResponseID != ""
+		for _, input := range gwReq.Input {
+			if input.Type != "message" {
+				hasReferences = true
+			}
+		}
+		state := decisionChatState(messages, len(gwReq.Tools) > 0 || len(gwReq.BuiltinTools) > 0 || hasReferences)
+		var err error
+		gwReq.Model, err = s.selectDecisionRoute(ctx, gwReq.Model, state)
+		if err != nil {
+			return err
+		}
+	}
 	s.requestDefaultsForModel(ctx, gwReq.Model).applyResponse(&gwReq)
 
 	// Find a provider that supports the Responses API
 	provider, providerName, ok := bundle.reg.FindResponsesProvider()
+	if automaticallyRouted {
+		resolved, model, err := resolveDecisionModel(bundle.reg, gwReq.Model)
+		if err != nil {
+			return connect.NewError(connect.CodeFailedPrecondition, err)
+		}
+		provider, ok = resolved.(gw.ResponsesProvider)
+		providerName = resolved.Name()
+		if ok {
+			gwReq.Model = model
+		}
+	}
 	if ok {
 		logger.WithFields("provider", providerName, "model", req.Msg.Model).Debug("gateway: routing response request to native provider")
 
@@ -111,7 +484,11 @@ func (s *Server) handleStreamingResponse(ctx context.Context, provider gw.Respon
 	var streamUsage *gw.ResponseUsage
 	var streamModel string
 	var streamID string
-	err := provider.CreateResponseStream(ctx, req, func(resp gw.CreateResponseResponse) error {
+	var lastSnapshot gw.CreateResponseResponse
+	err := provider.CreateResponseStream(responsesAttempt(ctx), req, func(resp gw.CreateResponseResponse) error {
+		if resp.ID != "" {
+			lastSnapshot = resp
+		}
 		if resp.Usage != nil {
 			streamUsage = resp.Usage
 		}
@@ -128,7 +505,15 @@ func (s *Server) handleStreamingResponse(ctx context.Context, provider gw.Respon
 		return nil
 	})
 	if err != nil {
-		return connect.NewError(connect.CodeInternal, err)
+		return responsesConnectError(err)
+	}
+
+	// Record ownership of the streamed response so the tenant can retrieve
+	// it and chain from it (previous_response_id is gated on ownership on the
+	// shared gateway).
+	if streamID != "" && shouldStoreResponse(req) {
+		lastSnapshot.ID = streamID
+		s.storeResponse(ctx, streamID, &lastSnapshot)
 	}
 
 	// Record usage metrics from the final streaming chunk. Use the provider that
@@ -149,9 +534,6 @@ func (s *Server) handleStreamingResponse(ctx context.Context, provider gw.Respon
 			costDetails.EstimatedUSD,
 			0, false,
 		)
-		// G0 shadow: the Responses path has no wallet meter. Track the
-		// served cost as unbilled, log-only.
-		reportShadowCost(ctx, s, streamID, "CreateResponse", shadowUnmeteredProcedure, s.effectiveKeySource(ctx), costDetails.EstimatedUSD)
 	}
 	return nil
 }
@@ -160,12 +542,12 @@ func (s *Server) handleStreamingResponse(ctx context.Context, provider gw.Respon
 func (s *Server) handleUnaryResponse(ctx context.Context, provider gw.ResponsesProvider, providerName string, req gw.CreateResponseRequest, stream *connect.ServerStream[gatewaypb.CreateResponseResponse]) error {
 	resp, cacheOutcome, err := cacheexec.ExecuteResponseWithCacheOutcome(ctx, req,
 		func(callCtx context.Context, callReq gw.CreateResponseRequest) (gw.CreateResponseResponse, error) {
-			return provider.CreateResponse(callCtx, callReq)
+			return provider.CreateResponse(responsesAttempt(callCtx), callReq)
 		},
 	)
 	annotateResponsesCacheTrace(ctx, cacheOutcome, req.Model)
 	if err != nil {
-		return connect.NewError(connect.CodeInternal, err)
+		return responsesConnectError(err)
 	}
 	cacheType := "miss"
 	if cacheOutcome.Hit {
@@ -202,14 +584,12 @@ func (s *Server) handleUnaryResponse(ctx context.Context, provider gw.ResponsesP
 			estimatedCost,
 			cacheSavings, cacheOutcome.Hit,
 		)
-		// G0 shadow: the Responses path has no wallet meter. Track the
-		// served cost as unbilled, log-only (0 on cache hits still records
-		// the unmetered-procedure observation).
-		reportShadowCost(ctx, s, resp.ID, "CreateResponse", shadowUnmeteredProcedure, s.effectiveKeySource(ctx), estimatedCost)
 	}
 
-	// Store the response
-	globalResponseStore.Set(resp.ID, &resp)
+	// Store the response, unless the caller asked not to.
+	if shouldStoreResponse(req) {
+		s.storeResponse(ctx, resp.ID, &resp)
+	}
 
 	// Send the response
 	protoResp := convertResponseToProto(&resp)
@@ -222,22 +602,29 @@ func (s *Server) handleAgenticResponse(ctx context.Context, req gw.CreateRespons
 	responseID := generateResponseID()
 	createdAt := time.Now().Unix()
 
-	// Convert inputs to chat messages
-	messages := s.convertInputsToMessages(req)
-
-	// If previous_response_id is provided, hydrate prior assistant messages so
-	// the fallback loop can continue the same thread.
+	// If previous_response_id is provided, hydrate the previous response's
+	// conversation (what it was given, then its output, tool calls and tool
+	// outputs included) so the fallback loop continues the same thread; then
+	// convert this request's inputs to chat messages after it.
+	// A previous response that is not stored (unknown, expired, another
+	// tenant's, or made with store:false) cannot be continued: the thread
+	// it names is not here to hydrate.
+	var messages []gw.Message
 	if req.PreviousResponseID != "" {
-		if prev, ok := globalResponseStore.Get(req.PreviousResponseID); ok && prev != nil {
-			previousMessages := responseOutputToMessages(prev.Output)
-			if len(previousMessages) > 0 {
-				messages = append(previousMessages, messages...)
-			}
-		} else {
-			logger.WithFields("previous_response_id", req.PreviousResponseID).
-				Debug("gateway: previous response not found in in-memory store")
+		prev, history, err := s.previousResponse(ctx, req.PreviousResponseID)
+		if err != nil {
+			return err
 		}
+		messages = append(messages, history...)
+		messages = appendResponseOutputMessages(messages, prev.Output)
 	}
+	messages = appendResponseInputMessages(messages, req.Input)
+
+	// save records the response with the conversation so far, so a request
+	// chained to it replays that ahead of its output. With store:false
+	// nothing is kept.
+	history := messages
+	persist := shouldStoreResponse(req)
 
 	// Add system instructions if provided
 	if req.Instructions != "" {
@@ -264,7 +651,8 @@ func (s *Server) handleAgenticResponse(ctx context.Context, req gw.CreateRespons
 			MaxTokens:             req.MaxOutputTokens,
 			ReasoningEffort:       reasoningEffort(req.Reasoning),
 		},
-		// The fallback loop uses unary provider.Chat calls internally.
+		// Each turn is a unary provider.Chat call, or a provider stream when
+		// the caller asked for one (streamAgenticTurn sets Stream itself).
 		Stream:     false,
 		ToolChoice: req.ToolChoice,
 	}
@@ -290,6 +678,12 @@ func (s *Server) handleAgenticResponse(ctx context.Context, req gw.CreateRespons
 		Reasoning:          req.Reasoning,
 	}
 
+	save := func() {
+		if persist {
+			s.storeConversation(ctx, responseID, response, history)
+		}
+	}
+
 	// Send initial in_progress event
 	if err := stream.Send(convertResponseToProto(response)); err != nil {
 		return err
@@ -302,75 +696,80 @@ func (s *Server) handleAgenticResponse(ctx context.Context, req gw.CreateRespons
 			chatReq.Messages = truncateChatHistory(chatReq.Messages, maxHistoryMessages)
 		}
 
-		// Call the chat completion
-		chatResp, cacheHit, err := s.processChatCompletionInternal(ctx, chatReq)
+		// Call the chat completion. A streamed turn adds its output items to
+		// the response as they are generated and sends each change; a unary
+		// turn's items are added below once it returns.
+		var chatResp gw.ChatCompletionResponse
+		var cacheHit bool
+		var err error
+		// metered is the turn's usage as the metering seam settled it, for
+		// the license-side record.
+		var metered turnUsage
+		if req.Stream {
+			chatResp, metered, err = s.streamAgenticTurn(ctx, chatReq, response, responseStreamSender{
+				snapshot: func() error { return stream.Send(convertResponseToProto(response)) },
+				delta: func(d *gatewaypb.ResponseDelta) error {
+					return stream.Send(&gatewaypb.CreateResponseResponse{Id: response.ID, Object: "response", Delta: d})
+				},
+			})
+		} else {
+			chatResp, cacheHit, err = s.processChatCompletionInternal(ctx, chatReq)
+			metered = turnUsage{model: chatResp.Model, usage: chatResp.Usage}
+		}
+		// Record usage metrics for this agentic loop iteration. A turn that
+		// broke off (client gone, upstream error) was still metered, on its
+		// reported usage or its estimate, and is recorded the same way.
+		s.recordTurnUsage(ctx, metered, cacheHit)
 		if err != nil {
 			response.Status = "failed"
 			response.Error = &gw.ResponseError{
 				Code:    "chat_error",
 				Message: err.Error(),
 			}
-			globalResponseStore.Set(responseID, response)
+			save()
 			return stream.Send(convertResponseToProto(response))
-		}
-
-		// Record usage metrics for this agentic loop iteration
-		if chatResp.Usage.PromptTokens > 0 || chatResp.Usage.CompletionTokens > 0 {
-			iterProvider := s.getProviderForModel(ctx, chatResp.Model)
-			iterCost := metrics.CalculateCostWithCacheTokens(
-				iterProvider,
-				chatResp.Model,
-				chatResp.Usage.PromptTokens,
-				chatResp.Usage.CompletionTokens,
-				chatResp.Usage.CacheReadCount(),
-				chatResp.Usage.CacheWriteCount(),
-			)
-			estimatedCost := iterCost.EstimatedUSD
-			cacheSavings := 0.0
-			if cacheHit {
-				estimatedCost = 0
-				cacheSavings = iterCost.EstimatedUSD
-			}
-			s.recordUsageMetrics(
-				int64(chatResp.Usage.PromptTokens),
-				int64(chatResp.Usage.CompletionTokens),
-				estimatedCost,
-				cacheSavings, cacheHit,
-			)
 		}
 
 		// Check if we have tool calls to execute
 		if len(chatResp.Choices) > 0 {
 			choice := chatResp.Choices[0]
 
-			// Add assistant message to output
-			outputItem := gw.ResponseOutputItem{
-				ID:      generateItemID(),
-				Type:    "message",
-				Status:  "completed",
-				Role:    gw.RoleAssistant,
-				Content: choice.Message.Content,
+			// Add the assistant message to the output (a streamed turn
+			// already has). A turn that only calls tools has no message
+			// item, as in OpenAI's output.
+			if !req.Stream && (len(choice.Message.Content) > 0 || len(choice.Message.ToolCalls) == 0) {
+				outputItem := gw.ResponseOutputItem{
+					ID:      generateItemID(),
+					Type:    "message",
+					Status:  "completed",
+					Role:    gw.RoleAssistant,
+					Content: choice.Message.Content,
+				}
+				response.Output = append(response.Output, outputItem)
 			}
-			response.Output = append(response.Output, outputItem)
 
 			// Check for tool calls
 			if len(choice.Message.ToolCalls) > 0 {
-				// Add tool call items to output
-				for _, tc := range choice.Message.ToolCalls {
-					toolCallItem := gw.ResponseOutputItem{
-						ID:        tc.ID,
-						Type:      "function_call",
-						Status:    "completed",
-						CallID:    tc.ID,
-						Name:      tc.Function.Name,
-						Arguments: tc.Function.Arguments,
+				// Add tool call items to output (a streamed turn already has)
+				if !req.Stream {
+					for _, tc := range choice.Message.ToolCalls {
+						toolCallItem := gw.ResponseOutputItem{
+							ID:        tc.ID,
+							Type:      "function_call",
+							Status:    "completed",
+							CallID:    tc.ID,
+							Name:      tc.Function.Name,
+							Arguments: tc.Function.Arguments,
+						}
+						response.Output = append(response.Output, toolCallItem)
 					}
-					response.Output = append(response.Output, toolCallItem)
 				}
 
 				// Execute tool calls using the tool loop manager
+				var toolMessages []gw.Message
 				if s.toolLoop != nil && s.toolLoop.IsEnabled() {
-					toolMessages, err := s.toolLoop.ExecuteToolLoop(ctx, &toolloop.ExecutionContext{
+					var err error
+					toolMessages, err = s.toolLoop.ExecuteToolLoop(ctx, &toolloop.ExecutionContext{
 						RequestID:     responseID,
 						TenantID:      s.GetOrganizationID(),
 						CorrelationID: responseID,
@@ -379,7 +778,8 @@ func (s *Server) handleAgenticResponse(ctx context.Context, req gw.CreateRespons
 					if err != nil {
 						logger.WithFields("error", err.Error()).Warn("gateway: tool execution failed")
 					}
-
+				}
+				if len(toolMessages) > 0 {
 					// ExecuteToolLoop returns messages in correct order:
 					// [0] = assistant message with tool_calls
 					// [1..n] = tool result messages
@@ -404,23 +804,28 @@ func (s *Server) handleAgenticResponse(ctx context.Context, req gw.CreateRespons
 						}
 					}
 
+					// A streaming caller sees the tool outputs now, not
+					// after the next turn's first token.
+					if req.Stream {
+						if err := stream.Send(convertResponseToProto(response)); err != nil {
+							return err
+						}
+					}
+
 					// Continue the loop to get the model's response to the tool results
 					continue
 				}
+				// The tool loop is off, or ran nothing: the caller runs the
+				// tools. The response ends here with its function_call items,
+				// as OpenAI's does; calling the model again without the tool
+				// results would only make it repeat the calls.
 			}
 
-			// No tool calls or tool execution disabled - we're done
-			if choice.FinishReason == "stop" || choice.FinishReason == "end_turn" || len(choice.Message.ToolCalls) == 0 {
-				response.Status = "completed"
-				response.Usage = responseUsageFromChat(&chatResp.Usage)
-				globalResponseStore.Set(responseID, response)
-				return stream.Send(convertResponseToProto(response))
-			}
-		}
-
-		// Add the assistant response to messages for next iteration
-		if len(chatResp.Choices) > 0 {
-			chatReq.Messages = append(chatReq.Messages, chatResp.Choices[0].Message)
+			// No tool calls, or tool calls left to the caller: we're done.
+			response.Status = "completed"
+			response.Usage = responseUsageFromChat(&chatResp.Usage)
+			save()
+			return stream.Send(convertResponseToProto(response))
 		}
 	}
 
@@ -429,8 +834,277 @@ func (s *Server) handleAgenticResponse(ctx context.Context, req gw.CreateRespons
 	response.IncompleteDetails = &gw.IncompleteDetails{
 		Reason: "max_iterations_reached",
 	}
-	globalResponseStore.Set(responseID, response)
+	save()
 	return stream.Send(convertResponseToProto(response))
+}
+
+// turnUsage is one turn's usage and the model it is priced for.
+type turnUsage struct {
+	model string
+	usage gw.Usage
+}
+
+// recordTurnUsage makes the license-side usage record of one turn of the
+// chat-based loop (license monitor, trial tokens, and through the monitor's
+// syncer the instance's usage totals). A turn that used nothing is not
+// recorded.
+func (s *Server) recordTurnUsage(ctx context.Context, t turnUsage, cacheHit bool) {
+	u := t.usage
+	if u.PromptTokens <= 0 && u.CompletionTokens <= 0 {
+		return
+	}
+	cost := metrics.CalculateCostWithCacheTokens(
+		s.getProviderForModel(ctx, t.model),
+		t.model,
+		u.PromptTokens,
+		u.CompletionTokens,
+		u.CacheReadCount(),
+		u.CacheWriteCount(),
+	)
+	estimatedCost := cost.EstimatedUSD
+	cacheSavings := 0.0
+	if cacheHit {
+		estimatedCost = 0
+		cacheSavings = cost.EstimatedUSD
+	}
+	s.recordUsageMetrics(int64(u.PromptTokens), int64(u.CompletionTokens), estimatedCost, cacheSavings, cacheHit)
+}
+
+// responsesAttempt tags a provider attempt of the Responses path for the
+// metering seam, as the chat path does: each one (every tool-loop turn
+// included) is a first try, and nothing is configured to take over, since
+// this path has no fallback. Without the tag an attempt that fails before
+// generating anything (a client gone before the first token) leaves no
+// billing.inference_attempts record.
+func responsesAttempt(ctx context.Context) context.Context {
+	return billingmeter.WithLastAttempt(billingmeter.WithAttemptKind(ctx, billingmeter.KindPrimary), true)
+}
+
+// responseStreamSender sends the two kinds of CreateResponse stream frame:
+// a full snapshot of the response, and a delta frame carrying only what one
+// item grew by.
+type responseStreamSender struct {
+	snapshot func() error
+	delta    func(*gatewaypb.ResponseDelta) error
+}
+
+// streamAgenticTurn runs one turn of the chat-based fallback loop as a
+// provider stream, for a Responses request with stream:true. The turn's
+// output items are added to response.Output as they appear, append-only so
+// every item keeps its output index: the assistant message first (where the
+// unary loop puts it), then one function_call item per tool call.
+//
+// What reaches the stream is proportional to what the model generates: a
+// chunk that only grows existing text or arguments is sent as delta frames
+// (the new fragment plus its item id and indexes), and a full snapshot is
+// sent only when the structure changes (a new item or content part, a tool
+// name), so a reply of N chunks costs O(N) bytes, not O(N^2). The SSE layer
+// turns delta frames into output_text and function_call_arguments delta
+// events and keeps the running text for the done events; response.Output
+// here keeps the full turn for the final snapshot, the store and the next
+// turn.
+//
+// The provider is resolved and called exactly as a unary turn is (through
+// the router, so billing and tracing wrap the call once), but without the
+// response cache, as chat streaming skips it. A send error (the client went
+// away) is returned from the chunk callback, which ends the provider stream
+// and cancels the upstream request.
+//
+// On success the turn's items are marked completed and the turn is returned
+// accumulated as a ChatCompletionResponse, so the rest of the loop (usage,
+// tool execution, history) is the same for both paths. On error, items left
+// in progress are marked incomplete; an item nobody was sent is dropped.
+func (s *Server) streamAgenticTurn(ctx context.Context, chatReq gw.ChatCompletionRequest, response *gw.CreateResponseResponse, send responseStreamSender) (gw.ChatCompletionResponse, turnUsage, error) {
+	router := s.routerFor(ctx)
+	if router == nil {
+		return gw.ChatCompletionResponse{}, turnUsage{}, gw.ErrNotImplemented("responses stream: no providers configured for this tenant")
+	}
+	provider, route, err := router.ResolveWithContext(ctx, chatReq.Model)
+	if err != nil {
+		return gw.ChatCompletionResponse{}, turnUsage{}, err
+	}
+	if route.ModelName != "" {
+		chatReq.Model = route.ModelName
+	}
+	chatReq.Stream = true
+
+	start := len(response.Output)
+	msgIdx := start
+	response.Output = append(response.Output, gw.ResponseOutputItem{
+		ID:     generateItemID(),
+		Type:   "message",
+		Status: "in_progress",
+		Role:   gw.RoleAssistant,
+	})
+	sent := false
+	var acc gw.ChatCompletionResponse
+	var toolCalls []gw.ToolCall
+	var toolItems []int // output index of each entry in toolCalls
+	finishReason := ""
+
+	// The metering seam reports what it settled, which for a stream that
+	// broke off before its usage chunk is its estimate. Settling happens
+	// before ChatStream returns, on this goroutine.
+	var settled *billingmeter.SettledUsage
+	attemptCtx := billingmeter.WithSettleObserver(responsesAttempt(ctx), func(u billingmeter.SettledUsage) { settled = &u })
+	err = provider.ChatStream(attemptCtx, chatReq, func(chunk gw.ChatResponseChunk) error {
+		if chunk.Model != "" {
+			acc.Model = chunk.Model
+		}
+		if chunk.ID != "" {
+			acc.ID = chunk.ID
+		}
+		if chunk.Usage != nil {
+			acc.Usage = *chunk.Usage
+		}
+		// structural: the chunk added an item or part (or renamed a tool),
+		// which only a snapshot can announce. Otherwise its growth goes out
+		// as deltas.
+		structural := false
+		var deltas []*gatewaypb.ResponseDelta
+		msg := &response.Output[msgIdx]
+		for _, delta := range chunk.Choices {
+			if delta.FinishReason != "" {
+				finishReason = delta.FinishReason
+			}
+			for _, part := range delta.Delta.Content {
+				grown, newPart := appendStreamedPart(msg, part)
+				switch {
+				case newPart:
+					structural = true
+				case grown != "":
+					deltas = append(deltas, &gatewaypb.ResponseDelta{
+						ItemId:       msg.ID,
+						OutputIndex:  int32(msgIdx),
+						ContentIndex: int32(len(msg.Content) - 1),
+						ContentDelta: grown,
+					})
+				}
+			}
+			for _, tc := range delta.Delta.ToolCalls {
+				i := -1
+				if tc.ID != "" {
+					for j := range toolCalls {
+						if toolCalls[j].ID == tc.ID {
+							i = j
+							break
+						}
+					}
+					if i < 0 {
+						toolCalls = append(toolCalls, gw.ToolCall{ID: tc.ID, Type: tc.Type})
+						toolItems = append(toolItems, len(response.Output))
+						response.Output = append(response.Output, gw.ResponseOutputItem{
+							ID:     tc.ID,
+							Type:   "function_call",
+							Status: "in_progress",
+							CallID: tc.ID,
+						})
+						i = len(toolCalls) - 1
+						structural = true
+					}
+				} else if len(toolCalls) > 0 {
+					// Argument fragments after the first carry no id: they
+					// continue the most recent call.
+					i = len(toolCalls) - 1
+				} else {
+					continue
+				}
+				if tc.Type != "" {
+					toolCalls[i].Type = tc.Type
+				}
+				item := &response.Output[toolItems[i]]
+				if tc.Function.Name != "" {
+					toolCalls[i].Function.Name += tc.Function.Name
+					item.Name = toolCalls[i].Function.Name
+					structural = true
+				}
+				if tc.Function.Arguments != "" {
+					toolCalls[i].Function.Arguments += tc.Function.Arguments
+					item.Arguments = toolCalls[i].Function.Arguments
+					deltas = append(deltas, &gatewaypb.ResponseDelta{
+						ItemId:         item.ID,
+						OutputIndex:    int32(toolItems[i]),
+						ArgumentsDelta: tc.Function.Arguments,
+					})
+				}
+			}
+		}
+		if structural {
+			// The snapshot already holds this chunk's growth.
+			sent = true
+			return send.snapshot()
+		}
+		for _, d := range deltas {
+			if err := send.delta(d); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if acc.Model == "" {
+		acc.Model = chatReq.Model
+	}
+	// Unmetered providers (self-hosted) settle nothing: their reported
+	// usage, if any arrived, is the turn's usage.
+	metered := turnUsage{model: acc.Model, usage: acc.Usage}
+	if settled != nil {
+		metered = turnUsage{model: settled.Model, usage: gw.Usage{
+			PromptTokens:     settled.InputTokens,
+			CompletionTokens: settled.OutputTokens,
+			TotalTokens:      settled.InputTokens + settled.OutputTokens,
+		}}
+		if settled.CacheReadTokens > 0 || settled.CacheWriteTokens > 0 {
+			metered.usage.PromptDetails = &gw.TokenDetails{CacheReadTokens: settled.CacheReadTokens, CacheWriteTokens: settled.CacheWriteTokens}
+		}
+	}
+	if err != nil {
+		if !sent {
+			response.Output = response.Output[:start]
+		} else {
+			for i := start; i < len(response.Output); i++ {
+				response.Output[i].Status = "incomplete"
+			}
+		}
+		return gw.ChatCompletionResponse{}, metered, err
+	}
+
+	for i := start; i < len(response.Output); i++ {
+		response.Output[i].Status = "completed"
+	}
+	msg := gw.Message{Role: gw.RoleAssistant, ToolCalls: toolCalls}
+	if content := response.Output[msgIdx].Content; len(content) > 0 {
+		msg.Content = append([]gw.ContentPart(nil), content...)
+	}
+	acc.Choices = []gw.Choice{{Message: msg, FinishReason: finishReason}}
+	return acc, metered, nil
+}
+
+// appendStreamedPart adds one streamed content part to a message item: text
+// extends the trailing text part (one output_text part grows, so its content
+// index is stable), anything else (a provider-native thinking block) is
+// appended as its own part. It returns the text the trailing part grew by,
+// or newPart when the item gained a part (text or not), which a snapshot
+// must announce.
+func appendStreamedPart(item *gw.ResponseOutputItem, part gw.ContentPart) (grown string, newPart bool) {
+	isText := part.Text != nil && part.ProviderJSON == nil && (part.Type == "" || part.Type == "text" || part.Type == "output_text")
+	if !isText {
+		item.Content = append(item.Content, part)
+		return "", true
+	}
+	if *part.Text == "" {
+		return "", false
+	}
+	if n := len(item.Content); n > 0 {
+		last := &item.Content[n-1]
+		if last.Type == "text" && last.Text != nil && last.ProviderJSON == nil {
+			joined := *last.Text + *part.Text
+			last.Text = &joined
+			return *part.Text, false
+		}
+	}
+	text := *part.Text
+	item.Content = append(item.Content, gw.ContentPart{Type: "text", Text: &text})
+	return "", true
 }
 
 func reasoningEffort(reasoning *gw.ReasoningConfig) string {
@@ -490,7 +1164,7 @@ func (s *Server) processChatCompletionInternal(ctx context.Context, req gw.ChatC
 				callReq.Model = route.ModelName
 			}
 
-			return provider.Chat(callCtx, callReq)
+			return provider.Chat(responsesAttempt(callCtx), callReq)
 		},
 	)
 	annotateResponsesCacheTrace(ctx, cacheOutcome, req.Model)
@@ -574,52 +1248,121 @@ func resolveResponseHistoryLimit(truncation *gw.TruncationStrategy) int {
 	return limit
 }
 
+// truncateChatHistory keeps the last maxMessages messages (the system
+// message, if first, counts as one and is always kept). The cut never splits
+// a tool call from its results: when it would land on tool results, the
+// rest of that call/result group is dropped too, so the kept history does
+// not start with results whose call is gone. Dropping from the front never
+// separates a kept call from its later results. If dropping the group would
+// leave nothing after the system message, the whole group is kept instead,
+// over the cap.
 func truncateChatHistory(messages []gw.Message, maxMessages int) []gw.Message {
 	if maxMessages <= 0 || len(messages) <= maxMessages {
 		return messages
 	}
 
-	tail := messages[len(messages)-maxMessages+1:]
-	if len(messages) > 0 && messages[0].Role == gw.RoleSystem {
-		truncated := make([]gw.Message, 0, maxMessages)
+	floor := 0 // first droppable index
+	start := len(messages) - maxMessages
+	if messages[0].Role == gw.RoleSystem {
+		floor = 1
+		start++
+	}
+	cut := start
+	for cut < len(messages) && messages[cut].Role == gw.RoleTool {
+		cut++
+	}
+	if cut == len(messages) && start < len(messages) {
+		// Nothing but tool results would remain: back up to their call.
+		cut = start
+		for cut > floor && messages[cut].Role == gw.RoleTool {
+			cut--
+		}
+	}
+
+	if floor == 1 {
+		truncated := make([]gw.Message, 0, 1+len(messages)-cut)
 		truncated = append(truncated, messages[0])
-		truncated = append(truncated, tail...)
+		truncated = append(truncated, messages[cut:]...)
 		return truncated
 	}
-	return messages[len(messages)-maxMessages:]
+	return messages[cut:]
 }
 
-func responseOutputToMessages(items []gw.ResponseOutputItem) []gw.Message {
-	msgs := make([]gw.Message, 0, len(items))
+// appendResponseOutputMessages appends a response's output items to msgs as
+// chat messages: message items, function_call items as assistant tool
+// calls, and function_call_output items as tool messages, in order.
+func appendResponseOutputMessages(msgs []gw.Message, items []gw.ResponseOutputItem) []gw.Message {
 	for _, item := range items {
-		if item.Type != "message" || len(item.Content) == 0 {
-			continue
+		switch item.Type {
+		case "message":
+			if len(item.Content) == 0 {
+				continue
+			}
+			role := item.Role
+			if role == "" {
+				role = gw.RoleAssistant
+			}
+			msgs = append(msgs, gw.Message{
+				Role:    role,
+				Content: item.Content,
+			})
+		case "function_call":
+			msgs = appendFunctionCall(msgs, item.CallID, item.Name, item.Arguments)
+		case "function_call_output":
+			msgs = appendFunctionCallOutput(msgs, item.CallID, item.Output)
 		}
-		role := item.Role
-		if role == "" {
-			role = gw.RoleAssistant
-		}
-		msgs = append(msgs, gw.Message{
-			Role:    role,
-			Content: item.Content,
-		})
 	}
 	return msgs
 }
 
 // convertInputsToMessages converts ResponseInputs to chat Messages.
 func (s *Server) convertInputsToMessages(req gw.CreateResponseRequest) []gw.Message {
-	var messages []gw.Message
-	for _, input := range req.Input {
-		if input.Type == "message" {
-			msg := gw.Message{
+	return appendResponseInputMessages(nil, req.Input)
+}
+
+// appendResponseInputMessages appends Responses input items to msgs as chat
+// messages, with the same mapping as appendResponseOutputMessages.
+func appendResponseInputMessages(msgs []gw.Message, inputs []gw.ResponseInput) []gw.Message {
+	for _, input := range inputs {
+		switch input.Type {
+		case "message":
+			msgs = append(msgs, gw.Message{
 				Role:    input.Role,
 				Content: input.Content,
-			}
-			messages = append(messages, msg)
+			})
+		case "function_call":
+			msgs = appendFunctionCall(msgs, input.CallID, input.Name, input.Arguments)
+		case "function_call_output":
+			msgs = appendFunctionCallOutput(msgs, input.CallID, input.Output)
 		}
 	}
-	return messages
+	return msgs
+}
+
+// appendFunctionCall adds a function_call item to msgs as a tool call of an
+// assistant message. A call that directly follows an assistant message
+// (another call, or the turn's text) joins that message, so one model turn
+// stays one assistant message with all its tool calls, as in Chat
+// Completions.
+func appendFunctionCall(msgs []gw.Message, callID, name, arguments string) []gw.Message {
+	tc := gw.ToolCall{ID: callID, Type: "function", Function: gw.ToolCallFunction{Name: name, Arguments: arguments}}
+	if n := len(msgs); n > 0 && msgs[n-1].Role == gw.RoleAssistant {
+		last := msgs[n-1].ToolCalls
+		// Copy: the message may share its tool calls with a stored response.
+		msgs[n-1].ToolCalls = append(last[:len(last):len(last)], tc)
+		return msgs
+	}
+	return append(msgs, gw.Message{Role: gw.RoleAssistant, ToolCalls: []gw.ToolCall{tc}})
+}
+
+// appendFunctionCallOutput adds a function_call_output item to msgs as the
+// tool message answering call callID.
+func appendFunctionCallOutput(msgs []gw.Message, callID, output string) []gw.Message {
+	return append(msgs, gw.Message{
+		Role:       gw.RoleTool,
+		Content:    []gw.ContentPart{gw.Text(output)},
+		ToolCallID: callID,
+	})
 }
 
 // convertToToolDefinitions converts builtin and custom tools to ToolDefinitions.
@@ -637,7 +1380,7 @@ func (s *Server) convertToToolDefinitions(req gw.CreateResponseRequest) []gw.Too
 
 // GetResponse retrieves a response by ID.
 func (s *Server) GetResponse(ctx context.Context, req *connect.Request[gatewaypb.GetResponseRequest]) (*connect.Response[gatewaypb.GetResponseResponse], error) {
-	resp, ok := globalResponseStore.Get(req.Msg.ResponseId)
+	resp, ok := s.lookupResponse(ctx, req.Msg.ResponseId)
 	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, gw.ErrNotImplemented("response not found"))
 	}
@@ -651,14 +1394,14 @@ func (s *Server) GetResponse(ctx context.Context, req *connect.Request[gatewaypb
 
 // CancelResponse cancels an in-progress response.
 func (s *Server) CancelResponse(ctx context.Context, req *connect.Request[gatewaypb.CancelResponseRequest]) (*connect.Response[gatewaypb.CancelResponseResponse], error) {
-	resp, ok := globalResponseStore.Get(req.Msg.ResponseId)
+	resp, ok := s.lookupResponse(ctx, req.Msg.ResponseId)
 	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, gw.ErrNotImplemented("response not found"))
 	}
 
 	// Update status to cancelled
 	resp.Status = "cancelled"
-	globalResponseStore.Set(req.Msg.ResponseId, resp)
+	s.storeResponse(ctx, req.Msg.ResponseId, resp)
 
 	return connect.NewResponse(&gatewaypb.CancelResponseResponse{
 		Success:  true,
@@ -668,7 +1411,10 @@ func (s *Server) CancelResponse(ctx context.Context, req *connect.Request[gatewa
 
 // DeleteResponse deletes a response.
 func (s *Server) DeleteResponse(ctx context.Context, req *connect.Request[gatewaypb.DeleteResponseRequest]) (*connect.Response[gatewaypb.DeleteResponseResponse], error) {
-	deleted := globalResponseStore.Delete(req.Msg.ResponseId)
+	deleted := false
+	if owner, ok := s.responseOwner(ctx); ok {
+		deleted = globalResponseStore.Delete(owner, req.Msg.ResponseId)
+	}
 
 	return connect.NewResponse(&gatewaypb.DeleteResponseResponse{
 		Id:      req.Msg.ResponseId,
@@ -684,7 +1430,10 @@ func (s *Server) ListResponses(ctx context.Context, req *connect.Request[gateway
 		limit = 20
 	}
 
-	responses := globalResponseStore.List(limit, req.Msg.After, req.Msg.Before)
+	var responses []*gw.CreateResponseResponse
+	if owner, ok := s.responseOwner(ctx); ok {
+		responses = globalResponseStore.List(owner, limit, req.Msg.After, req.Msg.Before)
+	}
 
 	protoResp := &gatewaypb.ListResponsesResponse{
 		Object: "list",
@@ -716,7 +1465,8 @@ func convertProtoToResponseRequest(msg *gatewaypb.CreateResponseRequest) gw.Crea
 		TemperatureConfigured: msg.Temperature != nil,
 		TopP:                  float64(msg.GetTopP()),
 		TopPConfigured:        msg.TopP != nil,
-		Store:                 msg.Store,
+		Store:                 msg.GetStore(),
+		StoreConfigured:       msg.Store != nil,
 		PreviousResponseID:    msg.PreviousResponseId,
 		Stream:                msg.Stream,
 		Metadata:              msg.Metadata,
@@ -725,9 +1475,13 @@ func convertProtoToResponseRequest(msg *gatewaypb.CreateResponseRequest) gw.Crea
 	// Convert inputs
 	for _, input := range msg.Input {
 		gwInput := gw.ResponseInput{
-			Type:   input.Type,
-			Role:   convertProtoRole(input.Role),
-			ItemID: input.ItemId,
+			Type:      input.Type,
+			Role:      convertProtoRole(input.Role),
+			ItemID:    input.ItemId,
+			CallID:    input.CallId,
+			Output:    input.Output,
+			Name:      input.Name,
+			Arguments: input.Arguments,
 		}
 		for _, content := range input.Content {
 			gwInput.Content = append(gwInput.Content, convertProtoContentPart(content))
@@ -1048,4 +1802,15 @@ func generateItemID() string {
 
 func stringPtr(s string) *string {
 	return &s
+}
+
+// responsesConnectError keeps a Connect status the provider chain already
+// chose (the spend limit refusal is ResourceExhausted with a reason detail
+// the HTTP layer turns into 402); anything else stays Internal.
+func responsesConnectError(err error) error {
+	var ce *connect.Error
+	if errors.As(err, &ce) {
+		return err
+	}
+	return connect.NewError(connect.CodeInternal, err)
 }

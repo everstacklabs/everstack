@@ -85,7 +85,7 @@ export function VolumesTab() {
                         <Loader loaderText="Loading volumes..." />
                     </div>
                 ) : error ? (
-                    <div className="flex items-center justify-center h-full text-red-400 light:text-red-600 text-sm">
+                    <div className="flex items-center justify-center h-full text-danger text-sm">
                         Error loading volumes: {error.message}
                     </div>
                 ) : volumes.length === 0 ? (
@@ -126,7 +126,7 @@ export function VolumesTab() {
                                             <button
                                                 onClick={() => handleDelete(vol.id, vol.name)}
                                                 disabled={deleteMutation.isPending}
-                                                className="p-1 rounded text-red-400 light:text-red-600 hover:text-red-300 light:hover:text-red-600 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                                className="p-1 rounded text-danger hover:bg-danger-surface transition-colors disabled:opacity-50"
                                                 title="Delete"
                                             >
                                                 <Iconify.Icon icon="heroicons:trash" className="size-4" />

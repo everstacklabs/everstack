@@ -17,13 +17,20 @@ type ConfigureProviderCommand struct {
 	EnabledModels  []string
 	CustomBaseURL  *string
 	CustomSettings map[string]string
+	// DefaultBaseURL is the catalog's base URL for ProviderName: the host the
+	// gateway calls when CustomBaseURL is unset. It lets the handler compare
+	// effective upstream hosts rather than raw column values.
+	DefaultBaseURL string
 	UserID         string
 	TraceID        string
 	Timestamp      time.Time
 }
 
-// AddProviderAPIKeyCommand represents a command to add an API key to a provider
+// AddProviderAPIKeyCommand represents a command to add an API key to a
+// provider. TenantID is required: the target configuration must be owned by
+// that tenant.
 type AddProviderAPIKeyCommand struct {
+	TenantID         string
 	ProviderConfigID string
 	KeyName          string
 	APIKey           string
@@ -33,8 +40,11 @@ type AddProviderAPIKeyCommand struct {
 	Timestamp        time.Time
 }
 
-// UpdateAPIKeyWeightCommand represents a command to update an API key's weight
+// UpdateAPIKeyWeightCommand represents a command to update an API key's
+// weight. TenantID is required, as for every key command below: the key's
+// configuration must be owned by that tenant.
 type UpdateAPIKeyWeightCommand struct {
+	TenantID  string
 	KeyID     string
 	Weight    int
 	UserID    string
@@ -44,6 +54,7 @@ type UpdateAPIKeyWeightCommand struct {
 
 // ToggleAPIKeyCommand represents a command to activate/deactivate an API key
 type ToggleAPIKeyCommand struct {
+	TenantID  string
 	KeyID     string
 	IsActive  bool
 	UserID    string
@@ -53,6 +64,7 @@ type ToggleAPIKeyCommand struct {
 
 // DeleteProviderAPIKeyCommand represents a command to delete an API key
 type DeleteProviderAPIKeyCommand struct {
+	TenantID  string
 	KeyID     string
 	UserID    string
 	TraceID   string
@@ -79,4 +91,11 @@ type DeleteProviderCommand struct {
 	UserID       string
 	TraceID      string
 	Timestamp    time.Time
+}
+
+// ListProviderAPIKeysQuery lists the keys of one provider configuration
+// owned by TenantID.
+type ListProviderAPIKeysQuery struct {
+	TenantID         string
+	ProviderConfigID string
 }

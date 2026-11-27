@@ -30,7 +30,7 @@ export const evaluationSelectContentClass =
   'border-brand-main-600 bg-brand-main-900 text-zinc-200 light:bg-white light:text-zinc-800'
 
 export const evaluationErrorClass =
-  'rounded border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400 light:text-red-600'
+  'rounded border border-danger-border bg-danger-surface p-3 text-sm text-danger'
 
 export const evaluationPanelClass =
   'rounded border border-brand-main-700/70 bg-brand-main-900/40 light:border-black/10 light:bg-white'

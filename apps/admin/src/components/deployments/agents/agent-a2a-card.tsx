@@ -38,7 +38,7 @@ export function AgentA2aCard({ agentId, hasDeployment }: { agentId: string; hasD
             </div>
 
             {!hasDeployment ? (
-                <p className="text-[11px] text-amber-300/80 light:text-amber-700/80">
+                <p className="text-[11px] text-warning/80">
                     {isPublished
                         ? 'Published but has no active deployment — A2A calls will fail until you deploy it.'
                         : 'This agent needs an active deployment before it can be published over A2A.'}

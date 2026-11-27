@@ -127,7 +127,7 @@ export function ActivateLicense({ children }: PropsWithChildren) {
                                 className="font-mono"
                             />
                             {activate.isError && (
-                                <p className="text-sm text-destructive">
+                                <p className="text-sm text-danger">
                                     {activate.error?.message || 'Failed to activate. Please check your token.'}
                                 </p>
                             )}

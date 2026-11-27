@@ -3,6 +3,7 @@
 /* eslint-disable */
 
 import type { GenFile, GenService } from "@bufbuild/protobuf/codegenv1";
+import type { SystemOneRequestSchema, SystemOneResponseSchema } from "./decisions_pb.js";
 import type { ActivateGatewayInstanceRequestSchema, ActivateGatewayInstanceResponseSchema, ActivationCallbackRequestSchema, ActivationCallbackResponseSchema, GetGatewayInstanceStatusRequestSchema, GetGatewayInstanceStatusResponseSchema, GetGatewayRequestSchema, GetGatewayResponseSchema, GetLicenseMonitorStatusRequestSchema, GetLicenseMonitorStatusResponseSchema, GetPlansRequestSchema, GetPlansResponseSchema, GetTrialStatusRequestSchema, GetTrialStatusResponseSchema, GetUpgradeCallbackSecretRequestSchema, GetUpgradeCallbackSecretResponseSchema, ListModelsRequestSchema, ListModelsResponseSchema, RefreshLicenseMonitorRequestSchema, RefreshLicenseMonitorResponseSchema, StoreUpgradeCallbackSecretRequestSchema, StoreUpgradeCallbackSecretResponseSchema, SubscriptionStatusCallbackRequestSchema, SubscriptionStatusCallbackResponseSchema } from "./gateway_pb.js";
 import type { ChatCompletionRequestSchema, ChatCompletionResponseSchema } from "./chat_pb.js";
 import type { EmbeddingsRequestSchema, EmbeddingsResponseSchema } from "./embedding_pb.js";
@@ -21,6 +22,16 @@ export declare const file_everstack_gateway_v1_gateway_service: GenFile;
  * @generated from service everstack.gateway.v1.GatewayService
  */
 export declare const GatewayService: GenService<{
+  /**
+   * Structured decisions, using customer-owned keys or self-hosted endpoints.
+   *
+   * @generated from rpc everstack.gateway.v1.GatewayService.SystemOne
+   */
+  systemOne: {
+    methodKind: "unary";
+    input: typeof SystemOneRequestSchema;
+    output: typeof SystemOneResponseSchema;
+  },
   /**
    * @generated from rpc everstack.gateway.v1.GatewayService.GetGateway
    */

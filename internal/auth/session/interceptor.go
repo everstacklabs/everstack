@@ -5,14 +5,16 @@ package session
 
 import (
 	"context"
-	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/jmoiron/sqlx"
+
+	"github.com/everstacklabs/everstack/internal/auth/sessionlive"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 )
 
@@ -103,6 +105,11 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		// Try to extract and validate session
 		claims, err := i.validateSession(ctx, req.Header())
 		if err != nil {
+			if errors.Is(err, sessionlive.ErrUnavailable) {
+				// Fail closed: a cookie that could not be verified never
+				// falls through to the next authenticator.
+				return nil, connect.NewError(connect.CodeUnavailable, sessionlive.ErrUnavailable)
+			}
 			if i.config.FallbackToNext {
 				// No valid session, let next interceptor handle it (M2M auth)
 				logger.Debugf("session: no valid session for %s, falling back to next auth", procedure)
@@ -137,6 +144,9 @@ func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) co
 		// Try to extract and validate session
 		claims, err := i.validateSession(ctx, conn.RequestHeader())
 		if err != nil {
+			if errors.Is(err, sessionlive.ErrUnavailable) {
+				return connect.NewError(connect.CodeUnavailable, sessionlive.ErrUnavailable)
+			}
 			if i.config.FallbackToNext {
 				return next(ctx, conn)
 			}
@@ -189,30 +199,23 @@ func (i *Interceptor) extractSessionToken(headers interface{ Get(string) string 
 	return cookie.Value
 }
 
-// lookupSession looks up a session in the database.
+// lookupSession resolves token through sessionlive: the mirror row must be
+// unexpired and, when it mirrors a Better Auth session, that session must
+// still exist and be unexpired. A store failure returns an error wrapping
+// sessionlive.ErrUnavailable; details are logged, never returned.
 func (i *Interceptor) lookupSession(ctx context.Context, token string) (*Session, error) {
 	if i.config.DB == nil {
-		return nil, errors.New("session: database not configured")
+		return nil, fmt.Errorf("session: database not configured: %w", sessionlive.ErrUnavailable)
 	}
-
-	var session Session
-	query := `SELECT id, user_id, token, expires_at, created_at, ip_address, user_agent 
-	          FROM sessions WHERE token = $1`
-	err := i.config.DB.GetContext(ctx, &session, query, token)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, errors.New("session: invalid or expired session")
-	}
+	s, err := sessionlive.Lookup(ctx, i.config.DB, token)
 	if err != nil {
-		logger.WithError(err).Error("session: failed to lookup session")
-		return nil, errors.New("session: failed to validate session")
+		if sessionlive.IsRejected(err) {
+			return nil, errors.New("session: invalid or expired session")
+		}
+		logger.WithError(err).Error("session: failed to verify session")
+		return nil, fmt.Errorf("session: failed to validate session: %w", sessionlive.ErrUnavailable)
 	}
-
-	// Check expiration
-	if time.Now().After(session.ExpiresAt) {
-		return nil, errors.New("session: session expired")
-	}
-
-	return &session, nil
+	return &Session{ID: s.ID, UserID: s.UserID, Token: token, ExpiresAt: s.ExpiresAt}, nil
 }
 
 // isSessionAuthEndpoint checks if a procedure accepts session authentication.

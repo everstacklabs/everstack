@@ -273,13 +273,15 @@ func (h *MetricsTimeSeriesHandler) queryTtftTimeSeries(ctx context.Context, tsQu
 		quantile = "0.95"
 	}
 
+	// Span attribute first; see tenantBridgeFilter.
+	tenantClause, tenantArgs := tenantBridgeFilter(tenantID)
 	conditions := []string{
 		"Timestamp >= ?",
 		"Timestamp <= ?",
-		"ResourceAttributes['tenant.id'] = ?",
+		tenantClause,
 		"SpanAttributes['llm.stream.time_to_first_token_ms'] != ''",
 	}
-	args := []interface{}{startTime, endTime, tenantID}
+	args := append([]interface{}{startTime, endTime}, tenantArgs...)
 
 	if len(tsQuery.Models) > 0 {
 		placeholders := buildPlaceholders(len(tsQuery.Models))

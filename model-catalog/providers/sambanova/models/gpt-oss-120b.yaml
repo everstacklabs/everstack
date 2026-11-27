@@ -1,0 +1,41 @@
+# Verified 2026-11-24.
+# Source: https://api.sambanova.ai/v1/models
+name: "gpt-oss-120b"
+display_name: "GPT OSS 120B (SambaNova)"
+family: "gpt-oss"
+status: "stable"
+release_date: "2025-08-05"
+
+cost:
+  input_per_1k: 0.00022
+  output_per_1k: 0.00059
+
+limits:
+  max_tokens: 131072
+  max_completion_tokens: 131072
+
+capabilities:
+  - chat
+  - function_calling
+  - reasoning
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+
+knowledge_cutoff: "2024-06"
+notes: "Open GPT reasoning model for self-hosted agents and controllable deployments"
+
+structured_output: true
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 131072
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+added_in_version: "2.11.0"

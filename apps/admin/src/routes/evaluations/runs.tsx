@@ -64,16 +64,16 @@ const runStatusFilters = [
 function StatusIcon({ status }: { status?: string }) {
   const s = status?.toLowerCase()
   if (s === 'completed')
-    return <Check className="h-4 w-4 text-emerald-400 light:text-emerald-600" />
+    return <Check className="h-4 w-4 text-success" />
   if (s === 'running')
     return (
-      <Activity className="h-4 w-4 text-blue-400 light:text-blue-600 animate-pulse" />
+      <Activity className="h-4 w-4 text-info animate-pulse" />
     )
   if (s === 'failed')
-    return <X className="h-4 w-4 text-red-400 light:text-red-600" />
+    return <X className="h-4 w-4 text-danger" />
   if (s === 'cancelled')
     return <X className="h-4 w-4 text-white/40 light:text-black/40" />
-  return <Clock className="h-4 w-4 text-yellow-400 light:text-yellow-700" />
+  return <Clock className="h-4 w-4 text-warning" />
 }
 
 function quotedList(values: string[]) {
@@ -270,7 +270,7 @@ function EvalRunsPageContent() {
         <span className="truncate font-medium text-brand-secondary-100 text-xs flex items-center gap-1.5">
           {run.name}
           {run.isBaseline && (
-            <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-medium bg-amber-500/20 text-amber-400 light:text-amber-700 border border-amber-500/30 flex-shrink-0">
+            <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-medium bg-warning-surface-strong text-warning border border-warning-border flex-shrink-0">
               <Flag className="h-2.5 w-2.5" /> Baseline
             </span>
           )}
@@ -287,7 +287,7 @@ function EvalRunsPageContent() {
           <StatusIcon status={run.status} />
           {run.regressionResult?.hasRegression && (
             <span title="Regression detected">
-              <TrendingDown className="h-3.5 w-3.5 text-red-400 light:text-red-600" />
+              <TrendingDown className="h-3.5 w-3.5 text-danger" />
             </span>
           )}
         </span>
@@ -546,7 +546,7 @@ function EvalRunsPageContent() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-danger-solid hover:bg-danger-solid/90"
             >
               {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>

@@ -86,6 +86,18 @@ type sseWriter struct {
 	streamModel   string
 	streamCreated int64
 	roleSent      map[int]bool
+	toolCounts    map[int]int
+	hasTools      map[int]bool
+
+	// responses carries the OpenAI Responses event state when format is
+	// SSEFormatOpenAIResponses.
+	responses *responsesStreamState
+
+	// passthrough is set when the downstream answered with an error status
+	// before streaming began (a refused key, a spend block, a grpc-gateway
+	// error). Its JSON body is passed through untouched so the caller gets
+	// the error, not an empty event stream.
+	passthrough bool
 }
 
 // Implement http.Flusher to avoid "Flush not supported" errors.
@@ -101,6 +113,16 @@ func (s *sseWriter) WriteHeader(status int) {
 		return
 	}
 	s.wroteHeader = true
+	if status >= http.StatusBadRequest {
+		s.passthrough = true
+		h := s.ResponseWriter.Header()
+		if strings.HasPrefix(strings.ToLower(h.Get("Content-Type")), "text/event-stream") {
+			h.Set("Content-Type", "application/json")
+		}
+		h.Del("X-Accel-Buffering")
+		s.ResponseWriter.WriteHeader(status)
+		return
+	}
 	// Enforce SSE headers at the moment of sending headers to the client,
 	// so downstream handlers cannot override Content-Type.
 	h := s.ResponseWriter.Header()
@@ -112,6 +134,9 @@ func (s *sseWriter) WriteHeader(status int) {
 }
 
 func (s *sseWriter) Write(p []byte) (int, error) {
+	if s.passthrough {
+		return s.ResponseWriter.Write(p)
+	}
 	s.buf = append(s.buf, p...)
 	reader := bufio.NewReader(bytes.NewReader(s.buf))
 	var consumed int
@@ -142,6 +167,13 @@ func (s *sseWriter) Write(p []byte) (int, error) {
 		// Ensure headers are written once before body
 		if !s.wroteHeader {
 			s.WriteHeader(http.StatusOK)
+		}
+
+		if s.format == SSEFormatOpenAIResponses {
+			if e := s.writeResponsesEvents(trimmed); e != nil {
+				return 0, e
+			}
+			continue
 		}
 
 		payload := s.reframeChunk(trimmed)
@@ -214,12 +246,13 @@ func (s *sseWriter) transformToOpenAIChunk(line string) []byte {
 
 	outChoices := make([]map[string]interface{}, 0, 1)
 	if choices, ok := obj["choices"].([]interface{}); ok {
-		for i, c := range choices {
+		for _, c := range choices {
 			ch, ok := c.(map[string]interface{})
 			if !ok {
 				continue
 			}
-			idx := i
+			// Proto JSON omits the zero index, even when choice 0 is not first.
+			idx := 0
 			if v, ok := ch["index"].(float64); ok {
 				idx = int(v)
 			}
@@ -264,9 +297,39 @@ func (s *sseWriter) transformToOpenAIChunk(line string) []byte {
 				delta["provider_content"] = providerContent
 			}
 
+			if msg, ok := ch["message"].(map[string]interface{}); ok {
+				if calls, ok := msg["tool_calls"].([]interface{}); ok && len(calls) > 0 {
+					if s.toolCounts == nil {
+						s.toolCounts = map[int]int{}
+						s.hasTools = map[int]bool{}
+					}
+					out := []interface{}{}
+					for _, raw := range calls {
+						if call, ok := raw.(map[string]interface{}); ok {
+							call["index"] = s.toolCounts[idx]
+							call["type"] = "function"
+							f, _ := call["function"].(map[string]interface{})
+							if f == nil {
+								f = map[string]interface{}{}
+								call["function"] = f
+							}
+							if _, ok := f["arguments"]; !ok {
+								f["arguments"] = ""
+							}
+							s.toolCounts[idx]++
+							out = append(out, call)
+						}
+					}
+					delta["tool_calls"] = out
+					s.hasTools[idx] = true
+				}
+			}
 			var finish interface{}
 			if fr, ok := ch["finish_reason"].(string); ok && fr != "" {
 				finish = strings.ToLower(strings.TrimPrefix(fr, "FINISH_REASON_"))
+				if s.hasTools[idx] && (finish == "stop" || finish == "function_call") {
+					finish = "tool_calls"
+				}
 			}
 
 			outChoices = append(outChoices, map[string]interface{}{
@@ -316,9 +379,18 @@ func providerContentValue(part map[string]interface{}) (interface{}, bool) {
 // status), or nil when the frame is a normal delta.
 func openAIErrorFromFrame(obj map[string]interface{}) []byte {
 	var message string
+	// An error that is already OpenAI-shaped (a string code, as the spend
+	// limit refusal carries) keeps its type and code.
+	errType, errCode := "api_error", interface{}(nil)
 	if e, ok := obj["error"].(map[string]interface{}); ok {
 		if m, ok := e["message"].(string); ok && m != "" {
 			message = m
+		}
+		if c, ok := e["code"].(string); ok && c != "" {
+			errCode = c
+			if t, ok := e["type"].(string); ok && t != "" {
+				errType = t
+			}
 		}
 	} else if m, ok := obj["message"].(string); ok && m != "" {
 		if _, hasCode := obj["code"]; hasCode {
@@ -333,9 +405,9 @@ func openAIErrorFromFrame(obj map[string]interface{}) []byte {
 	b, err := json.Marshal(map[string]interface{}{
 		"error": map[string]interface{}{
 			"message": message,
-			"type":    "api_error",
+			"type":    errType,
 			"param":   nil,
-			"code":    nil,
+			"code":    errCode,
 		},
 	})
 	if err != nil {
@@ -345,13 +417,46 @@ func openAIErrorFromFrame(obj map[string]interface{}) []byte {
 }
 
 func (s *sseWriter) flushPending() {
+	if s.passthrough {
+		return
+	}
 	// Emit [DONE] to signal end of stream
 	if !s.wroteHeader {
 		s.WriteHeader(http.StatusOK)
 	}
-	_, _ = s.ResponseWriter.Write([]byte("data: [DONE]\n\n"))
+	if s.passthrough {
+		return
+	}
+	// The OpenAI Responses stream ends with its terminal response.* event;
+	// [DONE] belongs to the chat chunk stream only.
+	if s.format != SSEFormatOpenAIResponses {
+		_, _ = s.ResponseWriter.Write([]byte("data: [DONE]\n\n"))
+	}
 	if f, ok := s.ResponseWriter.(http.Flusher); ok {
 		f.Flush()
 	}
 	s.buf = s.buf[:0]
+}
+
+// writeResponsesEvents writes the OpenAI Responses events one stream frame
+// implies, each as "event: <name>" plus its JSON data, and flushes them.
+func (s *sseWriter) writeResponsesEvents(line string) error {
+	if s.responses == nil {
+		s.responses = &responsesStreamState{}
+	}
+	for _, ev := range s.responses.events(line) {
+		if _, err := s.ResponseWriter.Write([]byte("event: " + ev.name + "\ndata: ")); err != nil {
+			return err
+		}
+		if _, err := s.ResponseWriter.Write(ev.data); err != nil {
+			return err
+		}
+		if _, err := s.ResponseWriter.Write([]byte("\n\n")); err != nil {
+			return err
+		}
+	}
+	if f, ok := s.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+	return nil
 }

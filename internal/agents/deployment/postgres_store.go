@@ -2,6 +2,7 @@ package deployment
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -154,19 +155,28 @@ func (s *PostgresStore) GetKeyByHash(ctx context.Context, hash string) (*Deploym
 	return &key, nil
 }
 
-func (s *PostgresStore) ListKeys(ctx context.Context, deploymentID string) ([]*DeploymentKey, error) {
+func (s *PostgresStore) ListKeys(ctx context.Context, deploymentID, tenantID string) ([]*DeploymentKey, error) {
 	var keys []*DeploymentKey
-	q := `SELECT * FROM agent_deployment_keys WHERE deployment_id = $1 ORDER BY created_at DESC`
-	if err := s.db.SelectContext(ctx, &keys, q, deploymentID); err != nil {
+	q := `SELECT * FROM agent_deployment_keys WHERE deployment_id = $1 AND tenant_id = $2 ORDER BY created_at DESC`
+	if err := s.db.SelectContext(ctx, &keys, q, deploymentID, tenantID); err != nil {
 		return nil, fmt.Errorf("list keys: %w", err)
 	}
 	return keys, nil
 }
 
-func (s *PostgresStore) RevokeKey(ctx context.Context, keyID string) error {
-	q := `UPDATE agent_deployment_keys SET is_active = FALSE WHERE id = $1`
-	_, err := s.db.ExecContext(ctx, q, keyID)
-	return err
+// ErrKeyNotFound means no key with that id belongs to the tenant.
+var ErrKeyNotFound = errors.New("deployment key not found")
+
+func (s *PostgresStore) RevokeKey(ctx context.Context, keyID, tenantID string) error {
+	q := `UPDATE agent_deployment_keys SET is_active = FALSE WHERE id = $1 AND tenant_id = $2`
+	result, err := s.db.ExecContext(ctx, q, keyID, tenantID)
+	if err != nil {
+		return err
+	}
+	if rows, err := result.RowsAffected(); err == nil && rows == 0 {
+		return ErrKeyNotFound
+	}
+	return nil
 }
 
 func (s *PostgresStore) TouchKeyLastUsed(ctx context.Context, keyID string) error {
@@ -211,14 +221,14 @@ func (s *PostgresStore) CompleteInvocation(ctx context.Context, id string, sessi
 	return err
 }
 
-func (s *PostgresStore) ListInvocations(ctx context.Context, deploymentID string, limit, offset int) ([]*Invocation, int, error) {
+func (s *PostgresStore) ListInvocations(ctx context.Context, deploymentID, tenantID string, limit, offset int) ([]*Invocation, int, error) {
 	if limit <= 0 {
 		limit = 50
 	}
 
 	var total int
-	countQ := `SELECT COUNT(*) FROM agent_deployment_invocations WHERE deployment_id = $1`
-	if err := s.db.GetContext(ctx, &total, countQ, deploymentID); err != nil {
+	countQ := `SELECT COUNT(*) FROM agent_deployment_invocations WHERE deployment_id = $1 AND tenant_id = $2`
+	if err := s.db.GetContext(ctx, &total, countQ, deploymentID, tenantID); err != nil {
 		return nil, 0, fmt.Errorf("count invocations: %w", err)
 	}
 
@@ -243,10 +253,10 @@ func (s *PostgresStore) ListInvocations(ctx context.Context, deploymentID string
 			COALESCE(user_agent, '')      AS user_agent,
 			created_at, completed_at
 		FROM agent_deployment_invocations
-		WHERE deployment_id = $1
+		WHERE deployment_id = $1 AND tenant_id = $2
 		ORDER BY created_at DESC
-		LIMIT $2 OFFSET $3`
-	if err := s.db.SelectContext(ctx, &invocations, q, deploymentID, limit, offset); err != nil {
+		LIMIT $3 OFFSET $4`
+	if err := s.db.SelectContext(ctx, &invocations, q, deploymentID, tenantID, limit, offset); err != nil {
 		return nil, 0, fmt.Errorf("list invocations: %w", err)
 	}
 	return invocations, total, nil

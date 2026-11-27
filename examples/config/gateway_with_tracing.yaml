@@ -1,0 +1,82 @@
+# Example Gateway Configuration with Distributed Tracing
+# This configuration enables comprehensive distributed tracing for all requests
+
+server:
+  http:
+    port: 8089 # HTTP port for gateway
+
+  telemetry:
+    # OpenTelemetry configuration
+    otel:
+      enabled: true
+      mode: external # Use external OTEL collector
+      collector_url: localhost:4317 # OTLP gRPC endpoint
+
+    # Distributed tracing configuration
+    # Presence of this section automatically enables tracing
+    tracing:
+      # Sampling rate: 1.0 = trace 100% of requests
+      # For high-volume production, consider 0.1 (10%) or lower
+      sampling_rate: 1.0
+
+      # Granularity level controls span detail
+      # - minimal: Gateway-level spans only (lowest overhead)
+      # - standard: Gateway + provider + embeddings (recommended)
+      # - detailed: Everything including stream chunks (highest detail)
+      granularity: standard
+
+      # Fine-grained controls (optional, defaults based on granularity)
+      # These override granularity-based defaults
+
+      # Trace individual provider HTTP requests
+      # Creates child spans for each provider API call
+      trace_provider_calls: true
+
+      # Trace individual streaming chunks
+      # WARNING: Can be very noisy for long responses
+      # Only recommended for debugging specific issues
+      trace_stream_chunks: false
+
+      # Trace fallback attempts
+      # Creates child spans for each fallback attempt
+      trace_fallbacks: true
+
+      # Trace key rotation attempts
+      # Creates spans when rotating through provider API keys
+      trace_key_rotation: false
+
+  # Database configuration for trace storage
+  database:
+    clickhouse:
+      host: localhost
+      port: 9000
+      database: everstack
+      username: clickhouse
+      password: clickhouse
+
+# Gateway routing configuration
+gateway:
+  # Your existing gateway configuration here
+  providers:
+    - name: openai
+      api_key: ${OPENAI_API_KEY}
+    - name: anthropic
+      api_key: ${ANTHROPIC_API_KEY}
+
+  # Load balancer configuration
+  load_balancer:
+    strategy: round_robin
+    key_source: sticky_session
+
+  # Fallback configuration
+  fallback:
+    enabled: true
+    steps:
+      - aliases: ["gpt-4"]
+        strategy: priority
+        max_attempts: 3
+        timeout_ms: 30000
+      - aliases: ["claude-3-opus"]
+        strategy: priority
+        max_attempts: 2
+        timeout_ms: 30000

@@ -1,0 +1,36 @@
+# Verified 2026-11-24.
+# Source: https://openrouter.ai/api/v1/models
+# Source: https://openrouter.ai/moondream/moondream3.1-9b-a2b
+name: "moondream/moondream3.1-9b-a2b"
+display_name: "Moondream: Moondream 3.1 (OpenRouter)"
+family: "moondream"
+status: "stable"
+release_date: "2026-10-15"
+cost:
+  input_per_1k: 0.0003
+  output_per_1k: 0.0025
+limits:
+  max_tokens: 32000
+  max_completion_tokens: 4096
+capabilities:
+  - "chat"
+  - "vision"
+  - "reasoning"
+modalities:
+  input:
+    - "text"
+    - "image"
+  output:
+    - "text"
+structured_output: false
+notes: "OpenRouter listing date, not necessarily the original model launch. Provider-route pricing and limits verified 2026-11-24; endpoint selection can change rates. Tool, audio, and other non-text charges are not represented by these text token rates."
+parameters:
+  -
+    key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 4096
+    has_max_value: true
+added_in_version: "2.11.0"

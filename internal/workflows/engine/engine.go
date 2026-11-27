@@ -302,54 +302,73 @@ func (e *Engine) asyncCacheWrite(ctx context.Context, ec *ExecutionContext) {
 
 	cacheType := ec.CacheType
 	cacheQuery := ec.CacheQuery
+	if ec.CacheKey == nil {
+		return
+	}
+	// Write under the request the cache node looked up, not the current
+	// ec.Messages (the provider node has since injected context and appended
+	// its reply, which would produce a key no lookup ever computes).
+	req := NewCacheRequest(*ec.CacheKey)
 
 	go func() {
-		// Use a detached context so the write completes even if the request ctx is cancelled
-		writeCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		// Detach from cancellation so the write completes even if the request
+		// ctx is cancelled, but keep its values: cache entries are owned by the
+		// authenticated tenant in ctx, and a tenantless ctx stores nothing.
+		writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
 
 		switch cacheType {
 		case "exact":
-			req := &exactCacheWriteRequest{
-				model:       ec.ResolvedModel,
-				messages:    ec.Messages,
-				temperature: ec.SamplingParams.Temperature,
-				maxTokens:   ec.SamplingParams.MaxTokens,
-				topP:        ec.SamplingParams.TopP,
-				stream:      ec.StreamingEnabled,
-			}
 			fpEngine.CacheResponseWithContext(writeCtx, req, cached)
 			logger.Debug("engine: async exact cache write completed")
 		case "semantic":
 			if cacheQuery != "" {
-				fpEngine.CacheSemanticResponseWithContext(writeCtx, cacheQuery, cached)
+				fpEngine.CacheSemanticResponseWithContext(writeCtx, req, cacheQuery, cached)
 				logger.Debug("engine: async semantic cache write completed")
 			}
 		}
 	}()
 }
 
-// exactCacheWriteRequest implements cache.ChatRequest for the async cache write.
-// It captures values by copy so the goroutine doesn't race on the ExecutionContext.
-type exactCacheWriteRequest struct {
-	model       string
-	messages    []gw.Message
-	temperature float64
-	maxTokens   int
-	topP        float64
-	stream      bool
+// CacheKeyRequest is the normalized request a workflow's response-cache entry
+// is keyed on. It copies messages so later in-place edits of ec.Messages by
+// downstream nodes cannot change a snapshot.
+func CacheKeyRequest(model string, messages []gw.Message, sampling gw.SamplingParams) gw.ChatCompletionRequest {
+	return gw.ChatCompletionRequest{
+		Model:    model,
+		Messages: append([]gw.Message(nil), messages...),
+		Sampling: sampling,
+	}
 }
 
-func (r *exactCacheWriteRequest) GetModel() string        { return r.model }
-func (r *exactCacheWriteRequest) GetTemperature() float64 { return r.temperature }
-func (r *exactCacheWriteRequest) GetMaxTokens() int       { return r.maxTokens }
-func (r *exactCacheWriteRequest) GetTopP() float64        { return r.topP }
-func (r *exactCacheWriteRequest) GetStream() bool         { return r.stream }
+// CacheRequest adapts a workflow cache key request to cache.ChatRequest,
+// fingerprinting it at most once.
+type CacheRequest struct {
+	req  gw.ChatCompletionRequest
+	memo cache.FingerprintMemo
+}
 
-func (r *exactCacheWriteRequest) GetMessages() []cache.Message {
-	msgs := make([]cache.Message, 0, len(r.messages))
-	for i := range r.messages {
-		msgs = append(msgs, &engineMessageAdapter{msg: &r.messages[i]})
+// NewCacheRequest wraps a request produced by CacheKeyRequest.
+func NewCacheRequest(req gw.ChatCompletionRequest) *CacheRequest {
+	return &CacheRequest{req: req}
+}
+
+func (r *CacheRequest) GetModel() string        { return r.req.Model }
+func (r *CacheRequest) GetTemperature() float64 { return r.req.Sampling.Temperature }
+func (r *CacheRequest) GetMaxTokens() int       { return r.req.Sampling.MaxTokens }
+func (r *CacheRequest) GetTopP() float64        { return r.req.Sampling.TopP }
+func (r *CacheRequest) GetStream() bool         { return false }
+func (r *CacheRequest) CacheFingerprint() []byte {
+	return r.memo.Exact(func() []byte { return gw.ChatCacheFingerprint(r.req) })
+}
+func (r *CacheRequest) SemanticContextFingerprint() []byte {
+	return r.memo.Semantic(func() []byte { return gw.ChatSemanticContextFingerprint(r.req) })
+}
+
+func (r *CacheRequest) GetMessages() []cache.Message {
+	msgs := make([]cache.Message, 0, len(r.req.Messages))
+	for i := range r.req.Messages {
+		msgs = append(msgs, &engineMessageAdapter{msg: &r.req.Messages[i]})
 	}
 	return msgs
 }

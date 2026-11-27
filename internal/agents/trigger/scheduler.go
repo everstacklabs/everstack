@@ -84,14 +84,34 @@ func (s *Scheduler) tick(ctx context.Context) {
 		return
 	}
 
-	now := time.Now()
-	for _, t := range triggers {
-		if s.isDue(t, now) {
-			logger.WithFields("trigger_id", t.ID, "name", t.Name, "cron", t.CronExpression).
-				Info("trigger_scheduler: firing cron trigger")
-			go s.executor.Execute(tickCtx, t, nil)
-		}
+	for _, t := range s.dueTriggers(tickCtx, triggers, time.Now()) {
+		logger.WithFields("trigger_id", t.ID, "name", t.Name, "cron", t.CronExpression).
+			Info("trigger_scheduler: firing cron trigger")
+		go s.executor.Execute(tickCtx, t, nil)
 	}
+}
+
+// dueTriggers returns the triggers that should fire at now: due by their cron
+// expression and owned by an active tenant. The tenant check reuses the
+// executor's SetTenantActiveFn (the Scheduler has no setter of its own), so one
+// wiring call covers cron, webhook and event triggers. isDue is a stateless
+// wall-clock window with no persisted next-run, so skipping a paused tenant's
+// trigger cannot delay or mis-schedule any other trigger; the paused trigger
+// simply misses its windows and is not caught up on resume.
+func (s *Scheduler) dueTriggers(ctx context.Context, triggers []*Trigger, now time.Time) []*Trigger {
+	due := make([]*Trigger, 0, len(triggers))
+	for _, t := range triggers {
+		if t == nil || !s.isDue(t, now) {
+			continue
+		}
+		if !s.executor.tenantActive(ctx, t.TenantID) {
+			logger.WithFields("trigger_id", t.ID, "tenant_id", t.TenantID).
+				Debug("trigger_scheduler: skipped cron trigger (tenant paused)")
+			continue
+		}
+		due = append(due, t)
+	}
+	return due
 }
 
 // isDue checks whether a cron trigger should fire based on the current time.

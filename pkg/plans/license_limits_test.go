@@ -23,7 +23,16 @@ func TestCatalogLicenseLimitsRoundTrip(t *testing.T) {
 			require.True(t, ok)
 			limits, err := plan.ToProtoUsageLimits()
 			require.NoError(t, err)
-			require.Len(t, limits, len(plan.UsageLimits))
+			// Cloud usage allowances are wallet pricing, not license limits:
+			// they are left out of the license and everything else survives.
+			var licensed []UsageLimit
+			for _, l := range plan.UsageLimits {
+				if !l.IsAllowance() {
+					licensed = append(licensed, l)
+				}
+			}
+			require.Less(t, len(licensed), len(plan.UsageLimits), "every public plan carries compute allowances")
+			require.Len(t, limits, len(licensed))
 			state := &licv1.LicenseState{UsageLimits: limits}
 			// The service stores encoding/json; Connect transmits protobuf or
 			// protobuf JSON. Verify each boundary preserves type and int64 value.
@@ -40,7 +49,7 @@ func TestCatalogLicenseLimitsRoundTrip(t *testing.T) {
 					require.NoError(t, err)
 					var decoded licv1.LicenseState
 					require.NoError(t, codec.unmarshal(payload, &decoded))
-					for i, expected := range plan.UsageLimits {
+					for i, expected := range licensed {
 						actual := decoded.UsageLimits[i]
 						key := expected.Type
 						if key == "STORAGE_BYTES" {

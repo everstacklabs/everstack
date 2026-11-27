@@ -9,7 +9,6 @@ import (
 	"sync/atomic"
 
 	"github.com/everstacklabs/everstack/cmd/config/gateway/validator"
-	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 )
 
@@ -80,7 +79,7 @@ func NewSemanticCacheV2(
 			indexName = "semantic_cache_idx"
 		}
 
-		vs, err := NewRedisVectorStore(redisClient, indexName, dimensions)
+		vs, err := NewRedisVectorStore(redisClient, indexName, dimensions, cfg.TTL)
 		if err != nil {
 			logger.WithError(err).Warn("Failed to initialize vector store, will use memory cache only")
 		} else {
@@ -122,18 +121,16 @@ func (c *SemanticCacheV2) SetTracingHooks(hooks TracingHooks) {
 	}
 }
 
-// Get looks up a semantically similar cached response
+// Get looks up a semantically similar cached response within partition
+// (see SemanticPartition: tenant + request context). An empty partition or a
+// missing tenant is a miss; there is no unscoped fallback.
 // Tracing hooks are used to create proper span hierarchy for embedding and search operations.
-func (c *SemanticCacheV2) Get(ctx context.Context, query string) (*CachedResponse, bool) {
-	if query == "" {
+func (c *SemanticCacheV2) Get(ctx context.Context, partition, query string) (*CachedResponse, bool) {
+	tenantID := TenantFromContext(ctx)
+	if query == "" || partition == "" || tenantID == "" {
 		c.misses.Add(1)
 		return nil, false
 	}
-
-	// Extract tenantID from context — skip vector store cache when empty
-	// to prevent cross-tenant data leakage. Memory cache fallback is
-	// process-local so it's inherently single-tenant safe.
-	tenantID := contextkeys.GetTenantID(ctx)
 
 	// 1. Generate embedding using router (automatically resolves provider)
 	// Wrap in embedding span for proper trace hierarchy
@@ -145,8 +142,8 @@ func (c *SemanticCacheV2) Get(ctx context.Context, query string) (*CachedRespons
 
 		logger.WithError(err).Warn("Failed to generate embedding, falling back to memory cache")
 		c.errors.Add(1)
-		// Fallback to memory cache with MinHash
-		resp, found := c.memoryCache.Get(query)
+		// Fallback to the partitioned MinHash memory cache.
+		resp, found := c.memoryCache.Get(partition, query)
 		if found {
 			c.memoryHits.Add(1)
 		} else {
@@ -160,11 +157,11 @@ func (c *SemanticCacheV2) Get(ctx context.Context, query string) (*CachedRespons
 	embeddingSpan.SetSuccess()
 	embeddingSpan.End()
 
-	// 2. Search in Redis vector store if available and tenantID is set
+	// 2. Search in Redis vector store, filtered to the caller's partition.
 	// Wrap in search span for proper trace hierarchy
-	if c.vectorStore != nil && tenantID != "" {
+	if c.vectorStore != nil {
 		searchCtx, searchSpan := c.tracingHooks.StartSearchSpan(ctx, "redis")
-		results, err := c.vectorStore.Search(searchCtx, embedding, 5, c.config.SimilarityThreshold, tenantID)
+		results, err := c.vectorStore.Search(searchCtx, embedding, 5, c.config.SimilarityThreshold, partition)
 		if err != nil {
 			// Use SetWarning instead of SetError - cache failures are non-critical
 			// The request will continue with fallback to provider
@@ -185,9 +182,7 @@ func (c *SemanticCacheV2) Get(ctx context.Context, query string) (*CachedRespons
 
 			c.hits.Add(1)
 			logger.WithFields(
-				"query", query,
 				"similarity", results[0].Score,
-				"cached_query", results[0].Query,
 			).Debug("Semantic cache HIT (vector store)")
 			return &results[0].Response, true
 		} else {
@@ -200,28 +195,29 @@ func (c *SemanticCacheV2) Get(ctx context.Context, query string) (*CachedRespons
 		}
 	}
 
-	// 3. Fallback to memory cache with MinHash
-	if resp, found := c.memoryCache.Get(query); found {
+	// 3. Fallback to the partitioned MinHash memory cache.
+	if resp, found := c.memoryCache.Get(partition, query); found {
 		c.memoryHits.Add(1)
-		logger.WithFields("query", query).Debug("Semantic cache HIT (memory fallback)")
+		logger.Debug("Semantic cache HIT (memory fallback)")
 		return resp, true
 	}
 
 	c.misses.Add(1)
-	logger.WithFields("query", query).Debug("Semantic cache MISS")
+	logger.Debug("Semantic cache MISS")
 	return nil, false
 }
 
-// Put stores a response in the semantic cache
+// Put stores a response in the semantic cache under partition. Without a
+// partition or an authenticated tenant nothing is stored.
 // Tracing hooks are used to create proper span hierarchy for embedding operations.
-func (c *SemanticCacheV2) Put(ctx context.Context, query string, response *CachedResponse) error {
+func (c *SemanticCacheV2) Put(ctx context.Context, partition, query string, response *CachedResponse) error {
 	if query == "" || response == nil {
 		return fmt.Errorf("query and response are required")
 	}
-
-	// Extract tenantID from context — skip vector store when empty
-	// to prevent unscoped cache entries from being created.
-	tenantID := contextkeys.GetTenantID(ctx)
+	tenantID := TenantFromContext(ctx)
+	if partition == "" || tenantID == "" {
+		return fmt.Errorf("semantic cache: refusing to store without a tenant partition")
+	}
 
 	// 1. Generate embedding using router
 	// Wrap in embedding span for proper trace hierarchy
@@ -233,8 +229,8 @@ func (c *SemanticCacheV2) Put(ctx context.Context, query string, response *Cache
 
 		logger.WithError(err).Warn("Failed to generate embedding for caching")
 		c.errors.Add(1)
-		// Still store in memory cache
-		c.memoryCache.Put(query, response)
+		// Still store in the partitioned memory cache
+		c.memoryCache.Put(partition, query, response)
 		return err
 	}
 	embeddingSpan.SetAttributes(map[string]interface{}{
@@ -243,19 +239,20 @@ func (c *SemanticCacheV2) Put(ctx context.Context, query string, response *Cache
 	embeddingSpan.SetSuccess()
 	embeddingSpan.End()
 
-	// 2. Store in Redis vector store if available and tenantID is set
-	if c.vectorStore != nil && tenantID != "" {
-		key := fmt.Sprintf("cache:semantic:%s:%s", tenantID, hashQuery(query))
-		if err := c.vectorStore.Store(ctx, key, embedding, response, tenantID); err != nil {
+	// 2. Store in Redis vector store. The key keeps the tenant prefix (so a
+	// tenant-scoped Clear still finds it); the indexed TAG is the partition.
+	if c.vectorStore != nil {
+		key := fmt.Sprintf("cache:semantic:%s:%s:%s", tenantID, partition, hashQuery(query))
+		if err := c.vectorStore.Store(ctx, key, embedding, response, partition); err != nil {
 			logger.WithError(err).Warn("Failed to store in Redis vector store")
 			c.errors.Add(1)
 		} else {
-			logger.WithFields("query", query, "key", key).Debug("Stored in vector store")
+			logger.WithFields("key", key).Debug("Stored in vector store")
 		}
 	}
 
-	// 3. Also store in memory cache as fallback
-	c.memoryCache.Put(query, response)
+	// 3. Also store in the partitioned memory cache as fallback
+	c.memoryCache.Put(partition, query, response)
 
 	return nil
 }
@@ -286,7 +283,7 @@ func (c *SemanticCacheV2) ResetStats() {
 
 // Clear removes all entries from the cache for the tenant in context.
 func (c *SemanticCacheV2) Clear(ctx context.Context) error {
-	tenantID := contextkeys.GetTenantID(ctx)
+	tenantID := TenantFromContext(ctx)
 
 	// Clear vector store — scoped to tenant when tenantID is available
 	if c.vectorStore != nil {
@@ -326,8 +323,11 @@ func hashQuery(query string) string {
 // SemanticCacheInterface defines the interface for semantic caches
 // This allows both SemanticCache (MinHash) and SemanticCacheV2 (embeddings) to be used interchangeably
 type SemanticCacheInterface interface {
-	Get(ctx context.Context, query string) (*CachedResponse, bool)
-	Put(ctx context.Context, query string, response *CachedResponse) error
+	// Get and Put operate on one partition (SemanticPartition: tenant +
+	// request context). Implementations must never match across partitions
+	// and must treat an empty partition as "no cache".
+	Get(ctx context.Context, partition, query string) (*CachedResponse, bool)
+	Put(ctx context.Context, partition, query string, response *CachedResponse) error
 	Clear(ctx context.Context) error
 	Size() int
 	Threshold() float64

@@ -20,7 +20,7 @@ function StudioListPage() {
                         <Loader loaderText='Loading workflows...' />
                     </div>
                 ) : error ? (
-                    <div className='flex-1 flex items-center justify-center text-red-400 light:text-red-600'>
+                    <div className='flex-1 flex items-center justify-center text-danger'>
                         Error loading workflows: {error.message}
                     </div>
                 ) : workflows.length === 0 ? (

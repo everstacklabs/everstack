@@ -65,16 +65,19 @@ const SEMANTICS: Record<
     { success: string; error: string; warning: string; info: string; neutral: string }
 > = {
     dark: {
-        success: '#34d399',
-        error: '#fb7185',
-        warning: '#fbbf24',
+        // Mirror --color-success / --color-danger / --color-warning (dark)
+        // in @everstack/tailwind-config/shared-styles.css.
+        success: '#90d7aa',
+        error: '#f69b98',
+        warning: '#f4c170',
         info: '#826cf5',
         neutral: 'rgba(255,255,255,0.45)',
     },
     light: {
-        success: '#059669',
-        error: '#e11d48',
-        warning: '#d97706',
+        // Mirror the light -solid status tokens.
+        success: '#2a8d4f',
+        error: '#c33939',
+        warning: '#ba6900',
         info: '#6d55e8',
         neutral: 'rgba(0,0,0,0.45)',
     },

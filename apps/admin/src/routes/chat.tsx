@@ -1,10 +1,12 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowRight, Loader2, ChevronDown, Bot, AlertTriangle } from 'lucide-react'
-import { Iconify } from '@everstack/ui/icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { create } from '@everstack/client'
-import { getOrCreatePlatformAgent } from '@/server/platform-agent'
+import {
+  getOrCreatePlatformAgent,
+  NoModelProviderError,
+} from '@/server/platform-agent'
 import { createSession } from '@/server/agents'
 import { useSession_, useAgents } from '@/hooks/deployments/use-agents'
 import { useSession } from '@/hooks/auth/use-auth'
@@ -20,7 +22,11 @@ import {
   type MentionComposerInputHandle,
 } from '@/components/deployments/agents/mention-composer-input'
 import { Button } from '@everstack/ui/components'
-import { ContextSelector } from '@/components/home/context-selector'
+import { QuickTopics } from '@/components/home/quick-topics'
+import {
+  AssistantSetupCard,
+  useStickyError,
+} from '@/components/home/assistant-setup'
 import { ModelPicker } from '@/components/providers/model-picker'
 import { cn } from '@/lib/utils'
 import { EverstackLogo } from '@/components/brand/everstack-logo'
@@ -50,14 +56,19 @@ function ChatPage() {
     data: platformAgent,
     isLoading: isAgentLoading,
     error: agentError,
+    refetch: refetchPlatformAgent,
   } = useQuery({
     queryKey: ['platform-agent', orgId],
     queryFn: getOrCreatePlatformAgent,
     enabled: !!orgId,
     staleTime: Infinity,
-    retry: 2,
+    // A missing provider does not fix itself: skip the retries so the key
+    // step shows at once.
+    retry: (count, err) => !(err instanceof NoModelProviderError) && count < 2,
   })
   const platformAgentId = platformAgent?.id ?? ''
+  // Held across refetches, so the setup card survives its own retry.
+  const platformAgentError = useStickyError(agentError, !!platformAgentId)
 
   // Persist last active session
   useEffect(() => {
@@ -97,7 +108,10 @@ function ChatPage() {
     <NewChatView
       platformAgentId={platformAgentId}
       isPlatformAgentLoading={isAgentLoading}
-      platformAgentError={agentError instanceof Error ? agentError : null}
+      platformAgentError={platformAgentError}
+      retryPlatformAgent={async () =>
+        Boolean((await refetchPlatformAgent()).data)
+      }
       orgId={orgId}
       onSessionCreated={(id, selectedModel) => navigate({ to: '/chat', search: { session: id, model: selectedModel || undefined }, replace: true })}
     />
@@ -180,32 +194,26 @@ function SessionView({ sessionId, agentId, initialModel }: { sessionId: string; 
  * Empty state with composer. Creates a session on first message
  * and navigates to /chat?session={id}.
  */
-const QUICK_TOPICS = [
-  { label: 'Agents', icon: 'lucide:bot' },
-  { label: 'Observability', icon: 'hugeicons:telescope-02' },
-  { label: 'Gateway', icon: 'mingcute:route-line' },
-  { label: 'Evaluations', icon: 'lucide:flask-conical' },
-  { label: 'Vault', icon: 'stash:vault' },
-  { label: 'Sandbox', icon: 'lucide:box' },
-]
-
 function NewChatView({
   platformAgentId,
   isPlatformAgentLoading,
   platformAgentError,
+  retryPlatformAgent,
   orgId,
   onSessionCreated,
 }: {
   platformAgentId: string
   isPlatformAgentLoading: boolean
   platformAgentError: Error | null
+  // Re-resolves the assistant; resolves true once it exists.
+  retryPlatformAgent: () => Promise<boolean>
   orgId: string
   onSessionCreated: (sessionId: string, model: string) => void
 }) {
   const [userInput, setUserInput] = useState('')
-  const [context, setContext] = useState('auto')
   const [model, setModel] = useState('')
   const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
   const [selectedAgentId, setSelectedAgentId] = useState<string>('')
   const composerRef = useRef<MentionComposerInputHandle>(null)
   const queryClient = useQueryClient()
@@ -223,12 +231,13 @@ function NewChatView({
     const text = userInput.trim()
     if (!text || sending || !effectiveAgentId) return
     setUserInput('')
+    setSendError(null)
     setSending(true)
 
     try {
       const resp = await createSession({ tenantId: orgId, agentId: effectiveAgentId })
       const newSessionId = resp.session?.id
-      if (!newSessionId) return
+      if (!newSessionId) throw new Error('No session was returned.')
 
       // Start the turn FIRST so SSE events flow into the store,
       // then navigate so SessionView picks them up on mount.
@@ -244,6 +253,14 @@ function NewChatView({
       await new Promise((r) => setTimeout(r, 150))
 
       onSessionCreated(newSessionId, model)
+    } catch (err) {
+      // Nothing was sent: give the message back instead of losing it.
+      setUserInput(text)
+      setSendError(
+        err instanceof Error && err.message
+          ? err.message
+          : 'The message could not be sent.',
+      )
     } finally {
       setSending(false)
     }
@@ -263,6 +280,11 @@ function NewChatView({
     setUserInput(value)
   }, [])
 
+  const seedPrompt = useCallback((prompt: string) => {
+    setUserInput(prompt)
+    composerRef.current?.focus()
+  }, [])
+
   return (
     <div className="flex h-full flex-col items-center justify-center overflow-y-auto scrollbar-macos">
       <div className="w-full max-w-2xl px-6 space-y-6">
@@ -270,7 +292,7 @@ function NewChatView({
         <div className="text-center space-y-2">
           <EverstackLogo className="mx-auto mb-4" />
           <h1 className="text-2xl font-semibold text-white light:text-brand-main-50">How can I help you?</h1>
-          <p className="text-sm text-white/40 light:text-black/40">Manage agents, query traces, and control your platform.</p>
+          <p className="text-sm text-white/40 light:text-black/40">Create and manage agents by chat, or jump to any part of the platform.</p>
         </div>
 
         {/* Prompt bar */}
@@ -285,7 +307,6 @@ function NewChatView({
           />
           <div className="flex items-center justify-between px-3 pb-2.5">
             <div className="flex items-center gap-1.5">
-              <ContextSelector value={context} onChange={setContext} />
               <AgentPicker
                 value={effectiveAgentId}
                 onChange={setSelectedAgentId}
@@ -312,39 +333,38 @@ function NewChatView({
           </div>
         </div>
 
-        {platformAgentError && !platformAgentId ? (
-          <div className="flex items-start gap-2 rounded border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-200/80 light:text-amber-700/80">
+        {/* Nothing can take a message yet: say why and hold the fix,
+            instead of a send button that does nothing. */}
+        {!effectiveAgentId && platformAgentError && !isUserAgentsLoading ? (
+          // Not gated on the assistant loading: the card stays up while its
+          // own retry re-resolves the assistant.
+          <AssistantSetupCard
+            error={platformAgentError}
+            retry={retryPlatformAgent}
+          />
+        ) : !effectiveAgentId && !isPlatformAgentLoading && !isUserAgentsLoading ? (
+          <div className="rounded border border-brand-main-600 bg-brand-main-800/40 px-3 py-2 text-xs text-white/50 light:text-black/50 text-center">
+            No agents available yet. Create one in Agents to start chatting.
+          </div>
+        ) : effectiveAgentId && platformAgentError && !platformAgentId ? (
+          <div className="flex items-start gap-2 rounded border border-warning-border bg-warning-surface/60 px-3 py-2 text-xs text-warning/80">
             <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
             <div className="min-w-0 space-y-0.5">
-              <p className="font-medium text-amber-200 light:text-amber-700">Platform agent unavailable.</p>
-              <p className="text-amber-200/60 light:text-amber-700/60 break-words">{platformAgentError.message}</p>
-              <p className="text-amber-200/50 light:text-amber-700/50">Pick one of your agents above to keep going.</p>
+              <p className="font-medium text-warning">Platform agent unavailable.</p>
+              <p className="text-warning/60 break-words">{platformAgentError.message}</p>
+              <p className="text-warning/50">Pick one of your agents above to keep going.</p>
             </div>
           </div>
         ) : null}
 
-        {!effectiveAgentId && !isPlatformAgentLoading && !isUserAgentsLoading ? (
-          <div className="rounded border border-brand-main-600 bg-brand-main-800/40 px-3 py-2 text-xs text-white/50 light:text-black/50 text-center">
-            No agents available yet. Create one in Agents to start chatting.
-          </div>
+        {sendError ? (
+          <p role="alert" className="text-center text-xs text-danger">
+            {sendError}
+          </p>
         ) : null}
 
         {/* Quick topic pills */}
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          {QUICK_TOPICS.map((topic) => (
-            <button
-              key={topic.label}
-              onClick={() => {
-                setContext(topic.label.toLowerCase())
-                composerRef.current?.focus()
-              }}
-              className="flex items-center gap-1.5 rounded-full border border-brand-main-600 bg-brand-main-800/40 px-3 py-1.5 text-xs text-white/50 light:text-black/50 transition-colors hover:border-brand-main-500 hover:text-white/70 light:hover:text-black/70 hover:bg-brand-main-800/60"
-            >
-              <Iconify.Icon icon={topic.icon} className="size-3.5" />
-              {topic.label}
-            </button>
-          ))}
-        </div>
+        <QuickTopics onPrompt={seedPrompt} />
       </div>
     </div>
   )

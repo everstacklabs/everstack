@@ -423,7 +423,16 @@ func SetResponseProcessing(span trace.Span, model, responseID string, meta Respo
 // SetTraceInput sets the trace-level input payload on the root span WITHOUT truncation
 // All message content, headers, and metadata are stored completely
 func SetTraceInput(span trace.Span, messages []gw.Message) {
-	inputJSON := maybeRedact(SerializeToJSON(messages))
+	SetTraceInputJSON(span, SerializeToJSON(messages))
+}
+
+// SetTraceInputJSON sets the trace-level input payload from a pre-serialized
+// JSON string, applying the same redaction as SetTraceInput. Use when the
+// caller already holds the marshaled payload (e.g. the gateway shares one
+// marshal across several attributes) to avoid re-marshaling the same content.
+// The stored value is identical to SetTraceInput's.
+func SetTraceInputJSON(span trace.Span, inputJSON string) {
+	inputJSON = maybeRedact(inputJSON)
 	if inputJSON != "" {
 		span.SetAttributes(attribute.String(TraceInput, inputJSON))
 	}
@@ -441,7 +450,15 @@ func SetTraceInputTruncated(span trace.Span, messages []gw.Message) {
 // SetTraceOutput sets the trace-level output payload on the root span WITHOUT truncation
 // All response content, headers, and metadata are stored completely
 func SetTraceOutput(span trace.Span, choices []gw.Choice) {
-	outputJSON := maybeRedact(SerializeToJSON(choices))
+	SetTraceOutputJSON(span, SerializeToJSON(choices))
+}
+
+// SetTraceOutputJSON sets the trace-level output payload from a pre-serialized
+// JSON string, applying the same redaction as SetTraceOutput. See
+// SetTraceInputJSON for rationale. The stored value is identical to
+// SetTraceOutput's.
+func SetTraceOutputJSON(span trace.Span, outputJSON string) {
+	outputJSON = maybeRedact(outputJSON)
 	if outputJSON != "" {
 		span.SetAttributes(attribute.String(TraceOutput, outputJSON))
 	}

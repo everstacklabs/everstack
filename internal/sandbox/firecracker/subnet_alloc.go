@@ -3,9 +3,7 @@ package firecracker
 import (
 	"fmt"
 	"os/exec"
-	"regexp"
 	"strconv"
-	"strings"
 	"sync"
 )
 
@@ -34,7 +32,7 @@ var (
 // per-host slots are in use. Surfaced upward so the CreateVM path
 // can reject cleanly with a 503-shaped error instead of corrupting
 // the network state of an existing VM.
-var ErrSubnetsExhausted = fmt.Errorf("firecracker: no free /30 subnets in 10.0.0.0/16 (max 254 per host)")
+var ErrSubnetsExhausted = fmt.Errorf("firecracker: no free /30 subnets in the guest pool (max 254 per host)")
 
 // AllocateSubnet returns the lowest free third-octet in [1, 254] and
 // records it as in-use. The caller must call ReleaseSubnet on VM
@@ -86,11 +84,6 @@ func allocateLocked(hostTaken map[int]struct{}) (int, error) {
 	return 0, ErrSubnetsExhausted
 }
 
-// hostTapIPRe matches a host-side per-VM TAP address (10.0.<n>.1/30) in
-// `ip -o addr show` output. .1 is always the host TAP end of a /30; the
-// guest is .2. Anchoring on ".1/30" avoids matching guest addresses.
-var hostTapIPRe = regexp.MustCompile(`inet 10\.0\.(\d{1,3})\.1/30`)
-
 // hostAssignedSubnets returns the set of /30 third-octets whose host
 // TAP address is currently assigned on this node. Best-effort: any
 // error reading host state returns nil, and AllocateSubnet degrades to
@@ -107,7 +100,7 @@ func hostAssignedSubnets() map[int]struct{} {
 // of `ip -4 -o addr show`. Pure (no host calls) so it is unit-testable.
 func parseAssignedSubnets(ipOutput string) map[int]struct{} {
 	set := make(map[int]struct{})
-	for _, m := range hostTapIPRe.FindAllStringSubmatch(ipOutput, -1) {
+	for _, m := range activeGuestPool().hostIPRe.FindAllStringSubmatch(ipOutput, -1) {
 		if n, err := strconv.Atoi(m[1]); err == nil && n >= 1 && n <= 254 {
 			set[n] = struct{}{}
 		}
@@ -138,23 +131,15 @@ func ReserveSubnet(n int) error {
 	subnetAllocMu.Lock()
 	defer subnetAllocMu.Unlock()
 	if _, taken := subnetInUse[n]; taken {
-		return fmt.Errorf("firecracker: subnet 10.0.%d.0/30 already in use", n)
+		return fmt.Errorf("firecracker: subnet %s/30 already in use", guestSubnetBase(n))
 	}
 	subnetInUse[n] = struct{}{}
 	return nil
 }
 
-// subnetFromHostIP parses the third octet of a "10.0.<n>.1" host IP
-// so recovery can pass it to ReserveSubnet without re-deriving the
-// allocation scheme from the IP format.
-func subnetFromHostIP(hostIP string) (int, error) {
-	parts := strings.Split(hostIP, ".")
-	if len(parts) != 4 || parts[0] != "10" || parts[1] != "0" {
-		return 0, fmt.Errorf("firecracker: hostIP %q does not match 10.0.<n>.1", hostIP)
-	}
-	n, err := strconv.Atoi(parts[2])
-	if err != nil {
-		return 0, fmt.Errorf("firecracker: hostIP %q has non-numeric third octet: %w", hostIP, err)
-	}
-	return n, nil
+// guestSubnetBase renders the network address of subnet n in the
+// configured pool, for messages.
+func guestSubnetBase(n int) string {
+	p := activeGuestPool()
+	return fmt.Sprintf("%d.%d.%d.0", p.o1, p.o2, n)
 }

@@ -179,7 +179,7 @@ export function CustomColumnManager() {
                                         placeholder='customer_tier'
                                         className={INPUT_CLASS}
                                     />
-                                    <p className={key !== '' && !keyValid ? 'min-h-4 text-[11px] leading-snug text-red-400' : HELP_CLASS}>
+                                    <p className={key !== '' && !keyValid ? 'min-h-4 text-[11px] leading-snug text-danger' : HELP_CLASS}>
                                         {key !== '' && !keyValid
                                             ? 'Letters, numbers, underscore only.'
                                             : 'Stable id used for the table column.'}

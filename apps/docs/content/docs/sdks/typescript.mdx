@@ -56,7 +56,7 @@ const client = await Everstack.init({
 
 ```typescript
 const completion = await client.chat.completions.create({
-  model: "@openai/gpt-4o-mini",
+  model: "@openai/gpt-5.4-mini",
   messages: [{ role: "user", content: "Hello" }],
 });
 ```
@@ -65,7 +65,7 @@ Streaming:
 
 ```typescript
 const stream = await client.chat.completions.create({
-  model: "@anthropic/claude-sonnet-4-20250514",
+  model: "@anthropic/claude-sonnet-5-5",
   messages: [{ role: "user", content: "Write a haiku" }],
   stream: true,
 });
@@ -151,13 +151,13 @@ const reranked = await client.rerank.create({
 
 ```typescript
 const response = await client.responses.create({
-  model: "@openai/gpt-4o",
+  model: "@openai/gpt-5.4",
   input: "Summarize this document",
 });
 
 // Streaming
 const stream = await client.responses.create({
-  model: "@openai/gpt-4o",
+  model: "@openai/gpt-5.4",
   input: "Summarize this document",
   stream: true,
 });
@@ -348,7 +348,7 @@ import { createOpenAIConfig } from "@everstack/node/compat";
 const openai = new OpenAI(
   createOpenAIConfig({
     apiKey: process.env.EVERSTACK_API_KEY!,
-    baseURL: "https://{instance}.{region}.everstack.ai/openai/v1",
+    baseURL: "https://{instance}.{region}.everstack.ai/v1",
   })
 );
 ```

@@ -39,18 +39,18 @@ const statusConfig: Record<
 > = {
   running: {
     label: 'Running',
-    color: 'text-blue-400 light:text-blue-600',
-    bg: 'bg-blue-500/20',
+    color: 'text-info',
+    bg: 'bg-info-surface-strong',
   },
   completed: {
     label: 'Completed',
-    color: 'text-emerald-400 light:text-emerald-600',
-    bg: 'bg-emerald-500/20',
+    color: 'text-success',
+    bg: 'bg-success-surface-strong',
   },
   failed: {
     label: 'Failed',
-    color: 'text-red-400 light:text-red-600',
-    bg: 'bg-red-500/20',
+    color: 'text-danger',
+    bg: 'bg-danger-surface-strong',
   },
 }
 
@@ -194,7 +194,7 @@ export function ExecutionDetail() {
           <Icon icon="lucide:arrow-left" className="h-3 w-3" />
           Back
         </button>
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400 light:text-red-600">
+        <div className="rounded-lg border border-danger-border bg-danger-surface px-3 py-2 text-sm text-danger">
           {error}
         </div>
       </div>
@@ -271,7 +271,7 @@ export function ExecutionDetail() {
 
       {/* Error message */}
       {execution.errorMessage && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400 light:text-red-600">
+        <div className="rounded-lg border border-danger-border bg-danger-surface px-3 py-2 text-xs text-danger">
           <div className="flex items-start gap-2">
             <Icon
               icon="lucide:alert-circle"

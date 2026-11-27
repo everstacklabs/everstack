@@ -809,7 +809,10 @@ export function useSandboxEventsStream(sandboxId: string | undefined) {
     abortRef.current = controller
     ;(async () => {
       try {
-        const response = await fetch(url, { signal: controller.signal })
+        const response = await fetch(url, {
+          signal: controller.signal,
+          credentials: 'include',
+        })
         if (!response.ok || !response.body) {
           setIsStreaming(false)
           return
@@ -1078,7 +1081,10 @@ export function useSandboxStatsStream(sessionId: string | undefined) {
     abortRef.current = controller
     ;(async () => {
       try {
-        const response = await fetch(url, { signal: controller.signal })
+        const response = await fetch(url, {
+          signal: controller.signal,
+          credentials: 'include',
+        })
         if (!response.ok || !response.body) {
           streamingRef.current = false
           setIsStreaming(false)

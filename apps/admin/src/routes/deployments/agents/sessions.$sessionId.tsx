@@ -33,7 +33,7 @@ function SessionDetailPage() {
     if (error || !session) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center gap-4">
-                <div className="text-red-400 light:text-red-600">{error?.message ??'Session not found'}</div>
+                <div className="text-danger">{error?.message ??'Session not found'}</div>
                 <Link to="/deployments/agents" className="text-sm text-brand-secondary-400 hover:text-brand-secondary-300">
                     Back to agents
                 </Link>

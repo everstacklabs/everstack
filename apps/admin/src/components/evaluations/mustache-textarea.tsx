@@ -1,4 +1,5 @@
 import { useRef, type ReactNode } from 'react'
+import { replayMask } from '@/lib/replay-privacy'
 import { cn } from '@/lib/utils'
 
 // Mustache-highlighting textarea. A transparent <textarea> sits over a
@@ -97,6 +98,7 @@ export function MustacheTextarea({
         <div
           ref={highlightRef}
           aria-hidden
+          {...replayMask}
           className={cn(
             SHARED_TEXT,
             'pointer-events-none absolute inset-0 overflow-hidden px-3 py-2 text-white/85 light:text-black/85',

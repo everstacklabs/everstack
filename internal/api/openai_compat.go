@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+
+	httpmw "github.com/everstacklabs/everstack/internal/api/http/middleware"
 )
 
 // This file holds the response-side converters for the /openai/v1 surface.
@@ -75,6 +77,18 @@ func protoErrorToOpenAI(body []byte, fallbackStatus int) ([]byte, int, bool) {
 		} `json:"error"`
 		Code    int    `json:"code"`
 		Message string `json:"message"`
+	}
+	// Already OpenAI-shaped: a string error code (the spend limit refusal's
+	// "spend_limit_exceeded") is neither an HTTP status nor a gRPC code, so
+	// the body and its status are kept as they are.
+	var shaped struct {
+		Error *struct {
+			Code json.RawMessage `json:"code"`
+		} `json:"error"`
+	}
+	if json.Unmarshal(trimmed, &shaped) == nil && shaped.Error != nil &&
+		len(shaped.Error.Code) > 0 && shaped.Error.Code[0] == '"' {
+		return nil, 0, false
 	}
 	if json.Unmarshal(trimmed, &probe) != nil {
 		return nil, 0, false
@@ -234,6 +248,11 @@ type sseSniffWriter struct {
 	header    http.Header
 	buf       bytes.Buffer
 	status    int
+	// convert reshapes a buffered 200 body; nil means the chat
+	// completion conversion. convertErr, when set, replaces
+	// protoErrorToOpenAI for the error fallback.
+	convert    func([]byte) ([]byte, bool)
+	convertErr func([]byte, int) ([]byte, int, bool)
 }
 
 func (s *sseSniffWriter) Header() http.Header {
@@ -301,11 +320,21 @@ func (s *sseSniffWriter) finishBuffered() {
 		status = http.StatusOK
 	}
 	body := s.buf.Bytes()
+	convert, convertErr := s.convert, s.convertErr
+	if convert == nil {
+		convert = protoChatCompletionToOpenAI
+	}
+	if convertErr == nil {
+		convertErr = protoErrorToOpenAI
+	}
 	if status == http.StatusOK {
-		if conv, ok := protoChatCompletionToOpenAI(body); ok {
+		if conv, ok := convert(body); ok {
 			body = conv
+		} else if conv, mapped, ok := convertErr(body, status); ok {
+			// Some error paths report 200 with an error body.
+			body, status = conv, mapped
 		}
-	} else if conv, mapped, ok := protoErrorToOpenAI(body, status); ok {
+	} else if conv, mapped, ok := convertErr(body, status); ok {
 		body, status = conv, mapped
 	}
 	dst := s.w.Header()
@@ -320,4 +349,54 @@ func (s *sseSniffWriter) finishBuffered() {
 	dst.Set("Content-Type", "application/json")
 	s.w.WriteHeader(status)
 	_, _ = s.w.Write(body)
+}
+
+// protoResponseStreamToOpenAI reduces the grpc-gateway rendering of the
+// CreateResponse server stream (newline-delimited {"result":{...}} frames,
+// each a snapshot of the response) to the final snapshot, as an OpenAI
+// Responses API response object. Returns ok=false when the stream holds no
+// response, or ends in an error frame, so the error conversion handles it.
+func protoResponseStreamToOpenAI(body []byte) ([]byte, bool) {
+	var last map[string]interface{}
+	for _, line := range bytes.Split(body, []byte("\n")) {
+		line = bytes.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
+		var top map[string]interface{}
+		if json.Unmarshal(line, &top) != nil {
+			continue
+		}
+		obj, ok := top["result"].(map[string]interface{})
+		if !ok {
+			if _, _, isErr := protoErrorToOpenAI(line, http.StatusInternalServerError); isErr {
+				return nil, false
+			}
+			continue
+		}
+		if _, isDelta := obj["delta"]; isDelta {
+			// An incremental frame, not a snapshot of the response.
+			continue
+		}
+		last = obj
+	}
+	if last == nil {
+		return nil, false
+	}
+	out, err := json.Marshal(httpmw.ProtoResponseToOpenAI(last))
+	if err != nil {
+		return nil, false
+	}
+	return out, true
+}
+
+// protoResponseStreamErrorToOpenAI finds the error frame that ended a
+// CreateResponse stream and converts it (see protoErrorToOpenAI).
+func protoResponseStreamErrorToOpenAI(body []byte, fallbackStatus int) ([]byte, int, bool) {
+	for _, line := range bytes.Split(body, []byte("\n")) {
+		if conv, status, ok := protoErrorToOpenAI(line, fallbackStatus); ok {
+			return conv, status, true
+		}
+	}
+	return nil, 0, false
 }

@@ -67,8 +67,8 @@ export function WorkflowsTable({ workflows }: WorkflowsTableProps) {
             render: (w: Workflow) => (
                 <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${
                     w.enabled
-                        ? 'bg-emerald-500/20 text-emerald-300 light:text-emerald-600 border-emerald-500/30'
-                        : 'bg-amber-500/20 text-amber-300 light:text-amber-700 border-amber-500/30'
+                        ? 'bg-success-surface-strong text-success border-success-border'
+                        : 'bg-warning-surface-strong text-warning border-warning-border'
                 }`}>
                     {w.enabled ? 'Published' : 'Draft'}
                 </span>
@@ -112,7 +112,7 @@ export function WorkflowsTable({ workflows }: WorkflowsTableProps) {
                 <div className='flex items-center justify-center'>
                     <button
                         type='button'
-                        className='p-1 rounded hover:bg-red-500/20 hover:text-red-400 light:hover:text-red-600 transition-colors'
+                        className='p-1 rounded hover:bg-danger-surface-strong hover:text-danger transition-colors'
                         onClick={(e) => {
                             e.stopPropagation()
                             setDeleteConfirmId(w.id)

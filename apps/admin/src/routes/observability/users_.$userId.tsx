@@ -97,7 +97,7 @@ function UserDetailPage() {
                     <Card className="border-brand-main-500 rounded-md">
                         <CardContent className="pt-4 pb-4">
                             <div className="text-white/60 light:text-black/60 text-sm">Error Rate</div>
-                            <div className={`text-2xl font-bold mt-1 ${user.errorRate > 0.05 ? 'text-red-400 light:text-red-600' : 'text-white light:text-brand-main-50'}`}>
+                            <div className={`text-2xl font-bold mt-1 ${user.errorRate > 0.05 ? 'text-danger' : 'text-white light:text-brand-main-50'}`}>
                                 {(user.errorRate * 100).toFixed(1)}%
                             </div>
                         </CardContent>

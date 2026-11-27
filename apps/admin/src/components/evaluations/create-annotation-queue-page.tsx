@@ -13,6 +13,8 @@ import {
   evaluationPanelClass,
   evaluationTextareaClass,
 } from './evaluation-form'
+import { PlanLimitNotice } from '@/components/billing/plan-limit-notice'
+import { isPlanLimitError } from '@/lib/plan-limit-error'
 
 const { Input, Textarea } = ui
 
@@ -58,7 +60,9 @@ export function CreateAnnotationQueuePage() {
         return
       }
       void navigate({ to: '/evaluations/annotation-queues' })
-    } catch {
+    } catch (err) {
+      // A plan cap is shown inline with an Upgrade link, not as an error.
+      if (isPlanLimitError(err)) return
       toast.error('Failed to create annotation queue')
     }
   }
@@ -74,11 +78,14 @@ export function CreateAnnotationQueuePage() {
           </div>
 
           <form onSubmit={handleCreate} className="space-y-5 p-5">
-            {createMutation.error && (
-              <div className={evaluationErrorClass}>
-                {(createMutation.error as Error).message}
-              </div>
-            )}
+            {createMutation.error &&
+              (isPlanLimitError(createMutation.error) ? (
+                <PlanLimitNotice error={createMutation.error} />
+              ) : (
+                <div className={evaluationErrorClass}>
+                  {(createMutation.error as Error).message}
+                </div>
+              ))}
 
             <EvaluationField label="Name" htmlFor="annotation-queue-name">
               <Input

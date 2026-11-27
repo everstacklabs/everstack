@@ -240,11 +240,11 @@ function PairSelector({
     return (
         <div
             className={cn(
-                'rounded border border-amber-500/25 bg-amber-500/8 px-3 py-2 space-y-1.5',
+                'rounded border border-warning-border bg-warning-surface px-3 py-2 space-y-1.5',
                 enterClass,
             )}
         >
-            <div className="text-xs text-amber-300/90 light:text-amber-700/90">
+            <div className="text-xs text-warning/90">
                 Select two runs to diff. The typed comparison is pairwise: first pick is the
                 baseline, second is the candidate.
             </div>
@@ -305,7 +305,7 @@ function ComparePanel({ baselineId, candidateId }: { baselineId: string; candida
 
     if (error) {
         return (
-            <div className="rounded border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-400 light:text-red-600">
+            <div className="rounded border border-danger-border bg-danger-surface p-3 text-xs text-danger">
                 Comparison failed: {error.message}
             </div>
         )
@@ -338,7 +338,7 @@ function ComparePanel({ baselineId, candidateId }: { baselineId: string; candida
             {!comparisonId && (
                 <div
                     className={cn(
-                        'rounded border border-amber-500/25 bg-amber-500/8 px-3 py-2 text-xs text-amber-300/90 light:text-amber-700/90',
+                        'rounded border border-warning-border bg-warning-surface px-3 py-2 text-xs text-warning/90',
                         enterClass,
                     )}
                     style={enterDelay(1)}
@@ -373,7 +373,7 @@ function RunLabel({ run, role }: { run: EvalRun; role: 'baseline' | 'candidate' 
             {r.isBaseline && (
                 <Badge
                     variant="outline"
-                    className="text-[10px] text-amber-400 light:text-amber-700 border-amber-500/30 inline-flex items-center gap-0.5 shrink-0"
+                    className="text-[10px] text-warning border-warning-border inline-flex items-center gap-0.5 shrink-0"
                 >
                     <Flag className="h-2.5 w-2.5" /> Baseline
                 </Badge>
@@ -465,7 +465,7 @@ function CompareHeader({
 const SCORER_VERDICT_STYLE: Record<string, { cls: string; label: string }> = {
     improvement: { cls: statusTint.success.text, label: 'improvement' },
     regression: { cls: statusTint.error.text, label: 'regression' },
-    inconclusive: { cls: 'text-amber-400/80 light:text-amber-700/80', label: 'not significant' },
+    inconclusive: { cls: 'text-warning/80', label: 'not significant' },
     insufficient: { cls: faintText, label: 'n too low' },
 }
 
@@ -692,7 +692,7 @@ function ComparisonRowsGrid({ comparisonId }: { comparisonId: string }) {
                     <Loader2 className="size-4 animate-spin mr-2" /> Loading rows…
                 </div>
             ) : query.error && rows.length === 0 ? (
-                <div className="px-3 py-6 text-center text-xs text-red-400 light:text-red-600">
+                <div className="px-3 py-6 text-center text-xs text-danger">
                     Could not load comparison rows: {query.error.message}
                 </div>
             ) : rows.length === 0 ? (
@@ -789,7 +789,7 @@ function DiffGridRow({
             className={cn(
                 'border-b border-brand-main-700/30 last:border-0 border-l-2',
                 'transition-colors duration-200 ease-out-strong',
-                row.regression ? 'border-l-rose-500/60 bg-rose-500/5' : 'border-l-transparent',
+                row.regression ? 'border-l-danger-border bg-danger-surface/60' : 'border-l-transparent',
                 animate && enterClass,
             )}
             style={animate ? enterDelay(index) : undefined}
@@ -878,14 +878,14 @@ function OutputDiff({ a, b }: { a: string; b: string }) {
                 ) : seg.type === 'add' ? (
                     <ins
                         key={i}
-                        className="rounded-[2px] bg-emerald-500/15 text-emerald-200 no-underline light:bg-emerald-500/15 light:text-emerald-800"
+                        className="rounded-[2px] bg-success-surface-strong text-success no-underline"
                     >
                         {seg.text}
                     </ins>
                 ) : (
                     <del
                         key={i}
-                        className="rounded-[2px] bg-rose-500/15 text-rose-300 line-through decoration-rose-400/50 light:bg-rose-500/15 light:text-rose-700"
+                        className="rounded-[2px] bg-danger-surface-strong text-danger line-through decoration-danger/50"
                     >
                         {seg.text}
                     </del>

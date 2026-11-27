@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { isCloudManaged, getCloudConsoleUrl } from '@/lib/cloud-mode'
+import { isCloudManaged } from '@/lib/cloud-mode'
+import { cloudLoginURLForPage } from '@/lib/auth-redirect'
 import { resetPostHog } from '@/lib/posthog'
 import { setActiveOrgId } from '@/lib/active-org'
 import { useAgentSessionStore } from '@/stores/agent-session-store'
@@ -94,8 +95,10 @@ export function useGlobalLogoutWatcher() {
             setActiveOrgId(null)
             queryClient.clear()
             useAgentSessionStore.getState().clearAll()
-            const target = `${getCloudConsoleUrl()}/login`
-            window.location.href = target
+            // The cascade ended the cloud session too, so the cloud shows
+            // its sign-in form; naming this instance as the return target
+            // brings the user back here once they sign in again.
+            window.location.href = cloudLoginURLForPage()
         }, POLL_MS)
 
         return () => {

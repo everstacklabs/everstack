@@ -3,6 +3,7 @@ package validator
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"strings"
 
 	"github.com/everstacklabs/everstack/internal/lib/logger"
@@ -10,17 +11,21 @@ import (
 )
 
 // ValidateAndFix runs startup validation on the assembled config. It logs
-// warnings for common misconfigurations but never crashes — the binary should
-// always start, and bad config surfaces as runtime errors (connection failures
-// etc.) rather than startup panics.
+// warnings for common misconfigurations, and returns an error only for values
+// that would make the gateway less secure than the operator asked for: an
+// unrecognised auth.mode is refused rather than guessed at.
 //
 // It may mutate cfg to auto-fix recoverable issues (e.g. generating a random
-// session secret when auth.mode=builtin but no secret is configured).
-func ValidateAndFix(cfg *Config) {
+// session secret when auth.mode=builtin but no secret is configured, or
+// normalising the case of auth.mode).
+func ValidateAndFix(cfg *Config) error {
 	validateDatabase(cfg)
-	validateAuth(cfg)
+	if err := validateAuth(cfg); err != nil {
+		return err
+	}
 	validateCache(cfg)
 	validateSecurity()
+	return nil
 }
 
 // validateDatabase warns when the Postgres DSN still has the embedded default
@@ -35,26 +40,44 @@ func validateDatabase(cfg *Config) {
 	}
 }
 
-// validateAuth checks auth.mode and, when builtin auth is selected, ensures a
-// session secret is present (auto-generating one if missing).
-func validateAuth(cfg *Config) {
+// AuthModes lists the accepted values of auth.mode (EVS_AUTH_MODE).
+var AuthModes = []string{"none", "builtin", "oidc"}
+
+// NormalizeAuthMode trims and lower-cases an auth.mode value. Empty means the
+// documented default, "none". Any other unrecognised value is an error: the
+// operator asked for something, and falling back to no authentication would
+// silently open the dashboard to anyone.
+func NormalizeAuthMode(raw string) (string, error) {
+	mode := strings.ToLower(strings.TrimSpace(raw))
+	if mode == "" {
+		return "none", nil
+	}
+	for _, valid := range AuthModes {
+		if mode == valid {
+			return mode, nil
+		}
+	}
+	return "", fmt.Errorf("auth.mode %q is not a recognised authentication mode; set auth.mode (EVS_AUTH_MODE) to one of: %s", raw, strings.Join(AuthModes, ", "))
+}
+
+// validateAuth checks auth.mode, normalises it in place so the server sees
+// the canonical value, and, when builtin auth is selected, ensures a session
+// secret is present (auto-generating one if missing).
+func validateAuth(cfg *Config) error {
 	if cfg.Auth == nil {
-		return
+		return nil
 	}
 
-	mode := strings.ToLower(strings.TrimSpace(cfg.Auth.Mode))
-	switch mode {
-	case "", "none":
-		cfg.Auth.Mode = "none"
-	case "builtin":
-		validateBuiltinAuth(cfg)
-	case "oidc":
-		// OIDC validation is handled at connect time
-	default:
-		logger.WithFields("auth_mode", cfg.Auth.Mode).
-			Warn("auth: unrecognised mode, falling back to \"none\" — valid values are none, builtin, oidc")
-		cfg.Auth.Mode = "none"
+	mode, err := NormalizeAuthMode(cfg.Auth.Mode)
+	if err != nil {
+		return err
 	}
+	cfg.Auth.Mode = mode
+	if mode == "builtin" {
+		validateBuiltinAuth(cfg)
+	}
+	// OIDC validation is handled at connect time.
+	return nil
 }
 
 // validateBuiltinAuth auto-generates a random session secret when none is

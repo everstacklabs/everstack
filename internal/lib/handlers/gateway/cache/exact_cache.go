@@ -3,8 +3,7 @@ package cache
 
 import (
 	"context"
-	"sort"
-	"strings"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -35,13 +34,21 @@ type CachedResponse struct {
 
 	// RequestHash is the xxhash of the original request
 	RequestHash uint64
+
+	// TenantID is the authenticated tenant that produced this entry. It is
+	// set by the cache on store and re-checked on every read; an entry is
+	// never served to any other tenant.
+	TenantID string
 }
 
 // ExactCache provides exact-match caching for LLM requests.
 // It uses xxHash for fast hashing and LRU for eviction.
 //
 // Cache key is computed from:
-//   - model + sorted(messages) + temperature + max_tokens
+//   - key version + authenticated tenant + the request's CacheFingerprint
+//     (every output-affecting field, in order)
+//
+// Entries are tenant-owned: see scope.go.
 //
 // Performance targets:
 //   - Cache hit: <1ms
@@ -111,6 +118,19 @@ type ChatRequest interface {
 	GetMaxTokens() int
 	GetTopP() float64
 	GetStream() bool
+
+	// CacheFingerprint is a deterministic encoding of every request field
+	// that can change the output: model, every message (in order, all
+	// content parts), system prompt / instructions, tools and tool choice,
+	// response format and sampling parameters. Transport-only fields
+	// (stream flag, request metadata) are excluded. It is the exact-cache key
+	// material.
+	CacheFingerprint() []byte
+
+	// SemanticContextFingerprint is CacheFingerprint with the text of the
+	// final user turn (the semantic query) left out. Semantic matches are
+	// only considered between requests with identical context.
+	SemanticContextFingerprint() []byte
 }
 
 // Message represents a chat message for cache key computation.
@@ -141,6 +161,12 @@ func (r *SimpleChatRequest) GetTemperature() float64 { return r.Temperature }
 func (r *SimpleChatRequest) GetMaxTokens() int       { return r.MaxTokens }
 func (r *SimpleChatRequest) GetTopP() float64        { return r.TopP }
 func (r *SimpleChatRequest) GetStream() bool         { return r.Stream }
+func (r *SimpleChatRequest) CacheFingerprint() []byte {
+	return FieldFingerprint(r)
+}
+func (r *SimpleChatRequest) SemanticContextFingerprint() []byte {
+	return FieldSemanticContextFingerprint(r)
+}
 
 // SimpleMessage is a concrete implementation of Message for testing.
 type SimpleMessage struct {
@@ -151,30 +177,54 @@ type SimpleMessage struct {
 func (m *SimpleMessage) GetRole() string    { return m.Role }
 func (m *SimpleMessage) GetContent() string { return m.Content }
 
-// Get retrieves a cached response for the given request.
+// GetWithContext retrieves the caller tenant's cached response for req.
+// The tenant comes from ctx (TenantFromContext); without one it is a miss.
 // Returns the cached response and true if found and not expired.
-// This is the legacy method without tracing - prefer GetWithContext for new code.
-func (c *ExactCache) Get(req ChatRequest) (*CachedResponse, bool) {
-	return c.GetWithContext(context.Background(), req)
-}
-
-// GetWithContext retrieves a cached response with context support.
-// Returns the cached response and true if found and not expired.
-// Note: Tracing is handled at the fastpath engine layer to avoid import cycles.
 func (c *ExactCache) GetWithContext(ctx context.Context, req ChatRequest) (*CachedResponse, bool) {
-	_ = ctx // Context reserved for future use
-
 	if !c.enabled.Load() {
 		return nil, false
 	}
 
-	key := c.ComputeKey(req)
+	tenantID := TenantFromContext(ctx)
+	if tenantID == "" {
+		c.misses.Add(1)
+		return nil, false
+	}
 
+	key, ok := ComputeCacheKey(tenantID, req)
+	if !ok {
+		c.misses.Add(1)
+		return nil, false
+	}
+	return c.getOwned(key, tenantID)
+}
+
+// GetByHashWithContext retrieves a cached response by a hash previously
+// produced by ComputeCacheKey. The entry is only returned when it is owned by
+// the tenant in ctx.
+func (c *ExactCache) GetByHashWithContext(ctx context.Context, hash uint64) (*CachedResponse, bool) {
+	if !c.enabled.Load() {
+		return nil, false
+	}
+
+	tenantID := TenantFromContext(ctx)
+	if tenantID == "" {
+		c.misses.Add(1)
+		return nil, false
+	}
+
+	return c.getOwned(hash, tenantID)
+}
+
+func (c *ExactCache) getOwned(key uint64, tenantID string) (*CachedResponse, bool) {
 	c.mu.RLock()
 	resp, ok := c.cache.Get(key)
 	c.mu.RUnlock()
 
-	if !ok {
+	// Ownership is re-checked, not implied by the key: xxhash64 collisions
+	// can be constructed, and entries written before tenant scoping carry no
+	// owner at all.
+	if !ok || resp.TenantID == "" || resp.TenantID != tenantID {
 		c.misses.Add(1)
 		return nil, false
 	}
@@ -193,93 +243,61 @@ func (c *ExactCache) GetWithContext(ctx context.Context, req ChatRequest) (*Cach
 	return resp, true
 }
 
-// GetByHash retrieves a cached response by pre-computed hash.
-// This is the legacy method without tracing - prefer GetByHashWithContext for new code.
-func (c *ExactCache) GetByHash(hash uint64) (*CachedResponse, bool) {
-	return c.GetByHashWithContext(context.Background(), hash)
-}
-
-// GetByHashWithContext retrieves a cached response by pre-computed hash with context support.
-// Note: Tracing is handled at the fastpath engine layer to avoid import cycles.
-func (c *ExactCache) GetByHashWithContext(ctx context.Context, hash uint64) (*CachedResponse, bool) {
-	_ = ctx // Context reserved for future use
-
-	if !c.enabled.Load() {
-		return nil, false
-	}
-
-	c.mu.RLock()
-	resp, ok := c.cache.Get(hash)
-	c.mu.RUnlock()
-
-	if !ok {
-		c.misses.Add(1)
-		return nil, false
-	}
-
-	if time.Since(resp.CreatedAt) >= c.ttl {
-		c.mu.Lock()
-		c.cache.Remove(hash)
-		c.mu.Unlock()
-		c.misses.Add(1)
-		c.evicts.Add(1)
-		return nil, false
-	}
-
-	c.hits.Add(1)
-	return resp, true
-}
-
-// Set stores a response in the cache.
-// This is the legacy method without tracing - prefer SetWithContext for new code.
-func (c *ExactCache) Set(req ChatRequest, resp *CachedResponse) {
-	c.SetWithContext(context.Background(), req, resp)
-}
-
-// SetWithContext stores a response in the cache with context support.
-// Note: Tracing is handled at the fastpath engine layer to avoid import cycles.
+// SetWithContext stores resp for the tenant in ctx. Without a tenant nothing
+// is stored. resp is copied; the caller keeps ownership of its value.
 func (c *ExactCache) SetWithContext(ctx context.Context, req ChatRequest, resp *CachedResponse) {
-	_ = ctx // Context reserved for future use
-
 	if !c.enabled.Load() || resp == nil {
 		return
 	}
 
-	key := c.ComputeKey(req)
-	resp.CreatedAt = time.Now()
-	resp.RequestHash = key
+	tenantID := TenantFromContext(ctx)
+	if tenantID == "" {
+		return
+	}
 
-	c.mu.Lock()
-	c.cache.Add(key, resp)
-	c.mu.Unlock()
+	key, ok := ComputeCacheKey(tenantID, req)
+	if !ok {
+		return
+	}
+	c.setOwned(key, tenantID, resp)
 }
 
-// SetByHash stores a response with a pre-computed hash.
-// This is the legacy method without tracing - prefer SetByHashWithContext for new code.
-func (c *ExactCache) SetByHash(hash uint64, resp *CachedResponse) {
-	c.SetByHashWithContext(context.Background(), hash, resp)
-}
-
-// SetByHashWithContext stores a response with a pre-computed hash with context support.
-// Note: Tracing is handled at the fastpath engine layer to avoid import cycles.
+// SetByHashWithContext stores resp under a hash previously produced by
+// ComputeCacheKey for the tenant in ctx. Without a tenant nothing is stored.
 func (c *ExactCache) SetByHashWithContext(ctx context.Context, hash uint64, resp *CachedResponse) {
-	_ = ctx // Context reserved for future use
-
 	if !c.enabled.Load() || resp == nil {
 		return
 	}
 
-	resp.CreatedAt = time.Now()
-	resp.RequestHash = hash
+	tenantID := TenantFromContext(ctx)
+	if tenantID == "" {
+		return
+	}
+
+	c.setOwned(hash, tenantID, resp)
+}
+
+func (c *ExactCache) setOwned(key uint64, tenantID string, resp *CachedResponse) {
+	entry := cloneForStore(resp)
+	entry.CreatedAt = time.Now()
+	entry.RequestHash = key
+	entry.TenantID = tenantID
 
 	c.mu.Lock()
-	c.cache.Add(hash, resp)
+	c.cache.Add(key, entry)
 	c.mu.Unlock()
 }
 
-// Remove removes a specific entry from the cache.
-func (c *ExactCache) Remove(req ChatRequest) {
-	key := c.ComputeKey(req)
+// RemoveWithContext removes the tenant-in-ctx's entry for req.
+func (c *ExactCache) RemoveWithContext(ctx context.Context, req ChatRequest) {
+	tenantID := TenantFromContext(ctx)
+	if tenantID == "" {
+		return
+	}
+	key, ok := ComputeCacheKey(tenantID, req)
+	if !ok {
+		return
+	}
 	c.mu.Lock()
 	c.cache.Remove(key)
 	c.mu.Unlock()
@@ -302,49 +320,29 @@ func (c *ExactCache) IsEnabled() bool {
 	return c.enabled.Load()
 }
 
-// ComputeKey computes the cache key for a request.
-// The key is deterministic for the same logical request.
-func (c *ExactCache) ComputeKey(req ChatRequest) uint64 {
-	return ComputeCacheKey(req)
-}
-
-// ComputeCacheKey computes a cache key from a chat request.
-// Exported for use by other packages that need to pre-compute keys.
-func ComputeCacheKey(req ChatRequest) uint64 {
+// ComputeCacheKey computes the exact-cache key for a tenant's request.
+// The key is deterministic for the same tenant and logical request, and
+// differs across tenants for identical requests. ok is false when the request
+// must not be cached (no tenant, or no fingerprint could be produced).
+func ComputeCacheKey(tenantID string, req ChatRequest) (key uint64, ok bool) {
+	if tenantID == "" || req == nil {
+		return 0, false
+	}
+	fp := req.CacheFingerprint()
+	if fp == nil {
+		return 0, false
+	}
 	h := xxhash.New()
-
-	// Model
-	h.WriteString(req.GetModel())
-	h.WriteString("|")
-
-	// Messages (sorted by role for determinism with same content)
-	messages := req.GetMessages()
-	msgStrs := make([]string, len(messages))
-	for i, msg := range messages {
-		msgStrs[i] = msg.GetRole() + ":" + msg.GetContent()
-	}
-	sort.Strings(msgStrs)
-	for _, ms := range msgStrs {
-		h.WriteString(ms)
-		h.WriteString("|")
-	}
-
-	// Sampling parameters (these affect output)
-	// Use string formatting to avoid floating point comparison issues
-	h.WriteString(formatFloat(req.GetTemperature()))
-	h.WriteString("|")
-	h.WriteString(formatInt(req.GetMaxTokens()))
-	h.WriteString("|")
-	h.WriteString(formatFloat(req.GetTopP()))
-
-	return h.Sum64()
+	writeField(h, []byte(exactKeyVersion))
+	writeField(h, []byte(tenantID))
+	writeField(h, fp)
+	return h.Sum64(), true
 }
 
 // formatFloat formats a float for hashing (avoids floating point comparison issues).
 func formatFloat(f float64) string {
-	// Round to 4 decimal places for cache key stability
-	return strings.TrimRight(strings.TrimRight(
-		strings.Replace(string(rune(int(f*10000))), ".", "", 1), "0"), ".")
+	// Round to 4 decimal places for cache key stability.
+	return strconv.FormatFloat(f, 'f', 4, 64)
 }
 
 // formatInt formats an int for hashing.

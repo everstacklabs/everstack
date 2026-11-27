@@ -12,6 +12,7 @@ import {
   ResponseInputSchema,
   type CreateResponseResponse as ProtoCreateResponseResponse,
   type ResponseOutputItem as ProtoResponseOutputItem,
+  type ResponseDelta as ProtoResponseDelta,
 } from "@everstack/proto/everstack/gateway/v1/responses_pb.js";
 import {
   ContentPartSchema,
@@ -123,8 +124,44 @@ export interface ResponseObject {
   top_p: number;
   max_output_tokens: number;
   previous_response_id?: string;
+  /**
+   * Set only on a streamed `response.delta` event: what one output item grew
+   * by since the last event. Such an event carries no `status` and an empty
+   * `output`; apply the delta to the item it names.
+   */
+  delta?: ResponseDelta;
 }
 
+/**
+ * The growth of one output item in a streamed response. A message item's
+ * text grows by `text` (in the content part at `content_index`); a
+ * `function_call` item's arguments grow by `arguments`. Exactly one of the
+ * two is set.
+ */
+export interface ResponseDelta {
+  /** Id of the output item that grew */
+  item_id: string;
+  /** Index of that item in `output` */
+  output_index: number;
+  /** Index of the content part within a message item (text deltas only) */
+  content_index?: number;
+  /** Text appended to the message item's content part */
+  text?: string;
+  /** JSON fragment appended to the function_call item's arguments */
+  arguments?: string;
+}
+
+/**
+ * One event of a streamed response. `data` is a JSON-encoded
+ * {@link ResponseObject}:
+ *
+ * - `response.in_progress`: a full snapshot, sent when the response's
+ *   structure changes (a new output item or content part).
+ * - `response.delta`: only `id`, `object` and `delta` are meaningful; append
+ *   `delta.text` or `delta.arguments` to the item at `delta.output_index`.
+ * - `response.completed` (or `response.failed`, `response.incomplete`): the
+ *   final, full response.
+ */
 export interface ResponseStreamEvent {
   event: string;
   data: string;
@@ -205,8 +242,19 @@ function transformOutputItem(item: ProtoResponseOutputItem): ResponseOutputItem 
   };
 }
 
+function transformDelta(delta: ProtoResponseDelta): ResponseDelta {
+  const out: ResponseDelta = { item_id: delta.itemId, output_index: delta.outputIndex };
+  if (delta.argumentsDelta) {
+    out.arguments = delta.argumentsDelta;
+  } else {
+    out.content_index = delta.contentIndex;
+    out.text = delta.contentDelta;
+  }
+  return out;
+}
+
 function transformResponse(proto: ProtoCreateResponseResponse): ResponseObject {
-  return {
+  const res: ResponseObject = {
     id: proto.id,
     object: proto.object,
     created_at: Number(proto.createdAt),
@@ -226,6 +274,10 @@ function transformResponse(proto: ProtoCreateResponseResponse): ResponseObject {
     max_output_tokens: proto.maxOutputTokens,
     previous_response_id: proto.previousResponseId || undefined,
   };
+  if (proto.delta) {
+    res.delta = transformDelta(proto.delta);
+  }
+  return res;
 }
 
 // ---------------------------------------------------------------------------

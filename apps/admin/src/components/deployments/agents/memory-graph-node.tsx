@@ -70,7 +70,7 @@ function MemoryGraphNodeComponent({ id, data }: NodeProps<MemoryGraphNode>) {
           </div>
           <div
             className={`h-2 w-2 rounded-full ${
-              memory.isActive ? 'bg-emerald-500' : 'bg-brand-main-600'
+              memory.isActive ? 'bg-success-solid' : 'bg-brand-main-600'
             }`}
             title={memory.isActive ? 'Active memory' : 'Inactive memory'}
           />

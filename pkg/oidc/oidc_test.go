@@ -52,6 +52,7 @@ func TestAuthCodeFlowRoundTrip(t *testing.T) {
 		Name:                "Alice",
 		OrgID:               "org-acme",
 		OrgSlug:             "acme",
+		OrgRole:             "viewer",
 		InstanceID:          "inst-1",
 	})
 	if err != nil {
@@ -92,6 +93,10 @@ func TestAuthCodeFlowRoundTrip(t *testing.T) {
 	}
 	if claims.Email != "alice@acme.com" || !claims.EmailVerified {
 		t.Errorf("email claims wrong: %+v", claims)
+	}
+	// The relying party attaches the user with this role, not as owner.
+	if claims.OrgRole != "viewer" {
+		t.Errorf("org_role = %q, want viewer", claims.OrgRole)
 	}
 }
 

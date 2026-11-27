@@ -72,7 +72,7 @@ export function NodeContextMenu({ menu, onClose }: NodeContextMenuProps) {
                 <DropdownMenuSeparator className="bg-brand-main-500" />
                 <DropdownMenuItem
                     onSelect={handleDelete}
-                    className="text-red-400 light:text-red-600 border border-transparent hover:border-red-500/10  hover:bg-red-500/10 hover:text-red-400 light:hover:text-red-600 flex items-center gap-2"
+                    className="text-danger border border-transparent hover:border-danger-border hover:bg-danger-surface flex items-center gap-2"
                 >
                     <Trash2 className="h-4 w-4" />
                     Delete

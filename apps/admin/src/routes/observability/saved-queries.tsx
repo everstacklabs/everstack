@@ -292,7 +292,7 @@ function SavedQueriesPage() {
                         <Button
                             variant="outline"
                             onClick={clearHistory}
-                            className="ml-auto text-white/60 hover:text-rose-300"
+                            className="ml-auto text-white/60 hover:text-danger"
                         >
                             Clear history
                         </Button>
@@ -365,7 +365,7 @@ function IconBtn({ label, onClick, danger, children }: { label: string; onClick:
             aria-label={label}
             title={label}
             onClick={onClick}
-            className={cn('text-white/50', danger && 'hover:text-rose-300')}
+            className={cn('text-white/50', danger && 'hover:text-danger')}
         >
             {children}
         </Button>

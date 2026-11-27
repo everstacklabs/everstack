@@ -29,6 +29,12 @@ func (s *Server) RegisterMcpServer(ctx context.Context, req *connect.Request[mcp
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("name is required"))
 	}
 
+	// Refuse before the INSERT: a refused registry start must not leave a
+	// stdio row behind for hydration to pick up later.
+	if err := s.checkStdioWrite(req.Msg.TransportType == mcppb.McpTransportType_MCP_TRANSPORT_TYPE_STDIO, req.Msg.StdioConfig != nil); err != nil {
+		return nil, err
+	}
+
 	transportType := protoTransportToString(req.Msg.TransportType)
 	authType := protoAuthTypeToString(req.Msg.AuthType)
 	authConfig := structToJSON(req.Msg.AuthConfig)
@@ -172,6 +178,14 @@ func (s *Server) UpdateMcpServer(ctx context.Context, req *connect.Request[mcppb
 
 	serverID := mustParseInt64(req.Msg.Id)
 
+	// Same policy as Register: neither flipping the transport to stdio nor
+	// attaching a stdio config is allowed where stdio is disabled. Checked
+	// before the UPDATE is built so nothing is persisted.
+	wantsStdioTransport := req.Msg.TransportType != nil && *req.Msg.TransportType == mcppb.McpTransportType_MCP_TRANSPORT_TYPE_STDIO
+	if err := s.checkStdioWrite(wantsStdioTransport, req.Msg.StdioConfig != nil); err != nil {
+		return nil, err
+	}
+
 	// Build dynamic UPDATE
 	sets := []string{}
 	args := []interface{}{}
@@ -238,6 +252,10 @@ func (s *Server) UpdateMcpServer(ctx context.Context, req *connect.Request[mcppb
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("mcp server not found"))
 	}
 
+	// The live entry holds the old URL, credentials and enabled state. Drop it
+	// so the next use reconnects from this row, or is refused if now disabled.
+	s.dropFromRegistry(tenantID, serverID)
+
 	// Emit event
 	s.publishEvent(ctx, "mcp.server.updated", map[string]interface{}{
 		"server_id": serverID,
@@ -250,6 +268,16 @@ func (s *Server) UpdateMcpServer(ctx context.Context, req *connect.Request[mcppb
 	}
 
 	return connect.NewResponse(&mcppb.UpdateMcpServerResponse{Server: server}), nil
+}
+
+// dropFromRegistry closes this process's live connection to a tenant's server.
+// The registry is keyed by the canonical id, which the raw request id ("07")
+// need not be.
+func (s *Server) dropFromRegistry(tenantID string, serverID int64) {
+	id := strconv.FormatInt(serverID, 10)
+	if s.registry.OwnedBy(tenantID, id) {
+		s.registry.Unregister(id)
+	}
 }
 
 // ─── DeleteMcpServer ────────────────────────────────────────────────
@@ -277,7 +305,7 @@ func (s *Server) DeleteMcpServer(ctx context.Context, req *connect.Request[mcppb
 	}
 
 	// Remove from live registry
-	s.registry.Unregister(req.Msg.Id)
+	s.dropFromRegistry(tenantID, serverID)
 
 	// Emit event
 	s.publishEvent(ctx, "mcp.server.deleted", map[string]interface{}{

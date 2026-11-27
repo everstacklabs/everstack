@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 )
 
@@ -56,12 +57,23 @@ func (h *ManifestHandler) Start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID := strings.TrimSpace(r.URL.Query().Get("tenant_id"))
-	if tenantID == "" {
-		tenantID = strings.TrimSpace(r.Header.Get("x-tenant-id"))
+	// The tenant comes from the authenticated principal. tenant_id (query or
+	// x-tenant-id) only selects among the caller's own ids: the callback
+	// installs the new app's credentials for session.TenantID, so a caller-
+	// chosen tenant here would let anyone replace another tenant's GitHub App.
+	requested := strings.TrimSpace(r.URL.Query().Get("tenant_id"))
+	if requested == "" {
+		requested = strings.TrimSpace(r.Header.Get("x-tenant-id"))
 	}
-	if tenantID == "" {
-		http.Error(w, "tenant_id is required", http.StatusBadRequest)
+	tenantID, err := AuthorizedTenantID(r.Context(), requested)
+	if err != nil {
+		http.Error(w, "not authorized for this tenant", http.StatusForbidden)
+		return
+	}
+	// The callback installs the new app's credentials over the org's current
+	// ones, so only an owner or admin may start it.
+	if !contextkeys.IsVerifiedOrgAdmin(r.Context()) {
+		http.Error(w, "only organization owners and admins can connect GitHub", http.StatusForbidden)
 		return
 	}
 

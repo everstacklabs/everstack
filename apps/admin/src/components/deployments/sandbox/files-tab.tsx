@@ -252,16 +252,16 @@ export function FilesTab() {
                                                     onClick={() => handleDownload(entry)}
                                                     className="p-1 rounded text-white/45 light:text-black/45 hover:text-white light:hover:text-brand-main-50 hover:bg-brand-main-700/60"
                                                     title="Download"
-                                                    aria-label={`Download ${entry.name}`}
+                                                    aria-label="Download file"
                                                 >
                                                     <Iconify.Icon icon="heroicons:arrow-down-tray" className="size-4" />
                                                 </button>
                                             )}
                                             <button
                                                 onClick={() => handleDelete(entry)}
-                                                className="p-1 rounded text-white/45 light:text-black/45 hover:text-red-400 light:hover:text-red-600 hover:bg-red-500/10"
+                                                className="p-1 rounded text-white/45 light:text-black/45 hover:text-danger hover:bg-danger-surface"
                                                 title="Delete"
-                                                aria-label={`Delete ${entry.name}`}
+                                                aria-label="Delete file"
                                             >
                                                 <Iconify.Icon icon="heroicons:trash" className="size-4" />
                                             </button>

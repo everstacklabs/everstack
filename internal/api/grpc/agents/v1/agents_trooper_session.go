@@ -25,7 +25,6 @@ import (
 	channelpkg "github.com/everstacklabs/everstack/internal/channels"
 	agentscmd "github.com/everstacklabs/everstack/internal/commands/handlers/agents"
 	"github.com/everstacklabs/everstack/internal/cqrs"
-	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/everstacklabs/everstack/internal/query"
@@ -83,7 +82,7 @@ func (s *Server) handleCreateTrooperSessionStream(w http.ResponseWriter, r *http
 		http.Error(w, `{"error":{"code":"invalid_argument","message":"tenant_id is required"}}`, http.StatusBadRequest)
 		return
 	}
-	ctx = contextkeys.WithTenantID(ctx, tenantID)
+	ctx = agentrt.ContextWithTenantIdentity(ctx, tenantID)
 
 	// Load trooper (auto-wake if sleeping).
 	ws, err := s.ensureTrooperReadyForMessage(ctx, sys, trooperID, tenantID)
@@ -255,7 +254,7 @@ func (s *Server) handleSteerTrooperSessionStream(w http.ResponseWriter, r *http.
 		http.Error(w, `{"error":{"code":"invalid_argument","message":"tenant_id is required"}}`, http.StatusBadRequest)
 		return
 	}
-	ctx = contextkeys.WithTenantID(ctx, tenantID)
+	ctx = agentrt.ContextWithTenantIdentity(ctx, tenantID)
 
 	// Load session
 	swt, err := s.loadSessionWithRetry(ctx, sys, sessionID, tenantID)
@@ -706,7 +705,7 @@ func (s *Server) buildTrooperLoopInput(
 	}
 
 	// Sandbox config: always enabled for troopers, persistent, reuses provisioned sandbox
-	spawnConfig := agenttools.ParseSpawnConfig(agentConfig)
+	spawnConfig := agenttools.PlanSpawnConfig(ctx, agenttools.ParseSpawnConfig(agentConfig))
 	sandboxConfig := sandbox.SandboxConfig{
 		Enabled:        true,
 		Persistent:     true,

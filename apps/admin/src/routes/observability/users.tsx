@@ -80,7 +80,7 @@ function UsersPage() {
             width: 100,
             minWidth: 80,
             render: (u: any) => (
-                <span className={`text-xs ${u.errorRate > 0.05 ? 'text-red-400 light:text-red-600' : 'text-brand-main-100'}`}>
+                <span className={`text-xs ${u.errorRate > 0.05 ? 'text-danger' : 'text-brand-main-100'}`}>
                     {(u.errorRate * 100).toFixed(1)}%
                 </span>
             ),

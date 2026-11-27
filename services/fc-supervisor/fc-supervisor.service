@@ -1,0 +1,58 @@
+[Unit]
+# Everstack Firecracker VM supervisor.
+#
+# Runs on each host that participates in the firecracker fleet, owns
+# the lifetime of every Everstack VM scope (everstack-fc-*.scope
+# under everstack-firecracker.slice), and exposes a unix-socket
+# HTTP API for the in-cluster fcagent pod to call.
+#
+# Install:
+#   sudo cp fc-supervisor /usr/local/bin/fc-supervisor
+#   sudo cp fc-supervisor.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now fc-supervisor
+#
+# See docs/design/fc-supervisor.md for the architectural rationale.
+Description=Everstack Firecracker VM Supervisor
+After=network.target systemd-modules-load.service
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStartPre=/bin/mkdir -p /var/run/everstack
+ExecStart=/usr/local/bin/fc-supervisor \
+  --socket /var/run/everstack/fc-supervisor.sock \
+  --slice everstack-firecracker.slice
+Restart=always
+RestartSec=2
+StandardOutput=journal
+StandardError=journal
+
+# Run as root: we need to talk to PID 1's systemd manager, and the
+# scopes we create own firecracker children that need root for KVM
+# + iptables. Containers calling our socket are also root (fcagent
+# runs as root in its privileged pod), so socket permissions of
+# 0660 root:root work without extra group plumbing.
+User=root
+Group=root
+
+# Don't restrict process count — the supervisor itself forks
+# systemd-run/systemctl on each request, and they can fan out further.
+LimitNPROC=infinity
+LimitNOFILE=65535
+
+# Crucially, KillMode=process. The supervisor must not take any of
+# its scope-children with it on stop/restart. Pair with NotifyAccess
+# defaults (none) — Type=simple means systemd considers the unit
+# active once ExecStart starts, and exit triggers Restart.
+KillMode=process
+
+# Don't sandbox ourselves — we need to create transient scopes,
+# read host namespaces, and shell out to systemctl.
+NoNewPrivileges=no
+PrivateDevices=no
+PrivateNetwork=no
+ProtectKernelTunables=no
+
+[Install]
+WantedBy=multi-user.target

@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { replayMask } from '@/lib/replay-privacy'
 import { CornerDownLeft, X } from 'lucide-react'
 import { Button } from '@everstack/ui/components'
 import { cn } from '@/lib/utils'
@@ -41,7 +42,7 @@ function highlight(text: string): Tok[] {
     }
     raw.forEach((t, i) => {
         if (t.kind === 'ws') return toks.push({ text: t.text, cls: '' })
-        if (t.kind === 'str') return toks.push({ text: t.text, cls: 'text-emerald-400' })
+        if (t.kind === 'str') return toks.push({ text: t.text, cls: 'text-success' })
         if (t.kind === 'op') return toks.push({ text: t.text, cls: 'text-white/40 light:text-black/40' })
         // word: keyword, field (followed by an operator), or value
         const lower = t.text.toLowerCase()
@@ -104,6 +105,7 @@ export function EsqlEditor({
                 <div
                     ref={overlayRef}
                     aria-hidden="true"
+                    {...replayMask}
                     className="pointer-events-none absolute inset-0 overflow-auto whitespace-pre-wrap break-words px-3 py-3 font-mono text-[13px] leading-[1.7]"
                 >
                     {tokens.map((t, i) => (
@@ -137,7 +139,7 @@ export function EsqlEditor({
             </div>
 
             {errors.length > 0 ? (
-                <div className="flex items-start gap-2 border-t border-brand-main-700/70 bg-rose-500/[0.06] px-3 py-2 text-[12px] text-rose-300">
+                <div className="flex items-start gap-2 border-t border-brand-main-700/70 bg-danger-surface/60 px-3 py-2 text-[12px] text-danger">
                     <span className="mt-px font-mono text-[10px] uppercase tracking-[0.14em]">Error</span>
                     <span>{errors.join(' · ')}</span>
                 </div>

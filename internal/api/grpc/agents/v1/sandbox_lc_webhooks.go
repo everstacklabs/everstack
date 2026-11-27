@@ -2,6 +2,7 @@ package v1
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -16,7 +17,11 @@ func (s *Server) HandleListLCWebhooks(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusServiceUnavailable, "webhooks not configured")
 		return
 	}
-	tenantID, _ := s.resolveTenantID(r.Context(), r.URL.Query().Get("tenant_id"))
+	tenantID, err := s.resolveTenantID(r.Context(), "")
+	if err != nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
 	eps, err := s.lcWebhookRepo.ListEndpoints(r.Context(), tenantID)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
@@ -51,7 +56,11 @@ func (s *Server) HandleCreateLCWebhook(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	tenantID, _ := s.resolveTenantID(r.Context(), body.TenantID)
+	tenantID, err := s.resolveTenantID(r.Context(), "")
+	if err != nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
 	ep, err := s.lcWebhookRepo.CreateEndpoint(r.Context(), tenantID, body.URL, body.Events, body.Secret)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
@@ -68,7 +77,11 @@ func (s *Server) HandleDeleteLCWebhook(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusServiceUnavailable, "webhooks not configured")
 		return
 	}
-	tenantID, _ := s.resolveTenantID(r.Context(), r.URL.Query().Get("tenant_id"))
+	tenantID, err := s.resolveTenantID(r.Context(), "")
+	if err != nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
 	id := mux.Vars(r)["webhook_id"]
 	if err := s.lcWebhookRepo.DeleteEndpoint(r.Context(), tenantID, id); err != nil {
 		writeJSONError(w, http.StatusNotFound, err.Error())
@@ -83,8 +96,20 @@ func (s *Server) HandleListLCWebhookDeliveries(w http.ResponseWriter, r *http.Re
 		writeJSONError(w, http.StatusServiceUnavailable, "webhooks not configured")
 		return
 	}
-	tenantID, _ := s.resolveTenantID(r.Context(), r.URL.Query().Get("tenant_id"))
+	tenantID, err := s.resolveTenantID(r.Context(), "")
+	if err != nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
 	id := mux.Vars(r)["webhook_id"]
+	if _, err := s.lcWebhookRepo.GetEndpoint(r.Context(), tenantID, id); err != nil {
+		if errors.Is(err, lcwebhooks.ErrEndpointNotFound) {
+			writeJSONError(w, http.StatusNotFound, "webhook endpoint not found")
+			return
+		}
+		writeJSONError(w, http.StatusInternalServerError, "failed to load webhook endpoint")
+		return
+	}
 	ds, err := s.lcWebhookRepo.ListDeliveries(r.Context(), tenantID, id)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
@@ -101,7 +126,11 @@ func (s *Server) HandleTestLCWebhook(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusServiceUnavailable, "webhooks not configured")
 		return
 	}
-	tenantID, _ := s.resolveTenantID(r.Context(), r.URL.Query().Get("tenant_id"))
+	tenantID, err := s.resolveTenantID(r.Context(), "")
+	if err != nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
 	id := mux.Vars(r)["webhook_id"]
 	eps, err := s.lcWebhookRepo.ListEndpoints(r.Context(), tenantID)
 	if err != nil {

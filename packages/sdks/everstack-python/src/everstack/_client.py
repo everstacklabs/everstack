@@ -11,6 +11,7 @@ from .resources.models import Models, AsyncModels
 from .resources.audio import Audio, AsyncAudio
 from .resources.images import Images, AsyncImages
 from .resources.moderations import Moderations, AsyncModerations
+from .resources.decisions import Decisions, AsyncDecisions
 from .resources.rerank import Rerank, AsyncRerank
 from .resources.responses import Responses, AsyncResponses
 from .resources.agents import Agents, AsyncAgents
@@ -42,6 +43,7 @@ class Everstack:
     audio: Audio
     images: Images
     moderations: Moderations
+    decisions: Decisions
     rerank: Rerank
     responses: Responses
     agents: Agents
@@ -84,6 +86,7 @@ class Everstack:
         self.images = Images(self._transport)
         self.moderations = Moderations(self._transport)
         self.rerank = Rerank(self._transport)
+        self.decisions = Decisions(self._transport)
         self.responses = Responses(self._transport)
         self.agents = Agents(self._transport)
         self.datasets = Datasets(self._transport)
@@ -140,6 +143,7 @@ class AsyncEverstack:
     audio: AsyncAudio
     images: AsyncImages
     moderations: AsyncModerations
+    decisions: AsyncDecisions
     rerank: AsyncRerank
     responses: AsyncResponses
     agents: AsyncAgents
@@ -182,6 +186,7 @@ class AsyncEverstack:
         self.images = AsyncImages(self._transport)
         self.moderations = AsyncModerations(self._transport)
         self.rerank = AsyncRerank(self._transport)
+        self.decisions = AsyncDecisions(self._transport)
         self.responses = AsyncResponses(self._transport)
         self.agents = AsyncAgents(self._transport)
         self.datasets = AsyncDatasets(self._transport)

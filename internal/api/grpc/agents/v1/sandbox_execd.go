@@ -15,16 +15,46 @@ import (
 	"github.com/everstacklabs/everstack/internal/sandbox"
 )
 
-// resolveSandbox resolves a sandbox_id (ID or name) to an instance and its session ID.
-func (s *Server) resolveSandbox(sandboxID string) (*sandbox.Instance, string, error) {
+// resolveSandbox resolves a sandbox_id (ID or name) to an instance and its
+// session ID, always inside the caller's tenant.
+//
+// On the direct HTTP routes RequireSandboxOwnership has already resolved and
+// checked the sandbox, and that instance is returned as is. On the Connect
+// path the lookup is scoped to the authenticated tenant. There is no unscoped
+// fallback: GetBySandboxIDOrName matches a name across every tenant, so a
+// second lookup by the caller's string could land on someone else's sandbox
+// even after an ownership check passed.
+func (s *Server) resolveSandbox(ctx context.Context, sandboxID string) (*sandbox.Instance, string, error) {
 	if s.sandboxMgr == nil {
 		return nil, "", fmt.Errorf("sandbox feature is not enabled")
 	}
-	inst, ok := s.sandboxMgr.GetBySandboxIDOrName(sandboxID)
-	if !ok {
+	if inst, ok := ResolvedSandboxFromContext(ctx); ok && inst != nil {
+		return inst, inst.Config.SessionID, nil
+	}
+	scope, err := s.resolveSandboxTenantInstanceScope(ctx, "")
+	if err != nil {
+		return nil, "", fmt.Errorf("sandbox not found: %s", sandboxID)
+	}
+	inst, ok := s.sandboxMgr.GetBySandboxIDOrNameInScope(sandboxID, scope)
+	if !ok || inst == nil || !s.sandboxSessionMatchesTenant(inst) {
 		return nil, "", fmt.Errorf("sandbox not found: %s", sandboxID)
 	}
 	return inst, inst.Config.SessionID, nil
+}
+
+// trackedCommandForSandbox returns a background command only if it was
+// started in inst. Command ids are global to the process, so without this a
+// caller who passed the ownership check on their own sandbox could read or
+// interrupt a command running in someone else's.
+func (s *Server) trackedCommandForSandbox(cmdID string, inst *sandbox.Instance) (*sandbox.TrackedCommand, bool) {
+	if s.commandTracker == nil || inst == nil || cmdID == "" {
+		return nil, false
+	}
+	cmd, ok := s.commandTracker.Get(cmdID)
+	if !ok || cmd == nil || cmd.SandboxID != inst.ID {
+		return nil, false
+	}
+	return cmd, true
 }
 
 // sandboxNotEnabled writes a 503 JSON error.
@@ -53,7 +83,7 @@ func (s *Server) HandleSandboxPing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	inst, sessionID, err := s.resolveSandbox(sandboxID)
+	inst, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -88,7 +118,7 @@ func (s *Server) HandleSandboxCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	cmdInst, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -127,7 +157,7 @@ func (s *Server) HandleSandboxCommand(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		cmdID := s.commandTracker.Track(sandboxID, body.Command, body.CWD, cancel)
+		cmdID := s.commandTracker.Track(cmdInst.ID, body.Command, body.CWD, cancel)
 
 		go func() {
 			defer cancel()
@@ -199,7 +229,8 @@ func (s *Server) HandleSandboxCommandInterrupt(w http.ResponseWriter, r *http.Re
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	if _, _, err := s.resolveSandbox(sandboxID); err != nil {
+	sandboxInst, _, err := s.resolveSandbox(r.Context(), sandboxID)
+	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
 	}
@@ -212,7 +243,7 @@ func (s *Server) HandleSandboxCommandInterrupt(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if s.commandTracker == nil || !s.commandTracker.Interrupt(body.CommandID) {
+	if _, ok := s.trackedCommandForSandbox(body.CommandID, sandboxInst); !ok || !s.commandTracker.Interrupt(body.CommandID) {
 		sandboxJSONError(w, http.StatusNotFound, "command not found or already finished")
 		return
 	}
@@ -229,7 +260,8 @@ func (s *Server) HandleSandboxCommandStatus(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	vars := mux.Vars(r)
-	if _, _, err := s.resolveSandbox(vars["sandbox_id"]); err != nil {
+	sandboxInst, _, err := s.resolveSandbox(r.Context(), vars["sandbox_id"])
+	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
 	}
@@ -239,7 +271,7 @@ func (s *Server) HandleSandboxCommandStatus(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	cmd, ok := s.commandTracker.Get(vars["cmd_id"])
+	cmd, ok := s.trackedCommandForSandbox(vars["cmd_id"], sandboxInst)
 	if !ok {
 		sandboxJSONError(w, http.StatusNotFound, "command not found")
 		return
@@ -257,7 +289,8 @@ func (s *Server) HandleSandboxCommandLogs(w http.ResponseWriter, r *http.Request
 		return
 	}
 	vars := mux.Vars(r)
-	if _, _, err := s.resolveSandbox(vars["sandbox_id"]); err != nil {
+	sandboxInst, _, err := s.resolveSandbox(r.Context(), vars["sandbox_id"])
+	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
 	}
@@ -267,6 +300,10 @@ func (s *Server) HandleSandboxCommandLogs(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	if _, owned := s.trackedCommandForSandbox(vars["cmd_id"], sandboxInst); !owned {
+		sandboxJSONError(w, http.StatusNotFound, "command not found")
+		return
+	}
 	logs, ok := s.commandTracker.GetLogs(vars["cmd_id"])
 	if !ok {
 		sandboxJSONError(w, http.StatusNotFound, "command not found")
@@ -289,7 +326,7 @@ func (s *Server) HandleCreateCodeContext(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -332,7 +369,7 @@ func (s *Server) HandleListCodeContexts(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -372,7 +409,8 @@ func (s *Server) HandleGetCodeContext(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	vars := mux.Vars(r)
-	if _, _, err := s.resolveSandbox(vars["sandbox_id"]); err != nil {
+	_, sandboxSession, err := s.resolveSandbox(r.Context(), vars["sandbox_id"])
+	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
 	}
@@ -382,8 +420,10 @@ func (s *Server) HandleGetCodeContext(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cc, err := s.codeContextMgr.Get(r.Context(), vars["context_id"])
-	if err != nil {
-		sandboxJSONError(w, http.StatusNotFound, err.Error())
+	if err != nil || cc == nil || cc.SessionID != sandboxSession {
+		// A context id is global; only the checked sandbox's own contexts
+		// are visible through it.
+		sandboxJSONError(w, http.StatusNotFound, "code context not found")
 		return
 	}
 
@@ -404,7 +444,8 @@ func (s *Server) HandleDeleteCodeContext(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	vars := mux.Vars(r)
-	if _, _, err := s.resolveSandbox(vars["sandbox_id"]); err != nil {
+	_, sandboxSession, err := s.resolveSandbox(r.Context(), vars["sandbox_id"])
+	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
 	}
@@ -413,6 +454,10 @@ func (s *Server) HandleDeleteCodeContext(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	if cc, getErr := s.codeContextMgr.Get(r.Context(), vars["context_id"]); getErr != nil || cc == nil || cc.SessionID != sandboxSession {
+		sandboxJSONError(w, http.StatusNotFound, "code context not found")
+		return
+	}
 	if err := s.codeContextMgr.Delete(r.Context(), vars["context_id"]); err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -430,7 +475,7 @@ func (s *Server) HandleDeleteCodeContextsByLang(w http.ResponseWriter, r *http.R
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -459,7 +504,7 @@ func (s *Server) HandleExecuteCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -583,7 +628,7 @@ func (s *Server) HandleFileInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -613,7 +658,7 @@ func (s *Server) HandleDeleteFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -644,7 +689,7 @@ func (s *Server) HandleFilePermissions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -676,7 +721,7 @@ func (s *Server) HandleMoveFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -708,7 +753,7 @@ func (s *Server) HandleSearchFilesExecd(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -743,7 +788,7 @@ func (s *Server) HandleReplaceFileContent(w http.ResponseWriter, r *http.Request
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -776,7 +821,7 @@ func (s *Server) HandleUploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -844,7 +889,7 @@ func (s *Server) HandleDownloadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -876,7 +921,7 @@ func (s *Server) HandleCreateDirectories(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -908,7 +953,7 @@ func (s *Server) HandleDeleteDirectories(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -945,7 +990,7 @@ func (s *Server) HandleBulkUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -1018,7 +1063,7 @@ func (s *Server) HandleSandboxMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -1042,7 +1087,7 @@ func (s *Server) HandleSandboxMetricsStream(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return
@@ -1092,7 +1137,7 @@ func (s *Server) HandleRenewExpiration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sandboxID := mux.Vars(r)["sandbox_id"]
-	_, sessionID, err := s.resolveSandbox(sandboxID)
+	_, sessionID, err := s.resolveSandbox(r.Context(), sandboxID)
 	if err != nil {
 		sandboxJSONError(w, http.StatusNotFound, err.Error())
 		return

@@ -52,13 +52,13 @@ export const FreePlanBanner = () => {
                 <div className="mb-2">
                     <div className="flex justify-between text-xs text-brand-secondary-400/70 mb-1">
                         <span>Token usage</span>
-                        <span className={isNearTokenLimit ? 'text-amber-400 light:text-amber-700' : ''}>
+                        <span className={isNearTokenLimit ? 'text-warning' : ''}>
                             {formatNumber(tokensUsed)}/{formatNumber(tokenLimit)}
                         </span>
                     </div>
                     <div className="h-1.5 bg-brand-secondary-500/20 rounded-full overflow-hidden">
                         <div
-                            className={`h-full rounded-full transition-all ${isNearTokenLimit ? 'bg-amber-500' : 'bg-brand-secondary-500'
+                            className={`h-full rounded-full transition-all ${isNearTokenLimit ? 'bg-warning-solid' : 'bg-brand-secondary-500'
                                 }`}
                             style={{ width: `${tokenUsagePercent}%` }}
                         />

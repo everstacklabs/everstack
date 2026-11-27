@@ -1,0 +1,21 @@
+chat:
+  - gemma-4-31B-it
+  - MiniMax-M3.1-Flash
+  - GLM-5.3
+  - gpt-oss-120b
+
+function_calling:
+  - gemma-4-31B-it
+  - MiniMax-M3.1-Flash
+  - GLM-5.3
+  - gpt-oss-120b
+
+reasoning:
+  - gemma-4-31B-it
+  - MiniMax-M3.1-Flash
+  - GLM-5.3
+  - gpt-oss-120b
+
+vision:
+  - gemma-4-31B-it
+  - MiniMax-M3.1-Flash

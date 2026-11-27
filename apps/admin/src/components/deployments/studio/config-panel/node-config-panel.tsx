@@ -57,7 +57,7 @@ export function NodeConfigPanel() {
                         <div className="flex items-center gap-1">
                             <button
                                 onClick={() => selectedNodeId && removeNode(selectedNodeId)}
-                                className="rounded p-1 text-brand-main-400 hover:bg-red-500/20 hover:text-red-400 light:hover:text-red-600 transition-colors"
+                                className="rounded p-1 text-brand-main-400 hover:bg-danger-surface-strong hover:text-danger transition-colors"
                                 title="Delete node"
                             >
                                 <Icon icon="lucide:trash-2" className="h-4 w-4" />

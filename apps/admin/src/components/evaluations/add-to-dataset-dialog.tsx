@@ -131,12 +131,12 @@ function JsonField({
           )}
         </span>
         {error ? (
-          <span className="flex shrink-0 items-center gap-1 text-[10px] text-red-400">
+          <span className="flex shrink-0 items-center gap-1 text-[10px] text-danger">
             <AlertCircle className="h-3 w-3" />
             {error}
           </span>
         ) : (
-          <span className="flex shrink-0 items-center gap-1 text-[10px] text-emerald-400/70">
+          <span className="flex shrink-0 items-center gap-1 text-[10px] text-success/70">
             <Check className="h-3 w-3" />
             valid
           </span>

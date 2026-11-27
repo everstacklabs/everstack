@@ -1,0 +1,288 @@
+# Semantic Cache Configuration Example
+# This example shows how to configure semantic caching with different embedding providers
+
+server:
+  config:
+    port: 8089
+    external_domain: localhost
+  cors:
+    enabled: true # EVS_CORS_ENABLED
+    allow_credentials: true
+    allowed_origins:
+      - "http://localhost:3000"
+      - "http://localhost:4321"
+      - "http://localhost:5173"
+      - "http://localhost:8089"
+      - "http://localhost:8089"
+      - "https://gateway.example.test"
+    allowed_methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+      - "HEAD"
+      - "PATCH"
+    allowed_headers:
+      - "Origin"
+      - "Content-Type"
+      - "Accept"
+      - "Authorization"
+      - "x-evs-api-key"
+      - "x-evs-org-id"
+      - "x-evs-license-key"
+      - "x-user-agent"
+      - "x-grpc-web"
+      - "x-requested-with"
+      - "Cookie"
+  security:
+    api_key_hash_secret: "${EVS_API_KEY_HASH_SECRET}"
+  # OpenTelemetry configuration for logs and traces export to ClickHouse
+  telemetry:
+    otel:
+      enabled: true
+      mode: embedded # Use embedded mode with local collector sidecar
+      collector_url: "localhost:4317" # OTEL collector endpoint
+      service_name: "everstack-gateway"
+      tenant_type: "self_hosted"
+      instance_owner: "user"
+      # Direct export to ClickHouse (uses database.clickhouse.dsn for connection)
+      direct_export:
+        enabled: true # Enable to export logs/traces to ClickHouse
+      # Distributed tracing configuration
+      tracing:
+        sampling_rate: 1.0 # Trace 100% of requests
+        granularity: standard # Gateway + provider + embeddings
+        trace_provider_calls: true
+        trace_stream_chunks: false
+        trace_fallbacks: true
+        trace_key_rotation: false
+# Database configuration
+database:
+  mode: hybrid
+  postgres:
+    dsn: "postgres://postgres:postgres@localhost:5432/everstack?sslmode=disable"
+  clickhouse:
+    dsn: "clickhouse://clickhouse:clickhouse@localhost:9000/everstack"
+# Authentication Configuration
+auth:
+  mode: "builtin" # EVS_AUTH_MODE (none, builtin, oidc)
+  builtin:
+    session_secure: true
+    session_same_site: "none"
+    session_secret: "change-me-in-production-use-a-random-64-char-string"
+    session_max_age: 604800
+# Cache configuration with semantic caching enabled
+cache:
+  enabled: false
+  type: redis # Use Redis for production (or "memory" for testing)
+  memory:
+    max_size: 50000
+    ttl: 10m
+  redis:
+    address: "localhost:6380" # Redis Stack server (port 6380 to avoid conflict with OrbStack Redis)
+    password: "mysecretpassword" # Redis password (if required)
+    db: 0
+    ttl: 10m
+    pool_size: 100
+    # RedisSearch configuration for vector similarity
+    search:
+      enabled: true # Enable RedisSearch module
+      index_name: "semantic_cache_idx"
+  # Semantic cache with embeddings
+  semantic:
+    enabled: false # Enable semantic similarity caching
+    max_entries: 10000 # Max entries in memory fallback cache
+    ttl: 5m # Cache entry TTL
+    similarity_threshold: 0.85 # Cosine similarity threshold (0.0-1.0)
+    backend: "auto" # Try redis, fallback to memory
+    search:
+      enabled: true # Must enable RedisSearch
+      index_name: "semantic_cache_idx"
+    # Embedding configuration
+    embedding:
+      # Model name - must be configured in gateway.models section below
+      model: "text-embedding-3-small" # OpenAI embedding model
+      dimensions: 1536 # Embedding dimensions (auto-detected if 0)
+      cache_embeddings: true # Cache embeddings to avoid re-computation
+      cache_ttl: 1h # Embedding cache TTL
+      batch_size: 10 # Batch size for embedding generation
+      timeout: 30s # Timeout for embedding requests
+    # Tokenizer configuration
+    tokenizer:
+      type: "simple" # "bpe" or "simple"
+      vocab_file: "" # Path to BPE vocab file (optional)
+# Gateway configuration
+gateway:
+  models:
+    - provider: anthropic
+      model:
+        - claude-3-5-haiku-20241022
+      api_key: ${ANTHROPIC_API_KEY}
+      base_url: https://api.anthropic.com/v1
+      max_tokens: 4096
+    - provider: huggingface
+      model:
+        - meta-llama/Llama-3.1-8B-Instruct
+        - moonshotai/Kimi-K2-Thinking
+        - HuggingFaceTB/SmolLM3-3B
+        - dphn/Dolphin-Mistral-24B-Venice-Edition
+      api_key: ""
+      base_url: https://router.huggingface.co/v1
+      max_tokens: 4096
+    - provider: ollama
+      model:
+        - gemma3:12b
+      api_key: ""
+      base_url: http://localhost:11434
+      max_tokens: 4096
+      default_alias: gemma3:12b
+    - provider: openai
+      model:
+        - text-embedding-3-small
+        - text-embedding-3-large
+        - gpt-5.5
+        - gpt-5.4
+        - gpt-5.5-pro
+        - gpt-5.4-pro
+        - gpt-5.4-nano
+      api_key: ${OPENAI_API_KEY}
+      base_url: https://api.openai.com/v1
+      max_tokens: 4096
+      default_alias: text-embedding-3-small
+    - provider: qwen
+      model:
+        - qwen3-tts-vc
+        - qwen3-tts-flash
+        - qwen3-tts-vd
+        - qwen3-tts-instruct-flash
+        - qwen3-8b
+      api_key: ${DASHSCOPE_API_KEY}
+      base_url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+      max_tokens: 4096
+      default: true
+      default_alias: qwen3-8b
+  # Rate limiting
+  rate_limit:
+    enabled: true
+    requests_per_minute: 500
+    burst: 100
+    key_source: "correlation"
+# Features configuration
+features:
+  enable_memory: true
+  memory:
+    backend: pgvector # was: qdrant
+    embedding_models:
+      - model: text-embedding-3-small
+        dimension: 1536
+  # Fast-path engine for ultra-low latency
+  isolated_functions:
+    pool:
+      enabled: true # Enable warm container pooling
+      min_per_runtime: 1 # Minimum warm containers per runtime
+      max_per_runtime: 10 # Maximum containers per runtime
+      idle_timeout_seconds: 300 # Remove idle containers after 5 min
+      max_uses: 100 # Recycle after 100 executions
+      warmup_on_start: true
+  fastpath:
+    enabled: true
+    auth:
+      bloom_filter_size: 100000
+      bloom_false_positive_rate: 0.001
+      cache_ttl: "60s"
+    cache:
+      exact:
+        enabled: true
+        max_entries: 50000
+        ttl: "5m"
+      semantic:
+        enabled: true # This is legacy - use cache.semantic instead
+        max_entries: 10000
+        ttl: "5m"
+        similarity_threshold: 0.35
+        algorithm: "minhash"
+        num_hashes: 128
+        shingle_size: 2
+    streaming:
+      buffer_size: 32768
+      pool_size: 1024
+      connection_pool:
+        max_idle_per_host: 256
+        prewarm_connections: 10
+        prewarm_on_startup: true
+  # Gateway features
+  gateway:
+    enable_streaming: true
+    enable_embeddings: true
+    enable_sse: false
+  # Sandbox backend configuration
+  sandbox:
+    enabled: true
+    backend: "kubernetes" # "kubernetes" (cloud/default), "docker", or "firecracker" (Linux + /dev/kvm required)
+    docker:
+      host: "" # Docker socket (empty = auto-detect)
+      auto_pull: true
+      auto_build: true
+    kubernetes:
+      kubeconfig: "" # Path to kubeconfig (empty = in-cluster)
+      namespace: "everstack-sandboxes"
+      image_pull_policy: "IfNotPresent"
+      service_account: "default"
+      node_selector: {}
+    firecracker:
+      binary: "/usr/bin/firecracker"
+      kernel: "/var/lib/everstack/vmlinux.bin"
+      rootfs_dir: "/var/lib/everstack/rootfs"
+      work_dir: "/var/lib/everstack/vms"
+      pool_min_size: 2
+      pool_max_size: 10
+      pool_max_total: 50
+      replenish_interval_ms: 1000
+      replenish_batch: 3
+      warmup_on_start: false
+    ssh:
+      listen_addr: ":2223" # Default :2222, change to avoid OrbStack conflict
+      host: "localhost" # Tailscale IP of the server machine
+    default_image: "everstack/sandbox:base"
+    max_cpu: 4.0
+    max_memory_mb: 4096
+    max_disk_mb: 4096
+    max_timeout_seconds: 3600
+    port_exposure:
+      enabled: true
+      base_domain: "everstack.localhost"
+      listen_addr: ":8443"
+      max_ports_per_sandbox: 5
+# ===================================================================
+# Configuration Notes
+# ===================================================================
+#
+# 1. Semantic Cache Backend Options:
+#    - "redis": Use Redis with RedisSearch (production recommended)
+#    - "memory": Use in-memory cache only (testing/development)
+#    - "auto": Try Redis, fallback to memory (recommended)
+#
+# 2. Similarity Threshold:
+#    - 0.85-0.95: High similarity (fewer false positives, more misses)
+#    - 0.75-0.85: Medium similarity (balanced)
+#    - 0.60-0.75: Low similarity (more hits, more false positives)
+#
+# 3. Embedding Models:
+#    - OpenAI: text-embedding-3-small (1536 dims, $0.02/1M tokens)
+#    - OpenAI: text-embedding-3-large (3072 dims, $0.13/1M tokens)
+#    - Cohere: embed-english-v3.0 (1024 dims, $0.10/1M tokens)
+#    - Ollama: nomic-embed-text (768 dims, free, local)
+#
+# 4. Redis Setup:
+#    - Install Redis with RedisSearch module
+#    - Docker: docker run -p 6379:6379 redis/redis-stack:latest
+#    - Or use redis.conf to load the module
+#
+# 5. Performance Tips:
+#    - Enable cache_embeddings to avoid re-computing embeddings
+#    - Adjust similarity_threshold based on your use case
+#    - Use batch_size > 1 for better throughput
+#    - Monitor cache hit ratio and adjust threshold
+#
+# ===================================================================

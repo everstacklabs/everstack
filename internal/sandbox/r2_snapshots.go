@@ -2,6 +2,7 @@ package sandbox
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -119,7 +120,8 @@ func (m *SandboxManager) RestoreFromR2Snapshot(ctx context.Context, sandboxID, s
 	if !ok {
 		return nil, fmt.Errorf("backend %s advertises VM restore but does not implement it", m.backend.Name())
 	}
-	inst, err := restorer.RestoreVMSnapshot(ctx, sandboxID, tenantID, agentID, store)
+	policy := m.restoreNetworkPolicy(ctx, sandboxID, tenantID)
+	inst, err := restorer.RestoreVMSnapshot(ctx, sandboxID, tenantID, agentID, policy, store)
 	if err != nil {
 		if errors.Is(err, snapshot.ErrSnapshotMissing) {
 			return nil, nil
@@ -155,6 +157,59 @@ func (m *SandboxManager) RestoreFromR2Snapshot(ctx context.Context, sandboxID, s
 		"agent_id", agentID,
 	).Info("sandbox_manager: restored sandbox from R2 snapshot")
 	return inst, nil
+}
+
+// restoreNetworkPolicy reads the egress policy a restored sandbox must
+// come back with from its sandbox_instances record, scoped to the
+// tenant. The snapshot manifest is never consulted: it only describes
+// the guest at capture time, and an older manifest records no policy.
+//
+// Fails closed when the record cannot be read or names an unknown mode:
+// the VM restores in whitelist mode with an empty allowlist, so its DNS
+// proxy refuses every name. An empty mode on a real record is the
+// "allow" default the sandbox was created with.
+func (m *SandboxManager) restoreNetworkPolicy(ctx context.Context, sandboxID, tenantID string) RestoreNetworkPolicy {
+	failClosed := func(reason string, err error) RestoreNetworkPolicy {
+		fields := []interface{}{"sandbox_id", sandboxID, "tenant_id", tenantID, "reason", reason}
+		if err != nil {
+			fields = append(fields, "error", err.Error())
+		}
+		logger.WithFields(fields...).
+			Warn("sandbox_manager: no usable network policy for snapshot restore; restoring in whitelist mode with an empty allowlist")
+		return RestoreNetworkPolicy{Mode: NetworkWhitelist}
+	}
+	if m.db == nil {
+		return failClosed("no database", nil)
+	}
+	qCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	var raw []byte
+	const q = `SELECT config FROM sandbox_instances WHERE id = $1 AND tenant_id = $2`
+	if err := m.db.GetContext(qCtx, &raw, q, sandboxID, tenantID); err != nil {
+		return failClosed("sandbox record not readable", err)
+	}
+	var cfg struct {
+		TenantID     string   `json:"tenant_id"`
+		NetworkMode  string   `json:"network_mode"`
+		AllowedHosts []string `json:"allowed_hosts"`
+	}
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return failClosed("sandbox config not parseable", err)
+	}
+	if cfg.TenantID != "" && cfg.TenantID != tenantID {
+		return failClosed("sandbox config names another tenant", nil)
+	}
+	mode := NetworkMode(normalizedNetworkMode(cfg.NetworkMode))
+	switch mode {
+	case NetworkAllow, NetworkWhitelist, NetworkDeny:
+	default:
+		return failClosed(fmt.Sprintf("unknown network mode %q", cfg.NetworkMode), nil)
+	}
+	policy := RestoreNetworkPolicy{Mode: mode}
+	if mode == NetworkWhitelist {
+		policy.AllowedHosts = append([]string(nil), cfg.AllowedHosts...)
+	}
+	return policy
 }
 
 func (m *SandboxManager) snapshotStore() snapshot.Store {

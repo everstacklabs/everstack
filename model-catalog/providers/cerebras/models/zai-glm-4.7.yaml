@@ -1,7 +1,7 @@
 name: "zai-glm-4.7"
 display_name: "Z.AI GLM-4.7"
 family: "glm"
-status: "stable"
+status: "deprecated"
 release_date: "2026-01-07"
 
 cost:
@@ -69,3 +69,4 @@ variants:
     description: "Fastest response with reasoning disabled when the model permits it."
     parameters:
       reasoning_effort: "none"
+notes: "Deprecated by Cerebras on 2026-08-17; no replacement listed. No longer listed on the Cerebras models page as of 2026-11-24 (Shared Inference serves gpt-oss-120b and qwen-3.8-27b only)."

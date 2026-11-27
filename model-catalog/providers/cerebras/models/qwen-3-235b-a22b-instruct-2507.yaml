@@ -1,7 +1,7 @@
 name: "qwen-3-235b-a22b-instruct-2507"
 display_name: "Qwen 3 235B Instruct"
 family: "qwen"
-status: "stable"
+status: "deprecated"
 
 cost:
   input_per_1k: 0.0006
@@ -59,3 +59,4 @@ parameters:
   - key: "seed"
     display_name: "Seed"
     type: "integer"
+notes: "Deprecated by Cerebras on 2026-05-27. Migrate to gpt-oss-120b. No longer listed on the Cerebras models page as of 2026-11-24 (Shared Inference serves gpt-oss-120b and qwen-3.8-27b only)."

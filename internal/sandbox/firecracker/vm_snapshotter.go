@@ -31,12 +31,15 @@ func (b *FirecrackerBackend) SaveVMSnapshot(ctx context.Context, sandboxID, tena
 // RestoreVMSnapshot implements sandbox.VMRestorer. Reads the manifest
 // from the snapshot store, allocates a host-side TAP that matches the
 // snapshot's guest MAC (so the guest kernel sees no interface change),
-// then spawns a fresh firecracker and loads the snapshot.
+// then spawns a fresh firecracker, loads the snapshot and re-addresses
+// the guest onto the new /30. The egress policy comes from policy (the
+// sandbox record), never the manifest. On any failure the VM is killed
+// and the host network, /30 included, is released.
 //
 // On success the VM is registered in b.vms under sandboxID and a
 // sandbox.Instance is returned with Status = StatusRunning. Callers
 // (typically SandboxManager) re-register it in the per-session map.
-func (b *FirecrackerBackend) RestoreVMSnapshot(ctx context.Context, sandboxID, tenantID, agentID string, store snapshot.Store) (*sandbox.Instance, error) {
+func (b *FirecrackerBackend) RestoreVMSnapshot(ctx context.Context, sandboxID, tenantID, agentID string, policy sandbox.RestoreNetworkPolicy, store snapshot.Store) (*sandbox.Instance, error) {
 	if store == nil {
 		return nil, fmt.Errorf("firecracker.RestoreVMSnapshot: nil store")
 	}
@@ -45,27 +48,9 @@ func (b *FirecrackerBackend) RestoreVMSnapshot(ctx context.Context, sandboxID, t
 		return nil, err
 	}
 
-	// Allocate a host-side network if the snapshot had one. Use the
-	// snapshot's allowed-hosts / DNS so the restored VM gets the same
-	// egress policy. The MAC is overwritten with the snapshot's so
-	// LoadSnapshot's network override pairs correctly.
-	var netCfg *NetworkConfig
-	if manifest.Network != nil {
-		mode := sandbox.NetworkAllow
-		if len(manifest.Network.DNSServers) > 0 {
-			// Conservative: assume allow unless the snapshot's spec
-			// suggests a tighter mode. The full mode isn't currently
-			// recorded; future iterations can persist it.
-		}
-		cfg, netErr := SetupNetwork(sandboxID, mode, nil, manifest.Network.DNSServers)
-		if netErr != nil {
-			return nil, fmt.Errorf("firecracker.RestoreVMSnapshot: setup network: %w", netErr)
-		}
-		// Pin the MAC to the snapshot's value — the firecracker
-		// network-interfaces override only remaps host_dev_name,
-		// so the MAC has to match what the snapshot expects.
-		cfg.GuestMAC = manifest.Network.GuestMAC
-		netCfg = cfg
+	netCfg, err := setupRestoreNetwork(sandboxID, manifest, policy)
+	if err != nil {
+		return nil, err
 	}
 
 	vm, err := RestoreSnapshot(ctx, store, RestoreOpts{
@@ -77,10 +62,21 @@ func (b *FirecrackerBackend) RestoreVMSnapshot(ctx context.Context, sandboxID, t
 		Network:     netCfg,
 	})
 	if err != nil {
+		// Releases the TAP, iptables rules and the /30. RestoreSnapshot
+		// has already killed the VM if it got as far as booting one.
 		if netCfg != nil {
-			CleanupNetwork(netCfg)
+			cleanupNetworkFn(netCfg)
 		}
 		return nil, fmt.Errorf("firecracker.RestoreVMSnapshot: %w", err)
+	}
+
+	// Record the policy the VM actually runs under, so policy checks on
+	// the Instance (port exposure etc.) see it. No interface means deny.
+	if vm.Network == nil {
+		vm.Config.NetworkMode = sandbox.NetworkDeny
+	} else {
+		vm.Config.NetworkMode = policy.Mode
+		vm.Config.AllowedHosts = append([]string(nil), policy.AllowedHosts...)
 	}
 
 	// Register in the backend's vm map so subsequent backend.Status
@@ -106,4 +102,45 @@ func (b *FirecrackerBackend) RestoreVMSnapshot(ctx context.Context, sandboxID, t
 		Persistent: agentID != "",
 	}
 	return inst, nil
+}
+
+// setupNetworkFn is SetupNetwork, swappable in tests: the real one needs
+// root, ip and iptables.
+var setupNetworkFn = SetupNetwork
+
+// cleanupNetworkFn is CleanupNetwork, swappable in tests for the same
+// reason.
+var cleanupNetworkFn = CleanupNetwork
+
+// setupRestoreNetwork allocates the host side of a restored VM's network
+// under the record's policy.
+//
+// The DNS proxy's upstreams are always the operator's (nil here, so
+// SetupNetwork falls back to readNodeNameservers / FCAGENT_DNS_UPSTREAMS).
+// Nothing from the snapshot is ever used as an upstream: older manifests
+// stored the guest's resolver, which is the old TAP host IP, and a proxy
+// forwarding there would send this tenant's queries to whichever
+// sandbox's proxy owns that address now.
+//
+// Returns nil when the snapshot has no network (deny mode at capture):
+// the VM comes back without an interface whatever the policy says. A
+// deny policy with a networked snapshot is refused outright, before any
+// stream is downloaded: firecracker cannot load a snapshot whose
+// interface has no host side, and giving it one would mean egress.
+func setupRestoreNetwork(sandboxID string, manifest *snapshot.Manifest, policy sandbox.RestoreNetworkPolicy) (*NetworkConfig, error) {
+	if manifest.Network == nil {
+		return nil, nil
+	}
+	if policy.Mode == sandbox.NetworkDeny {
+		return nil, fmt.Errorf("firecracker.RestoreVMSnapshot: sandbox %s has network mode deny but its snapshot has a network interface; refusing to restore", sandboxID)
+	}
+	cfg, err := setupNetworkFn(sandboxID, policy.Mode, policy.AllowedHosts, nil)
+	if err != nil {
+		return nil, fmt.Errorf("firecracker.RestoreVMSnapshot: setup network: %w", err)
+	}
+	// Pin the MAC to the snapshot's value: the firecracker
+	// network-interfaces override only remaps host_dev_name, so the MAC
+	// has to match what the snapshot expects.
+	cfg.GuestMAC = manifest.Network.GuestMAC
+	return cfg, nil
 }

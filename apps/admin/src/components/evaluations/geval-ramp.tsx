@@ -92,7 +92,7 @@ export function GEvalRamp({ onLock }: { onLock: (promptText: string) => void }) 
       </div>
 
       {error && (
-        <div className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300 light:text-red-600">
+        <div className="rounded border border-danger-border bg-danger-surface px-3 py-2 text-xs text-danger">
           {error}
         </div>
       )}
@@ -110,7 +110,7 @@ export function GEvalRamp({ onLock }: { onLock: (promptText: string) => void }) 
             <MustacheTextarea value={steps} onChange={setSteps} rows={10} showVarChips={false} />
           </EvaluationField>
           {notes && (
-            <p className="text-[11px] leading-relaxed text-amber-300/80 light:text-amber-700">
+            <p className="text-[11px] leading-relaxed text-warning/80 light:text-warning">
               {notes}
             </p>
           )}

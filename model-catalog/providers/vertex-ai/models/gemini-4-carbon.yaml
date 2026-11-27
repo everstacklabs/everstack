@@ -1,0 +1,37 @@
+name: "gemini-4-carbon"
+display_name: "Gemini 4 Carbon (Vertex)"
+family: "gemini"
+status: "stable"
+release_date: "2026-11-10"
+
+cost:
+  input_per_1k: 0.002
+  output_per_1k: 0.01
+  cache_read_per_1k: 0.0001
+
+limits:
+  max_tokens: 1048576
+  max_completion_tokens: 65536
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image","video","audio","pdf"]
+  output: ["text"]
+
+knowledge_cutoff: "2026-03"
+notes: "Google's most capable reasoning model for complex software engineering, deep math and science, high factual accuracy, and long-horizon autonomous agents"
+structured_output: true
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 65536
+    has_max_value: true
+added_in_version: "2.11.0"

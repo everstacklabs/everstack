@@ -338,6 +338,19 @@ func Load(path string) (*ServicesConfig, error) {
 	// subdomains (e.g. .everstack.ai so the cookie works for both
 	// app.everstack.ai and *.tenants.everstack.ai).
 	_ = vp.BindEnv("services.auth.session.domain", "EVS_SESSION_COOKIE_DOMAIN")
+	// Secure flag for that cookie. The checked-in config says false for local
+	// HTTP development; deployments served over HTTPS set this to true.
+	_ = vp.BindEnv("services.auth.session.secure", "EVS_SERVICES_AUTH_SESSION_SECURE")
+
+	// Prepaid credit purchase flag and its parameters (billing S3).
+	_ = vp.BindEnv("services.billing.credit_purchase.enabled", "EVS_SERVICES_BILLING_CREDIT_PURCHASE_ENABLED")
+	_ = vp.BindEnv("services.billing.credit_purchase.auto_topup", "EVS_SERVICES_BILLING_CREDIT_PURCHASE_AUTO_TOPUP")
+	_ = vp.BindEnv("services.billing.credit_purchase.tax_code", "EVS_SERVICES_BILLING_CREDIT_PURCHASE_TAX_CODE")
+	_ = vp.BindEnv("services.billing.credit_purchase.app_base_url", "EVS_SERVICES_BILLING_CREDIT_PURCHASE_APP_BASE_URL")
+	_ = vp.BindEnv("services.billing.dunning.access_mode", "EVS_SERVICES_BILLING_DUNNING_ACCESS_MODE")
+	_ = vp.BindEnv("services.billing.dunning.grace_days", "EVS_SERVICES_BILLING_DUNNING_GRACE_DAYS")
+	_ = vp.BindEnv("services.billing.stripe_webhook.ensure_events", "EVS_SERVICES_BILLING_STRIPE_WEBHOOK_ENSURE_EVENTS")
+	_ = vp.BindEnv("services.billing.stripe_webhook.endpoint_url", "EVS_SERVICES_BILLING_STRIPE_WEBHOOK_ENDPOINT_URL")
 	_ = vp.BindEnv("services.auth.external_url", "EVS_SERVICES_AUTH_EXTERNAL_URL")
 
 	// Cloud service URLs (new unified format)
@@ -438,6 +451,16 @@ func Load(path string) (*ServicesConfig, error) {
 	_ = vp.BindEnv("services.auth.identity.enabled", "EVS_SERVICES_AUTH_IDENTITY_ENABLED")
 	_ = vp.BindEnv("services.auth.identity.base_url", "EVS_SERVICES_AUTH_IDENTITY_BASE_URL")
 	_ = vp.BindEnv("services.auth.identity.internal_token", "EVS_IDENTITY_INTERNAL_TOKEN")
+	_ = vp.BindEnv("services.auth.rate_limit.key_prefix", "EVS_SERVICES_AUTH_RATE_LIMIT_KEY_PREFIX")
+	_ = vp.BindEnv("services.auth.rate_limit.redis.required", "EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_REQUIRED")
+	_ = vp.BindEnv("services.auth.rate_limit.redis.dsn", "EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_DSN")
+	_ = vp.BindEnv("services.auth.rate_limit.redis.address", "EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_ADDRESS")
+	_ = vp.BindEnv("services.auth.rate_limit.redis.password", "EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_PASSWORD")
+	_ = vp.BindEnv("services.auth.rate_limit.redis.sentinel_master_name", "EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_SENTINEL_MASTER_NAME")
+	_ = vp.BindEnv("services.auth.rate_limit.redis.sentinel_addresses", "EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_SENTINEL_ADDRESSES")
+	_ = vp.BindEnv("services.auth.rate_limit.redis.tls_enabled", "EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_TLS_ENABLED")
+	_ = vp.BindEnv("services.auth.rate_limit.redis.tls_ca_file", "EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_TLS_CA_FILE")
+	_ = vp.BindEnv("services.auth.rate_limit.redis.tls_server_name", "EVS_SERVICES_AUTH_RATE_LIMIT_REDIS_TLS_SERVER_NAME")
 
 	// Billing service config (for standalone billing service deployments)
 	_ = vp.BindEnv("services.billing.database.dsn", "EVS_SERVICES_BILLING_DATABASE_DSN")

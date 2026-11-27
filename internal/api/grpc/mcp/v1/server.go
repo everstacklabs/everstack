@@ -90,6 +90,50 @@ func (s *Server) resolveTenantID(ctx context.Context, _ string) (string, error) 
 	return "", connect.NewError(connect.CodePermissionDenied, errors.New("tenant context missing"))
 }
 
+// stdioRefusedError is the single client-facing refusal for every stdio
+// write or start on a gateway that serves more than one tenant: Register,
+// Update and the lazy start path all return exactly this code and message,
+// and so does any refusal surfacing from the mcp package below (its
+// ErrStdioNotAllowed text is the message). The wording is about the
+// deployment and carries no ids.
+func stdioRefusedError() error {
+	return connect.NewError(connect.CodeInvalidArgument, mcp.ErrStdioNotAllowed)
+}
+
+// stdioAllowed reports whether this gateway may run stdio MCP servers. A
+// stdio server is a child process of the gateway with the gateway's
+// privileges, so it is only acceptable where the gateway serves exactly one
+// tenant. Two independent signals are consulted and either one refuses:
+// the mcp package's process-wide switch (set by the embedder in managed
+// mode, and the gate the registry and transport constructors enforce) and
+// the SharedGatewayMode marker on the server context (the same marker
+// gateway/v1 uses for instance scoping).
+func (s *Server) stdioAllowed() bool {
+	if !mcp.StdioAllowed() {
+		return false
+	}
+	if s.ctx != nil {
+		if shared, _ := s.ctx.Value(contextkeys.SharedGatewayMode).(bool); shared {
+			return false
+		}
+	}
+	return true
+}
+
+// checkStdioWrite is the write-path guard shared by Register and Update.
+// It refuses when the request either selects the stdio transport or carries
+// a stdio config (a config on a non-stdio row would still be executed the
+// moment the transport is flipped), and only where stdio is disallowed.
+func (s *Server) checkStdioWrite(stdioTransport, hasStdioConfig bool) error {
+	if !stdioTransport && !hasStdioConfig {
+		return nil
+	}
+	if s.stdioAllowed() {
+		return nil
+	}
+	return stdioRefusedError()
+}
+
 // cqrsSystem extracts the CQRS system from the provided context.
 func (s *Server) cqrsSystem(ctx context.Context) *cqrs.System {
 	if sys, err := cqrs.GetSystemFromContext(ctx); err == nil && sys != nil {

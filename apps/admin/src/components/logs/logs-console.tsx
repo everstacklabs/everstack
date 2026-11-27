@@ -65,7 +65,7 @@ const LogLine = memo(({ log, isSelected, customColumnDefs, onClick, rowRef, onHo
 	const tokenBreakdown = formatTokenBreakdown(log.promptTokens, log.completionTokens)
 	const cost = formatCostCompact(log.cost)
 	const status = getStatusIcon(log.status)
-	const statusColor = log.status === 'success' ? 'text-emerald-400 light:text-emerald-600' : log.status === 'error' ? 'text-rose-400 light:text-rose-600' : 'text-yellow-400 light:text-yellow-700'
+	const statusColor = log.status === 'success' ? 'text-success' : log.status === 'error' ? 'text-danger' : 'text-warning'
 	const correlationId = truncateText(log.correlationId, 8)
 	const preview = truncateText(log.requestText || log.responseText || '', 35)
 
@@ -371,9 +371,9 @@ export const LogsConsole = ({
 								<div className='flex gap-3'>
 									<span className='text-brand-main-100 w-20 shrink-0'>Status:</span>
 									<span className={cn(
-										hoveredLog.status === 'success' ? 'text-emerald-400 light:text-emerald-600' :
-											hoveredLog.status === 'error' ? 'text-rose-400 light:text-rose-600' :
-												'text-yellow-400 light:text-yellow-700'
+										hoveredLog.status === 'success' ? 'text-success' :
+											hoveredLog.status === 'error' ? 'text-danger' :
+												'text-warning'
 									)}>
 										{hoveredLog.status.toUpperCase()}
 									</span>
@@ -395,7 +395,7 @@ export const LogsConsole = ({
 								{hoveredLog.fallbackOccurred && (
 									<div className='flex gap-3'>
 										<span className='text-brand-main-100 w-20 shrink-0'>Fallback:</span>
-										<span className='text-yellow-400 light:text-yellow-700'>YES</span>
+										<span className='text-warning'>YES</span>
 									</div>
 								)}
 								<div className='flex gap-3 border-t border-white/10 light:border-black/10 pt-1.5'>

@@ -15,6 +15,7 @@ import (
 	agentrt "github.com/everstacklabs/everstack/internal/agents/runtime"
 	agentskills "github.com/everstacklabs/everstack/internal/agents/skills"
 	"github.com/everstacklabs/everstack/internal/cqrs"
+	"github.com/everstacklabs/everstack/internal/enterprise"
 	"github.com/everstacklabs/everstack/internal/functions/toolloop"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
@@ -37,6 +38,29 @@ type SpawnConfig struct {
 	ChildTimeout      time.Duration `json:"childTimeout"`
 	TotalTokenBudget  int           `json:"totalTokenBudget"`
 	AllowedAgents     []string      `json:"allowedAgents"` // empty = allow all
+	// PlanCapped is set when the organization's SPAWN_DEPTH plan cap, not
+	// the agent's own setting, decided MaxDepth.
+	PlanCapped bool `json:"-"`
+}
+
+// PlanSpawnConfig applies the organization's SPAWN_DEPTH plan cap on a
+// managed (Cloud) gateway: MaxDepth becomes the smaller of the agent's setting
+// and the plan's. Self-hosted spawning is unchanged.
+//
+// SPAWN_DEPTH counts levels below the root agent: 1 lets the root spawn
+// children that cannot spawn further; 0 disables sub-agents.
+func PlanSpawnConfig(ctx context.Context, cfg SpawnConfig) SpawnConfig {
+	if !enterprise.ManagedGateway() {
+		return cfg
+	}
+	limit, capped := enterprise.ResolveEntitlements(ctx, enterprise.LicenseMonitorFromContext(ctx)).
+		Limit(enterprise.UsageTypeSpawnDepth)
+	if !capped || limit >= int64(cfg.MaxDepth) {
+		return cfg
+	}
+	cfg.MaxDepth = int(limit)
+	cfg.PlanCapped = true
+	return cfg
 }
 
 // DefaultSpawnConfig returns the default spawn configuration.
@@ -126,6 +150,13 @@ func (t *SpawnTracker) CanSpawn() error {
 		return fmt.Errorf("sub-agent spawning is disabled")
 	}
 	if t.CurrentDepth >= t.Config.MaxDepth {
+		if t.Config.PlanCapped {
+			if t.Config.MaxDepth == 0 {
+				return fmt.Errorf("sub-agents are not included in your current plan. Upgrade your plan to use them: %s", enterprise.UpgradeURL)
+			}
+			return fmt.Errorf("sub-agent depth limit reached: your plan allows %d %s of sub-agents. Upgrade your plan for deeper spawning: %s",
+				t.Config.MaxDepth, levelNoun(t.Config.MaxDepth), enterprise.UpgradeURL)
+		}
 		return fmt.Errorf("maximum spawn depth reached (%d)", t.Config.MaxDepth)
 	}
 	if int(t.SpawnCount.Load()) >= t.Config.MaxTotalSpawns {
@@ -135,6 +166,13 @@ func (t *SpawnTracker) CanSpawn() error {
 		return fmt.Errorf("total token budget exhausted (%d)", t.Config.TotalTokenBudget)
 	}
 	return nil
+}
+
+func levelNoun(n int) string {
+	if n == 1 {
+		return "level"
+	}
+	return "levels"
 }
 
 // ChildTracker returns a new tracker for a child spawn with the given parent node ID.
@@ -315,7 +353,10 @@ func selectedChildSandboxPolicy(
 	persistent bool,
 	hasProjectFunctions bool,
 ) (sandbox.SandboxConfig, sandbox.BrowserConfig, bool, error) {
-	sandboxConfig := sandbox.ParseSandboxConfig(config)
+	sandboxConfig, err := sandbox.ParseSandboxConfig(config)
+	if err != nil {
+		return sandboxConfig, sandbox.BrowserConfig{}, false, err
+	}
 	browserConfig := sandbox.ParseBrowserConfig(config)
 	if persistent {
 		sandboxConfig.Enabled = true

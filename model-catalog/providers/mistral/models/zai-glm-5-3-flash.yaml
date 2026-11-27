@@ -1,0 +1,47 @@
+# Verified 2026-11-24.
+# Source: https://docs.mistral.ai/models/zai-glm-5-3-flash
+name: "zai-glm-5-3-flash"
+display_name: "Z.ai GLM 5.3 Flash"
+family: "glm"
+status: "stable"
+release_date: "2026-10-22"
+
+cost:
+  input_per_1k: 0.00015
+  output_per_1k: 0.0005
+  cache_read_per_1k: 3.0e-05
+
+limits:
+  max_tokens: 1048576
+  max_completion_tokens: 131072
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image"]
+  output: ["text"]
+
+notes: "Z.ai GLM 5.3 Flash hosted by Mistral. Reasoning output; Mistral documents no reasoning controls."
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 131072
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+added_in_version: "2.11.0"

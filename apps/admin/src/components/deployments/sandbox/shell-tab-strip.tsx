@@ -143,7 +143,7 @@ function TabButton({ index, row, isActive, onSelect, onKill, disabled }: TabButt
             <span className="text-[10px] text-white/40 light:text-black/40 font-mono">{shortId}</span>
             {row.attached_clients > 0 && (
                 <span
-                    className="w-1.5 h-1.5 rounded-full bg-green-400"
+                    className="w-1.5 h-1.5 rounded-full bg-success-solid"
                     title={`${row.attached_clients} attached`}
                 />
             )}
@@ -152,7 +152,7 @@ function TabButton({ index, row, isActive, onSelect, onKill, disabled }: TabButt
             <button
                 onClick={onKill}
                 disabled={disabled}
-                className="p-0.5 rounded text-white/30 light:text-black/30 hover:text-red-400 light:hover:text-red-600 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="p-0.5 rounded text-white/30 light:text-black/30 hover:text-danger hover:bg-danger-surface disabled:opacity-40 disabled:cursor-not-allowed"
                 title="Kill this session"
                 aria-label="Kill session"
             >

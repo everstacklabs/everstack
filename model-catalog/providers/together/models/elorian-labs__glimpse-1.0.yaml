@@ -1,0 +1,63 @@
+name: "elorian-labs/glimpse-1.0"
+display_name: "Glimpse 1.0 (Together)"
+family: "glimpse"
+status: "stable"
+release_date: "2026-10-16"
+
+cost:
+  input_per_1k: 0.0006
+  output_per_1k: 0.003
+  cache_read_per_1k: 0.00006
+
+limits:
+  max_tokens: 262144
+  max_completion_tokens: 256000
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image","video"]
+  output: ["text"]
+notes: "Visual thinking model that reasons over images and video, post-trained by Elorian on an open-weights base"
+structured_output: true
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 256000
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "reasoning_effort"
+    display_name: "Reasoning effort"
+    type: "enum"
+    options: ["none","low","medium","xhigh"]
+variants:
+  - id: "none"
+    display_name: "No reasoning"
+    description: "Fastest response with reasoning disabled when the model permits it."
+    parameters:
+      reasoning_effort: "none"
+  - id: "low"
+    display_name: "Low reasoning"
+    description: "Lower latency and cost for straightforward tasks."
+    parameters:
+      reasoning_effort: "low"
+  - id: "medium"
+    display_name: "Medium reasoning"
+    description: "Balanced reasoning for general-purpose work."
+    parameters:
+      reasoning_effort: "medium"
+  - id: "xhigh"
+    display_name: "Extra-high reasoning"
+    description: "Extended reasoning for long-horizon agentic work."
+    parameters:
+      reasoning_effort: "xhigh"
+added_in_version: "2.12.0"

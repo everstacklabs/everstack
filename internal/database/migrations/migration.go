@@ -305,6 +305,48 @@ func ValidateForService(ctx context.Context, db *sqlx.DB, dialect, service strin
 	return nil
 }
 
+// shadowedMigration is a migration on disk whose version is already recorded
+// in schema_migrations under a different name, so the migrator will never
+// apply it.
+type shadowedMigration struct {
+	Migration    Migration
+	RecordedName string
+}
+
+// versionsRecordedUnderAnotherName finds migrations in ups whose version is
+// already recorded under another name. The gateway and every service record
+// Postgres migrations in the same everstack.schema_migrations table, keyed
+// by (dialect, version) only, so when two sets reuse a timestamp in a shared
+// database the second one is skipped without a trace. Postgres only; any
+// error reading the table yields nil, since this is a diagnostic.
+func versionsRecordedUnderAnotherName(ctx context.Context, db *sqlx.DB, dialect string, ups []Migration) []shadowedMigration {
+	if strings.ToLower(dialect) != "postgres" {
+		return nil
+	}
+	rows, err := listAppliedDescending(ctx, db, dialect)
+	if err != nil {
+		return nil
+	}
+	recorded := make(map[int64]string, len(rows))
+	for _, r := range rows {
+		recorded[r.Version] = r.Name
+	}
+	var out []shadowedMigration
+	for _, m := range ups {
+		if name, ok := recorded[m.Version]; ok && name != m.Name {
+			out = append(out, shadowedMigration{Migration: m, RecordedName: name})
+		}
+	}
+	return out
+}
+
+func warnShadowedMigrations(ctx context.Context, db *sqlx.DB, dialect, scope string, ups []Migration) {
+	for _, s := range versionsRecordedUnderAnotherName(ctx, db, dialect, ups) {
+		logger.Warnf("migrations(%s/%s): %s_%014d is skipped because version %d is already recorded as %q by another migration set sharing this database; its schema changes may be missing",
+			scope, strings.ToLower(dialect), s.Migration.Name, s.Migration.Version, s.Migration.Version, s.RecordedName)
+	}
+}
+
 // MigrateUpForService applies pending ups for a service
 func MigrateUpForService(ctx context.Context, db *sqlx.DB, dialect, service string) error {
 	applied, err := loadApplied(ctx, db, dialect)
@@ -316,6 +358,7 @@ func MigrateUpForService(ctx context.Context, db *sqlx.DB, dialect, service stri
 		return err
 	}
 	sort.Slice(ups, func(i, j int) bool { return ups[i].Version < ups[j].Version })
+	warnShadowedMigrations(ctx, db, dialect, service, ups)
 	appliedAny := false
 	for _, m := range ups {
 		key := fmt.Sprintf("%s:%d", dialectKey(dialect), m.Version)
@@ -353,6 +396,7 @@ func MigrateUp(ctx context.Context, db *sqlx.DB, dialect string) error {
 	}
 	// Sort by version ascending
 	sort.Slice(ups, func(i, j int) bool { return ups[i].Version < ups[j].Version })
+	warnShadowedMigrations(ctx, db, dialect, "core", ups)
 	appliedAny := false
 	for _, m := range ups {
 		key := fmt.Sprintf("%s:%d", dialectKey(dialect), m.Version)

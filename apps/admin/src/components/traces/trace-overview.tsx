@@ -1,4 +1,5 @@
 import { Route } from '@/routes/observability/traces'
+import { replayMask } from '@/lib/replay-privacy'
 import {
   getSpanDisplayConfig,
   humanizeSpanName,
@@ -1205,14 +1206,14 @@ function promptLineTone(line: string): string {
   const trimmed = line.trim()
   if (!trimmed) return 'text-brand-main-50 light:text-black'
   if (/^<\/?[a-z][\w:-]*(\s|>|$)/i.test(trimmed))
-    return 'text-sky-300 light:text-sky-700'
+    return 'text-info'
   if (/^[}\]],?$/.test(trimmed) || /^[{[]/.test(trimmed))
     return 'text-violet-200 light:text-violet-700'
   if (/^"[^"]+"\s*:/.test(trimmed) || /^[a-zA-Z0-9_.-]+\s*:/.test(trimmed)) {
-    return 'text-amber-200 light:text-amber-700'
+    return 'text-warning'
   }
   if (/^[-*]\s+/.test(trimmed) || /^\d+\.\s+/.test(trimmed))
-    return 'text-emerald-200 light:text-emerald-700'
+    return 'text-success'
   return 'text-zinc-200 light:text-zinc-800'
 }
 
@@ -1531,14 +1532,13 @@ function IOViewer({
             </Badge>
             <span
               className="min-w-0 truncate text-[10px] text-brand-main-50 light:text-black"
-              title={source?.key}
             >
               {source?.key}
             </span>
           </div>
         )}
       </div>
-      <div data-slot="trace-details-card-body" className="overflow-auto p-3">
+      <div data-slot="trace-details-card-body" {...replayMask} className="overflow-auto p-3">
         {viewMode === 'formatted' ? renderFormatted() : renderJson()}
       </div>
     </div>
@@ -2786,7 +2786,7 @@ function MetricValue({ attrKey, value }: { attrKey: string; value: unknown }) {
         className={cn(
           'inline-flex items-center gap-1.5 rounded border px-2 py-1 text-[11px] font-medium',
           booleanValue
-            ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
+            ? 'border-success-border bg-success-surface text-success'
             : 'border-zinc-500/25 bg-zinc-500/10 text-zinc-300',
         )}
       >
@@ -2903,21 +2903,21 @@ const GUARDRAIL_OUTCOME_STYLE: Record<
 > = {
   pass: {
     label: 'Pass',
-    text: 'text-emerald-300',
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/25',
+    text: 'text-success',
+    bg: 'bg-success-surface',
+    border: 'border-success-border',
   },
   block: {
     label: 'Block',
-    text: 'text-red-400',
-    bg: 'bg-red-500/10',
-    border: 'border-red-500/25',
+    text: 'text-danger',
+    bg: 'bg-danger-surface',
+    border: 'border-danger-border',
   },
   flag: {
     label: 'Flag',
-    text: 'text-amber-300',
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/25',
+    text: 'text-warning',
+    bg: 'bg-warning-surface',
+    border: 'border-warning-border',
   },
   unknown: {
     label: 'Ran',
@@ -2942,7 +2942,7 @@ function GuardrailSummaryPanel({
       className={cn(
         'mb-4 rounded border',
         guardrails.hasBlock
-          ? 'border-red-500/30 bg-red-500/5'
+          ? 'border-danger-border bg-danger-surface/60'
           : 'border-brand-main-600 bg-brand-main-800/30',
       )}
     >
@@ -2950,7 +2950,7 @@ function GuardrailSummaryPanel({
         <Shield
           className={cn(
             'h-4 w-4',
-            guardrails.hasBlock ? 'text-red-400' : 'text-brand-secondary-300',
+            guardrails.hasBlock ? 'text-danger' : 'text-brand-secondary-300',
           )}
         />
         <span className="text-xs font-medium text-brand-main-50 light:text-brand-main-50">
@@ -2979,14 +2979,12 @@ function GuardrailSummaryPanel({
               <div className="min-w-0 flex-1">
                 <div
                   className="truncate text-xs text-brand-main-50 light:text-brand-main-50"
-                  title={check.name}
                 >
                   {check.rule || check.name}
                 </div>
                 {check.detail && (
                   <div
                     className="truncate text-[11px] text-brand-main-50 light:text-black"
-                    title={check.detail}
                   >
                     {check.detail}
                   </div>
@@ -3464,7 +3462,7 @@ function SpanDetailView({
                 {hasIO ? (
                   <>
                     {hasSuppressedTracePayload && (
-                      <div className="rounded border border-amber-500/20 bg-amber-500/5 px-2.5 py-1.5 text-[11px] text-amber-200 light:text-amber-700">
+                      <div className="rounded border border-warning-border bg-warning-surface/60 px-2.5 py-1.5 text-[11px] text-warning">
                         Trace-level payload omitted on this child span to avoid
                         repeating root I/O.
                       </div>

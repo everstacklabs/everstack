@@ -3,9 +3,9 @@ import { Iconify } from '@everstack/ui/icons'
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
     CHANNEL_STATUS_CONNECTED: {
         label: 'Connected',
-        bg: 'bg-emerald-500/15',
-        text: 'text-emerald-300 light:text-emerald-600',
-        dot: 'bg-emerald-400',
+        bg: 'bg-success-surface-strong',
+        text: 'text-success',
+        dot: 'bg-success-solid',
     },
     CHANNEL_STATUS_DISCONNECTED: {
         label: 'Disconnected',
@@ -15,15 +15,15 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; d
     },
     CHANNEL_STATUS_CONNECTING: {
         label: 'Connecting',
-        bg: 'bg-amber-500/15',
-        text: 'text-amber-300 light:text-amber-700',
-        dot: 'bg-amber-400 animate-pulse',
+        bg: 'bg-warning-surface-strong',
+        text: 'text-warning',
+        dot: 'bg-warning-solid animate-pulse',
     },
     CHANNEL_STATUS_ERROR: {
         label: 'Error',
-        bg: 'bg-red-500/15',
-        text: 'text-red-300 light:text-red-600',
-        dot: 'bg-red-400',
+        bg: 'bg-danger-surface-strong',
+        text: 'text-danger',
+        dot: 'bg-danger-solid',
     },
 }
 

@@ -38,20 +38,21 @@ func NewONNXCache(cfg ONNXCacheConfig) (*ONNXCache, error) {
 }
 
 // Get is a no-op stub.
-func (c *ONNXCache) Get(query string) (*CachedResponse, bool) {
+func (c *ONNXCache) Get(partition, query string) (*CachedResponse, bool) {
 	return nil, false
 }
 
 // GetWithContext is a no-op stub.
-func (c *ONNXCache) GetWithContext(ctx context.Context, query string) (*CachedResponse, bool) {
+func (c *ONNXCache) GetWithContext(ctx context.Context, partition, query string) (*CachedResponse, bool) {
 	return nil, false
 }
 
 // Put is a no-op stub.
-func (c *ONNXCache) Put(query string, response *CachedResponse) {}
+func (c *ONNXCache) Put(partition, query string, response *CachedResponse) {}
 
 // PutWithContext is a no-op stub.
-func (c *ONNXCache) PutWithContext(ctx context.Context, query string, response *CachedResponse) {}
+func (c *ONNXCache) PutWithContext(ctx context.Context, partition, query string, response *CachedResponse) {
+}
 
 // Cleanup is a no-op stub.
 func (c *ONNXCache) Cleanup() {}
@@ -68,4 +69,3 @@ func (c *ONNXCache) Stats() map[string]interface{} {
 func (c *ONNXCache) Close() error {
 	return nil
 }
-

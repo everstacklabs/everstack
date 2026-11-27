@@ -72,7 +72,17 @@ type Row struct {
 	WorkspaceArchiveRef  sql.NullString `db:"workspace_archive_ref"`  // object-storage marker written at archive
 	// Recoverable error state plumbing.
 	ErrorReason sql.NullString `db:"error_reason"`
-	ErrorAt     sql.NullTime   `db:"error_at"`
+	// OverrideDesired is set by Step when it deliberately changes
+	// desired_state (a refused sleep). Otherwise ApplyTransition keeps the
+	// column's current value, so a user request that arrived while the
+	// step ran (a wake during a stop) is not overwritten by the claimed
+	// copy. Not a column.
+	OverrideDesired bool `db:"-"`
+	// Notice is a customer-facing reason Step attaches to a transition.
+	// Not a column: ApplyTransition writes it to error_reason (and stamps
+	// error_at) for this transition only; empty clears both as before.
+	Notice  string       `db:"-"`
+	ErrorAt sql.NullTime `db:"error_at"`
 	// RecoveryAttempts counts consecutive auto-recovery attempts
 	// (RecoveryChecker) that have not yet produced a successful
 	// convergence. Distinct from ReconcileAttempts (the per-convergence
@@ -189,15 +199,18 @@ func (r *Repository) InsertPending(ctx context.Context, row Row) (Row, error) {
 	return existing, nil
 }
 
-// InsertPendingWithLimit serializes plan-slot reservations per tenant across
-// gateway replicas. The advisory lock and pending-row insert share one
-// transaction, so two simultaneous requests for the final slot cannot both
-// pass the count.
+// InsertPendingWithLimit serializes plan-slot reservations per concurrency
+// scope (the tenant's organization on a managed gateway, the tenant alone
+// elsewhere) across gateway replicas. The advisory lock and pending-row insert
+// share one transaction, so two simultaneous requests for the final slot, even
+// from two instances of one organization, cannot both pass the count.
 func (r *Repository) InsertPendingWithLimit(
 	ctx context.Context,
 	row Row,
 	limit int,
+	scope runtimesandbox.TenantScope,
 ) (Row, error) {
+	scope = scopeIncluding(scope, row.TenantID)
 	if limit == runtimesandbox.UnlimitedSandboxLimit {
 		return r.InsertPending(ctx, row)
 	}
@@ -225,7 +238,7 @@ func (r *Repository) InsertPendingWithLimit(
 		if _, err := tx.ExecContext(
 			ctx,
 			`SELECT pg_advisory_xact_lock(hashtext($1))`,
-			"sandbox-concurrency:"+row.TenantID,
+			scope.LockName(),
 		); err != nil {
 			rollback()
 			return Row{}, fmt.Errorf("InsertPendingWithLimit: lock tenant: %w", err)
@@ -252,14 +265,14 @@ func (r *Repository) InsertPendingWithLimit(
 		if err := tx.GetContext(ctx, &used, `
 			SELECT COUNT(*)
 			FROM sandbox_instances
-			WHERE tenant_id = $1
+			WHERE tenant_id = ANY($1::text[])
 			  AND (
 			    lifecycle_state IN (
 			      'pending', 'creating', 'provisioning', 'running',
 			      'stopping', 'reviving', 'terminating'
 			    )
 			    OR (billing_started_at IS NOT NULL AND billing_ended_at IS NULL)
-			  )`, row.TenantID); err != nil {
+			  )`, scope.AliasArray()); err != nil {
 			rollback()
 			return Row{}, fmt.Errorf("InsertPendingWithLimit: count slots: %w", err)
 		}
@@ -517,15 +530,41 @@ func (r *Repository) ApplyTransition(ctx context.Context, leaderID string, next 
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	// desired_state is re-read under the row lock: a user request that
+	// landed while Step ran (Stop/Revive/Terminate via SetDesiredState) is
+	// kept unless Step deliberately overrode it ($14). If the committed
+	// quiescent state then disagrees with that desire, the row advances
+	// straight to the matching convergence state (same mapping as
+	// SetDesiredState) so the request is acted on, not dropped. Example:
+	// a wake requested during a stop commits sleeping then reviving,
+	// waking from the workspace the stop just uploaded.
 	const q = `
-		UPDATE sandbox_instances
-		SET lifecycle_state     = $2::text,
-		    status              = $3,
-		    desired_state       = $4,
+		WITH cur AS (
+		    SELECT id,
+		           CASE WHEN $14::boolean THEN $4::text ELSE desired_state END AS eff
+		    FROM sandbox_instances
+		    WHERE id = $1
+		    FOR UPDATE
+		), nxt AS (
+		    SELECT id, eff,
+		           CASE
+		               WHEN $2::text = 'sleeping' AND eff = 'running'     THEN 'reviving'
+		               WHEN $2::text = 'sleeping' AND eff = 'archived'    THEN 'archiving'
+		               WHEN $2::text = 'archived' AND eff = 'running'     THEN 'reviving'
+		               WHEN $2::text = 'running'  AND eff = 'sleeping'    THEN 'stopping'
+		               WHEN $2::text IN ('running', 'sleeping', 'archived') AND eff = 'terminated' THEN 'terminating'
+		               ELSE $2::text
+		           END AS state
+		    FROM cur
+		)
+		UPDATE sandbox_instances si
+		SET lifecycle_state     = nxt.state,
+		    status              = CASE WHEN nxt.state <> $2::text THEN nxt.state ELSE $3 END,
+		    desired_state       = nxt.eff,
 		    container_id        = $5,
 		    agent_target        = $6,
 		    error               = $7,
-		    reconcile_after     = $8,
+		    reconcile_after     = CASE WHEN nxt.state <> $2::text THEN NOW() ELSE $8 END,
 		    workspace_snapshot_ref = $9,
 		    workspace_archive_ref  = $10,
 		    reconcile_attempts  = 0,
@@ -535,40 +574,50 @@ func (r *Repository) ApplyTransition(ctx context.Context, leaderID string, next 
 		    recovery_attempts   = 0,
 		    reconcile_locked_by = NULL,
 		    reconcile_locked_at = NULL,
-		    error_reason        = NULL,
-		    error_at            = NULL,
+		    error_reason        = NULLIF($13::text, ''),
+		    error_at            = CASE WHEN $13::text <> '' THEN NOW() ELSE NULL END,
 		    stopped_at          = CASE
 		        WHEN $2::text = 'sleeping' THEN NOW()
 		        WHEN $2::text = 'running'  THEN NULL
-		        ELSE stopped_at END,
-			    archived_at         = CASE
-			        WHEN $2::text = 'archived' THEN NOW()
-			        WHEN $2::text = 'running'  THEN NULL
-			        ELSE archived_at END,
-			    billing_started_at = CASE
-			        WHEN $2::text = 'running' AND lifecycle_state IS DISTINCT FROM 'running'
-			            THEN COALESCE($12, NOW())
-			        WHEN $2::text IN ('sleeping', 'archived', 'terminated') THEN NULL
-			        ELSE billing_started_at END,
-			    billing_ended_at = CASE
-			        WHEN $2::text = 'running' AND lifecycle_state IS DISTINCT FROM 'running' THEN NULL
-			        WHEN $2::text IN ('sleeping', 'archived', 'terminated') THEN NULL
-			        ELSE billing_ended_at END,
-			    last_used_at        = CASE WHEN $2::text = 'running' THEN NOW() ELSE last_used_at END,
+		        ELSE si.stopped_at END,
+		    archived_at         = CASE
+		        WHEN $2::text = 'archived' THEN NOW()
+		        WHEN $2::text = 'running'  THEN NULL
+		        ELSE si.archived_at END,
+		    billing_started_at = CASE
+		        WHEN $2::text = 'running' AND si.lifecycle_state IS DISTINCT FROM 'running'
+		            THEN COALESCE($12, NOW())
+		        WHEN $2::text IN ('sleeping', 'archived', 'terminated') THEN NULL
+		        ELSE si.billing_started_at END,
+		    billing_ended_at = CASE
+		        WHEN $2::text = 'running' AND si.lifecycle_state IS DISTINCT FROM 'running' THEN NULL
+		        WHEN $2::text IN ('sleeping', 'archived', 'terminated') THEN NULL
+		        ELSE si.billing_ended_at END,
+		    last_used_at        = CASE WHEN $2::text = 'running' THEN NOW() ELSE si.last_used_at END,
+		    -- Every start of a VM run (create or wake) gets a new run id, so
+		    -- tarballs uploaded by this run's stop are told apart from the
+		    -- one the wake consumed and from any earlier run.
+		    workspace_run_id    = CASE
+		        WHEN nxt.state = 'running' AND si.lifecycle_state IS DISTINCT FROM 'running'
+		            THEN gen_random_uuid()::text
+		        ELSE si.workspace_run_id END,
 		    updated_at          = NOW()
-		WHERE id = $1 AND ($11 = '' OR reconcile_locked_by = $11)`
-	res, err := tx.ExecContext(ctx, q,
+		FROM nxt
+		WHERE si.id = nxt.id AND ($11 = '' OR si.reconcile_locked_by = $11)
+		RETURNING si.lifecycle_state`
+	var committedState string
+	err = tx.QueryRowxContext(ctx, q,
 		next.ID, next.LifecycleState, next.Status, next.DesiredState,
 		next.ContainerID, next.AgentTarget, next.Error,
 		next.ReconcileAfter,
 		next.WorkspaceSnapshotRef, next.WorkspaceArchiveRef,
-		leaderID, next.BillingStartedAt,
-	)
+		leaderID, next.BillingStartedAt, next.Notice, next.OverrideDesired,
+	).Scan(&committedState)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrLeaseLost
+	}
 	if err != nil {
 		return fmt.Errorf("ApplyTransition: %w", err)
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return ErrLeaseLost
 	}
 
 	// Issue-9: derive agent lifecycle from sandbox lifecycle. Best-
@@ -577,10 +626,20 @@ func (r *Repository) ApplyTransition(ctx context.Context, leaderID string, next 
 	// rather have a slightly stale agent_definitions row than a wedged
 	// reconciler). Logged but not surfaced.
 	if next.AgentID.Valid && next.AgentID.String != "" {
-		if err := r.applyAgentLifecycleInTx(ctx, tx, next.AgentID.String, next.LifecycleState); err != nil {
+		if err := r.applyAgentLifecycleInTx(ctx, tx, next.AgentID.String, committedState); err != nil {
 			// We could log here; keep the repo dependency-free and let
 			// callers wrap with their own logger if needed.
 			_ = err
+		}
+	}
+
+	// Terminate deletes the workspace objects best-effort; the outbox row
+	// written in the same transaction makes the deletion durable. It is
+	// keyed by incarnation, so a later reuse of this sandbox id is never
+	// touched by the purge.
+	if committedState == StateTerminated {
+		if _, err := tx.ExecContext(ctx, enqueueWorkspacePurgeQuery, next.ID); err != nil {
+			return fmt.Errorf("ApplyTransition: enqueue workspace purge: %w", err)
 		}
 	}
 
@@ -589,6 +648,11 @@ func (r *Repository) ApplyTransition(ctx context.Context, leaderID string, next 
 	}
 	return nil
 }
+
+const enqueueWorkspacePurgeQuery = `
+		INSERT INTO sandbox_workspace_purges (sandbox_id, incarnation, tenant_id)
+		SELECT id, workspace_incarnation, tenant_id FROM sandbox_instances WHERE id = $1
+		ON CONFLICT (sandbox_id, incarnation) DO NOTHING`
 
 // applyAgentLifecycleInTx writes the derived agent lifecycle_status
 // inside the caller's tx. The mapping (sandbox state → agent state)
@@ -871,10 +935,14 @@ func (r *Repository) SetDesiredState(ctx context.Context, id, desired string) er
 // SetDesiredStateWithLimit applies a running/revive request under the same
 // cross-replica tenant lock used by creates. Non-running desired states do not
 // consume a new slot and use the ordinary path.
+//
+// scope is the concurrency scope of the sandbox's tenant; a zero scope counts
+// the sandbox's own tenant alone.
 func (r *Repository) SetDesiredStateWithLimit(
 	ctx context.Context,
 	id, desired string,
 	limit int,
+	scope runtimesandbox.TenantScope,
 ) error {
 	if desired != DesireRunning || limit == runtimesandbox.UnlimitedSandboxLimit {
 		return r.SetDesiredState(ctx, id, desired)
@@ -896,10 +964,11 @@ func (r *Repository) SetDesiredStateWithLimit(
 		}
 		return fmt.Errorf("SetDesiredStateWithLimit: resolve tenant: %w", err)
 	}
+	scope = scopeIncluding(scope, tenantID)
 	if _, err := tx.ExecContext(
 		ctx,
 		`SELECT pg_advisory_xact_lock(hashtext($1))`,
-		"sandbox-concurrency:"+tenantID,
+		scope.LockName(),
 	); err != nil {
 		return fmt.Errorf("SetDesiredStateWithLimit: lock tenant: %w", err)
 	}
@@ -928,7 +997,7 @@ func (r *Repository) SetDesiredStateWithLimit(
 		if err := tx.GetContext(ctx, &used, `
 			SELECT COUNT(*)
 			FROM sandbox_instances
-			WHERE tenant_id = $1
+			WHERE tenant_id = ANY($1::text[])
 			  AND id <> $2
 			  AND (
 			    lifecycle_state IN (
@@ -936,7 +1005,7 @@ func (r *Repository) SetDesiredStateWithLimit(
 			      'stopping', 'reviving', 'terminating'
 			    )
 			    OR (billing_started_at IS NOT NULL AND billing_ended_at IS NULL)
-			  )`, tenantID, id); err != nil {
+			  )`, scope.AliasArray(), id); err != nil {
 			return fmt.Errorf("SetDesiredStateWithLimit: count slots: %w", err)
 		}
 		if used >= limit {
@@ -1072,3 +1141,17 @@ const selectColumns = `
 	       COALESCE(recovery_attempts, 0) AS recovery_attempts,
 	       auto_stop_minutes, auto_archive_minutes, auto_delete_minutes
 	FROM sandbox_instances`
+
+// scopeIncluding returns scope, or the tenant alone when scope is empty or
+// shadow only (the pre-existing per-tenant gate), and
+// always includes tenantID so a sandbox's own tenant is never left uncounted.
+func scopeIncluding(scope runtimesandbox.TenantScope, tenantID string) runtimesandbox.TenantScope {
+	if scope.ShadowOnly || scope.Key == "" || len(scope.Aliases) == 0 {
+		return runtimesandbox.SingleTenantScope(tenantID)
+	}
+	if scope.Contains(tenantID) {
+		return scope
+	}
+	scope.Aliases = append(append([]string(nil), scope.Aliases...), tenantID)
+	return scope
+}

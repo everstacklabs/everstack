@@ -23,7 +23,7 @@ export function NewModelsIndicator({ providerName }: NewModelsIndicatorProps) {
         <Badge
             size="sm"
             variant="default"
-            className="bg-brand-secondary-700/50 border-brand-secondary-700 text-xs hover:bg-green-600 text-white light:text-brand-main-50"
+            className="bg-brand-secondary-700/50 border-brand-secondary-700 text-xs hover:bg-success-solid text-white light:text-brand-main-50 hover:text-success-solid-foreground"
         >
             NEW
         </Badge>

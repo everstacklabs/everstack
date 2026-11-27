@@ -235,7 +235,7 @@ export function CreateFunctionDialog({
           <SheetTitle className="flex items-center gap-2">
             {step === 'success' ? (
               <>
-                <CheckCircle2 className="text-emerald-400 light:text-emerald-600" size={20} />
+                <CheckCircle2 className="text-success" size={20} />
                 Function Created
               </>
             ) : (
@@ -286,7 +286,7 @@ export function CreateFunctionDialog({
                           {m === ExecutionMode.ISOLATED && 'Isolated'}
                         </span>
                         {isDisabled && (
-                          <span className="text-xs text-amber-300/80 light:text-amber-700/80 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-500/25">
+                          <span className="text-xs text-warning/80 bg-warning-surface px-2 py-0.5 rounded border border-warning-border">
                             Docker unavailable
                           </span>
                         )}
@@ -295,7 +295,7 @@ export function CreateFunctionDialog({
                         {getModeDescription(m)}
                       </p>
                       {isDisabled && (
-                        <p className="text-xs text-amber-300/60 light:text-amber-700/60 mt-1">
+                        <p className="text-xs text-warning/60 mt-1">
                           Start Docker to use isolated functions.
                         </p>
                       )}

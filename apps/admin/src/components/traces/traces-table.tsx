@@ -791,8 +791,8 @@ export const TracesTable = ({
                             className={cn(
                                 'size-2 rounded-full ring-4',
                                 isError
-                                    ? 'bg-rose-400 ring-rose-500/15'
-                                    : 'bg-emerald-400/80 ring-emerald-500/10',
+                                    ? 'bg-danger-solid ring-danger-border'
+                                    : 'bg-success-solid/80 ring-success-border',
                             )}
                         />
                     </div>
@@ -1368,7 +1368,7 @@ export const TracesTable = ({
                 return (
                     <Badge
                         variant='outline'
-                        className='text-sm py-0.5 bg-rose-500/10 text-rose-400 border-rose-500/30'
+                        className='text-sm py-0.5 bg-danger-surface text-danger border-danger-border'
                     >
                         {n}
                     </Badge>
@@ -1479,7 +1479,7 @@ export const TracesTable = ({
                         {/* State 1: Error State */}
                         {error ? (
                             <div className='flex flex-col items-center justify-center space-y-3 text-center px-4'>
-                                <AlertCircle className='size-12 text-rose-400' />
+                                <AlertCircle className='size-12 text-danger' />
                                 <div className='space-y-1'>
                                     <div className='text-brand-main-50 font-semibold light:text-black'>Error Loading Traces</div>
                                     <div className='text-brand-main-50 text-sm max-w-md light:text-black'>
@@ -1580,7 +1580,7 @@ export const TracesTable = ({
                                 </Tooltip>
                                 {isCopied && (
                                     <div>
-                                        <Check className='size-3 text-green-500' />
+                                        <Check className='size-3 text-success' />
                                     </div>
                                 )}
                                 <Link

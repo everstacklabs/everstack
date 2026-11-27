@@ -7,7 +7,7 @@
       "inference_cap_usd": 5,
       "credit_rollover": false,
       "name": "Starter",
-      "description": "Self-hosted Community Edition",
+      "description": "Try Everstack and ship your first workload",
       "pricing": {
         "monthly": "$0",
         "yearly": "$0"
@@ -51,6 +51,10 @@
         {
           "name": "memory_external",
           "enabled": false
+        },
+        {
+          "name": "spend_limits",
+          "enabled": false
         }
       ],
       "usage_limits": [
@@ -65,6 +69,30 @@
         {
           "type": "REQUESTS",
           "value": 10000
+        },
+        {
+          "type": "SANDBOX_VCPU_HOURS",
+          "value": 40,
+          "unit": "vcpu_hour",
+          "billing": "allowance",
+          "overage_rate_usd": 0.0504,
+          "subText": "+$0.0504 per vCPU-hour over 40"
+        },
+        {
+          "type": "SANDBOX_MEMORY_GIB_HOURS",
+          "value": 40,
+          "unit": "gib_hour",
+          "billing": "allowance",
+          "overage_rate_usd": 0.0162,
+          "subText": "+$0.0162 per GiB-hour over 40"
+        },
+        {
+          "type": "BROWSER_HOURS",
+          "value": 5,
+          "unit": "browser_hour",
+          "billing": "allowance",
+          "overage_rate_usd": 0.05,
+          "subText": "+$0.05 per browser-hour over 5"
         },
         {
           "type": "STORAGE_BYTES",
@@ -147,10 +175,17 @@
       "inference_cap_usd": 10,
       "credit_rollover": false,
       "name": "Build",
-      "description": "Design-partner deployments with onboarding and support",
+      "description": "For building production AI applications",
       "pricing": {
-        "monthly": "Custom",
-        "yearly": "Custom"
+        "monthly": "$20",
+        "yearly": "$200",
+        "discounted": "$200",
+        "suggested": "2 months free with annual billing",
+        "per_seat": {
+          "monthly": "$15",
+          "yearly": "$150",
+          "subText": "per additional seat beyond 3 included"
+        }
       },
       "highlight": false,
       "seat_limit": 3,
@@ -191,6 +226,10 @@
         {
           "name": "memory_external",
           "enabled": false
+        },
+        {
+          "name": "spend_limits",
+          "enabled": true
         }
       ],
       "usage_limits": [
@@ -207,6 +246,30 @@
           "type": "REQUESTS",
           "value": 100000,
           "subText": "+$0.01 per 1k requests over 100k"
+        },
+        {
+          "type": "SANDBOX_VCPU_HOURS",
+          "value": 150,
+          "unit": "vcpu_hour",
+          "billing": "allowance",
+          "overage_rate_usd": 0.0504,
+          "subText": "+$0.0504 per vCPU-hour over 150"
+        },
+        {
+          "type": "SANDBOX_MEMORY_GIB_HOURS",
+          "value": 150,
+          "unit": "gib_hour",
+          "billing": "allowance",
+          "overage_rate_usd": 0.0162,
+          "subText": "+$0.0162 per GiB-hour over 150"
+        },
+        {
+          "type": "BROWSER_HOURS",
+          "value": 100,
+          "unit": "browser_hour",
+          "billing": "allowance",
+          "overage_rate_usd": 0.05,
+          "subText": "+$0.05 per browser-hour over 100"
         },
         {
           "type": "STORAGE_BYTES",
@@ -294,10 +357,17 @@
       "inference_cap_usd": 25,
       "credit_rollover": false,
       "name": "Scale",
-      "description": "Managed production deployments with premium support",
+      "description": "For scaling production workloads",
       "pricing": {
-        "monthly": "Custom",
-        "yearly": "Custom"
+        "monthly": "$100",
+        "yearly": "$1,000",
+        "discounted": "$1,000",
+        "suggested": "2 months free with annual billing",
+        "per_seat": {
+          "monthly": "$39",
+          "yearly": "$390",
+          "subText": "per additional seat beyond 10 included"
+        }
       },
       "highlight": true,
       "seat_limit": 10,
@@ -354,6 +424,10 @@
         {
           "name": "memory_external",
           "enabled": true
+        },
+        {
+          "name": "spend_limits",
+          "enabled": true
         }
       ],
       "usage_limits": [
@@ -370,6 +444,30 @@
           "type": "REQUESTS",
           "value": 1000000,
           "subText": "+$0.01 per 1k requests over 1M"
+        },
+        {
+          "type": "SANDBOX_VCPU_HOURS",
+          "value": 750,
+          "unit": "vcpu_hour",
+          "billing": "allowance",
+          "overage_rate_usd": 0.0504,
+          "subText": "+$0.0504 per vCPU-hour over 750"
+        },
+        {
+          "type": "SANDBOX_MEMORY_GIB_HOURS",
+          "value": 750,
+          "unit": "gib_hour",
+          "billing": "allowance",
+          "overage_rate_usd": 0.0162,
+          "subText": "+$0.0162 per GiB-hour over 750"
+        },
+        {
+          "type": "BROWSER_HOURS",
+          "value": 500,
+          "unit": "browser_hour",
+          "billing": "allowance",
+          "overage_rate_usd": 0.05,
+          "subText": "+$0.05 per browser-hour over 500"
         },
         {
           "type": "STORAGE_BYTES",
@@ -457,7 +555,7 @@
       "inference_cap_usd": 0,
       "credit_rollover": false,
       "name": "Enterprise",
-      "description": "Custom infrastructure, governance, and support",
+      "description": "For large organizations",
       "pricing": {
         "monthly": "Custom",
         "yearly": "Custom"
@@ -525,6 +623,10 @@
         {
           "name": "memory_external",
           "enabled": true
+        },
+        {
+          "name": "spend_limits",
+          "enabled": true
         }
       ],
       "usage_limits": [
@@ -539,6 +641,24 @@
         {
           "type": "REQUESTS",
           "value": -1
+        },
+        {
+          "type": "SANDBOX_VCPU_HOURS",
+          "value": -1,
+          "unit": "vcpu_hour",
+          "billing": "allowance"
+        },
+        {
+          "type": "SANDBOX_MEMORY_GIB_HOURS",
+          "value": -1,
+          "unit": "gib_hour",
+          "billing": "allowance"
+        },
+        {
+          "type": "BROWSER_HOURS",
+          "value": -1,
+          "unit": "browser_hour",
+          "billing": "allowance"
         },
         {
           "type": "STORAGE_BYTES",
@@ -619,6 +739,22 @@
       ]
     }
   },
+  "free_inference_allowlist": [
+    "openai/gpt-4o-mini*",
+    "openai/gpt-4.1-mini*",
+    "openai/gpt-4.1-nano*",
+    "openai/gpt-5-mini*",
+    "openai/gpt-5-nano*",
+    "openai/text-embedding-3-small",
+    "anthropic/claude-haiku-*",
+    "anthropic/claude-3-5-haiku*",
+    "google/gemini-*-flash*",
+    "deepseek/deepseek-chat",
+    "mistral/mistral-small*"
+  ],
+  "guardrails": {
+    "max_inflight_platform_requests": 32
+  },
   "credit_pricing": {
     "currency": "USD",
     "inference_markup": 1.0,
@@ -626,7 +762,16 @@
     "processed_data_per_gib_free": 4.0,
     "retention_per_gib_month": 0.5,
     "scores_per_1k": 1.5,
-    "scores_per_1k_free": 2.5
+    "scores_per_1k_free": 2.5,
+    "extra_instance_per_month": 10.0,
+    "topup_presets_usd": [
+      10,
+      25,
+      50,
+      100
+    ],
+    "topup_min_usd": 10,
+    "topup_max_usd": 5000
   },
   "site_delivery_pricing": {
     "currency": "USD",
@@ -660,7 +805,7 @@
   },
   "browser_runtime_pricing": {
     "currency": "USD",
-    "browser_hour": 0.01,
+    "browser_hour": 0.05,
     "billing_increment_seconds": 1,
     "minimum_session_seconds": 60,
     "idle_pool_billing": false

@@ -113,7 +113,7 @@ export function GatewayConfigSaveActions() {
     return (
         <div className="flex items-center gap-2">
             {hasAnyChanges && (
-                <span className="text-xs text-yellow-400 light:text-yellow-700 bg-yellow-400/10 px-2 py-1 rounded flex items-center gap-1">
+                <span className="text-xs text-warning bg-warning-surface px-2 py-1 rounded flex items-center gap-1">
                     <Iconify.Icon icon="mdi:circle" className="h-2 w-2" />
                     {sectionsWithChanges.length} modified
                 </span>

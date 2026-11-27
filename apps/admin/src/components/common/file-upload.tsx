@@ -150,7 +150,7 @@ export function FileUpload({
                 className={`
                     relative border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer
                     ${isDragging
-                        ? 'border-emerald-500 bg-emerald-500/10'
+                        ? 'border-success-solid bg-success-surface'
                         : 'border-zinc-700 light:border-zinc-300 hover:border-zinc-500 bg-zinc-900/50 light:bg-zinc-100/50'
                     }
                     ${isUploading ? 'pointer-events-none opacity-60' : ''}
@@ -170,14 +170,14 @@ export function FileUpload({
 
                 {isUploading ? (
                     <div className="space-y-3">
-                        <Icon icon="lucide:upload-cloud" className="h-8 w-8 mx-auto text-emerald-500 animate-pulse" />
+                        <Icon icon="lucide:upload-cloud" className="h-8 w-8 mx-auto text-success animate-pulse" />
                         <p className="text-sm text-zinc-400 light:text-zinc-600">Uploading...</p>
                         <Progress value={progress} className="h-2 max-w-[200px] mx-auto" />
                         <p className="text-xs text-zinc-500">{progress}%</p>
                     </div>
                 ) : uploadedFile ? (
                     <div className="space-y-2">
-                        <Icon icon="lucide:check-circle" className="h-8 w-8 mx-auto text-emerald-500" />
+                        <Icon icon="lucide:check-circle" className="h-8 w-8 mx-auto text-success" />
                         <p className="text-sm text-white light:text-brand-main-50">{uploadedFile}</p>
                         <p className="text-xs text-zinc-500">Upload complete. Drop another file to replace.</p>
                     </div>
@@ -195,7 +195,7 @@ export function FileUpload({
             </div>
 
             {error && (
-                <div className="mt-2 rounded border border-red-500/20 bg-red-500/10 p-2 text-sm text-red-400 light:text-red-600">
+                <div className="mt-2 rounded border border-danger-border bg-danger-surface p-2 text-sm text-danger">
                     {error}
                 </div>
             )}

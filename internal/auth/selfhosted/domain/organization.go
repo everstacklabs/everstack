@@ -84,6 +84,31 @@ func CanManageMembers(role string) bool {
 	return role == RoleOwner || role == RoleAdmin
 }
 
+// roleRank orders the organization roles from least to most privileged. An
+// unknown role ranks zero, so it can neither be granted nor grant anything.
+func roleRank(role string) int {
+	switch role {
+	case RoleViewer:
+		return 1
+	case RoleMember:
+		return 2
+	case RoleAdmin:
+		return 3
+	case RoleOwner:
+		return 4
+	default:
+		return 0
+	}
+}
+
+// CanGrantRole reports whether someone holding actorRole may give role to
+// another person, for example by inviting them. The actor must be able to
+// manage members, and the role must be a known one no higher than the
+// actor's own, so only an owner can grant owner.
+func CanGrantRole(actorRole, role string) bool {
+	return CanManageMembers(actorRole) && roleRank(role) > 0 && roleRank(role) <= roleRank(actorRole)
+}
+
 // CanManageBilling checks if role can manage billing
 func CanManageBilling(role string) bool {
 	return role == RoleOwner

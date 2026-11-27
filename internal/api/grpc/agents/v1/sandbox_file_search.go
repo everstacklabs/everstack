@@ -31,7 +31,7 @@ func (s *Server) ContentSearch(
 	if msg.GetPattern() == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("pattern is required"))
 	}
-	_, sessionID, err := s.resolveSandbox(msg.GetSandboxId())
+	_, sessionID, err := s.resolveSandbox(ctx, msg.GetSandboxId())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
@@ -121,7 +121,7 @@ func (s *Server) GlobalReplace(
 	if msg.GetPattern() == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("pattern is required"))
 	}
-	_, sessionID, err := s.resolveSandbox(msg.GetSandboxId())
+	_, sessionID, err := s.resolveSandbox(ctx, msg.GetSandboxId())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}

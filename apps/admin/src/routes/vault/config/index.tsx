@@ -120,12 +120,12 @@ function ConfigTab() {
                 </div>
 
                 {/* Warning */}
-                <div className='bg-blue-500/10 border border-blue-500/20 rounded-lg p-4'>
+                <div className='bg-info-surface border border-info-border rounded-lg p-4'>
                     <div className='flex items-start gap-3'>
-                        <Iconify.Icon icon='mdi:information' className='h-5 w-5 text-blue-400 light:text-blue-600 mt-0.5' />
+                        <Iconify.Icon icon='mdi:information' className='h-5 w-5 text-info mt-0.5' />
                         <div className='flex-1'>
-                            <h3 className='text-sm font-medium text-blue-400 light:text-blue-600'>Configuration Editor</h3>
-                            <p className='text-sm text-blue-300/80 light:text-blue-600/80 mt-1'>
+                            <h3 className='text-sm font-medium text-info'>Configuration Editor</h3>
+                            <p className='text-sm text-info/80 mt-1'>
                                 Changes made here will be saved to both the YAML file and the database.
                                 Make sure to validate your YAML syntax before saving.
                             </p>
@@ -140,7 +140,7 @@ function ConfigTab() {
                             <Iconify.Icon icon='mdi:file-code' className='h-4 w-4 text-gray-400 light:text-gray-600' />
                             <span className='text-sm text-gray-300 light:text-gray-700'>gateway.yaml</span>
                             {hasChanges && (
-                                <span className='text-xs text-yellow-400 light:text-yellow-700 bg-yellow-400/10 px-2 py-1 rounded'>
+                                <span className='text-xs text-warning bg-warning-surface px-2 py-1 rounded'>
                                     Modified
                                 </span>
                             )}

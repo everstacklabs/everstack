@@ -31,8 +31,10 @@ import (
 	apikeycmd "github.com/everstacklabs/everstack/internal/commands/handlers/api_key"
 	"github.com/everstacklabs/everstack/internal/cqrs"
 	"github.com/everstacklabs/everstack/internal/database"
+	"github.com/everstacklabs/everstack/internal/enterprise"
 	hostinglib "github.com/everstacklabs/everstack/internal/hosting"
 	hostingmoderation "github.com/everstacklabs/everstack/internal/hosting/moderation"
+	apikeylib "github.com/everstacklabs/everstack/internal/lib/apikey"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	s3pkg "github.com/everstacklabs/everstack/internal/storage/s3"
 )
@@ -216,7 +218,9 @@ func buildHostingServer(ctx context.Context, initRes *database.InitResult, embed
 
 	// Key issuance goes through the standard api_key command stack so the
 	// minted key validates via the normal interceptor path (full-string
-	// HMAC; prefixes are not parsed anywhere).
+	// HMAC). Validation never parses the prefix, but the OpenAI-compatible
+	// /v1 surface matches on it to accept the key as a Bearer, so it must
+	// come from apikeylib.
 	hostingServer.SetKeyIssuer(func(ctx context.Context, orgID, name string) (string, error) {
 		sys, err := cqrs.GetSystemFromContext(ctx)
 		if err != nil {
@@ -226,13 +230,19 @@ func buildHostingServer(ctx context.Context, initRes *database.InitResult, embed
 		if _, err := cryptorand.Read(buf); err != nil {
 			return "", err
 		}
-		plaintext := "evs_live_" + base64.RawURLEncoding.EncodeToString(buf)
+		plaintext := apikeylib.HostingKeyPrefix + base64.RawURLEncoding.EncodeToString(buf)
 		cmd := apikeycmd.NewCreateApiKeyCommand(name, "API_KEY_TYPE_SERVICE", plaintext, "", orgID, os.Getenv("EVS_INSTANCE_ID"))
 		if err := sys.CommandBus.Dispatch(ctx, cmd); err != nil {
 			return "", err
 		}
 		return plaintext, nil
 	})
+
+	// HOSTED_SITES and HOSTING_STORAGE_BYTES apply on a managed gateway only,
+	// per organization. Self-hosted hosting keeps running without plan quotas.
+	if enterprise.ManagedGateway() {
+		hostingServer.SetQuotaResolver(hostinglib.QuotaResolverFunc(managedHostingQuota))
+	}
 
 	logger.WithFields("bucket", hostingCfg.Bucket, "base_domain", baseDomain).Info("hosting: evs.run control plane enabled")
 	return hostingServer, true

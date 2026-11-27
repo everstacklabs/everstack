@@ -24,7 +24,7 @@ modalities:
   output: ["text"]
 
 knowledge_cutoff: "2026-03"
-notes: "High-efficiency Gemini model for agentic workflows, coding, and multimodal reasoning"
+notes: "Deprecated by Google on 2026-10-08; requests are automatically routed to gemini-3.8-flash. Migrate to gemini-3.8-flash."
 
 parameters:
   - key: "max_output_tokens"

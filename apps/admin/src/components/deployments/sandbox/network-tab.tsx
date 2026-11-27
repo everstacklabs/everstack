@@ -25,19 +25,19 @@ function formatBytes(bytes: number): string {
 }
 
 const ACTION_STYLES: Record<string, string> = {
-    allowed: 'bg-green-500/20 text-green-400 light:text-green-600 border-green-500/30',
-    blocked: 'bg-red-500/20 text-red-400 light:text-red-600 border-red-500/30',
+    allowed: 'bg-success-surface-strong text-success border-success-border',
+    blocked: 'bg-danger-surface-strong text-danger border-danger-border',
 }
 
 const ACTION_DOT_COLORS: Record<string, string> = {
-    allowed: 'bg-green-400',
-    blocked: 'bg-red-400',
+    allowed: 'bg-success-solid',
+    blocked: 'bg-danger-solid',
 }
 
 const MODE_STYLES: Record<string, string> = {
-    allow: 'bg-green-500/20 text-green-400 light:text-green-600 border-green-500/30',
-    whitelist: 'bg-yellow-500/20 text-yellow-400 light:text-yellow-700 border-yellow-500/30',
-    deny: 'bg-red-500/20 text-red-400 light:text-red-600 border-red-500/30',
+    allow: 'bg-success-surface-strong text-success border-success-border',
+    whitelist: 'bg-warning-surface-strong text-warning border-warning-border',
+    deny: 'bg-danger-surface-strong text-danger border-danger-border',
 }
 
 // ─── Main Component ─────────────────────────────────────────────────
@@ -90,7 +90,7 @@ export function NetworkTab() {
                 {/* Gateway health */}
                 {!gwLoading && !gwError && gateway && (
                     <span className="flex items-center gap-1.5 text-xs text-white/50 light:text-black/50">
-                        <span className={`size-1.5 rounded-full ${gateway.healthy ? 'bg-green-400' : 'bg-red-400'}`} />
+                        <span className={`size-1.5 rounded-full ${gateway.healthy ? 'bg-success-solid' : 'bg-danger-solid'}`} />
                         Gateway {gateway.healthy ? 'up' : 'down'}
                     </span>
                 )}
@@ -112,7 +112,7 @@ export function NetworkTab() {
                         <Loader loaderText="Loading network status..." />
                     </div>
                 ) : gwError ? (
-                    <div className="flex items-center justify-center h-full text-red-400 light:text-red-600 text-sm">
+                    <div className="flex items-center justify-center h-full text-danger text-sm">
                         Error loading gateway: {gwError.message}
                     </div>
                 ) : !activeSandboxId ? (
@@ -140,8 +140,8 @@ export function NetworkTab() {
                                 <Iconify.Icon icon="heroicons:arrows-up-down" className="size-3.5 text-brand-secondary-400" />
                                 <span className="text-xs text-white/50 light:text-black/50 uppercase font-medium">Data Transfer</span>
                                 {isStreaming && (
-                                    <span className="flex items-center gap-1 text-[10px] text-green-400 light:text-green-600">
-                                        <span className="size-1.5 rounded-full bg-green-500 animate-pulse" />
+                                    <span className="flex items-center gap-1 text-[10px] text-success">
+                                        <span className="size-1.5 rounded-full bg-success-solid animate-pulse" />
                                         Live
                                     </span>
                                 )}

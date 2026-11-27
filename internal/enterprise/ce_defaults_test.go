@@ -20,8 +20,9 @@ func TestCEDefaultsMatchPlansJSON(t *testing.T) {
 	var doc struct {
 		Plans map[string]struct {
 			UsageLimits []struct {
-				Type  string `json:"type"`
-				Value int64  `json:"value"`
+				Type    string `json:"type"`
+				Value   int64  `json:"value"`
+				Billing string `json:"billing"`
 			} `json:"usage_limits"`
 			Features []struct {
 				Name    string `json:"name"`
@@ -40,6 +41,11 @@ func TestCEDefaultsMatchPlansJSON(t *testing.T) {
 
 	seen := make(map[UsageType]bool, len(free.UsageLimits))
 	for _, ul := range free.UsageLimits {
+		if ul.Billing == "allowance" {
+			// Cloud wallet allowances (compute hours) have no self-hosted
+			// counterpart: CE has no prepaid wallet to price them against.
+			continue
+		}
 		ut := UsageType(ul.Type)
 		seen[ut] = true
 		got, ok := CEUsageLimits[ut]

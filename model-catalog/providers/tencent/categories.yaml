@@ -1,0 +1,18 @@
+chat:
+  - hy4-flash
+  - hy4
+  - hy3
+
+function_calling:
+  - hy4-flash
+  - hy4
+  - hy3
+
+reasoning:
+  - hy4-flash
+  - hy4
+  - hy3
+
+vision:
+  - hy4-flash
+  - hy4

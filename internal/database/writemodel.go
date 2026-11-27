@@ -6,6 +6,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
+
+	"github.com/jmoiron/sqlx"
 
 	"github.com/everstacklabs/everstack/internal/database/dialect"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
@@ -68,40 +71,25 @@ func (w *SQLWriter) Append(ctx context.Context, events ...Event) error {
 		).Warn("event writer: ClickHouse insert with empty tenant_id — call site missing WithTenantSchema; rows will be invisible to tenant queries")
 	}
 
-	for _, e := range events {
-		// Defaults
-		payloadSize := len(e.Payload)
-		sum := sha256.Sum256(e.Payload)
-		payloadHash := hex.EncodeToString(sum[:])
-		var blobID *string // set for CH if externalized
+	// ClickHouse creates a storage part per INSERT, so a row-at-a-time loop
+	// turns N events into N parts and N merges. Its own guidance is to insert
+	// at least a thousand rows at a time. Build one multi-row statement instead.
+	//
+	// Postgres keeps the per-row loop: it is the transactional store, the row
+	// counts there are small, and it has no part-per-insert cost.
+	if _, isClickHouse := w.d.(dialect.ClickHouse); isClickHouse {
+		if err := w.appendClickHouse(ctx, tx, insert, tenantID, events); err != nil {
+			return err
+		}
+		return tx.Commit()
+	}
 
-		// For ClickHouse, optionally externalize large payloads to event_blobs
-		switch w.d.(type) {
-		case dialect.ClickHouse:
-			// Externalize if > 64KB
-			const threshold = 64 * 1024
-			if payloadSize > threshold {
-				id := payloadHash // deterministic id for dedupe potential
-				blobID = &id
-				// Best-effort insert blob; duplicates are acceptable
-				if _, err := tx.ExecContext(ctx,
-					"INSERT INTO event_blobs (tenant_id, blob_id, size_bytes, content) VALUES (?,?,?,?)",
-					tenantID, id, payloadSize, string(e.Payload),
-				); err != nil {
-					logger.WithFields("error", err.Error()).Warn("failed to insert event blob; continuing")
-				}
-			}
-			// Pass string(e.Payload) so ClickHouse stores proper UTF-8 strings;
-			// []byte is stored as binary which breaks JSONExtractString queries.
-			if _, err := tx.ExecContext(ctx, insert, tenantID, e.Stream, e.ID, e.Type, string(e.Payload), e.CreatedAt, payloadSize, payloadHash, blobID); err != nil {
-				return err
-			}
-		default:
-			if _, err := tx.ExecContext(ctx, insert, e.Stream, e.ID, e.Type, e.Payload, e.CreatedAt); err != nil {
-				return err
-			}
+	for _, e := range events {
+		if _, err := tx.ExecContext(ctx, insert, e.Stream, e.ID, e.Type, e.Payload, e.CreatedAt); err != nil {
+			return err
 		}
 	}
+
 	return tx.Commit()
 }
 
@@ -203,5 +191,50 @@ func (w *VisibilityFilteredWriter) Append(ctx context.Context, events ...Event) 
 		}
 	}
 
+	return nil
+}
+
+// appendClickHouse writes every event in a single multi-row INSERT.
+//
+// Large payloads are still externalised to event_blobs first; those are rare
+// (>64KB) so they stay one statement each rather than complicating the batch.
+func (w *SQLWriter) appendClickHouse(ctx context.Context, tx *sqlx.Tx, insert, tenantID string, events []Event) error {
+	const blobThreshold = 64 * 1024
+
+	values := make([]string, 0, len(events))
+	args := make([]any, 0, len(events)*9)
+
+	for _, e := range events {
+		payloadSize := len(e.Payload)
+		sum := sha256.Sum256(e.Payload)
+		payloadHash := hex.EncodeToString(sum[:])
+		var blobID *string
+
+		if payloadSize > blobThreshold {
+			id := payloadHash // deterministic, so duplicates dedupe
+			blobID = &id
+			// Best effort: losing a blob costs payload detail, not the event.
+			if _, err := tx.ExecContext(ctx,
+				"INSERT INTO event_blobs (tenant_id, blob_id, size_bytes, content) VALUES (?,?,?,?)",
+				tenantID, id, payloadSize, string(e.Payload),
+			); err != nil {
+				logger.WithFields("error", err.Error()).Warn("failed to insert event blob; continuing")
+			}
+		}
+
+		values = append(values, "(?,?,?,?,?,?,?,?,?)")
+		// string(e.Payload), not []byte: ClickHouse stores []byte as binary,
+		// which breaks JSONExtractString queries over the payload.
+		args = append(args, tenantID, e.Stream, e.ID, e.Type, string(e.Payload), e.CreatedAt, payloadSize, payloadHash, blobID)
+	}
+
+	if len(values) == 0 {
+		return nil
+	}
+
+	stmt := insert[:strings.Index(insert, "VALUES")+len("VALUES")] + " " + strings.Join(values, ",")
+	if _, err := tx.ExecContext(ctx, stmt, args...); err != nil {
+		return err
+	}
 	return nil
 }

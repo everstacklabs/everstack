@@ -2,13 +2,17 @@ package v1
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
+	"html"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
+	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/everstacklabs/everstack/internal/mcp"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -52,6 +56,14 @@ func (s *Server) handleOAuthInitiate(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, "tenant resolution failed")
 		return
 	}
+	// A self-hosted gateway stamps its local tenant on every request, signed
+	// in or not, so a tenant alone proves nothing here. Without a signed-in
+	// user or API key, anyone who can reach the gateway could connect a
+	// server to their own account and receive what agents send it.
+	if !contextkeys.HasVerifiedTenantPrincipal(ctx) {
+		writeJSONError(w, http.StatusUnauthorized, "sign in to connect this server")
+		return
+	}
 
 	serverID := mustParseInt64(req.ServerID)
 	if serverID == 0 {
@@ -80,6 +92,15 @@ func (s *Server) handleOAuthInitiate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The browser opens this URL from the dashboard's origin and the server
+	// that supplied it is tenant-chosen, so anything but a web URL (javascript:
+	// and friends) stops here.
+	authURL, err := url.Parse(discovery.AuthorizationEndpoint)
+	if err != nil || (authURL.Scheme != "https" && authURL.Scheme != "http") || authURL.Host == "" {
+		writeJSONError(w, http.StatusBadGateway, "OAuth discovery returned an unusable authorization endpoint")
+		return
+	}
+
 	// Generate PKCE pair
 	verifier, challenge, err := mcp.GeneratePKCE()
 	if err != nil {
@@ -103,6 +124,10 @@ func (s *Server) handleOAuthInitiate(w http.ResponseWriter, r *http.Request) {
 			scheme = "http"
 		}
 		callbackBase = fmt.Sprintf("%s://%s", scheme, r.Host)
+	}
+	if !callbackBaseAllowed(r, callbackBase) {
+		writeJSONError(w, http.StatusBadRequest, "callback_base_url is not allowed")
+		return
 	}
 	redirectURI := callbackBase + "/mcp/oauth/callback"
 
@@ -132,16 +157,15 @@ func (s *Server) handleOAuthInitiate(w http.ResponseWriter, r *http.Request) {
 		tenantID, serverID, state, verifier, redirectURI, discovery.TokenEndpoint, clientID, clientSecret,
 	)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("failed to store OAuth state: %v", err))
+		logger.Error("failed to store OAuth state", "error", err, "server_id", serverID)
+		writeJSONError(w, http.StatusInternalServerError, "failed to store OAuth state")
 		return
+	}
+	if mcp.PublicEndpointsRequired() {
+		setOAuthBindingCookie(w, redirectURI, state, oauthStateTTLSeconds)
 	}
 
 	// Build authorization URL
-	authURL, err := url.Parse(discovery.AuthorizationEndpoint)
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "invalid authorization endpoint")
-		return
-	}
 	q := authURL.Query()
 	q.Set("response_type", "code")
 	q.Set("client_id", clientID)
@@ -167,7 +191,7 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Look up state from DB
+	// Consume the state: of two concurrent callbacks, only one finds the row.
 	var (
 		serverID      int64
 		tenantID      string
@@ -179,12 +203,25 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		expiresAt     time.Time
 	)
 	err := s.db.QueryRowContext(ctx,
-		`SELECT server_id, tenant_id, code_verifier, redirect_uri, token_endpoint, client_id, client_secret, expires_at
-		 FROM mcp_oauth_states WHERE state = $1`, state,
+		`DELETE FROM mcp_oauth_states WHERE state = $1
+		 RETURNING server_id, tenant_id, code_verifier, redirect_uri, token_endpoint, client_id, client_secret, expires_at`, state,
 	).Scan(&serverID, &tenantID, &codeVerifier, &redirectURI, &tokenEndpoint, &clientID, &clientSecret, &expiresAt)
 	if err != nil {
 		writeOAuthCallbackError(w, "Invalid or expired OAuth state")
 		return
+	}
+
+	// Only the browser that started the flow may finish it. Otherwise a tenant
+	// could send anyone its authorization link and collect their tokens on its
+	// own server. Enforced where tenants share a gateway: a self-hosted UI may
+	// sit on a different host from the API, where this cookie would not arrive.
+	if mcp.PublicEndpointsRequired() {
+		c, cookieErr := r.Cookie(oauthBindingCookieName(redirectURI))
+		if cookieErr != nil || subtle.ConstantTimeCompare([]byte(c.Value), []byte(state)) != 1 {
+			writeOAuthCallbackError(w, "Please start the authorization again from the dashboard")
+			return
+		}
+		setOAuthBindingCookie(w, redirectURI, "", -1)
 	}
 
 	// Check expiry
@@ -193,15 +230,13 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete used state
-	_, _ = s.db.ExecContext(ctx,
-		`DELETE FROM mcp_oauth_states WHERE state = $1`, state)
-
 	// Exchange code for tokens
 	tokens, err := mcp.ExchangeCode(ctx, tokenEndpoint, code, codeVerifier, redirectURI, clientID, clientSecret)
 	if err != nil {
 		logger.Error("OAuth code exchange failed", "error", err, "server_id", serverID)
-		writeOAuthCallbackError(w, fmt.Sprintf("Token exchange failed: %v", err))
+		// The error carries the token endpoint's response body, which a
+		// tenant-chosen server controls. It stays in the log.
+		writeOAuthCallbackError(w, "Token exchange failed")
 		return
 	}
 
@@ -222,8 +257,8 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 
 	_, err = s.db.ExecContext(ctx,
 		`UPDATE mcp_servers SET auth_type = 'oauth2', auth_config = $1, updated_at = NOW()
-		 WHERE id = $2 AND deleted_at IS NULL`,
-		string(authConfigJSON), serverID,
+		 WHERE id = $2 AND tenant_id = $3 AND deleted_at IS NULL`,
+		string(authConfigJSON), serverID, tenantID,
 	)
 	if err != nil {
 		logger.Error("failed to update server auth config", "error", err, "server_id", serverID)
@@ -248,9 +283,10 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 <body>
 <p>Authorization successful. This window will close automatically.</p>
 <script>
-  if (window.opener) {
-    window.opener.postMessage({ type: 'mcp-oauth-success', serverId: '`+strconv.FormatInt(serverID, 10)+`' }, '*');
-  }
+  (function (msg) {
+    try { var ch = new BroadcastChannel('`+oauthResultChannel+`'); ch.postMessage(msg); ch.close(); } catch (e) {}
+    if (window.opener) { window.opener.postMessage(msg, window.location.origin); }
+  })({ type: 'mcp-oauth-success', serverId: '`+strconv.FormatInt(serverID, 10)+`' });
   window.close();
 </script>
 </body></html>`)
@@ -313,8 +349,8 @@ func (s *Server) makeTokenUpdateCallback(serverID int64, tenantID string) func(*
 
 		_, err := s.db.ExecContext(s.ctx,
 			`UPDATE mcp_servers SET auth_config = $1, updated_at = NOW()
-			 WHERE id = $2 AND deleted_at IS NULL`,
-			string(authConfigJSON), serverID,
+			 WHERE id = $2 AND tenant_id = $3 AND deleted_at IS NULL`,
+			string(authConfigJSON), serverID, tenantID,
 		)
 		if err != nil {
 			logger.Error("failed to persist refreshed tokens", "error", err, "server_id", serverID)
@@ -334,7 +370,59 @@ func writeJSONError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
+// oauthStateTTLSeconds matches the expires_at default on mcp_oauth_states.
+const oauthStateTTLSeconds = 600
+
+// oauthBindingCookieName uses the __Host- prefix on https so a sibling tenant
+// subdomain can't plant the cookie with Domain=.
+func oauthBindingCookieName(redirectURI string) string {
+	if strings.HasPrefix(redirectURI, "https://") {
+		return "__Host-evs_mcp_oauth"
+	}
+	return "evs_mcp_oauth"
+}
+
+// setOAuthBindingCookie remembers the state in the initiating browser. Lax is
+// what lets it travel on the authorization server's redirect back.
+func setOAuthBindingCookie(w http.ResponseWriter, redirectURI, value string, maxAge int) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     oauthBindingCookieName(redirectURI),
+		Value:    value,
+		Path:     "/",
+		MaxAge:   maxAge,
+		HttpOnly: true,
+		Secure:   strings.HasPrefix(redirectURI, "https://"),
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+// callbackBaseAllowed decides where an authorization code may be sent. The
+// value comes from the request body, so on a gateway shared between tenants it
+// must be this gateway, which is also the only host the binding cookie reaches.
+func callbackBaseAllowed(r *http.Request, base string) bool {
+	u, err := url.Parse(base)
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" ||
+		u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+		return false
+	}
+	if !mcp.PublicEndpointsRequired() {
+		return true
+	}
+	// Exact https:// keeps the cookie on its __Host- name, which is chosen from
+	// this same string. No path, so the code can only land on the callback route.
+	return strings.HasPrefix(base, "https://") && u.Path == "" && strings.EqualFold(u.Host, r.Host)
+}
+
+// oauthResultChannel is the BroadcastChannel the callback page reports on. The
+// dashboard opens the popup without an opener link, so that a tenant-chosen
+// authorization page cannot navigate the dashboard tab; the channel is
+// same-origin only, which is also where the callback page lives.
+const oauthResultChannel = "evs-mcp-oauth"
+
+// writeOAuthCallbackError renders the popup's error page. json.Marshal escapes
+// <, > and &, which keeps the message inside the script string.
 func writeOAuthCallbackError(w http.ResponseWriter, msg string) {
+	jsMsg, _ := json.Marshal(msg)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusBadRequest)
 	fmt.Fprintf(w, `<!DOCTYPE html>
@@ -342,12 +430,13 @@ func writeOAuthCallbackError(w http.ResponseWriter, msg string) {
 <body>
 <p>Authorization failed: %s</p>
 <script>
-  if (window.opener) {
-    window.opener.postMessage({ type: 'mcp-oauth-error', error: %q }, '*');
-  }
+  (function (msg) {
+    try { var ch = new BroadcastChannel('%s'); ch.postMessage(msg); ch.close(); } catch (e) {}
+    if (window.opener) { window.opener.postMessage(msg, window.location.origin); }
+  })({ type: 'mcp-oauth-error', error: %s });
   setTimeout(function() { window.close(); }, 3000);
 </script>
-</body></html>`, msg, msg)
+</body></html>`, html.EscapeString(msg), oauthResultChannel, jsMsg)
 }
 
 // reRegisterServerContext is a minimal interface to pass either context.Context

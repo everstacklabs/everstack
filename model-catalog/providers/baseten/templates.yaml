@@ -1,0 +1,14 @@
+default:
+  name: "Default"
+  description: "Standard Baseten gateway settings"
+  settings:
+    timeout: 60s
+    retry_attempts: 2
+
+cost_optimized:
+  name: "Cost Optimized"
+  description: "Low-cost models on Baseten Model APIs"
+  recommended_models:
+    - deepseek-ai/DeepSeek-V4-Flash-0731
+    - openai/gpt-oss-120b
+    - zai-org/GLM-5.3-Flash

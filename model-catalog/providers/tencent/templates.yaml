@@ -1,0 +1,13 @@
+default:
+  name: "Default"
+  description: "Standard Tencent TokenHub gateway settings"
+  settings:
+    timeout: 60s
+    retry_attempts: 2
+
+cost_optimized:
+  name: "Cost Optimized"
+  description: "Cheapest Hy tier"
+  recommended_models:
+    - hy4-flash
+    - hy3

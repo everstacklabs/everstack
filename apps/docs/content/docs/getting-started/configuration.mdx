@@ -51,8 +51,8 @@ gateway:
   models:
     - provider: openai
       model:
-        - gpt-4o
-        - gpt-4o-mini
+        - gpt-5.4
+        - gpt-5.4-mini
       api_key: sk-your-openai-key
       default: true
 ```
@@ -127,7 +127,7 @@ gateway:
   <Tab value="Auth">
     ```yaml
     auth:
-      mode: "none"                      # EVS_AUTH_MODE (none, builtin, oidc)
+      mode: "none"                      # EVS_AUTH_MODE (none, builtin)
 
       # Built-in email/password auth — first user becomes owner
       builtin:
@@ -137,6 +137,7 @@ gateway:
         seat_limit: 0                   # 0 = unlimited users
 
       # OpenID Connect (Keycloak, Auth0, Okta, Azure AD, etc.)
+      # mode "oidc" is not implemented yet: the gateway refuses to start with it.
       oidc:
         issuer_url: ""                  # EVS_AUTH_OIDC_ISSUER_URL
         client_id: ""                   # EVS_AUTH_OIDC_CLIENT_ID
@@ -189,17 +190,17 @@ gateway:
       models:
         - provider: openai
           model:
-            - gpt-4o
-            - gpt-4o-mini
+            - gpt-5.4
+            - gpt-5.4-mini
           api_key: sk-your-key          # Or use Vault for key management
           base_url: https://api.openai.com/v1
           max_tokens: 4096
           default: true                 # Default provider for unmatched models
-          default_alias: gpt-4o         # Default model when none specified
+          default_alias: gpt-5.4        # Default model when none specified
 
         - provider: anthropic
           model:
-            - claude-sonnet-4-5-20250929
+            - claude-sonnet-5-5
             - claude-haiku-4-5-20251001
           api_key: sk-ant-your-key
           base_url: https://api.anthropic.com/v1
@@ -346,7 +347,7 @@ All config values can be set via environment variables with the `EVS_` prefix. E
 | `EVS_DATABASE_MODE`       | `single` or `hybrid`         | `hybrid` |
 | `EVS_POSTGRES_DSN`        | PostgreSQL connection string | —        |
 | `EVS_CLICKHOUSE_DSN`      | ClickHouse connection string | —        |
-| `EVS_AUTH_MODE`           | `none`, `builtin`, or `oidc` | `none`   |
+| `EVS_AUTH_MODE`           | `none` or `builtin`          | `none`   |
 | `EVS_CACHE_TYPE`          | `memory` or `redis`          | `memory` |
 | `EVS_CACHE_REDIS_ADDRESS` | Redis address                | —        |
 | `EVS_LOG_LEVEL`           | Log level                    | `info`   |

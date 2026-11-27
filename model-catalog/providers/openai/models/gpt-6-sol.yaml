@@ -1,0 +1,90 @@
+# Verified 2026-09-29.
+# Source: https://developers.openai.com/api/docs/models/gpt-6-sol
+name: "gpt-6-sol"
+display_name: "GPT-6 Sol"
+family: "gpt-6"
+status: "stable"
+release_date: "2026-09-22"
+api_type: "responses"
+cost:
+  input_per_1k: 0.002
+  output_per_1k: 0.01
+  cache_read_per_1k: 0.0002
+  cache_write_per_1k: 0.0025
+  long_context:
+    threshold_tokens: 272000
+    input_multiplier: 2
+    cache_multiplier: 2
+    output_multiplier: 1.5
+limits:
+  max_tokens: 1050000
+  max_completion_tokens: 128000
+capabilities:
+  - "chat"
+  - "function_calling"
+  - "vision"
+  - "reasoning"
+  - "computer_use"
+  - "coding"
+modalities:
+  input:
+    - "text"
+    - "image"
+    - "pdf"
+  output:
+    - "text"
+knowledge_cutoff: "2026-04-20"
+notes: "Use Responses for reasoning with tools; Chat Completions function calling requires reasoning_effort=none. Standard global token rates; regional processing adds 10% where available."
+structured_output: true
+parameters:
+  -
+    key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 128000
+    has_max_value: true
+  -
+    key: "reasoning_effort"
+    display_name: "Reasoning effort"
+    type: "enum"
+    options:
+      - "none"
+      - "low"
+      - "medium"
+      - "high"
+      - "xhigh"
+      - "max"
+variants:
+  -
+    id: "none"
+    display_name: "None reasoning"
+    parameters:
+      reasoning_effort: "none"
+  -
+    id: "low"
+    display_name: "Low reasoning"
+    parameters:
+      reasoning_effort: "low"
+  -
+    id: "medium"
+    display_name: "Medium reasoning"
+    parameters:
+      reasoning_effort: "medium"
+  -
+    id: "high"
+    display_name: "High reasoning"
+    parameters:
+      reasoning_effort: "high"
+  -
+    id: "xhigh"
+    display_name: "Xhigh reasoning"
+    parameters:
+      reasoning_effort: "xhigh"
+  -
+    id: "max"
+    display_name: "Max reasoning"
+    parameters:
+      reasoning_effort: "max"
+added_in_version: "2.9.0"

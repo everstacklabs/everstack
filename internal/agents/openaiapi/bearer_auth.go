@@ -87,6 +87,17 @@ func WithDeviceTokenAuth(next http.Handler, tokens *deviceauth.TokenManager, db 
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
+		// Refused once the account's credentials were revoked after the
+		// token was issued (an undone email change).
+		revoked, err := deviceauth.CredentialsRevoked(ctx, db, member.UserID, identity.IssuedAt)
+		if err != nil {
+			http.Error(w, "Authorization unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		if revoked {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
 		if identity.InstanceID != "" {
 			var count int
 			if err = db.GetContext(ctx, &count, `SELECT COUNT(*) FROM everstack.tenant_config WHERE instance_id=$1 AND organization_id=$2::uuid AND status='active'`, identity.InstanceID, identity.OrganizationID); err != nil {

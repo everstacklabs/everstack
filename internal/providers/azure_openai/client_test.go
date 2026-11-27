@@ -106,3 +106,37 @@ func TestEmbedUsesDeploymentPath(t *testing.T) {
 		t.Fatalf("unexpected response: %+v", resp)
 	}
 }
+
+func TestRequiresMaxCompletionTokens(t *testing.T) {
+	tests := map[string]bool{
+		"o1":           true,
+		"o1-mini":      true,
+		"o3-mini":      true,
+		"gpt-5":        true,
+		"gpt-5-mini":   true,
+		"gpt-6":        true,
+		"gpt-6.2-sol":  true,
+		"gpt-4o":       false,
+		"gpt-35-turbo": false,
+	}
+	for model, want := range tests {
+		if got := requiresMaxCompletionTokens(model); got != want {
+			t.Errorf("requiresMaxCompletionTokens(%q) = %v, want %v", model, got, want)
+		}
+	}
+}
+
+func TestToAzureChatRequestMovesMaxTokensForGPT6(t *testing.T) {
+	for model, wantCompletion := range map[string]bool{"gpt-6.2-astra": true, "gpt-5": true, "gpt-4o": false} {
+		out := toAzureChatRequest(gw.ChatCompletionRequest{
+			Model:    model,
+			Sampling: gw.SamplingParams{MaxTokens: 300},
+		})
+		if wantCompletion && (out.MaxCompletionTokens != 300 || out.MaxTokens != 0) {
+			t.Errorf("%s: max_tokens=%d max_completion_tokens=%d, want 0/300", model, out.MaxTokens, out.MaxCompletionTokens)
+		}
+		if !wantCompletion && (out.MaxTokens != 300 || out.MaxCompletionTokens != 0) {
+			t.Errorf("%s: max_tokens=%d max_completion_tokens=%d, want 300/0", model, out.MaxTokens, out.MaxCompletionTokens)
+		}
+	}
+}

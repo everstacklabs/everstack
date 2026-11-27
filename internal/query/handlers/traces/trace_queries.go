@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/everstacklabs/everstack/internal/query"
+	"github.com/everstacklabs/everstack/internal/telemetry/otelstatus"
 	"github.com/google/uuid"
 )
 
@@ -139,14 +140,17 @@ func (q ListTracesQuery) Validate() error {
 	if q.Limit < 0 || q.Limit > 1000 {
 		return fmt.Errorf("limit must be between 0 and 1000")
 	}
-	validStatusCodes := map[string]bool{
-		"":      true,
-		"OK":    true,
-		"ERROR": true,
-		"UNSET": true,
-	}
-	if !validStatusCodes[q.StatusCode] {
-		return fmt.Errorf("invalid status_code: %s", q.StatusCode)
+	// The accepted vocabulary is unchanged for existing callers: "OK",
+	// "ERROR" and "UNSET" still validate, and "" still means no filter.
+	// otelstatus.Normalize additionally accepts the spellings otel_traces
+	// actually stores ("Ok"/"Error"/"Unset") and the protobuf enum names, so a
+	// caller that echoes a status straight back from a span is no longer
+	// rejected. All of them compile to the same membership predicate, so this
+	// widens no query's reach.
+	if q.StatusCode != "" {
+		if _, ok := otelstatus.Normalize(q.StatusCode); !ok {
+			return fmt.Errorf("invalid status_code: %s", q.StatusCode)
+		}
 	}
 	return nil
 }

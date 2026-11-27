@@ -1,0 +1,17 @@
+# Verified 2026-09-29: https://docs.typesafe.ai/models
+# Input-only price. Total request budget 64k; state plus longest question 32k.
+name: "jev-1.13.0"
+display_name: "Jev 1.13"
+api_type: "systemone"
+family: "typesafe"
+status: "stable"
+added_in_version: "2.10.0"
+cost:
+  input_per_1k: 4.2e-05
+  output_per_1k: 0
+limits:
+  max_tokens: 64000
+capabilities: [decisions]
+modalities:
+  input: [text]
+  output: [json]

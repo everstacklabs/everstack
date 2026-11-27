@@ -42,10 +42,13 @@ func NewDefaultPolicy() *Policy {
 			"/everstack.gateway.v1.GatewayService/GetTrialStatus", // Needed by activation guard to check trial mode
 			"/everstack.gateway.v1.GatewayService/ActivationCallback",
 			"/everstack.gateway.v1.GatewayService/SubscriptionStatusCallback",
-			"/everstack.gateway.v1.GatewayService/GetLicenseMonitorStatus",    // Billing page needs license/usage info to render
-			"/everstack.gateway.v1.GatewayService/RefreshLicenseMonitor",      // Billing page manual refresh button
-			"/everstack.gateway.v1.GatewayService/GetPlans",                   // Billing page needs plan list for upgrade
-			"/everstack.gateway.v1.GatewayService/StoreUpgradeCallbackSecret", // Upgrade flow requires storing callback secret before redirect
+			"/everstack.gateway.v1.GatewayService/GetLicenseMonitorStatus", // Pre-login callers get a redacted answer (handler checks auth)
+			// RefreshLicenseMonitor is deliberately absent: it triggers an
+			// upstream license refresh and must never be anonymous (EVS-324).
+			"/everstack.gateway.v1.GatewayService/GetPlans", // Billing page needs plan list for upgrade
+			// Billing verifies an upgrade's callback secret here. Possession of the
+			// secret is the credential; the reply is only its plan tier/period.
+			"/everstack.gateway.v1.GatewayService/GetUpgradeCallbackSecret",
 
 			// REST equivalents (grpc-gateway)
 			"/v1/gateway/instance/activate",
@@ -65,10 +68,12 @@ func NewDefaultPolicy() *Policy {
 			"/v1/images",
 			"/v1/audio",
 			"/v1/moderations",
+			"/v1/systemone",
 
 			// ConnectRPC/gRPC endpoints (GatewayService AI methods)
 			"/everstack.gateway.v1.GatewayService/ChatCompletion",
 			"/everstack.gateway.v1.GatewayService/Embeddings",
+			"/everstack.gateway.v1.GatewayService/SystemOne",
 		},
 		ShadowMeteredPathPrefixes: []string{
 			// Billable AI paths missing from MeteredPathPrefixes above.

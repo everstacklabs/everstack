@@ -141,7 +141,7 @@ export function LogDetailSheet({ log, open, onClose, onPrevious, onNext, canGoPr
 															<span className='text-white/90 light:text-black/90 text-xs'>{log.correlationId}</span>
 														</Badge>
 														{isCopied && (
-															<Check className='size-3 text-green-500' />
+															<Check className='size-3 text-success' />
 														)}
 													</div>
 												</Tooltip>
@@ -224,7 +224,7 @@ export function LogDetailSheet({ log, open, onClose, onPrevious, onNext, canGoPr
 									</div>
 									<div className='space-y-1'>
 										<div className='text-white/50 light:text-black/50 text-xs'>Severity</div>
-										<div className={cn(log.severity === 'error' ? 'text-red-400 light:text-red-600' : log.severity === 'warn' ? 'text-yellow-400 light:text-yellow-700' : 'text-white/90 light:text-black/90')}>
+										<div className={cn(log.severity === 'error' ? 'text-danger' : log.severity === 'warn' ? 'text-warning' : 'text-white/90 light:text-black/90')}>
 											{log.severity || 'N/A'}
 										</div>
 									</div>
@@ -292,7 +292,7 @@ export function LogDetailSheet({ log, open, onClose, onPrevious, onNext, canGoPr
 											<div className={cn(
 												'font-mono',
 												safeBigIntToNumber(log.streamingMetrics.maxChunkLatencyMs) > 500
-													? 'text-yellow-400 light:text-yellow-700'
+													? 'text-warning'
 													: 'text-white/90 light:text-black/90'
 											)}>
 												{safeBigIntToNumber(log.streamingMetrics.maxChunkLatencyMs) > 0
@@ -312,7 +312,7 @@ export function LogDetailSheet({ log, open, onClose, onPrevious, onNext, canGoPr
 									{log.status === 'error' && log.streamingMetrics.partialResponseOnError && (
 										<div className='mt-3'>
 											<div className='text-white/50 light:text-black/50 text-xs mb-1'>Partial Response Before Error</div>
-											<div className='text-yellow-400/80 light:text-yellow-700/80 text-sm bg-yellow-500/10 p-2 rounded border border-yellow-500/20 whitespace-pre-wrap max-h-[100px] overflow-y-auto scrollbar-macos'>
+											<div className='text-warning/80 text-sm bg-warning-surface p-2 rounded border border-warning-border whitespace-pre-wrap max-h-[100px] overflow-y-auto scrollbar-macos'>
 												{log.streamingMetrics.partialResponseOnError}
 											</div>
 										</div>
@@ -441,8 +441,8 @@ export function LogDetailSheet({ log, open, onClose, onPrevious, onNext, canGoPr
 
 															{exec.error && (
 																<div>
-																	<div className='text-xs text-red-400 light:text-red-600 mb-1'>Error ({exec.errorType || 'runtime'})</div>
-																	<pre className='text-xs text-red-300 light:text-red-600 bg-red-500/10 p-2 rounded border border-red-500/20 overflow-x-auto max-h-24 scrollbar-macos'>
+																	<div className='text-xs text-danger mb-1'>Error ({exec.errorType || 'runtime'})</div>
+																	<pre className='text-xs text-danger bg-danger-surface p-2 rounded border border-danger-border overflow-x-auto max-h-24 scrollbar-macos'>
 																		{exec.error}
 																	</pre>
 																</div>
@@ -471,18 +471,18 @@ export function LogDetailSheet({ log, open, onClose, onPrevious, onNext, canGoPr
 
 															{exec.stderr && (
 																<div>
-																	<div className='text-xs text-yellow-400 light:text-yellow-700 mb-1'>Stderr</div>
+																	<div className='text-xs text-warning mb-1'>Stderr</div>
 																	{(() => {
 																		const parsedJson = tryParseJson(exec.stderr)
 																		if (parsedJson) {
 																			return (
-																				<div className='bg-yellow-500/10 p-2 rounded overflow-x-auto max-h-48 overflow-y-auto scrollbar-macos'>
+																				<div className='bg-warning-surface p-2 rounded overflow-x-auto max-h-48 overflow-y-auto scrollbar-macos'>
 																					<JsonViewer data={parsedJson} collapsed={false} showControls={true} />
 																				</div>
 																			)
 																		}
 																		return (
-																			<pre className='text-xs text-yellow-300 light:text-yellow-700 bg-yellow-500/10 p-2 rounded border border-yellow-500/20 overflow-x-auto max-h-32 scrollbar-macos whitespace-pre-wrap'>
+																			<pre className='text-xs text-warning bg-warning-surface p-2 rounded border border-warning-border overflow-x-auto max-h-32 scrollbar-macos whitespace-pre-wrap'>
 																				{exec.stderr}
 																			</pre>
 																		)
@@ -587,7 +587,7 @@ export function LogDetailSheet({ log, open, onClose, onPrevious, onNext, canGoPr
 												: 'Chat Response')}
 									</h3>
 									<div className={`text-sm prose prose-invert max-w-none w-full whitespace-pre-wrap p-3 max-h-[200px] overflow-y-auto scrollbar-macos rounded border ${log.status === 'error'
-										? 'text-red-400 light:text-red-600 bg-red-500/10 border-red-500/20'
+										? 'text-danger bg-danger-surface border-danger-border'
 										: 'text-white/90 light:text-black/90 bg-white/5 light:bg-black/5 border-white/10 light:border-black/10'
 										} light:border-black/10`}>
 										{log.responseText}

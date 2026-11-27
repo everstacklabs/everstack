@@ -1,0 +1,269 @@
+{
+  "title": "Everstack Fast-Path Gateway Performance",
+  "tags": ["everstack", "fast-path", "performance"],
+  "timezone": "browser",
+  "schemaVersion": 16,
+  "version": 0,
+  "refresh": "5s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request Latency (p50, p99, p999)",
+      "type": "graph",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "fastpath_total_latency_microseconds{quantile=\"0.5\"}",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "fastpath_total_latency_microseconds{quantile=\"0.99\"}",
+          "legendFormat": "p99",
+          "refId": "B"
+        },
+        {
+          "expr": "fastpath_total_latency_microseconds{quantile=\"0.999\"}",
+          "legendFormat": "p999",
+          "refId": "C"
+        }
+      ],
+      "yaxes": [{ "format": "µs", "label": "Latency" }, { "format": "short" }],
+      "legend": { "show": true },
+      "tooltip": { "shared": true }
+    },
+    {
+      "id": 2,
+      "title": "Cache Hit Ratios",
+      "type": "graph",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "fastpath_auth_cache_hit_ratio",
+          "legendFormat": "Auth Cache",
+          "refId": "A"
+        },
+        {
+          "expr": "fastpath_router_cache_hit_ratio",
+          "legendFormat": "Router Cache",
+          "refId": "B"
+        },
+        {
+          "expr": "fastpath_exact_cache_hit_ratio",
+          "legendFormat": "Exact Cache",
+          "refId": "C"
+        }
+      ],
+      "yaxes": [
+        { "format": "percentunit", "label": "Hit Ratio", "min": 0, "max": 1 },
+        { "format": "short" }
+      ],
+      "legend": { "show": true },
+      "tooltip": { "shared": true }
+    },
+    {
+      "id": 3,
+      "title": "Auth Latency Breakdown",
+      "type": "graph",
+      "gridPos": { "x": 0, "y": 8, "w": 8, "h": 6 },
+      "targets": [
+        {
+          "expr": "fastpath_auth_latency_microseconds{quantile=\"0.5\"}",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "fastpath_auth_latency_microseconds{quantile=\"0.99\"}",
+          "legendFormat": "p99",
+          "refId": "B"
+        },
+        {
+          "expr": "fastpath_auth_latency_microseconds{quantile=\"0.999\"}",
+          "legendFormat": "p999",
+          "refId": "C"
+        }
+      ],
+      "yaxes": [{ "format": "µs", "label": "Latency" }, { "format": "short" }]
+    },
+    {
+      "id": 4,
+      "title": "Routing Latency",
+      "type": "graph",
+      "gridPos": { "x": 8, "y": 8, "w": 8, "h": 6 },
+      "targets": [
+        {
+          "expr": "fastpath_routing_latency_microseconds{quantile=\"0.5\"}",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "fastpath_routing_latency_microseconds{quantile=\"0.99\"}",
+          "legendFormat": "p99",
+          "refId": "B"
+        }
+      ],
+      "yaxes": [{ "format": "µs", "label": "Latency" }, { "format": "short" }]
+    },
+    {
+      "id": 5,
+      "title": "Cache Lookup Latency",
+      "type": "graph",
+      "gridPos": { "x": 16, "y": 8, "w": 8, "h": 6 },
+      "targets": [
+        {
+          "expr": "fastpath_cache_latency_microseconds{quantile=\"0.5\"}",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "fastpath_cache_latency_microseconds{quantile=\"0.99\"}",
+          "legendFormat": "p99",
+          "refId": "B"
+        }
+      ],
+      "yaxes": [{ "format": "µs", "label": "Latency" }, { "format": "short" }]
+    },
+    {
+      "id": 6,
+      "title": "Request Rate",
+      "type": "graph",
+      "gridPos": { "x": 0, "y": 14, "w": 12, "h": 6 },
+      "targets": [
+        {
+          "expr": "rate(fastpath_requests_total{path=\"fast\"}[1m])",
+          "legendFormat": "Fast-Path",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(fastpath_requests_total{path=\"legacy\"}[1m])",
+          "legendFormat": "Legacy",
+          "refId": "B"
+        }
+      ],
+      "yaxes": [
+        { "format": "reqps", "label": "Requests/sec" },
+        { "format": "short" }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Fast-Path Usage Ratio",
+      "type": "singlestat",
+      "gridPos": { "x": 12, "y": 14, "w": 6, "h": 6 },
+      "targets": [
+        {
+          "expr": "fastpath_ratio",
+          "refId": "A"
+        }
+      ],
+      "format": "percentunit",
+      "valueName": "current",
+      "thresholds": "0.7,0.9",
+      "colors": ["#d44a3a", "#e0b400", "#299c46"]
+    },
+    {
+      "id": 8,
+      "title": "Cache Operations Rate",
+      "type": "graph",
+      "gridPos": { "x": 18, "y": 14, "w": 6, "h": 6 },
+      "targets": [
+        {
+          "expr": "rate(fastpath_auth_cache_hits_total[1m])",
+          "legendFormat": "Auth Hits",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(fastpath_exact_cache_hits_total[1m])",
+          "legendFormat": "Exact Hits",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(fastpath_semantic_cache_hits_total[1m])",
+          "legendFormat": "Semantic Hits",
+          "refId": "C"
+        }
+      ],
+      "yaxes": [
+        { "format": "ops", "label": "Operations/sec" },
+        { "format": "short" }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Streaming Latency",
+      "type": "graph",
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 6 },
+      "targets": [
+        {
+          "expr": "fastpath_streaming_latency_microseconds{quantile=\"0.5\"}",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "fastpath_streaming_latency_microseconds{quantile=\"0.99\"}",
+          "legendFormat": "p99",
+          "refId": "B"
+        }
+      ],
+      "yaxes": [{ "format": "µs", "label": "Latency" }, { "format": "short" }]
+    },
+    {
+      "id": 10,
+      "title": "Cache Miss Rates",
+      "type": "graph",
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 6 },
+      "targets": [
+        {
+          "expr": "rate(fastpath_auth_cache_misses_total[1m])",
+          "legendFormat": "Auth Misses",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(fastpath_router_cache_misses_total[1m])",
+          "legendFormat": "Router Misses",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(fastpath_exact_cache_misses_total[1m])",
+          "legendFormat": "Exact Misses",
+          "refId": "C"
+        }
+      ],
+      "yaxes": [
+        { "format": "ops", "label": "Misses/sec" },
+        { "format": "short" }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Latency Heatmap",
+      "type": "heatmap",
+      "gridPos": { "x": 0, "y": 26, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(fastpath_total_latency_microseconds_bucket[1m])) by (le)",
+          "legendFormat": "{{le}}",
+          "refId": "A",
+          "format": "heatmap"
+        }
+      ],
+      "dataFormat": "tsbuckets",
+      "yAxis": {
+        "format": "µs",
+        "decimals": 0
+      },
+      "color": {
+        "mode": "spectrum",
+        "cardColor": "#b4ff00",
+        "colorScheme": "interpolateSpectral"
+      }
+    }
+  ],
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"]
+  }
+}

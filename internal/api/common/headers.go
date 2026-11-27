@@ -64,6 +64,9 @@ const (
 	EverstackAPIKey          = "x-evs-api-key"
 	EverstackOrgID           = "x-evs-org-id"
 	EverstackMode            = "x-evs-mode"
+	// EverstackModelTrial is set on a response served on the model trial:
+	// "remaining=<n>", the organization's free requests left.
+	EverstackModelTrial = "x-evs-model-trial"
 
 	// Legacy x-mf-* names, kept from before the rename. Accepted at read-sites
 	// for backward compatibility with deployed CLIs, published SDKs, and user

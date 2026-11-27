@@ -10,11 +10,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/everstacklabs/everstack/internal/database"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/lib/correlation"
-	"github.com/everstacklabs/everstack/internal/database"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/sirupsen/logrus"
 )
 
 // LoggingMiddleware wraps a provider with structured logging
@@ -87,20 +88,26 @@ func (m *LoggingMiddleware) Chat(ctx context.Context, req gw.ChatCompletionReque
 	// Extract user input for logging
 	userInput := extractUserInput(req)
 
-	// Log provider request issued with user input
-	requestPayload := m.buildRequestPayload(providerName, req.Model, endpoint, userInput, cid)
+	// The request and response lines are Info. Their payloads are JSON built
+	// from the request and response, so build them only when Info is logged.
+	logInfo := logger.IsLevelEnabled(logrus.InfoLevel)
 
-	withTenant(ctx, logger.WithCategory(logger.CategoryOperational).
-		WithLogEvent(logger.EventProviderRequestIssued).
-		WithPayload(requestPayload).
-		SetFields(
-			"provider", providerName,
-			"endpoint", endpoint,
-			"model", req.Model,
-			"stream", false,
-			"command_type", "ChatCompletion",
-			"correlation_id", cid,
-		)).Info("provider request issued")
+	// Log provider request issued with user input
+	if logInfo {
+		requestPayload := m.buildRequestPayload(providerName, req.Model, endpoint, userInput, cid)
+
+		withTenant(ctx, logger.WithCategory(logger.CategoryOperational).
+			WithLogEvent(logger.EventProviderRequestIssued).
+			WithPayload(requestPayload).
+			SetFields(
+				"provider", providerName,
+				"endpoint", endpoint,
+				"model", req.Model,
+				"stream", false,
+				"command_type", "ChatCompletion",
+				"correlation_id", cid,
+			)).Info("provider request issued")
+	}
 
 	// Call the actual provider
 	resp, err := m.provider.Chat(ctx, req)
@@ -123,23 +130,24 @@ func (m *LoggingMiddleware) Chat(ctx context.Context, req gw.ChatCompletionReque
 		return gw.ChatCompletionResponse{}, err
 	}
 
-	// Extract metadata from response
-	metadata := m.extractor.ExtractFromResponse(resp)
-
 	// Log provider response received
-	responsePayload := m.buildResponsePayload(providerName, metadata, cid, latencyMs)
+	if logInfo {
+		// Extract metadata from response
+		metadata := m.extractor.ExtractFromResponse(resp)
+		responsePayload := m.buildResponsePayload(providerName, metadata, cid, latencyMs)
 
-	withTenant(ctx, logger.WithCategory(logger.CategoryOperational).
-		WithLogEvent(logger.EventProviderResponseReceived).
-		WithPayload(responsePayload).
-		SetFields(
-			"provider", providerName,
-			"correlation_id", cid,
-			"command_type", "ChatCompletion",
-			"latency_ms", latencyMs,
-			"prompt_tokens", metadata.PromptTokens,
-			"completion_tokens", metadata.CompletionTokens,
-		)).Info("provider response received")
+		withTenant(ctx, logger.WithCategory(logger.CategoryOperational).
+			WithLogEvent(logger.EventProviderResponseReceived).
+			WithPayload(responsePayload).
+			SetFields(
+				"provider", providerName,
+				"correlation_id", cid,
+				"command_type", "ChatCompletion",
+				"latency_ms", latencyMs,
+				"prompt_tokens", metadata.PromptTokens,
+				"completion_tokens", metadata.CompletionTokens,
+			)).Info("provider response received")
+	}
 
 	return resp, nil
 }
@@ -784,13 +792,13 @@ func (m *LoggingMiddleware) buildStreamResponsePayloadWithMetrics(providerName s
 			"correlation.id": cid,
 		},
 		"streaming_metrics": map[string]interface{}{
-			"ttft_ms":               streamMetrics.TtftMs,
-			"chunk_count":           streamMetrics.ChunkCount,
-			"avg_chunk_latency_ms":  streamMetrics.AvgChunkLatencyMs,
-			"max_chunk_latency_ms":  streamMetrics.MaxChunkLatencyMs,
-			"tokens_per_second":     streamMetrics.TokensPerSecond,
-			"stream_duration_ms":    streamMetrics.StreamDurationMs,
-			"chunk_timeline":        streamMetrics.ChunkTimeline,
+			"ttft_ms":              streamMetrics.TtftMs,
+			"chunk_count":          streamMetrics.ChunkCount,
+			"avg_chunk_latency_ms": streamMetrics.AvgChunkLatencyMs,
+			"max_chunk_latency_ms": streamMetrics.MaxChunkLatencyMs,
+			"tokens_per_second":    streamMetrics.TokensPerSecond,
+			"stream_duration_ms":   streamMetrics.StreamDurationMs,
+			"chunk_timeline":       streamMetrics.ChunkTimeline,
 		},
 	}
 

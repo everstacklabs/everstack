@@ -55,3 +55,4 @@ parameters:
   - key: "seed"
     display_name: "Seed"
     type: "integer"
+notes: "Deprecated by OpenAI on 2026-10-14; shuts down 2027-01-14. Migrate to gpt-6-luna."

@@ -1,4 +1,418 @@
 versions:
+  - version: "2.13.0"
+    date: "2026-11-26"
+    description: "11 models on Azure and Amazon Bedrock that the gateway can now serve. Azure: GPT-6.1 Terra, GPT-6.2 Sol and GPT-6.2 Astra, called through Azure's v1 Responses API, and Claude Haiku 5.5 and Claude Fable 5.2, called through the Foundry Messages API. These need a gateway that includes the Azure Responses and Claude routes; an older gateway lists them but cannot call them. An Azure deployment must be named after the model id. Amazon Bedrock: GPT-6.1 Terra, GPT-6.2 Sol and GPT-6.2 Astra through their US and Global inference profiles, which is the form Bedrock's Converse API accepts for these models; prices, including the higher rate for prompts over 272K input tokens, are checked against the AWS model cards. Azure prices are copied from the first-party entries, which match the Azure list prices on models.dev as of 2026-11-26, and were not checked against Azure's own pricing page. All carry the same request-setting exclusions as the first-party models."
+    changes:
+      new_models:
+        - { provider: aws-bedrock, model: "global.openai.gpt-6.1-terra", display_name: "GPT-6.1 Terra (Global) (Bedrock)" }
+        - { provider: aws-bedrock, model: "global.openai.gpt-6.2-astra", display_name: "GPT-6.2 Astra (Global) (Bedrock)" }
+        - { provider: aws-bedrock, model: "global.openai.gpt-6.2-sol", display_name: "GPT-6.2 Sol (Global) (Bedrock)" }
+        - { provider: aws-bedrock, model: "us.openai.gpt-6.1-terra", display_name: "GPT-6.1 Terra (US) (Bedrock)" }
+        - { provider: aws-bedrock, model: "us.openai.gpt-6.2-astra", display_name: "GPT-6.2 Astra (US) (Bedrock)" }
+        - { provider: aws-bedrock, model: "us.openai.gpt-6.2-sol", display_name: "GPT-6.2 Sol (US) (Bedrock)" }
+        - { provider: azure-openai, model: "claude-fable-5-2", display_name: "Claude Fable 5.2 (Azure)" }
+        - { provider: azure-openai, model: "claude-haiku-5-5", display_name: "Claude Haiku 5.5 (Azure)" }
+        - { provider: azure-openai, model: "gpt-6.1-terra", display_name: "GPT-6.1 Terra (Azure)" }
+        - { provider: azure-openai, model: "gpt-6.2-astra", display_name: "GPT-6.2 Astra (Azure)" }
+        - { provider: azure-openai, model: "gpt-6.2-sol", display_name: "GPT-6.2 Sol (Azure)" }
+
+  - version: "2.12.0"
+    date: "2026-11-26"
+    description: "Follow-up to 2.11.0: 25 models added. New routes on Fireworks (DeepSeek V4.1 Flash 1017 Flex and US, Kimi K3.1 Pro US, Kimi Latest, Ultramarine 1 Flash, Qwen4 Max, Hy4 flash), Hugging Face (Mistral Large 4, Beam 1.0, Nemotron 3.5 Super VL in two builds, Muse Spark Open, Inkling 2 Mini), Together (Glimpse 1.0, DeepSeek V4.1 Flash 1017 Fast, Ripple 65B Preview), Alibaba (Kimi K3.1 Pro and Pro Prime), Z.ai (GLM-5.3-FlashX-Legal) and OpenRouter (Xiaomi MiMo-V2.6-Flash-MOPD, Upstage Solar Mini 4.5 Preview). On Amazon Bedrock, Kimi K3.1 Pro Highspeed is added through its US and Global inference profiles, with prices checked against the AWS pricing page, and the US and Global profiles of Claude Fable 5.2 get their own entries so requests to those ids are priced: Global at the first-party rate and US at 10 percent above it, following Anthropic's published rule for regional endpoints (the AWS page did not show Anthropic prices to confirm). They carry the same request-setting exclusions as the base model. Prices and limits for the Fireworks, Hugging Face, Together, Alibaba and Z.ai entries come from models.dev as of 2026-11-26 and were not checked against each provider's own page. OpenRouter dates indicate route listing, not necessarily original model launch."
+    changes:
+      new_models:
+        - { provider: aws-bedrock, model: "global.anthropic.claude-fable-5-2", display_name: "Claude Fable 5.2 (Global) (Bedrock)" }
+        - { provider: aws-bedrock, model: "global.moonshotai.kimi-k3.1", display_name: "Kimi K3.1 Pro Highspeed (Global) (Bedrock)" }
+        - { provider: aws-bedrock, model: "us.anthropic.claude-fable-5-2", display_name: "Claude Fable 5.2 (US) (Bedrock)" }
+        - { provider: aws-bedrock, model: "us.moonshotai.kimi-k3.1", display_name: "Kimi K3.1 Pro Highspeed (US) (Bedrock)" }
+        - { provider: fireworks, model: "accounts/fireworks/models/hy4-flash", display_name: "Hy4 flash (Fireworks)" }
+        - { provider: fireworks, model: "accounts/fireworks/models/qwen4-max", display_name: "Qwen4 Max (Fireworks)" }
+        - { provider: fireworks, model: "accounts/fireworks/models/ultramarine-1-flash-us", display_name: "Ultramarine 1 Flash (Fireworks)" }
+        - { provider: fireworks, model: "accounts/fireworks/routers/deepseek-v4p1-flash-1017-flex", display_name: "DeepSeek V4.1 Flash 1017 Flex (Fireworks)" }
+        - { provider: fireworks, model: "accounts/fireworks/routers/deepseek-v4p1-flash-1017-us", display_name: "DeepSeek V4.1 Flash 1017 (US) (Fireworks)" }
+        - { provider: fireworks, model: "accounts/fireworks/routers/kimi-k3p1-pro-us", display_name: "Kimi K3.1 Pro (US) (Fireworks)" }
+        - { provider: fireworks, model: "accounts/fireworks/routers/kimi-latest", display_name: "Kimi Latest (Kimi K3.1 Pro) (Fireworks)" }
+        - { provider: huggingface, model: "meta-models/Muse-Spark-Open-816B-A42B", display_name: "Muse Spark Open (Hugging Face)" }
+        - { provider: huggingface, model: "mistralai/Mistral-Large-4-1T-A52B", display_name: "Mistral Large 4 (Hugging Face)" }
+        - { provider: huggingface, model: "nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16", display_name: "Nemotron 3.5 Super VL 120B A12B BF16 (Hugging Face)" }
+        - { provider: huggingface, model: "nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4", display_name: "Nemotron 3.5 Super VL 120B A12B NVFP4 (Hugging Face)" }
+        - { provider: huggingface, model: "reflection/Beam-1.0-501B-A23B", display_name: "Beam 1.0 501B A23B (Hugging Face)" }
+        - { provider: huggingface, model: "thinkingmachines/Inkling-2-Mini", display_name: "Inkling 2 Mini (Hugging Face)" }
+        - { provider: openrouter, model: "upstage/solar-mini-4-5", display_name: "Upstage: Solar Mini 4.5 (Preview) (OpenRouter)" }
+        - { provider: openrouter, model: "xiaomi/mimo-v2.6-flash-mopd", display_name: "Xiaomi: MiMo-V2.6-Flash-MOPD (OpenRouter)" }
+        - { provider: qwen, model: "kimi-k3.1-pro", display_name: "Kimi K3.1 Pro" }
+        - { provider: qwen, model: "kimi-k3.1-pro-prime", display_name: "Kimi K3.1 Pro Prime" }
+        - { provider: together, model: "deepseek-ai/DeepSeek-V4.1-Flash-1017-fast", display_name: "DeepSeek V4.1 Flash 1017 Fast (Together)" }
+        - { provider: together, model: "elorian-labs/glimpse-1.0", display_name: "Glimpse 1.0 (Together)" }
+        - { provider: together, model: "ricursive-ai/Ripple-65B-Preview", display_name: "Ripple 65B Preview (Together)" }
+        - { provider: zai, model: "glm-5.3-flashx-legal", display_name: "GLM-5.3-FlashX-Legal" }
+
+  - version: "2.11.0"
+    date: "2026-11-24"
+    description: "Refresh for September 30 to November 24, 2026: 232 models added. New first-party models include GPT-6.1 Sol, GPT-6.1 Terra, GPT-6.2 Sol and GPT-6.2 Astra, Claude Fable 5.2 and Claude Haiku 5.5 (also on Amazon Bedrock and Vertex AI), Gemini 4 Argon, Carbon, Hydrogen and Neon, Mistral Large 4, Kimi K3.1 Pro, MiniMax-M3.1-Flash, Qwen4 Max and Qwen3.8 Flash, and GLM-5.3 Flash and FlashX, plus new routes on OpenRouter, Fireworks, Together, Hugging Face, NVIDIA NIM, Groq and Cerebras. Adds eight providers with 123 models between them: DeepInfra (25), Novita (25), Nebius (23), Chutes (20), Baseten (15), Meta Muse (7), SambaNova (4) and Tencent Hy (4). Models that reject certain request settings now say so, and the gateway leaves those settings out of the request: temperature and top_p for GPT-6.2 Sol and Astra; temperature, top_p, top_k and manual thinking budgets for Claude Haiku 5.5 and Claude Fable 5.2 (Fable 5.2 also ignores an explicit thinking on or off switch, since its thinking is always on); and the thinking switch for MiniMax-M3.1-Flash. Prices are corrected for Claude Sonnet 5.5 cache reads, DeepSeek V4 Pro, Qwen3.7 Plus and MiniMax-M3 long prompts, and mistral-large-latest now points to Mistral Large 4. 22 models their providers have already shut down or removed are marked deprecated. 32 more that their providers plan to retire stay selectable with their current status, because they can still be called. Both groups carry the provider's dates and replacement in their notes. Models on the eight new providers accept text input only through Everstack for now. Gemini 4 Argon and Carbon show their introductory prices, which double on December 1, 2026. OpenRouter dates indicate route listing, not necessarily original model launch. See research/2026-11-24.md for sources, coverage, and exclusions."
+    changes:
+      new_models:
+        - { provider: anthropic, model: "claude-fable-5-2", display_name: "Claude Fable 5.2" }
+        - { provider: anthropic, model: "claude-haiku-5-5", display_name: "Claude Haiku 5.5" }
+        - { provider: aws-bedrock, model: "anthropic.claude-fable-5-2", display_name: "Claude Fable 5.2 (Bedrock)" }
+        - { provider: aws-bedrock, model: "anthropic.claude-haiku-5-5", display_name: "Claude Haiku 5.5 (Bedrock)" }
+        - { provider: baseten, model: "deepseek-ai/DeepSeek-V4-Flash-0731", display_name: "DeepSeek V4 Flash 0731 (Baseten)" }
+        - { provider: baseten, model: "deepseek-ai/DeepSeek-V4-Pro-0813", display_name: "DeepSeek V4 Pro 0813 (Baseten)" }
+        - { provider: baseten, model: "deepseek-ai/DeepSeek-V4.1-Flash", display_name: "DeepSeek V4.1 Flash (Baseten)" }
+        - { provider: baseten, model: "deepseek-ai/DeepSeek-V4.1-Flash-1017", display_name: "DeepSeek V4.1 Flash 1017 (Baseten)" }
+        - { provider: baseten, model: "deepseek-ai/DeepSeek-V4.1-Flash-1017-Fast", display_name: "DeepSeek V4.1 Flash 1017 Fast (Baseten)" }
+        - { provider: baseten, model: "deepseek-ai/DeepSeek-V4.1-Flash-Fast", display_name: "DeepSeek V4.1 Flash Fast (Baseten)" }
+        - { provider: baseten, model: "moonshotai/Kimi-K3", display_name: "Kimi K3 (Baseten)" }
+        - { provider: baseten, model: "moonshotai/Kimi-K3.1-Pro", display_name: "Kimi K3.1 Pro (Baseten)" }
+        - { provider: baseten, model: "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B", display_name: "Nemotron 3 Ultra (Baseten)" }
+        - { provider: baseten, model: "openai/gpt-oss-120b", display_name: "OpenAI GPT 120B (Baseten)" }
+        - { provider: baseten, model: "zai-org/GLM-5.2", display_name: "GLM 5.2 (Baseten)" }
+        - { provider: baseten, model: "zai-org/GLM-5.2-Fast", display_name: "GLM 5.2 Fast (Baseten)" }
+        - { provider: baseten, model: "zai-org/GLM-5.3", display_name: "GLM 5.3 (Baseten)" }
+        - { provider: baseten, model: "zai-org/GLM-5.3-Fast", display_name: "GLM 5.3 Fast (Baseten)" }
+        - { provider: baseten, model: "zai-org/GLM-5.3-Flash", display_name: "GLM 5.3 Flash (Baseten)" }
+        - { provider: cerebras, model: "qwen-3.8-27b", display_name: "Qwen 3.8 27B" }
+        - { provider: chutes, model: "Qwen/Qwen3.5-27B-TEE", display_name: "Qwen3.5 27B TEE (Chutes)" }
+        - { provider: chutes, model: "Qwen/Qwen3.5-397B-A17B-TEE", display_name: "Qwen3.5 397B A17B TEE (Chutes)" }
+        - { provider: chutes, model: "Qwen/Qwen3.6-27B-TEE", display_name: "Qwen3.6 27B TEE (Chutes)" }
+        - { provider: chutes, model: "Qwen/Qwen3.8-2.4T-A95B", display_name: "Qwen3.8 2.4T A95B (Chutes)" }
+        - { provider: chutes, model: "Qwen/Qwen3.8-27B-TEE", display_name: "Qwen3.8 27B TEE (Chutes)" }
+        - { provider: chutes, model: "Qwen/Qwen3.8-Max-0902", display_name: "Qwen3.8 Max 0902 (Chutes)" }
+        - { provider: chutes, model: "Qwen/Qwen4-Max", display_name: "Qwen4 Max (Chutes)" }
+        - { provider: chutes, model: "deepseek-ai/DeepSeek-V3.2-TEE", display_name: "DeepSeek V3.2 TEE (Chutes)" }
+        - { provider: chutes, model: "deepseek-ai/DeepSeek-V4-Flash-0731-TEE", display_name: "DeepSeek V4 Flash 0731 TEE (Chutes)" }
+        - { provider: chutes, model: "deepseek-ai/DeepSeek-V4-Pro-0813", display_name: "DeepSeek V4 Pro 0813 (Chutes)" }
+        - { provider: chutes, model: "deepseek-ai/DeepSeek-V4.1-Flash-1017", display_name: "DeepSeek V4.1 Flash 1017 (Chutes)" }
+        - { provider: chutes, model: "google/gemma-4-31B-turbo-TEE", display_name: "gemma 4 31B turbo TEE (Chutes)" }
+        - { provider: chutes, model: "moonshotai/Kimi-K2.6-TEE", display_name: "Kimi K2.6 TEE (Chutes)" }
+        - { provider: chutes, model: "moonshotai/Kimi-K2.7-Code", display_name: "Kimi K2.7 Code (Chutes)" }
+        - { provider: chutes, model: "moonshotai/Kimi-K3-TEE", display_name: "Kimi K3 TEE (Chutes)" }
+        - { provider: chutes, model: "tencent/Hy4", display_name: "Hy4 (Chutes)" }
+        - { provider: chutes, model: "zai-org/GLM-5.1-TEE", display_name: "GLM 5.1 TEE (Chutes)" }
+        - { provider: chutes, model: "zai-org/GLM-5.2-Fast", display_name: "GLM 5.2 Fast (Chutes)" }
+        - { provider: chutes, model: "zai-org/GLM-5.2-TEE", display_name: "GLM 5.2 TEE (Chutes)" }
+        - { provider: chutes, model: "zai-org/GLM-5.3", display_name: "GLM 5.3 (Chutes)" }
+        - { provider: deepinfra, model: "MiniMaxAI/MiniMax-M3", display_name: "MiniMax-M3 (DeepInfra)" }
+        - { provider: deepinfra, model: "Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo", display_name: "Qwen3 Coder 480B A35B Instruct Turbo (DeepInfra)" }
+        - { provider: deepinfra, model: "Qwen/Qwen3.8-27B", display_name: "Qwen3.8 27B (DeepInfra)" }
+        - { provider: deepinfra, model: "Qwen/Qwen3.8-Flash", display_name: "Qwen3.8 Flash (DeepInfra)" }
+        - { provider: deepinfra, model: "Qwen/Qwen3.8-Max", display_name: "Qwen3.8 Max (DeepInfra)" }
+        - { provider: deepinfra, model: "Qwen/Qwen4-Max", display_name: "Qwen4 Max (DeepInfra)" }
+        - { provider: deepinfra, model: "XiaomiMiMo/MiMo-V2.6-Flash", display_name: "MiMo-V2.6-Flash (DeepInfra)" }
+        - { provider: deepinfra, model: "XiaomiMiMo/MiMo-V2.6-Pro", display_name: "MiMo-V2.6-Pro (DeepInfra)" }
+        - { provider: deepinfra, model: "deepseek-ai/DeepSeek-V4-Flash-0731", display_name: "DeepSeek V4 Flash 0731 (DeepInfra)" }
+        - { provider: deepinfra, model: "deepseek-ai/DeepSeek-V4-Pro", display_name: "DeepSeek V4 Pro (DeepInfra)" }
+        - { provider: deepinfra, model: "deepseek-ai/DeepSeek-V4-Pro-0813", display_name: "DeepSeek V4 Pro 0813 (DeepInfra)" }
+        - { provider: deepinfra, model: "deepseek-ai/DeepSeek-V4.1-Flash", display_name: "DeepSeek V4.1 Flash (DeepInfra)" }
+        - { provider: deepinfra, model: "deepseek-ai/DeepSeek-V4.1-Flash-1017", display_name: "DeepSeek V4.1 Flash 1017 (DeepInfra)" }
+        - { provider: deepinfra, model: "google/gemma-4-31B-it", display_name: "Gemma 4 31B IT (DeepInfra)" }
+        - { provider: deepinfra, model: "meta-llama/Llama-3.3-70B-Instruct-Turbo", display_name: "Llama 3.3 70B Turbo (DeepInfra)" }
+        - { provider: deepinfra, model: "moonshotai/Kimi-K2.6", display_name: "Kimi K2.6 (DeepInfra)" }
+        - { provider: deepinfra, model: "moonshotai/Kimi-K3", display_name: "Kimi K3 (DeepInfra)" }
+        - { provider: deepinfra, model: "moonshotai/Kimi-K3.1-Pro", display_name: "Kimi K3.1 Pro (DeepInfra)" }
+        - { provider: deepinfra, model: "openai/gpt-oss-120b", display_name: "GPT OSS 120B (DeepInfra)" }
+        - { provider: deepinfra, model: "openai/gpt-oss-20b", display_name: "GPT OSS 20B (DeepInfra)" }
+        - { provider: deepinfra, model: "tencent/Hy4", display_name: "Hy4 (DeepInfra)" }
+        - { provider: deepinfra, model: "thinkingmachines/Inkling-2-Small", display_name: "Inkling 2 Small (DeepInfra)" }
+        - { provider: deepinfra, model: "zai-org/GLM-5.2", display_name: "GLM-5.2 (DeepInfra)" }
+        - { provider: deepinfra, model: "zai-org/GLM-5.3", display_name: "GLM-5.3 (DeepInfra)" }
+        - { provider: deepinfra, model: "zai-org/GLM-5.3-Flash", display_name: "GLM-5.3-Flash (DeepInfra)" }
+        - { provider: fireworks, model: "accounts/fireworks/models/deepseek-v4p1-flash-1017", display_name: "DeepSeek V4.1 Flash 1017 (Fireworks)" }
+        - { provider: fireworks, model: "accounts/fireworks/models/kimi-k3p1-pro", display_name: "Kimi K3.1 Pro (Fireworks)" }
+        - { provider: fireworks, model: "accounts/fireworks/models/minimax-m3p1-flash", display_name: "MiniMax-M3.1-Flash (Fireworks)" }
+        - { provider: fireworks, model: "accounts/fireworks/models/muse-spark-open", display_name: "Muse Spark Open (Fireworks)" }
+        - { provider: fireworks, model: "accounts/fireworks/routers/deepseek-flash-latest", display_name: "DeepSeek Flash Latest (Fireworks)" }
+        - { provider: fireworks, model: "accounts/fireworks/routers/deepseek-v4p1-flash-1017-spot", display_name: "DeepSeek V4.1 Flash 1017 Spot (Fireworks)" }
+        - { provider: fireworks, model: "accounts/fireworks/routers/deepseek-v4p1-flash-1017-ultrafast", display_name: "DeepSeek V4.1 Flash 1017 Ultra-fast (Fireworks)" }
+        - { provider: google, model: "gemini-4-argon", display_name: "Gemini 4 Argon" }
+        - { provider: google, model: "gemini-4-carbon", display_name: "Gemini 4 Carbon" }
+        - { provider: google, model: "gemini-4-hydrogen", display_name: "Gemini 4 Hydrogen" }
+        - { provider: google, model: "gemini-4-neon", display_name: "Gemini 4 Neon" }
+        - { provider: groq, model: "qwen/qwen3.8-27b", display_name: "Qwen3.8 27B" }
+        - { provider: huggingface, model: "MiniMaxAI/MiniMax-M3.1-Flash", display_name: "MiniMax-M3.1-Flash (Hugging Face)" }
+        - { provider: huggingface, model: "deepseek-ai/DeepSeek-V4.1-Flash-1017", display_name: "DeepSeek V4.1 Flash 1017 (Hugging Face)" }
+        - { provider: huggingface, model: "moonshotai/Kimi-K3.1-Pro", display_name: "Kimi K3.1 Pro (Hugging Face)" }
+        - { provider: huggingface, model: "tencent/Hy4", display_name: "Hy4 (Hugging Face)" }
+        - { provider: huggingface, model: "tencent/Hy4-flash", display_name: "Hy4 flash (Hugging Face)" }
+        - { provider: huggingface, model: "thinkingmachines/Inkling-2-Small", display_name: "Inkling 2 Small (Hugging Face)" }
+        - { provider: meta, model: "muse-ember-1.0", display_name: "Muse Ember" }
+        - { provider: meta, model: "muse-spark-1.1", display_name: "Muse Spark 1.1" }
+        - { provider: meta, model: "muse-spark-1.2", display_name: "Muse Spark 1.2" }
+        - { provider: meta, model: "muse-spark-1.2-contributor", display_name: "Muse Spark 1.2 Contributor" }
+        - { provider: meta, model: "muse-spark-1.3", display_name: "Muse Spark 1.3" }
+        - { provider: meta, model: "muse-spark-1.3-contributor", display_name: "Muse Spark 1.3 Contributor" }
+        - { provider: meta, model: "muse-wonder-1.0", display_name: "Muse Wonder" }
+        - { provider: minimax, model: "MiniMax-M3.1-Flash", display_name: "MiniMax-M3.1-Flash" }
+        - { provider: mistral, model: "deepseek-v4-1-flash-1017", display_name: "DeepSeek V4.1 Flash 1017" }
+        - { provider: mistral, model: "mistral-large-4", display_name: "Mistral Large 4" }
+        - { provider: mistral, model: "mistral-large-4-0", display_name: "Mistral Large 4 (26.10)" }
+        - { provider: mistral, model: "zai-glm-5-3", display_name: "Z.ai GLM 5.3" }
+        - { provider: mistral, model: "zai-glm-5-3-flash", display_name: "Z.ai GLM 5.3 Flash" }
+        - { provider: moonshot, model: "kimi-k3.1-pro", display_name: "Kimi K3.1 Pro" }
+        - { provider: moonshot, model: "kimi-k3.1-pro-highspeed", display_name: "Kimi K3.1 Pro Highspeed" }
+        - { provider: nebius, model: "MiniMaxAI/MiniMax-M3", display_name: "MiniMax-M3 (Nebius)" }
+        - { provider: nebius, model: "MiniMaxAI/MiniMax-M3.1-Flash", display_name: "MiniMax-M3.1-Flash (Nebius)" }
+        - { provider: nebius, model: "NousResearch/Hermes-4-405B", display_name: "Hermes-4-405B (Nebius)" }
+        - { provider: nebius, model: "Qwen/Qwen3-235B-A22B-Instruct-2507", display_name: "Qwen3 235B A22B Instruct 2507 (Nebius)" }
+        - { provider: nebius, model: "Qwen/Qwen3-30B-A3B-Instruct-2507", display_name: "Qwen3-30B-A3B-Instruct-2507 (Nebius)" }
+        - { provider: nebius, model: "Qwen/Qwen3.8-27B", display_name: "Qwen3.8 27B (Nebius)" }
+        - { provider: nebius, model: "deepseek-ai/DeepSeek-V4-Pro-0813", display_name: "DeepSeek V4 Pro 0813 (Nebius)" }
+        - { provider: nebius, model: "deepseek-ai/DeepSeek-V4.1-Flash-1017", display_name: "DeepSeek V4.1 Flash 1017 (Nebius)" }
+        - { provider: nebius, model: "google/gemma-3-27b-it", display_name: "Gemma-3-27b-it (Nebius)" }
+        - { provider: nebius, model: "meta-models/muse-spark-open", display_name: "Muse Spark Open (Nebius)" }
+        - { provider: nebius, model: "moonshotai/Kimi-K3", display_name: "Kimi K3 (Nebius)" }
+        - { provider: nebius, model: "moonshotai/Kimi-K3.1-Pro", display_name: "Kimi K3.1 Pro (Nebius)" }
+        - { provider: nebius, model: "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B", display_name: "NVIDIA-Nemotron-3-Nano-30B-A3B (Nebius)" }
+        - { provider: nebius, model: "nvidia/Nemotron-3-Ultra-550b-a55b", display_name: "Nemotron 3 Ultra 550B A55B (Nebius)" }
+        - { provider: nebius, model: "nvidia/Nemotron-3.5-Super-VL", display_name: "Nemotron 3.5 Super VL 120B A12B (Nebius)" }
+        - { provider: nebius, model: "nvidia/Nemotron-3_5-Lightning", display_name: "Nemotron 3.5 Lightning 30B A3B (Nebius)" }
+        - { provider: nebius, model: "nvidia/nemotron-3-super-120b-a12b", display_name: "Nemotron-3-Super-120B-A12B (Nebius)" }
+        - { provider: nebius, model: "openai/gpt-oss-120b", display_name: "gpt-oss-120b (Nebius)" }
+        - { provider: nebius, model: "reflection/beam", display_name: "Beam 1.0 501B A23B (Nebius)" }
+        - { provider: nebius, model: "thinkingmachines/Inkling-2-Small", display_name: "Inkling 2 Small (Nebius)" }
+        - { provider: nebius, model: "zai-org/GLM-5.2", display_name: "GLM-5.2 (Nebius)" }
+        - { provider: nebius, model: "zai-org/GLM-5.3", display_name: "GLM-5.3 (Nebius)" }
+        - { provider: nebius, model: "zai-org/GLM-5.3-Flash", display_name: "GLM-5.3-Flash (Nebius)" }
+        - { provider: novita, model: "deepseek/deepseek-v4-flash-0731", display_name: "DeepSeek V4 Flash 0731 (Novita)" }
+        - { provider: novita, model: "deepseek/deepseek-v4-pro", display_name: "DeepSeek V4 Pro (Novita)" }
+        - { provider: novita, model: "deepseek/deepseek-v4-pro-0813", display_name: "DeepSeek V4 Pro 0813 (Novita)" }
+        - { provider: novita, model: "deepseek/deepseek-v4.1-flash", display_name: "DeepSeek V4.1 Flash (Novita)" }
+        - { provider: novita, model: "deepseek/deepseek-v4.1-flash-1017", display_name: "DeepSeek V4.1 Flash 1017 (Novita)" }
+        - { provider: novita, model: "google/gemma-4-31b-it", display_name: "Gemma 4 31B IT (Novita)" }
+        - { provider: novita, model: "meta-llama/llama-3.3-70b-instruct", display_name: "Llama-3.3-70B-Instruct (Novita)" }
+        - { provider: novita, model: "moonshotai/kimi-k2.6", display_name: "Kimi K2.6 (Novita)" }
+        - { provider: novita, model: "moonshotai/kimi-k2.7-code", display_name: "Kimi K2.7 Code (Novita)" }
+        - { provider: novita, model: "moonshotai/kimi-k3", display_name: "Kimi K3 (Novita)" }
+        - { provider: novita, model: "moonshotai/kimi-k3.1-pro", display_name: "Kimi K3.1 Pro (Novita)" }
+        - { provider: novita, model: "moonshotai/kimi-k3.1-pro-highspeed", display_name: "Kimi K3.1 Pro Highspeed (Novita)" }
+        - { provider: novita, model: "openai/gpt-oss-120b", display_name: "GPT OSS 120B (Novita)" }
+        - { provider: novita, model: "qwen/qwen3.8-27b", display_name: "Qwen3.8 27B (Novita)" }
+        - { provider: novita, model: "qwen/qwen3.8-flash", display_name: "Qwen3.8 Flash (Novita)" }
+        - { provider: novita, model: "qwen/qwen3.8-max", display_name: "Qwen3.8 Max (Novita)" }
+        - { provider: novita, model: "qwen/qwen4-max", display_name: "Qwen4 Max (Novita)" }
+        - { provider: novita, model: "tencent/hy4", display_name: "Hy4 (Novita)" }
+        - { provider: novita, model: "tencent/hy4-flash", display_name: "Hy4 flash (Novita)" }
+        - { provider: novita, model: "xiaomimimo/mimo-v2.6-flash", display_name: "MiMo-V2.6-Flash (Novita)" }
+        - { provider: novita, model: "xiaomimimo/mimo-v2.6-pro", display_name: "MiMo-V2.6-Pro (Novita)" }
+        - { provider: novita, model: "zai-org/glm-5.1", display_name: "GLM-5.1 (Novita)" }
+        - { provider: novita, model: "zai-org/glm-5.2", display_name: "GLM-5.2 (Novita)" }
+        - { provider: novita, model: "zai-org/glm-5.3", display_name: "GLM-5.3 (Novita)" }
+        - { provider: novita, model: "zai-org/glm-5.3-flash", display_name: "GLM-5.3-Flash (Novita)" }
+        - { provider: nvidia-nim, model: "minimaxai/minimax-m3.1-flash", display_name: "MiniMax-M3.1-Flash (NVIDIA NIM)" }
+        - { provider: nvidia-nim, model: "nvidia/nemotron-3.5-super-vl-120b-a12b", display_name: "Nemotron 3.5 Super VL 120B A12B (NVIDIA NIM)" }
+        - { provider: openai, model: "gpt-6.1-sol", display_name: "GPT-6.1 Sol" }
+        - { provider: openai, model: "gpt-6.1-terra", display_name: "GPT-6.1 Terra" }
+        - { provider: openai, model: "gpt-6.2-astra", display_name: "GPT-6.2 Astra" }
+        - { provider: openai, model: "gpt-6.2-sol", display_name: "GPT-6.2 Sol" }
+        - { provider: openrouter, model: "anthropic/claude-fable-5.2", display_name: "Anthropic: Claude Fable 5.2 (OpenRouter)" }
+        - { provider: openrouter, model: "anthropic/claude-haiku-5.5", display_name: "Anthropic: Claude Haiku 5.5 (OpenRouter)" }
+        - { provider: openrouter, model: "baidu/ernie-5.5-flash-preview:free", display_name: "Baidu: ERNIE-5.5-Flash-Preview (free) (OpenRouter)" }
+        - { provider: openrouter, model: "baidu/ernie-light-dt-1.0-intl", display_name: "Baidu: ERNIE-Light-DT-1.0 (OpenRouter)" }
+        - { provider: openrouter, model: "deepseek/deepseek-v4.1-flash-1017", display_name: "DeepSeek: DeepSeek V4.1 Flash 1017 (OpenRouter)" }
+        - { provider: openrouter, model: "elorian/glimpse", display_name: "Elorian: Glimpse (OpenRouter)" }
+        - { provider: openrouter, model: "google/gemini-4-argon", display_name: "Google: Gemini 4 Argon (OpenRouter)" }
+        - { provider: openrouter, model: "google/gemini-4-carbon", display_name: "Google: Gemini 4 Carbon (OpenRouter)" }
+        - { provider: openrouter, model: "google/gemini-4-hydrogen", display_name: "Google: Gemini 4 Hydrogen (OpenRouter)" }
+        - { provider: openrouter, model: "google/gemini-4-neon", display_name: "Google: Gemini 4 Neon (OpenRouter)" }
+        - { provider: openrouter, model: "inclusionai/ling-3.1-flash", display_name: "inclusionAI: Ling 3.1 Flash (OpenRouter)" }
+        - { provider: openrouter, model: "inclusionai/ling-3.2-flash:free", display_name: "inclusionAI: Ling 3.2 Flash (free) (OpenRouter)" }
+        - { provider: openrouter, model: "kt/midm-k-3.0-pro", display_name: "KT: Mi:dm K 3.0 Pro (OpenRouter)" }
+        - { provider: openrouter, model: "liquid/lfm-2.5-24b-a2b", display_name: "LiquidAI: LFM2.5-24B-A2B (OpenRouter)" }
+        - { provider: openrouter, model: "liquid/lfm-3-1.7b", display_name: "LiquidAI: LFM3-1.7B (OpenRouter)" }
+        - { provider: openrouter, model: "liquid/lfm-3-1.7b:free", display_name: "LiquidAI: LFM3-1.7B (free) (OpenRouter)" }
+        - { provider: openrouter, model: "meta/muse-ember", display_name: "Meta: Muse Ember (OpenRouter)" }
+        - { provider: openrouter, model: "meta/muse-spark-open", display_name: "Meta: Muse Spark Open (OpenRouter)" }
+        - { provider: openrouter, model: "meta/muse-wonder", display_name: "Meta: Muse Wonder (OpenRouter)" }
+        - { provider: openrouter, model: "minimax/minimax-m3.1-flash", display_name: "MiniMax: MiniMax M3.1 Flash (OpenRouter)" }
+        - { provider: openrouter, model: "mistralai/mistral-large-4-0", display_name: "Mistral: Mistral Large 4 (OpenRouter)" }
+        - { provider: openrouter, model: "mistralai/pixtral-large-2502", display_name: "Mistral: Pixtral Large 2502 (OpenRouter)" }
+        - { provider: openrouter, model: "moondream/moondream3-preview", display_name: "Moondream: Moondream 3 Preview (OpenRouter)" }
+        - { provider: openrouter, model: "moondream/moondream3.1-9b-a2b", display_name: "Moondream: Moondream 3.1 (OpenRouter)" }
+        - { provider: openrouter, model: "moonshotai/kimi-k3.1-pro", display_name: "MoonshotAI: Kimi K3.1 Pro (OpenRouter)" }
+        - { provider: openrouter, model: "motif-technologies/motif-3", display_name: "Motif Technologies: Motif 3 (OpenRouter)" }
+        - { provider: openrouter, model: "nex-agi/nex-n2.6", display_name: "Nex AGI: Nex-N2.6 (OpenRouter)" }
+        - { provider: openrouter, model: "nvidia/nemotron-3.5-super-vl", display_name: "NVIDIA: Nemotron 3.5 Super VL (OpenRouter)" }
+        - { provider: openrouter, model: "nvidia/nemotron-3.5-super-vl:free", display_name: "NVIDIA: Nemotron 3.5 Super VL (free) (OpenRouter)" }
+        - { provider: openrouter, model: "openai/gpt-6.1-terra", display_name: "OpenAI: GPT-6.1 Terra (OpenRouter)" }
+        - { provider: openrouter, model: "openai/gpt-6.1-terra-pro", display_name: "OpenAI: GPT-6.1 Terra Pro (OpenRouter)" }
+        - { provider: openrouter, model: "openai/gpt-6.2-astra", display_name: "OpenAI: GPT-6.2 Astra (OpenRouter)" }
+        - { provider: openrouter, model: "openai/gpt-6.2-astra-pro", display_name: "OpenAI: GPT-6.2 Astra Pro (OpenRouter)" }
+        - { provider: openrouter, model: "openai/gpt-6.2-sol", display_name: "OpenAI: GPT-6.2 Sol (OpenRouter)" }
+        - { provider: openrouter, model: "openai/gpt-6.2-sol-pro", display_name: "OpenAI: GPT-6.2 Sol Pro (OpenRouter)" }
+        - { provider: openrouter, model: "particle-ai/particle-1", display_name: "Particle AI: Particle-1 (OpenRouter)" }
+        - { provider: openrouter, model: "particle-ai/particle-1:free", display_name: "Particle AI: Particle-1 (free) (OpenRouter)" }
+        - { provider: openrouter, model: "prism-ml/ternary-bonsai-2-9b", display_name: "PrismML: Ternary Bonsai 2 9B (OpenRouter)" }
+        - { provider: openrouter, model: "qwen/qwen4-max", display_name: "Qwen: Qwen4 Max (OpenRouter)" }
+        - { provider: openrouter, model: "radixark/daisyrose-27b", display_name: "RadixArk: DaisyRose 27B (OpenRouter)" }
+        - { provider: openrouter, model: "recursive/flint-v1.0:free", display_name: "Recursive: Flint (free) (OpenRouter)" }
+        - { provider: openrouter, model: "reflection/beam-1.0-501b-a23b", display_name: "Reflection: Beam 1.0 501B A23B (OpenRouter)" }
+        - { provider: openrouter, model: "ricursiveai/ripple-65b-preview", display_name: "Ricursive: Ripple 65B Preview (OpenRouter)" }
+        - { provider: openrouter, model: "stepfun/step-5-preview", display_name: "StepFun: Step 5 Preview (OpenRouter)" }
+        - { provider: openrouter, model: "tencent/hy4", display_name: "Tencent: Hy4 (OpenRouter)" }
+        - { provider: openrouter, model: "tencent/hy4-flash", display_name: "Tencent: Hy4 flash (OpenRouter)" }
+        - { provider: openrouter, model: "thinkingmachines/inkling-2-mini", display_name: "Thinking Machines: Inkling 2 Mini (OpenRouter)" }
+        - { provider: openrouter, model: "thinkingmachines/inkling-2-small", display_name: "Thinking Machines: Inkling 2 Small (OpenRouter)" }
+        - { provider: openrouter, model: "unbiased/pareto-26.10", display_name: "Pareto 26.10 (OpenRouter)" }
+        - { provider: openrouter, model: "unbiased/pareto-26.10-preview", display_name: "Pareto 26.10 Preview (OpenRouter)" }
+        - { provider: openrouter, model: "unbiased/pareto-26.9", display_name: "Pareto 26.9 (OpenRouter)" }
+        - { provider: openrouter, model: "z-ai/glm-5.3-flashx-legal", display_name: "Z.ai: GLM 5.3 FlashX Legal (OpenRouter)" }
+        - { provider: qwen, model: "qwen3.7-text-embedding", display_name: "Qwen3.7 Text Embedding" }
+        - { provider: qwen, model: "qwen3.8-flash", display_name: "Qwen3.8 Flash" }
+        - { provider: qwen, model: "qwen4-max", display_name: "Qwen4 Max" }
+        - { provider: sambanova, model: "GLM-5.3", display_name: "GLM-5.3 (SambaNova)" }
+        - { provider: sambanova, model: "MiniMax-M3.1-Flash", display_name: "MiniMax-M3.1-Flash (SambaNova)" }
+        - { provider: sambanova, model: "gemma-4-31B-it", display_name: "Gemma 4 31B IT (SambaNova)" }
+        - { provider: sambanova, model: "gpt-oss-120b", display_name: "GPT OSS 120B (SambaNova)" }
+        - { provider: tencent, model: "hy3", display_name: "Hy3" }
+        - { provider: tencent, model: "hy4", display_name: "Hy4" }
+        - { provider: tencent, model: "hy4-flash", display_name: "Hy4 flash" }
+        - { provider: tencent, model: "hy4-preview", display_name: "Hy4 preview" }
+        - { provider: together, model: "MiniMaxAI/MiniMax-M3.1-Flash", display_name: "MiniMax-M3.1-Flash (Together)" }
+        - { provider: together, model: "Qwen/Qwen4-Max", display_name: "Qwen4 Max (Together)" }
+        - { provider: together, model: "deepseek-ai/DeepSeek-V4.1-Flash-1017", display_name: "DeepSeek V4.1 Flash 1017 (Together)" }
+        - { provider: together, model: "meta-models/Muse-Spark-Open-816B-A42B", display_name: "Muse Spark Open (Together)" }
+        - { provider: together, model: "moonshotai/Kimi-K3.1-Pro", display_name: "Kimi K3.1 Pro (Together)" }
+        - { provider: together, model: "nvidia/NVIDIA-Nemotron-3.5-Super-VL", display_name: "Nemotron 3.5 Super VL 120B A12B (Together)" }
+        - { provider: together, model: "reflection/Beam-1.0-501B-A23B", display_name: "Beam 1.0 501B A23B (Together)" }
+        - { provider: together, model: "tencent/Hy4", display_name: "Hy4 (Together)" }
+        - { provider: together, model: "thinkingmachines/Inkling-2-Small", display_name: "Inkling 2 Small (Together)" }
+        - { provider: vertex-ai, model: "claude-fable-5-2@default", display_name: "Claude Fable 5.2 (Vertex)" }
+        - { provider: vertex-ai, model: "claude-haiku-5-5@default", display_name: "Claude Haiku 5.5 (Vertex)" }
+        - { provider: vertex-ai, model: "gemini-4-argon", display_name: "Gemini 4 Argon (Vertex)" }
+        - { provider: vertex-ai, model: "gemini-4-carbon", display_name: "Gemini 4 Carbon (Vertex)" }
+        - { provider: vertex-ai, model: "gemini-4-hydrogen", display_name: "Gemini 4 Hydrogen (Vertex)" }
+        - { provider: vertex-ai, model: "gemini-4-neon", display_name: "Gemini 4 Neon (Vertex)" }
+        - { provider: zai, model: "glm-5.3-flash", display_name: "GLM-5.3-Flash" }
+        - { provider: zai, model: "glm-5.3-flashx", display_name: "GLM-5.3-FlashX" }
+      deprecated_models:
+        - { provider: cerebras, model: "gemma-4-31b", description: "Removed from Cerebras Shared Inference on 2026-09-03 (Dedicated Inference only). Migrate to qwen-3.8-27b." }
+        - { provider: cerebras, model: "llama3.1-8b", description: "Deprecated by Cerebras on 2026-05-27. Migrate to gpt-oss-120b. No longer listed on the Cerebras models page as of 2026-11-24 (Shared Inference serves gpt-oss-120b and qwen-3.8-27b only)." }
+        - { provider: cerebras, model: "qwen-3-235b-a22b-instruct-2507", description: "Deprecated by Cerebras on 2026-05-27. Migrate to gpt-oss-120b. No longer listed on the Cerebras models page as of 2026-11-24 (Shared Inference serves gpt-oss-120b and qwen-3.8-27b only)." }
+        - { provider: cerebras, model: "zai-glm-4.7", description: "Deprecated by Cerebras on 2026-08-17; no replacement listed. No longer listed on the Cerebras models page as of 2026-11-24 (Shared Inference serves gpt-oss-120b and qwen-3.8-27b only)." }
+        - { provider: groq, model: "deepseek-r1-distill-llama-70b", description: "Shut down by Groq on 2025-10-02. Replacement: llama-3.3-70b-versatile or openai/gpt-oss-120b." }
+        - { provider: groq, model: "groq/compound", description: "Shut down by Groq on 2026-09-21; no replacement listed." }
+        - { provider: groq, model: "groq/compound-mini", description: "Shut down by Groq on 2026-09-21; no replacement listed." }
+        - { provider: groq, model: "meta-llama/llama-4-maverick-17b-128e-instruct", description: "Shut down by Groq on 2026-03-09. Migrate to openai/gpt-oss-120b." }
+        - { provider: groq, model: "meta-llama/llama-4-scout-17b-16e-instruct", description: "Shut down by Groq on 2026-07-17. Migrate to openai/gpt-oss-120b." }
+        - { provider: groq, model: "moonshotai/kimi-k2-instruct-0905", description: "Shut down by Groq on 2026-04-15. Migrate to openai/gpt-oss-120b." }
+        - { provider: groq, model: "qwen-qwq-32b", description: "Shut down by Groq on 2025-07-14. Groq named qwen/qwen3-32b as the replacement, itself shut down; use openai/gpt-oss-120b." }
+        - { provider: groq, model: "qwen/qwen3-32b", description: "Shut down by Groq on 2026-07-17. Migrate to openai/gpt-oss-120b." }
+        - { provider: groq, model: "qwen/qwen3.6-27b", description: "Shut down by Groq on 2026-09-14. Migrate to qwen/qwen3.8-27b." }
+        - { provider: mistral, model: "magistral-small-2509", description: "Deprecated by Mistral; retirement date 2026-07-31 has passed. Replacement: Mistral Small 4 (mistral-small-latest)." }
+        - { provider: mistral, model: "mistral-large-2411", description: "Deprecated by Mistral; retirement date 2026-05-31 has passed. Mistral lists Mistral Medium 3.5 as the replacement, itself deprecated; use mistral-large-4." }
+        - { provider: mistral, model: "mistral-medium-2505", description: "Deprecated by Mistral; retirement date 2026-08-31 has passed. Mistral lists Mistral Medium 3.5 as the replacement, itself deprecated; use mistral-large-4." }
+        - { provider: mistral, model: "mistral-medium-2508", description: "Deprecated by Mistral; retirement date 2026-08-31 has passed. Mistral lists Mistral Medium 3.5 as the replacement, itself deprecated; use mistral-large-4." }
+        - { provider: mistral, model: "mistral-small-2506", description: "Deprecated by Mistral; retirement date 2026-07-31 has passed. Replacement: Mistral Small 4 (mistral-small-latest)." }
+        - { provider: mistral, model: "open-mistral-7b", description: "Retired by Mistral on 2025-03-30. Replacement: Ministral 3 8B." }
+        - { provider: mistral, model: "open-mixtral-8x22b", description: "Retired by Mistral on 2025-03-30. Replacement: Mistral Small 4 (mistral-small-latest)." }
+        - { provider: mistral, model: "open-mixtral-8x7b", description: "Retired by Mistral on 2025-03-30. Replacement: Mistral Small 4 (mistral-small-latest)." }
+        - { provider: xai, model: "grok-build-0.1", description: "Reached end of life on 2026-11-19 and is no longer served on the xAI API." }
+      pricing_changes:
+        - "Anthropic claude-sonnet-5-5 cache read: $0.0002 to $0.0001 per 1k"
+        - "DeepSeek deepseek-v4-pro: $0.000435/$0.00087 to $0.00132/$0.00396 per 1k (peak rates; off-peak is half), cache read $0.000003625 to $0.000044 per 1k"
+        - "Qwen qwen3.7-plus: $0.0005/$0.003 to $0.0004/$0.0016 per 1k up to 256K input tokens, 3x above; cache read $0.00005 to $0.00008, cache write $0.000625 to $0.0005 per 1k"
+        - "MiniMax MiniMax-M3: prompts over 512K tokens bill input, cache and output at 2x"
+        - "Mistral mistral-large-latest: now Mistral Large 4, $0.0005/$0.0015 to $0.0007/$0.0021 per 1k, cache read $0.00007 per 1k"
+      updated_models:
+        - { provider: mistral, model: "mistral-large-latest", description: "Now points to Mistral Large 4 (1M context, low, medium and high reasoning effort)." }
+        - { provider: deepseek, model: "deepseek-flash", description: "Serves DeepSeek V4.1 Flash 1017 since October 17, 2026; same ID and price." }
+        - { provider: anthropic, model: "claude-opus-4-5", description: "Retirement announced, still callable, status unchanged. Deprecated by Anthropic on 2026-11-23; retires 2027-01-22. Migrate to claude-opus-5-5." }
+        - { provider: anthropic, model: "claude-opus-4-5-20251101", description: "Retirement announced, still callable, status unchanged. Deprecated by Anthropic on 2026-11-23; retires 2027-01-22. Migrate to claude-opus-5-5." }
+        - { provider: anthropic, model: "claude-sonnet-4-5", description: "Retirement announced, still callable, status unchanged. Deprecated by Anthropic on 2026-09-30; retires 2026-11-30. Migrate to claude-sonnet-5-5." }
+        - { provider: anthropic, model: "claude-sonnet-4-5-20250929", description: "Retirement announced, still callable, status unchanged. Deprecated by Anthropic on 2026-09-30; retires 2026-11-30. Migrate to claude-sonnet-5-5." }
+        - { provider: google, model: "gemini-2.5-flash", description: "Retirement announced, still callable, status unchanged. Deprecated by Google on 2026-11-02; from 2026-12-01 requests route to gemini-3.5-flash-lite and bill at its rates. Migrate to gemini-3.5-flash-lite." }
+        - { provider: google, model: "gemini-2.5-pro", description: "Retirement announced, still callable, status unchanged. Deprecated by Google on 2026-11-02; from 2026-12-01 requests route to gemini-3.8-flash and bill at its rates. Migrate to gemini-3.8-flash." }
+        - { provider: google, model: "gemini-3.5-flash", description: "Retirement announced, still callable, status unchanged. Deprecated by Google on 2026-10-08; requests are automatically routed to gemini-3.6-flash. Migrate to gemini-3.6-flash." }
+        - { provider: google, model: "gemini-3.7-flash", description: "Retirement announced, still callable, status unchanged. Deprecated by Google on 2026-10-08; requests are automatically routed to gemini-3.8-flash. Migrate to gemini-3.8-flash." }
+        - { provider: mistral, model: "mistral-large-2512", description: "Retirement announced, still callable, status unchanged. Deprecated by Mistral on 2026-10-31; retires 2027-04-30. Migrate to mistral-large-4." }
+        - { provider: mistral, model: "mistral-medium-2604", description: "Retirement announced, still callable, status unchanged. Mistral Medium 3.5 was deprecated by Mistral on 2026-10-31; retires 2027-04-30. Migrate to mistral-large-4." }
+        - { provider: mistral, model: "mistral-medium-latest", description: "Retirement announced, still callable, status unchanged. Alias to Mistral Medium 3.5, which Mistral deprecated on 2026-10-31; retires 2027-04-30. Migrate to mistral-large-4." }
+        - { provider: moonshot, model: "kimi-k2-0711-preview", description: "Retirement announced, still callable, status unchanged. Moonshot closed the K2 series to newly registered users on 2026-10-31 and plans to retire all K2 models by the end of December 2026. Migrate to kimi-k3.1-pro." }
+        - { provider: moonshot, model: "kimi-k2-0905-preview", description: "Retirement announced, still callable, status unchanged. Moonshot closed the K2 series to newly registered users on 2026-10-31 and plans to retire all K2 models by the end of December 2026. Migrate to kimi-k3.1-pro." }
+        - { provider: moonshot, model: "kimi-k2-thinking", description: "Retirement announced, still callable, status unchanged. Moonshot closed the K2 series to newly registered users on 2026-10-31 and plans to retire all K2 models by the end of December 2026. Migrate to kimi-k3.1-pro." }
+        - { provider: moonshot, model: "kimi-k2-thinking-turbo", description: "Retirement announced, still callable, status unchanged. Moonshot closed the K2 series to newly registered users on 2026-10-31 and plans to retire all K2 models by the end of December 2026. Migrate to kimi-k3.1-pro." }
+        - { provider: moonshot, model: "kimi-k2-turbo-preview", description: "Retirement announced, still callable, status unchanged. Moonshot closed the K2 series to newly registered users on 2026-10-31 and plans to retire all K2 models by the end of December 2026. Migrate to kimi-k3.1-pro." }
+        - { provider: moonshot, model: "kimi-k2.5", description: "Retirement announced, still callable, status unchanged. Moonshot closed the K2 series to newly registered users on 2026-10-31 and plans to retire all K2 models by the end of December 2026. Migrate to kimi-k3.1-pro." }
+        - { provider: moonshot, model: "kimi-k2.6", description: "Retirement announced, still callable, status unchanged. Moonshot closed the K2 series to newly registered users on 2026-10-31 and plans to retire all K2 models by the end of December 2026. Migrate to kimi-k3.1-pro." }
+        - { provider: moonshot, model: "kimi-k2.7-code", description: "Retirement announced, still callable, status unchanged. Moonshot closed the K2 series to newly registered users on 2026-10-31 and plans to retire all K2 models by the end of December 2026. Migrate to kimi-k3.1-pro. Coding-focused Kimi model, stronger on long-horizon repo work with less overthinking" }
+        - { provider: moonshot, model: "kimi-k2.7-code-highspeed", description: "Retirement announced, still callable, status unchanged. Moonshot closed the K2 series to newly registered users on 2026-10-31 and plans to retire all K2 models by the end of December 2026. Migrate to kimi-k3.1-pro. Coding-focused Kimi model, stronger on long-horizon repo work with less overthinking" }
+        - { provider: openai, model: "gpt-4.1-2025-04-14", description: "Retirement announced, still callable, status unchanged. Deprecated by OpenAI on 2026-10-14; shuts down 2027-01-14. Migrate to gpt-6-luna." }
+        - { provider: openai, model: "gpt-4.1-mini-2025-04-14", description: "Retirement announced, still callable, status unchanged. Deprecated by OpenAI on 2026-10-14; shuts down 2027-01-14. Migrate to gpt-6-luna." }
+        - { provider: openai, model: "gpt-4o-2024-08-06", description: "Retirement announced, still callable, status unchanged. Deprecated by OpenAI on 2026-10-14; shuts down 2027-01-14. Migrate to gpt-6-luna." }
+        - { provider: openai, model: "gpt-4o-2024-11-20", description: "Retirement announced, still callable, status unchanged. Deprecated by OpenAI on 2026-10-14; shuts down 2027-01-14. Migrate to gpt-6-luna." }
+        - { provider: openai, model: "gpt-4o-mini-2024-07-18", description: "Retirement announced, still callable, status unchanged. Deprecated by OpenAI on 2026-10-14; shuts down 2027-01-14. Migrate to gpt-6-luna." }
+        - { provider: openai, model: "gpt-4o-mini-tts", description: "Retirement announced, still callable, status unchanged. Deprecated by OpenAI on 2026-10-01; shuts down 2027-01-06. Migrate to gpt-realtime-2.1-mini." }
+        - { provider: openai, model: "gpt-4o-mini-tts-2025-03-20", description: "Retirement announced, still callable, status unchanged. Deprecated by OpenAI on 2026-10-01; shuts down 2027-01-06. Migrate to gpt-realtime-2.1-mini." }
+        - { provider: openai, model: "gpt-4o-mini-tts-2025-12-15", description: "Retirement announced, still callable, status unchanged. Deprecated by OpenAI on 2026-10-01; shuts down 2027-01-06. Migrate to gpt-realtime-2.1-mini." }
+        - { provider: openai, model: "gpt-5.1", description: "Retirement announced, still callable, status unchanged. Deprecated by OpenAI on 2026-10-01; shuts down 2027-04-01. Migrate to gpt-6-sol." }
+        - { provider: openai, model: "gpt-5.1-2025-11-13", description: "Retirement announced, still callable, status unchanged. Deprecated by OpenAI on 2026-10-01; shuts down 2027-04-01. Migrate to gpt-6-sol." }
+        - { provider: openai, model: "gpt-5.3-codex", description: "Retirement announced, still callable, status unchanged. Deprecated by OpenAI on 2026-10-01; shuts down 2027-04-01. Migrate to gpt-6-sol." }
+        - { provider: openai, model: "gpt-5.4-nano", description: "Retirement announced, still callable, status unchanged. Deprecated by OpenAI on 2026-10-01; shuts down 2027-04-01. Migrate to gpt-6-luna." }
+
+  - version: "2.10.0"
+    date: "2026-09-29"
+    description: "Add TypeSafe Jev, self-hosted Kev and Laya decision services with System One integrations. Context limits for self-hosted services reflect defaults where documented. No release dates are inferred from repository activity."
+    changes:
+      new_models:
+        - { provider: typesafe, model: "jev-1.13.0", display_name: "Jev 1.13" }
+        - { provider: kev, model: "kev-latest", display_name: "Kev (configured checkpoint)" }
+        - { provider: laya, model: "english", display_name: "Laya English" }
+        - { provider: laya, model: "multilingual", display_name: "Laya Multilingual" }
+        - { provider: laya, model: "typed-decisions", display_name: "Laya Typed Decisions" }
+  - version: "2.9.0"
+    date: "2026-09-29"
+    description: "September 1-29 refresh: verified direct API releases plus new named OpenRouter offerings across the wider model ecosystem. Preserves provider-specific prices and context/output limits; updates retired DeepSeek Flash aliases. OpenRouter dates indicate route listing, not necessarily original model launch. See research/2026-09-29.md for sources, coverage, and exclusions."
+    changes:
+      new_models:
+        - { provider: anthropic, model: "claude-opus-5-5", display_name: "Claude Opus 5.5" }
+        - { provider: anthropic, model: "claude-sonnet-5-5", display_name: "Claude Sonnet 5.5" }
+        - { provider: deepseek, model: "deepseek-flash", display_name: "DeepSeek V4.1 Flash" }
+        - { provider: google, model: "gemini-3.8-flash", display_name: "Gemini 3.8 Flash" }
+        - { provider: openai, model: "gpt-6-luna", display_name: "GPT-6 Luna" }
+        - { provider: openai, model: "gpt-6-sol", display_name: "GPT-6 Sol" }
+        - { provider: openrouter, model: "aion-labs/aion-3.5", display_name: "AionLabs: Aion 3.5 (OpenRouter)" }
+        - { provider: openrouter, model: "aion-labs/aion-3.5-mini", display_name: "AionLabs: Aion 3.5 Mini (OpenRouter)" }
+        - { provider: openrouter, model: "anthropic/claude-fable-5.1", display_name: "Anthropic: Claude Fable 5.1 (OpenRouter)" }
+        - { provider: openrouter, model: "anthropic/claude-opus-5.5", display_name: "Anthropic: Claude Opus 5.5 (OpenRouter)" }
+        - { provider: openrouter, model: "anthropic/claude-sonnet-5.5", display_name: "Anthropic: Claude Sonnet 5.5 (OpenRouter)" }
+        - { provider: openrouter, model: "cohere/command-a-plus", display_name: "Cohere: Command A+ (OpenRouter)" }
+        - { provider: openrouter, model: "deepseek/deepseek-v4.1-flash", display_name: "DeepSeek: DeepSeek V4.1 Flash (OpenRouter)" }
+        - { provider: openrouter, model: "fireworks/ember-1", display_name: "Fireworks: Ember-1 (OpenRouter)" }
+        - { provider: openrouter, model: "google/gemini-3.8-flash", display_name: "Google: Gemini 3.8 Flash (OpenRouter)" }
+        - { provider: openrouter, model: "inception/mercury-2.5", display_name: "Inception: Mercury 2.5 (OpenRouter)" }
+        - { provider: openrouter, model: "inclusionai/ling-3.0-flash-sante:free", display_name: "inclusionAI: Ling 3.0 Flash Sante (free) (OpenRouter)" }
+        - { provider: openrouter, model: "inclusionai/ling-3.0-flash-vl", display_name: "inclusionAI: Ling 3.0 Flash VL (OpenRouter)" }
+        - { provider: openrouter, model: "inference-net/schematron-v2-small", display_name: "Inference.net: Schematron V2 Small (OpenRouter)" }
+        - { provider: openrouter, model: "inference-net/schematron-v2-turbo", display_name: "Inference.net: Schematron V2 Turbo (OpenRouter)" }
+        - { provider: openrouter, model: "meta/muse-spark-1.3", display_name: "Meta: Muse Spark 1.3 (OpenRouter)" }
+        - { provider: openrouter, model: "nex-agi/nex-n2.5-mini", display_name: "Nex AGI: Nex-N2.5-Mini (OpenRouter)" }
+        - { provider: openrouter, model: "nex-agi/nex-n2.5-pro", display_name: "Nex AGI: Nex-N2.5-Pro (OpenRouter)" }
+        - { provider: openrouter, model: "openai/gpt-6-astra", display_name: "OpenAI: GPT-6 Astra (OpenRouter)" }
+        - { provider: openrouter, model: "openai/gpt-6-astra-pro", display_name: "OpenAI: GPT-6 Astra Pro (OpenRouter)" }
+        - { provider: openrouter, model: "openai/gpt-6-luna", display_name: "OpenAI: GPT-6 Luna (OpenRouter)" }
+        - { provider: openrouter, model: "openai/gpt-6-luna-pro", display_name: "OpenAI: GPT-6 Luna Pro (OpenRouter)" }
+        - { provider: openrouter, model: "openai/gpt-6-sol", display_name: "OpenAI: GPT-6 Sol (OpenRouter)" }
+        - { provider: openrouter, model: "openai/gpt-6-sol-pro", display_name: "OpenAI: GPT-6 Sol Pro (OpenRouter)" }
+        - { provider: openrouter, model: "perceptron/perceptron-mk1.5", display_name: "Perceptron: Perceptron Mk1.5 (OpenRouter)" }
+        - { provider: openrouter, model: "prism-ml/ternary-bonsai-2-27b", display_name: "PrismML: Ternary Bonsai 2 27B (OpenRouter)" }
+        - { provider: openrouter, model: "qwen/qwen3.8-max-0902", display_name: "Qwen: Qwen3.8 Max (0902) (OpenRouter)" }
+        - { provider: openrouter, model: "qwen/qwen3.8-max-prime", display_name: "Qwen: Qwen3.8 Max Prime (OpenRouter)" }
+        - { provider: openrouter, model: "qwen/qwen3.8-omni-flash", display_name: "Qwen: Qwen3.8 Omni Flash (OpenRouter)" }
+        - { provider: openrouter, model: "sakana/fugu-max", display_name: "Sakana: Fugu Max (OpenRouter)" }
+        - { provider: openrouter, model: "sakana/fugu-ultra-v2", display_name: "Sakana: Fugu Ultra v2 (OpenRouter)" }
+        - { provider: openrouter, model: "unbiased/pareto", display_name: "Pareto (OpenRouter)" }
+        - { provider: openrouter, model: "upstage/solar-mini4", display_name: "Upstage: Solar Mini 4 (OpenRouter)" }
+        - { provider: openrouter, model: "x-ai/grok-4.7", display_name: "SpaceXAI: Grok 4.7 (OpenRouter)" }
+        - { provider: openrouter, model: "xiaomi/mimo-v2.6-flash", display_name: "Xiaomi: MiMo-V2.6-Flash (OpenRouter)" }
+        - { provider: openrouter, model: "xiaomi/mimo-v2.6-pro", display_name: "Xiaomi: MiMo-V2.6-Pro (OpenRouter)" }
+        - { provider: openrouter, model: "xiaomi/mimo-v2.6-pro-ultraspeed", display_name: "Xiaomi: MiMo-V2.6-Pro-UltraSpeed (OpenRouter)" }
+        - { provider: openrouter, model: "z-ai/glm-5.3-flashx", display_name: "Z.ai: GLM 5.3 FlashX (OpenRouter)" }
+        - { provider: openrouter, model: "z-ai/glm-5.3-prime", display_name: "Z.ai: GLM 5.3 Prime (OpenRouter)" }
+        - { provider: xai, model: "grok-4.7", display_name: "Grok 4.7" }
+      deprecated_models:
+        - { provider: deepseek, model: "deepseek-v4-flash", description: "Retired checkpoint; temporary alias routes to deepseek-flash (V4.1 Flash)." }
+        - { provider: deepseek, model: "deepseek-v4-flash-vision-exp", description: "Retired checkpoint; temporary alias routes to deepseek-flash (V4.1 Flash)." }
+
   - version: "2.8.0"
     date: "2026-09-03"
     description: "Adds GPT-6 Astra and Claude Fable 5.1 from their first-party API documentation, including their complete low, medium, high, xhigh, and max reasoning-effort variants. GPT-6 Astra includes its 1.05M-token context, 128K output limit, Responses API guidance, structured output support, cache pricing, and the price multipliers above 272K input tokens. Claude Fable 5.1 includes its 1M-token context, 128K output limit, adaptive-thinking controls, reduced cache-read price, and both 5-minute and 1-hour cache-write rates. This release also corrects Claude Fable 5's first-party release date from June 7 to June 9, 2026, and refreshes the provider UI with OpenRouter's current official glyph."

@@ -61,6 +61,14 @@ export declare type ContentPart = Message$1<"everstack.gateway.v1.ContentPart"> 
    * @generated from field: string provider_json = 7;
    */
   providerJson: string;
+
+  /**
+   * OpenAI image_url.detail ("auto", "low", "high", ...) for an image_url
+   * part. Empty means the provider default.
+   *
+   * @generated from field: string image_detail = 8;
+   */
+  imageDetail: string;
 };
 
 /**
@@ -103,6 +111,14 @@ export declare type ContentPartJson = {
    * @generated from field: string provider_json = 7;
    */
   providerJson?: string;
+
+  /**
+   * OpenAI image_url.detail ("auto", "low", "high", ...) for an image_url
+   * part. Empty means the provider default.
+   *
+   * @generated from field: string image_detail = 8;
+   */
+  imageDetail?: string;
 };
 
 /**
@@ -231,6 +247,13 @@ export declare type ToolFunctionDef = Message$1<"everstack.gateway.v1.ToolFuncti
    * @generated from field: google.protobuf.Struct parameters = 3;
    */
   parameters?: JsonObject;
+
+  /**
+   * OpenAI function.strict: enforce exact schema adherence for tool calls.
+   *
+   * @generated from field: optional bool strict = 4;
+   */
+  strict?: boolean;
 };
 
 /**
@@ -255,6 +278,13 @@ export declare type ToolFunctionDefJson = {
    * @generated from field: google.protobuf.Struct parameters = 3;
    */
   parameters?: StructJson;
+
+  /**
+   * OpenAI function.strict: enforce exact schema adherence for tool calls.
+   *
+   * @generated from field: optional bool strict = 4;
+   */
+  strict?: boolean;
 };
 
 /**
@@ -504,6 +534,27 @@ export declare type SamplingParams = Message$1<"everstack.gateway.v1.SamplingPar
    * @generated from field: optional string verbosity = 13;
    */
   verbosity?: string;
+
+  /**
+   * Return log probabilities of the output tokens (OpenAI logprobs).
+   *
+   * @generated from field: optional bool logprobs = 14;
+   */
+  logprobs?: boolean;
+
+  /**
+   * Number of most likely tokens to return per position (0-20); requires logprobs.
+   *
+   * @generated from field: optional int32 top_logprobs = 15;
+   */
+  topLogprobs?: number;
+
+  /**
+   * Token ID (as a string) to bias in [-100, 100] (OpenAI logit_bias).
+   *
+   * @generated from field: map<string, double> logit_bias = 16;
+   */
+  logitBias: { [key: string]: number };
 };
 
 /**
@@ -574,6 +625,27 @@ export declare type SamplingParamsJson = {
    * @generated from field: optional string verbosity = 13;
    */
   verbosity?: string;
+
+  /**
+   * Return log probabilities of the output tokens (OpenAI logprobs).
+   *
+   * @generated from field: optional bool logprobs = 14;
+   */
+  logprobs?: boolean;
+
+  /**
+   * Number of most likely tokens to return per position (0-20); requires logprobs.
+   *
+   * @generated from field: optional int32 top_logprobs = 15;
+   */
+  topLogprobs?: number;
+
+  /**
+   * Token ID (as a string) to bias in [-100, 100] (OpenAI logit_bias).
+   *
+   * @generated from field: map<string, double> logit_bias = 16;
+   */
+  logitBias?: { [key: string]: number | "NaN" | "Infinity" | "-Infinity" };
 };
 
 /**
@@ -600,6 +672,23 @@ export declare type Usage = Message$1<"everstack.gateway.v1.Usage"> & {
    * @generated from field: int32 total_tokens = 3;
    */
   totalTokens: number;
+
+  /**
+   * Breakdown of prompt_tokens, OpenAI-shaped. Set only when the provider
+   * reports one.
+   *
+   * @generated from field: everstack.gateway.v1.UsageTokenDetails prompt_tokens_details = 4;
+   */
+  promptTokensDetails?: UsageTokenDetails;
+
+  /**
+   * Breakdown of completion_tokens, OpenAI-shaped. reasoning_tokens counts
+   * thinking tokens already included in completion_tokens (OpenAI reasoning,
+   * Gemini thoughts). Set only when the provider reports one.
+   *
+   * @generated from field: everstack.gateway.v1.UsageTokenDetails completion_tokens_details = 5;
+   */
+  completionTokensDetails?: UsageTokenDetails;
 };
 
 /**
@@ -620,6 +709,23 @@ export declare type UsageJson = {
    * @generated from field: int32 total_tokens = 3;
    */
   totalTokens?: number;
+
+  /**
+   * Breakdown of prompt_tokens, OpenAI-shaped. Set only when the provider
+   * reports one.
+   *
+   * @generated from field: everstack.gateway.v1.UsageTokenDetails prompt_tokens_details = 4;
+   */
+  promptTokensDetails?: UsageTokenDetailsJson;
+
+  /**
+   * Breakdown of completion_tokens, OpenAI-shaped. reasoning_tokens counts
+   * thinking tokens already included in completion_tokens (OpenAI reasoning,
+   * Gemini thoughts). Set only when the provider reports one.
+   *
+   * @generated from field: everstack.gateway.v1.UsageTokenDetails completion_tokens_details = 5;
+   */
+  completionTokensDetails?: UsageTokenDetailsJson;
 };
 
 /**
@@ -627,6 +733,58 @@ export declare type UsageJson = {
  * Use `create(UsageSchema)` to create a new message.
  */
 export declare const UsageSchema: GenMessage<Usage, UsageJson>;
+
+/**
+ * OpenAI-compatible token breakdown for Usage. Each count is a subset of the
+ * parent prompt_tokens or completion_tokens, never additional to it.
+ *
+ * @generated from message everstack.gateway.v1.UsageTokenDetails
+ */
+export declare type UsageTokenDetails = Message$1<"everstack.gateway.v1.UsageTokenDetails"> & {
+  /**
+   * @generated from field: int32 cached_tokens = 1;
+   */
+  cachedTokens: number;
+
+  /**
+   * @generated from field: int32 reasoning_tokens = 2;
+   */
+  reasoningTokens: number;
+
+  /**
+   * @generated from field: int32 audio_tokens = 3;
+   */
+  audioTokens: number;
+};
+
+/**
+ * OpenAI-compatible token breakdown for Usage. Each count is a subset of the
+ * parent prompt_tokens or completion_tokens, never additional to it.
+ *
+ * @generated from message everstack.gateway.v1.UsageTokenDetails
+ */
+export declare type UsageTokenDetailsJson = {
+  /**
+   * @generated from field: int32 cached_tokens = 1;
+   */
+  cachedTokens?: number;
+
+  /**
+   * @generated from field: int32 reasoning_tokens = 2;
+   */
+  reasoningTokens?: number;
+
+  /**
+   * @generated from field: int32 audio_tokens = 3;
+   */
+  audioTokens?: number;
+};
+
+/**
+ * Describes the message everstack.gateway.v1.UsageTokenDetails.
+ * Use `create(UsageTokenDetailsSchema)` to create a new message.
+ */
+export declare const UsageTokenDetailsSchema: GenMessage<UsageTokenDetails, UsageTokenDetailsJson>;
 
 /**
  * @generated from message everstack.gateway.v1.Choice
@@ -850,6 +1008,14 @@ export declare type ChatCompletionRequest = Message$1<"everstack.gateway.v1.Chat
    * @generated from field: optional bool parallel_tool_calls = 9;
    */
   parallelToolCalls?: boolean;
+
+  /**
+   * Processing tier requested from the provider (OpenAI service_tier:
+   * "auto", "default", "flex", "priority", ...).
+   *
+   * @generated from field: optional string service_tier = 10;
+   */
+  serviceTier?: string;
 };
 
 /**
@@ -918,6 +1084,14 @@ export declare type ChatCompletionRequestJson = {
    * @generated from field: optional bool parallel_tool_calls = 9;
    */
   parallelToolCalls?: boolean;
+
+  /**
+   * Processing tier requested from the provider (OpenAI service_tier:
+   * "auto", "default", "flex", "priority", ...).
+   *
+   * @generated from field: optional string service_tier = 10;
+   */
+  serviceTier?: string;
 };
 
 /**

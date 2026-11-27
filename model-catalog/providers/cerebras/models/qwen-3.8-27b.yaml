@@ -1,0 +1,51 @@
+# Verified 2026-11-24.
+# Source: https://inference-docs.cerebras.ai/models/qwen-3.8-27b
+# Source: https://inference-docs.cerebras.ai/support/change-log
+name: "qwen-3.8-27b"
+display_name: "Qwen 3.8 27B"
+family: "qwen"
+status: "stable"
+release_date: "2026-09-03"
+
+cost:
+  input_per_1k: 0.00099
+  output_per_1k: 0.00149
+
+limits:
+  max_tokens: 131072
+  max_completion_tokens: 40960
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image"]
+  output: ["text"]
+
+notes: "Paid-tier limits (Free Trial: 65,536 context, 32,768 output). Images as base64 PNG or JPEG, up to 10 per request on pay-as-you-go. Reasoning defaults to high; reasoning_effort none disables it. The hidden reasoning format is unsupported."
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 40960
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "reasoning_effort"
+    display_name: "Reasoning effort"
+    type: "enum"
+    options: ["none","high"]
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+added_in_version: "2.11.0"

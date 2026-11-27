@@ -1,0 +1,60 @@
+name: "accounts/fireworks/routers/deepseek-flash-latest"
+display_name: "DeepSeek Flash Latest (Fireworks)"
+family: "deepseek-flash"
+status: "stable"
+release_date: "2026-10-17"
+
+cost:
+  input_per_1k: 0.0003
+  output_per_1k: 0.0012
+  cache_read_per_1k: 0.000006
+
+limits:
+  max_tokens: 1000000
+  max_completion_tokens: 384000
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image"]
+  output: ["text"]
+
+knowledge_cutoff: "2025-05"
+notes: "October 17 update of DeepSeek V4.1 Flash with improved reasoning, coding, agentic tasks, and visual understanding"
+structured_output: true
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 384000
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "reasoning_effort"
+    display_name: "Reasoning effort"
+    type: "enum"
+    options: ["low","high","max"]
+variants:
+  - id: "low"
+    display_name: "Low reasoning"
+    description: "Lower latency and cost for straightforward tasks."
+    parameters:
+      reasoning_effort: "low"
+  - id: "high"
+    display_name: "High reasoning"
+    description: "Deeper reasoning for complex analysis and coding."
+    parameters:
+      reasoning_effort: "high"
+  - id: "max"
+    display_name: "Maximum reasoning"
+    description: "Maximum available reasoning depth for the model."
+    parameters:
+      reasoning_effort: "max"
+added_in_version: "2.11.0"

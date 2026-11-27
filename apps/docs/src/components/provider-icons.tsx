@@ -8,6 +8,8 @@ const MONO_PROVIDERS = new Set([
   "openrouter",
   "ollama",
   "moonshot",
+  "nebius",
+  "baseten",
   "cursor",
   "githubcopilot",
 ]);
@@ -105,4 +107,25 @@ export function CursorIcon() {
 }
 export function GitHubCopilotIcon() {
   return <ProviderImg name="githubcopilot" />;
+}
+export function DeepInfraIcon() {
+  return <ProviderImg name="deepinfra" />;
+}
+export function NovitaIcon() {
+  return <ProviderImg name="novita" />;
+}
+export function NebiusIcon() {
+  return <ProviderImg name="nebius" />;
+}
+export function BasetenIcon() {
+  return <ProviderImg name="baseten" />;
+}
+export function SambaNovaIcon() {
+  return <ProviderImg name="sambanova" />;
+}
+export function MetaIcon() {
+  return <ProviderImg name="meta" />;
+}
+export function TencentIcon() {
+  return <ProviderImg name="tencent" />;
 }

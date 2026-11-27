@@ -1,0 +1,64 @@
+# Example configuration for OTEL External Mode (Cloud deployments)
+# This uses the external OTEL collector service
+#
+# To test:
+# 1. Start services with collector: docker-compose -f build/docker-compose-local.yaml --profile cloud up
+# 2. Run gateway with this config: ./bin/everstack serve --config examples/otel-external-mode.yaml
+
+server:
+  config:
+    port: 8089
+    external_domain: "localhost"
+
+  log:
+    level: info
+    formatter:
+      format: text
+
+  telemetry:
+    otel:
+      enabled: true
+      mode: external # Use external OTEL collector
+      collector_url: "localhost:4317"
+      service_name: "everstack-gateway"
+      tenant_type: "cloud"
+      instance_owner: "everstack"
+      # tenant_id is dynamically fetched from license context
+
+  tls:
+    enabled: false
+
+  cors:
+    enabled: true
+    allowed_origins:
+      - "http://localhost:3000"
+      - "http://localhost:8089"
+    allowed_methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+    allowed_headers:
+      - "Origin"
+      - "Content-Type"
+      - "Accept"
+      - "Authorization"
+      - "x-evs-api-key"
+
+database:
+  mode: hybrid
+  postgres:
+    dsn: "postgres://postgres:postgres@localhost:5432/everstack?sslmode=disable"
+  clickhouse:
+    dsn: "clickhouse://clickhouse:clickhouse@localhost:9000/everstack?dial_timeout=10s"
+
+gateway:
+  enable_streaming: true
+  enable_sse: false
+
+features:
+  gateway:
+    enable_streaming: true
+    enable_sse: false
+

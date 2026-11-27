@@ -2,6 +2,8 @@ package serverprovider
 
 import (
 	"context"
+	"github.com/everstacklabs/everstack/internal/adk"
+	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"strings"
 	"testing"
 )
@@ -100,5 +102,33 @@ func TestUnknownToolErrors(t *testing.T) {
 	p := New(Deps{})
 	if _, err := p.CallTool(context.Background(), "tenant-A", "does_not_exist", nil); err == nil {
 		t.Fatal("expected error for unknown tool")
+	}
+}
+
+func TestRestrictedContextCannotListOrCallADK(t *testing.T) {
+	p := New(Deps{ADK: &adk.Runtime{}})
+	for _, surfaces := range [][]string{nil, {}, {"mcp"}, {"inference", "mcp", "telemetry", "a2a"}} {
+		ctx := contextkeys.WithAPIKeySurfaces(context.Background(), surfaces)
+		tools, err := p.ListTools(ctx, "tenant")
+		if err != nil {
+			t.Fatal(err)
+		}
+		seen := false
+		for _, tool := range tools {
+			if tool.Name == "run_adk_agent" {
+				seen = true
+			}
+		}
+		if seen != (surfaces == nil) {
+			t.Fatal("list restriction missing")
+		}
+		_, err = p.CallTool(ctx, "tenant", "run_adk_agent", nil)
+		expected := "unknown tool: run_adk_agent"
+		if surfaces == nil {
+			expected = "agent_code is required"
+		}
+		if err == nil || err.Error() != expected {
+			t.Fatalf("ADK restriction=%v: %v", surfaces != nil, err)
+		}
 	}
 }

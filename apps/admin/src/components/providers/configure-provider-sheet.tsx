@@ -687,7 +687,7 @@ export function ConfigureProviderSheet({
                           variant="ghost"
                           size="sm"
                           onClick={() => setShowAddKeyForm(!showAddKeyForm)}
-                          className="text-blue-400 light:text-blue-600 hover:text-blue-300 light:hover:text-blue-600 hover:bg-blue-500/10 h-8"
+                          className="text-info hover:bg-info-surface h-8"
                         >
                           <Iconify.Icon
                             icon={
@@ -812,7 +812,7 @@ export function ConfigureProviderSheet({
                             <button
                               type="button"
                               onClick={() => setCustomBaseUrl(catalog.baseUrl)}
-                              className="text-xs text-blue-400 hover:text-blue-300 light:text-blue-600"
+                              className="text-xs text-info"
                             >
                               Use provider default
                             </button>
@@ -934,7 +934,7 @@ export function ConfigureProviderSheet({
                       <div className="flex items-center justify-between">
                         <Label className="text-white light:text-brand-main-50">
                           Enabled Models{' '}
-                          <span className="text-red-400 light:text-red-600">
+                          <span className="text-danger">
                             *
                           </span>
                         </Label>
@@ -942,7 +942,7 @@ export function ConfigureProviderSheet({
                           <button
                             type="button"
                             onClick={selectAllModels}
-                            className="text-xs text-blue-400 light:text-blue-600 hover:text-blue-300 light:hover:text-blue-600 transition-colors"
+                            className="text-xs text-info transition-colors"
                           >
                             All
                           </button>
@@ -952,7 +952,7 @@ export function ConfigureProviderSheet({
                           <button
                             type="button"
                             onClick={deselectAllModels}
-                            className="text-xs text-blue-400 light:text-blue-600 hover:text-blue-300 light:hover:text-blue-600 transition-colors"
+                            className="text-xs text-info transition-colors"
                           >
                             None
                           </button>
@@ -964,7 +964,7 @@ export function ConfigureProviderSheet({
                               <button
                                 type="button"
                                 onClick={() => setDiscoveryDialogOpen(true)}
-                                className="text-xs text-green-400 light:text-green-600 hover:text-green-300 light:hover:text-green-600 transition-colors flex items-center gap-1"
+                                className="text-xs text-success transition-colors flex items-center gap-1"
                               >
                                 <Iconify.Icon
                                   icon="heroicons:plus-circle"
@@ -1064,11 +1064,11 @@ export function ConfigureProviderSheet({
                                         className={cn(
                                           'text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wider font-medium',
                                           model.status === 'deprecated'
-                                            ? 'bg-red-500/20 text-red-400 light:text-red-600'
+                                            ? 'bg-danger-surface-strong text-danger'
                                             : model.status === 'beta'
-                                              ? 'bg-yellow-500/20 text-yellow-400 light:text-yellow-700'
+                                              ? 'bg-warning-surface-strong text-warning'
                                               : model.status === 'preview'
-                                                ? 'bg-blue-500/20 text-blue-400 light:text-blue-600'
+                                                ? 'bg-info-surface-strong text-info'
                                                 : 'bg-white/10 light:bg-black/10 text-white/60 light:text-black/60',
                                         )}
                                       >
@@ -1180,7 +1180,7 @@ export function ConfigureProviderSheet({
                               className={cn(
                                 'group/model w-full flex items-start gap-3 p-2 rounded transition-all text-left cursor-pointer select-none',
                                 selectedModels?.has(model.modelName)
-                                  ? 'bg-green-600/10 border border-green-500/30'
+                                  ? 'bg-success-surface border border-success-border'
                                   : 'hover:bg-brand-main-700 border border-transparent',
                               )}
                             >
@@ -1189,7 +1189,7 @@ export function ConfigureProviderSheet({
                                   className={cn(
                                     'size-4 rounded border-2 flex items-center justify-center transition-colors',
                                     selectedModels?.has(model.modelName)
-                                      ? 'bg-green-600 border-green-600'
+                                      ? 'bg-success-solid border-success-solid'
                                       : 'border-brand-main-400',
                                   )}
                                 >
@@ -1209,7 +1209,7 @@ export function ConfigureProviderSheet({
                               <div className="flex-1 min-w-0 pointer-events-none">
                                 <div className="text-white light:text-brand-main-50 font-medium text-sm flex items-center gap-1.5">
                                   {model.displayName}
-                                  <span className="text-[9px] px-1 py-0 rounded bg-green-500/20 text-green-400 light:text-green-600 uppercase tracking-wider">
+                                  <span className="text-[9px] px-1 py-0 rounded bg-success-surface-strong text-success uppercase tracking-wider">
                                     Custom
                                   </span>
                                   <button
@@ -1266,7 +1266,7 @@ export function ConfigureProviderSheet({
                     value="parameters"
                     className="space-y-5 mt-0 h-full overflow-y-auto scrollbar-macos"
                   >
-                    <div className="rounded border border-blue-500/20 bg-blue-500/10 p-4 text-sm text-blue-200 light:text-blue-700">
+                    <div className="rounded border border-info-border bg-info-surface p-4 text-sm text-info">
                       <div className="flex items-start gap-3">
                         <Iconify.Icon
                           icon="heroicons:information-circle"
@@ -1293,7 +1293,7 @@ export function ConfigureProviderSheet({
                         <button
                           type="button"
                           onClick={() => setActiveTab('models')}
-                          className="mt-1 text-xs text-blue-400 light:text-blue-600"
+                          className="mt-1 text-xs text-info"
                         >
                           Choose models
                         </button>

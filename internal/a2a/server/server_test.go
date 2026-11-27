@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -24,15 +25,16 @@ func (s stubRunner) Run(ctx context.Context, tenant, agent, msg string) (string,
 // --- fakes ---
 
 type fakeAuth struct {
-	tenant string
-	ok     bool
+	tenant   string
+	apiKeyID string
+	ok       bool
 }
 
-func (f fakeAuth) Authenticate(r *http.Request) (string, bool) {
+func (f fakeAuth) AuthenticateKey(r *http.Request) (string, string, bool) {
 	if r.Header.Get("Authorization") == "" {
-		return "", false
+		return "", "", false
 	}
-	return f.tenant, f.ok
+	return f.tenant, f.apiKeyID, f.ok
 }
 
 type fakeLookup struct {
@@ -240,5 +242,28 @@ func TestStreamingRejected(t *testing.T) {
 	_ = json.Unmarshal(rr.Body.Bytes(), &resp)
 	if resp.Error == nil {
 		t.Fatalf("expected error for streaming, got result")
+	}
+}
+
+// Spend attribution (docs/design/spend-limits-v2.md S1): the agent run
+// starts with the verified API key's id on its context; the runtime keeps
+// context values (WithoutCancel), so the run's inference is attributed to it.
+func TestMessageSendRunCarriesAPIKeyID(t *testing.T) {
+	var got string
+	s := newTestServer(Deps{
+		Agents: &fakeLookup{found: true},
+		Auth:   fakeAuth{tenant: "tenant-A", apiKeyID: "key-a2a", ok: true},
+		Runner: stubRunner{fn: func(ctx context.Context, _, _, _ string) (string, error) {
+			got = contextkeys.GetAPIKeyID(ctx)
+			return "ok", nil
+		}},
+	})
+	rr := doReq(t, newRouter(s), http.MethodPost, "/a2a/agents/agent-1", true,
+		`{"jsonrpc":"2.0","id":7,"method":"message/send","params":{"message":{"role":"user","parts":[{"kind":"text","text":"hello"}]}}}`)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", rr.Code)
+	}
+	if got != "key-a2a" {
+		t.Fatalf("agent run key id %q, want key-a2a", got)
 	}
 }

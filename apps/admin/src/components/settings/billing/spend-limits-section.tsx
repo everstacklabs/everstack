@@ -234,8 +234,8 @@ export function SpendLimitsSection({ organizationId = '', instanceId = '' }: Spe
 
     // Get progress color based on percentage
     const getProgressColor = (percentage: number) => {
-        if (percentage >= 90) return 'bg-red-500'
-        if (percentage >= 75) return 'bg-yellow-500'
+        if (percentage >= 90) return 'bg-danger-solid'
+        if (percentage >= 75) return 'bg-warning-solid'
         return 'bg-white/50 light:bg-black/50'
     }
 
@@ -328,7 +328,7 @@ export function SpendLimitsSection({ organizationId = '', instanceId = '' }: Spe
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="text-white/40 light:text-black/40 hover:text-red-400 light:hover:text-red-600 h-6 w-6 p-0"
+                                                className="text-white/40 light:text-black/40 hover:text-danger h-6 w-6 p-0"
                                                 onClick={(e) => {
                                                     e.stopPropagation()
                                                     handleDeleteLimit(limit.id)

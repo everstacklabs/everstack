@@ -46,8 +46,10 @@ func ExecuteChatWithCacheOutcome(
 	}
 
 	engine := fastpath.EngineFromContext(ctx)
+	// One cache view of the request: fingerprints are computed once and
+	// shared by the lookups and the stores.
+	adapter := &chatRequestAdapter{req: req}
 	if engine != nil && engine.IsEnabled() {
-		adapter := &chatRequestAdapter{req: req}
 
 		// 1) Exact cache lookup.
 		if cached, found := engine.GetCachedResponseWithContext(ctx, adapter); found {
@@ -64,7 +66,7 @@ func ExecuteChatWithCacheOutcome(
 		if engine.IsSemanticCacheEnabled() {
 			queryText := extractQueryText(req)
 			if queryText != "" {
-				if cached, found := engine.GetSemanticCachedResponseWithContext(ctx, queryText); found {
+				if cached, found := engine.GetSemanticCachedResponseWithContext(ctx, adapter, queryText); found {
 					var cachedResp gw.ChatCompletionResponse
 					if err := fastpath.Unmarshal(cached.Response, &cachedResp); err == nil {
 						engine.RecordFastPathRequest()
@@ -91,7 +93,6 @@ func ExecuteChatWithCacheOutcome(
 				Model:        resp.Model,
 				OutputTokens: resp.Usage.CompletionTokens,
 			}
-			adapter := &chatRequestAdapter{req: req}
 			engine.CacheResponseWithContext(ctx, adapter, cachedResp)
 			outcome.Stored = true
 
@@ -99,7 +100,9 @@ func ExecuteChatWithCacheOutcome(
 			if engine.IsSemanticCacheEnabled() {
 				queryText := extractQueryText(req)
 				if queryText != "" {
-					go engine.CacheSemanticResponseWithContext(context.Background(), queryText, cachedResp)
+					// Detach from cancellation but keep the tenant identity:
+					// semantic entries are tenant-owned.
+					go engine.CacheSemanticResponseWithContext(context.WithoutCancel(ctx), adapter, queryText, cachedResp)
 					outcome.SemanticStored = true
 				}
 			}
@@ -111,7 +114,8 @@ func ExecuteChatWithCacheOutcome(
 
 // chatRequestAdapter adapts gw.ChatCompletionRequest to cache.ChatRequest.
 type chatRequestAdapter struct {
-	req gw.ChatCompletionRequest
+	req  gw.ChatCompletionRequest
+	memo cache.FingerprintMemo
 }
 
 func (a *chatRequestAdapter) GetModel() string        { return a.req.Model }
@@ -119,6 +123,12 @@ func (a *chatRequestAdapter) GetTemperature() float64 { return a.req.Sampling.Te
 func (a *chatRequestAdapter) GetMaxTokens() int       { return a.req.Sampling.MaxTokens }
 func (a *chatRequestAdapter) GetTopP() float64        { return a.req.Sampling.TopP }
 func (a *chatRequestAdapter) GetStream() bool         { return a.req.Stream }
+func (a *chatRequestAdapter) CacheFingerprint() []byte {
+	return a.memo.Exact(func() []byte { return gw.ChatCacheFingerprint(a.req) })
+}
+func (a *chatRequestAdapter) SemanticContextFingerprint() []byte {
+	return a.memo.Semantic(func() []byte { return gw.ChatSemanticContextFingerprint(a.req) })
+}
 func (a *chatRequestAdapter) GetMessages() []cache.Message {
 	msgs := make([]cache.Message, len(a.req.Messages))
 	for i := range a.req.Messages {

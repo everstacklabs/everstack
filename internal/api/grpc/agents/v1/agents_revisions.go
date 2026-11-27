@@ -31,6 +31,9 @@ func (s *Server) CreateAgentRevision(
 	if req.Msg.GetAgentId() == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("agent_id is required"))
 	}
+	if _, err := s.requireOwnedAgent(ctx, req.Msg.GetAgentId(), tenantID); err != nil {
+		return nil, err
+	}
 	files := make([]agentrevision.File, 0, len(req.Msg.GetFiles()))
 	for _, file := range req.Msg.GetFiles() {
 		if file == nil {
@@ -104,6 +107,9 @@ func (s *Server) GetActiveAgentRevision(
 	}
 	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.requireOwnedAgent(ctx, req.Msg.GetAgentId(), tenantID); err != nil {
 		return nil, err
 	}
 	rev, err := s.revisionStore.GetActive(ctx, tenantID, req.Msg.GetAgentId())

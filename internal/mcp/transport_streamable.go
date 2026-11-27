@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"io"
 	"net/http"
 	"strings"
@@ -35,7 +36,7 @@ func newStreamableHTTPTransport(cfg ServerConfig) (*streamableHTTPTransport, err
 		url:         cfg.URL,
 		baseHeaders: cfg.Headers,
 		auth:        cfg.AuthConfig,
-		client:      &http.Client{},
+		client:      newHTTPClient(0),
 	}, nil
 }
 
@@ -64,6 +65,7 @@ func (t *streamableHTTPTransport) Send(ctx context.Context, req *JsonRpcRequest)
 		httpReq.Header.Set("Mcp-Session-Id", sessionID)
 	}
 
+	contextkeys.WriteAgentHop(ctx, httpReq.Header)
 	httpResp, err := t.client.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("mcp: http request: %w", err)

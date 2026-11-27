@@ -65,8 +65,14 @@ func NewVerifier(publicKeyB64 string) (*Verifier, error) {
 	}, nil
 }
 
+// ErrMissingExpiry is returned for a license JWT that carries no exp claim.
+// The license service always sets exp (services/license/internal/jwt), so a
+// token without one is either forged or produced by a broken signer; neither
+// may be treated as a license that never expires (EVS-292).
+var ErrMissingExpiry = errors.New("license JWT has no exp claim")
+
 // Verify parses and validates an Ed25519-signed license JWT.
-// It checks the signature, issuer, and audience.
+// It checks the signature, issuer, audience, and requires an exp claim.
 func (v *Verifier) Verify(tokenString string) (*Claims, error) {
 	if v == nil {
 		return nil, errors.New("verifier is nil")
@@ -80,6 +86,7 @@ func (v *Verifier) Verify(tokenString string) (*Claims, error) {
 	},
 		jwt.WithIssuer("everstack-license"),
 		jwt.WithAudience("everstack-gateway"),
+		jwt.WithExpirationRequired(),
 	)
 
 	if err != nil {
@@ -134,6 +141,12 @@ func (v *Verifier) VerifyAllowExpired(tokenString string) (*Claims, error) {
 	}
 	if !audOK {
 		return nil, errors.New("unexpected audience")
+	}
+	// Expiry is relaxed, not optional: an authentic token still needs an exp
+	// to anchor the grace window. Without one there is nothing to be
+	// "expired" relative to and the token would be immortal.
+	if claims.ExpiresAt == nil {
+		return nil, ErrMissingExpiry
 	}
 
 	return claims, nil

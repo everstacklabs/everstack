@@ -175,9 +175,9 @@ function StepIcon({ step, isCurrent }: { step: { complete: boolean; icon: string
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                className="flex size-5 items-center justify-center rounded bg-emerald-500/20 shrink-0"
+                className="flex size-5 items-center justify-center rounded bg-success-surface-strong shrink-0"
             >
-                <Iconify.Icon icon="lucide:check" className="size-3 text-emerald-400 light:text-emerald-600" />
+                <Iconify.Icon icon="lucide:check" className="size-3 text-success" />
             </motion.div>
         )
     }
@@ -331,7 +331,7 @@ function CopyableEndpointRow({
                 className="inline-flex items-center justify-center rounded border border-brand-main-600/40 bg-brand-main-900/60 p-1 text-brand-main-300 hover:text-white light:hover:text-brand-main-50 hover:border-brand-main-500 transition-colors shrink-0"
             >
                 {copied
-                    ? <Iconify.Icon icon="lucide:check" className="size-3 text-green-400 light:text-green-600" />
+                    ? <Iconify.Icon icon="lucide:check" className="size-3 text-success" />
                     : <Iconify.Icon icon="lucide:copy" className="size-3" />
                 }
             </button>

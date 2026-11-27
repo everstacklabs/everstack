@@ -114,9 +114,9 @@ export function TopNCard({
                           className={cn(
                             'rounded px-1 py-0 text-[10px] font-mono',
                             delta > 0 &&
-                              'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 light:text-emerald-600',
+                              'border-success-border bg-success-surface text-success',
                             delta < 0 &&
-                              'border-rose-500/30 bg-rose-500/10 text-rose-400 light:text-rose-600',
+                              'border-danger-border bg-danger-surface text-danger',
                             delta === 0 &&
                               'border-white/10 bg-white/5 text-white/45 light:border-black/10 light:bg-black/5 light:text-black/45',
                           )}

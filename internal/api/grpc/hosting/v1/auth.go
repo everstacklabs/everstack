@@ -282,6 +282,10 @@ func (s *Server) bindClaimedSiteLocked(ctx context.Context, slug, claimToken, or
 	}
 
 	quota, quotaEnabled, err := s.resolveTenantQuota(ctx, orgID)
+	var connectErr *connect.Error
+	if errors.As(err, &connectErr) {
+		return connectErr // e.g. quota temporarily unavailable
+	}
 	if err != nil {
 		return connect.NewError(connect.CodeInternal, err)
 	}

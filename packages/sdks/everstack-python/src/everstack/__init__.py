@@ -1,6 +1,7 @@
 """Everstack — The official Python SDK for the Everstack AI platform."""
 
 from ._version import __version__
+from .resources.decisions import DecisionAnswer, DecisionResponse, DecisionUsage
 from ._client import Everstack, AsyncEverstack
 from ._errors import (
     EverstackError,
@@ -81,6 +82,7 @@ from .resources.openai_agents import (
 )
 
 __all__ = [
+    "DecisionAnswer", "DecisionResponse", "DecisionUsage",
     "__version__",
     # Clients
     "Everstack",

@@ -107,3 +107,47 @@ func TestVerifyAcceptsValid(t *testing.T) {
 		t.Fatal("valid JWT reported expired")
 	}
 }
+
+// mintLicenseJWTNoExp signs an otherwise valid license JWT with no exp claim.
+func mintLicenseJWTNoExp(t *testing.T, priv ed25519.PrivateKey) string {
+	t.Helper()
+	claims := &Claims{
+		TenantID: "org-1",
+		Tier:     "enterprise",
+		Status:   "active",
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:   "everstack-license",
+			Audience: jwt.ClaimStrings{"everstack-gateway"},
+			Subject:  "inst-1",
+			IssuedAt: jwt.NewNumericDate(time.Now().Add(-time.Hour)),
+		},
+	}
+	signed, err := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims).SignedString(priv)
+	if err != nil {
+		t.Fatalf("sign JWT: %v", err)
+	}
+	return signed
+}
+
+// EVS-292: a license JWT without exp must not be accepted as never-expiring.
+func TestVerifyRejectsMissingExp(t *testing.T) {
+	v, priv := newTestVerifier(t)
+	immortal := mintLicenseJWTNoExp(t, priv)
+
+	if _, err := v.Verify(immortal); err == nil {
+		t.Fatal("Verify accepted a JWT with no exp claim; it would never expire")
+	}
+	if _, err := v.VerifyAllowExpired(immortal); err == nil {
+		t.Fatal("VerifyAllowExpired accepted a JWT with no exp claim; grace has nothing to anchor on")
+	}
+}
+
+// Guard for the compatibility promise: every JWT the license signer has ever
+// issued carries exp, so a well-formed token keeps validating.
+func TestVerifyStillAcceptsTokenWithExp(t *testing.T) {
+	v, priv := newTestVerifier(t)
+	ok := mintLicenseJWT(t, priv, "everstack-license", "everstack-gateway", time.Hour)
+	if _, err := v.Verify(ok); err != nil {
+		t.Fatalf("Verify rejected a valid JWT with exp: %v", err)
+	}
+}

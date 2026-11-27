@@ -47,6 +47,7 @@ import { Memory } from "./resources/memory.js";
 import { Models } from "./resources/models.js";
 import { Moderations } from "./resources/moderations.js";
 import { Observability } from "./resources/observability.js";
+import { Decisions } from "./resources/decisions.js";
 import { Rerank } from "./resources/rerank.js";
 import { Responses } from "./resources/responses.js";
 import { Scores } from "./resources/scores.js";
@@ -205,6 +206,7 @@ export class Everstack<TModels extends string = AllModels> {
    * Document reranking resource
    */
   readonly rerank: Rerank;
+ readonly decisions: Decisions;
 
   /**
    * Responses API resource (agentic orchestration)
@@ -310,6 +312,7 @@ export class Everstack<TModels extends string = AllModels> {
     this.images = new Images(this._client);
     this.moderations = new Moderations(this._client);
     this.rerank = new Rerank(this._client);
+ this.decisions = new Decisions(this._client);
     this.responses = new Responses(this._client);
     this.scores = new Scores(scoresClient);
     this.observability = new Observability(observabilityClient);

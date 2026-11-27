@@ -10,6 +10,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/database"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/everstacklabs/everstack/internal/query"
+	"github.com/everstacklabs/everstack/internal/telemetry/otelstatus"
 )
 
 // WorkflowMetricsHandler aggregates workflow performance metrics
@@ -118,22 +119,7 @@ func (h *WorkflowMetricsHandler) Handle(ctx context.Context, q query.Query) (int
 	}
 
 	// Query workflow-level metrics
-	// Note: toInt64() cast ensures compatibility with both Int64 and UInt64 Duration schemas
-	sqlQuery := fmt.Sprintf(`
-		SELECT
-			wm.WorkflowId,
-			wm.WorkflowType,
-			wm.WorkflowName,
-			count(*) as total_steps,
-			countIf(t.StatusCode = 'OK') as completed_steps,
-			countIf(t.StatusCode = 'ERROR') as failed_steps,
-			toInt64(sum(t.Duration)) as total_duration_ns,
-			avgIf(1, t.StatusCode = 'OK') as success_rate
-		FROM otel_workflow_metadata wm
-		INNER JOIN otel_traces t ON wm.TraceId = t.TraceId
-		%s
-		GROUP BY wm.WorkflowId, wm.WorkflowType, wm.WorkflowName
-	`, whereClause)
+	sqlQuery := buildWorkflowMetricsSQL(whereClause)
 
 	logger.WithFields("query", sqlQuery, "args", args).Debug("executing workflow metrics query")
 
@@ -195,6 +181,51 @@ func (h *WorkflowMetricsHandler) Handle(ctx context.Context, q query.Query) (int
 	}
 
 	return results, nil
+}
+
+// workflowStatusColumn is the span-status column on the otel_traces side of the
+// workflow join.
+const workflowStatusColumn = "t.StatusCode"
+
+// buildWorkflowMetricsSQL renders the workflow-level rollup.
+//
+// The status predicates are built by internal/telemetry/otelstatus instead of
+// being compared against a literal. otel_traces stores a span status as
+// 'Ok' / 'Error' / 'Unset' when the OpenTelemetry collector exporter writes it,
+// and as 'STATUS_CODE_OK' / 'STATUS_CODE_ERROR' / 'STATUS_CODE_UNSET' when the
+// Everstack OTLP HTTP handler does. ClickHouse '=' is case-sensitive, so the
+// original `t.StatusCode = 'OK'` / `t.StatusCode = 'ERROR'` matched neither
+// spelling: every workflow reported 0 completed steps, 0 failed steps and a 0
+// success rate, for all time.
+//
+// success_rate changes shape too. `avgIf(1, <ok>)` averages the constant 1 over
+// only the rows that already satisfy the predicate, so it can only ever be 1
+// (or NaN for a workflow with no successful step) -- fixing the predicate alone
+// would have turned a structural 0 into a structural 1. avg() over the
+// predicate is completed/total, which is what the field claims to report.
+//
+// Note: toInt64() cast ensures compatibility with both Int64 and UInt64
+// Duration schemas.
+func buildWorkflowMetricsSQL(whereClause string) string {
+	return fmt.Sprintf(`
+		SELECT
+			wm.WorkflowId,
+			wm.WorkflowType,
+			wm.WorkflowName,
+			count(*) as total_steps,
+			countIf(%[1]s) as completed_steps,
+			countIf(%[2]s) as failed_steps,
+			toInt64(sum(t.Duration)) as total_duration_ns,
+			avg(%[1]s) as success_rate
+		FROM otel_workflow_metadata wm
+		INNER JOIN otel_traces t ON wm.TraceId = t.TraceId
+		%[3]s
+		GROUP BY wm.WorkflowId, wm.WorkflowType, wm.WorkflowName
+	`,
+		otelstatus.IsOK(workflowStatusColumn),
+		otelstatus.IsError(workflowStatusColumn),
+		whereClause,
+	)
 }
 
 func (h *WorkflowMetricsHandler) queryStepMetrics(ctx context.Context, workflowID string) ([]StepMetrics, error) {

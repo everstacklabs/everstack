@@ -143,3 +143,10 @@ func (r *UserRepository) ListPaginated(ctx context.Context, limit, offset int) (
 func (r *UserRepository) List(ctx context.Context) ([]domain.User, error) {
 	return r.ListPaginated(ctx, 1000, 0)
 }
+
+// Delete deletes a user. Their sessions, credentials and memberships go
+// with them (ON DELETE CASCADE).
+func (r *UserRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM everstack.users WHERE id = $1`, id)
+	return err
+}

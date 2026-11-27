@@ -182,10 +182,12 @@ func (h *TracesHandler) insertSpans(ctx context.Context, tenantID string, rss []
 	}
 
 	for _, rs := range rss {
+		stripClientKeyAttributes(rs.ProtoReflect())
 		resAttrs := attrsToMap(rs.GetResource().GetAttributes())
 		// Tenant is always the authenticated caller's tenant — never trust
 		// the client-supplied tenant.id.
 		resAttrs["tenant.id"] = tenantID
+		stampKey(ctx, resAttrs)
 		serviceName := resAttrs["service.name"]
 
 		for _, ss := range rs.GetScopeSpans() {
@@ -273,7 +275,7 @@ func (h *TracesHandler) insertSpans(ctx context.Context, tenantID string, rss []
 func attrsToMap(kvs []*commonpb.KeyValue) map[string]string {
 	m := make(map[string]string, len(kvs))
 	for _, kv := range kvs {
-		if kv == nil || kv.Key == "" {
+		if kv == nil || kv.Key == "" || kv.Key == "everstack.api_key_id" {
 			continue
 		}
 		m[kv.Key] = anyValueToString(kv.Value)

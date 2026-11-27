@@ -54,11 +54,25 @@ jobs:
           go build ./...
           go build -tags=ce ./...
 
+      # The released binaries (gateway, firecracker agent, fc supervisor) must
+      # resolve every package they need from this repository, on every target
+      # OS, and compile no commercial file.
+      - name: Community Edition binaries compile no commercial code
+        run: python3 .github/scripts/validate-public-repo.py --go-deps-only .
+
+      - name: Scan for secrets
+        run: |
+          go install github.com/zricethezav/gitleaks/v8@v8.30.1
+          "$(go env GOPATH)/bin/gitleaks" dir . \
+            --config .gitleaks.toml \
+            --gitleaks-ignore-path .gitleaksignore \
+            --no-banner --redact --exit-code 1
+
       - name: Validate quickstart Compose file
         run: docker compose -f examples/quickstart/compose.yaml config --quiet
 
   frontend:
-    name: Community Edition frontend
+    name: Frontend
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:

@@ -166,17 +166,21 @@ func (s *Server) AddDocuments(ctx context.Context, req *connect.Request[memorypb
 	if err != nil {
 		return nil, err
 	}
+	documents := req.Msg.GetDocuments()
+	contents := make([]string, len(documents))
+	for i, doc := range documents {
+		contents[i] = doc.GetContent()
+	}
+	plan, err := planAddDocuments(contents, int(req.Msg.GetChunkSize()))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
 
 	collName := req.Msg.GetCollectionName()
 	coll, err := s.store.GetCollection(ctx, tenantID, collName)
 	if err != nil {
 		s.logRequest(tenantID, "", collName, "add_documents", "admin", start, nil, nil, err.Error())
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("collection %q not found: %w", collName, err))
-	}
-
-	chunkSize := int(req.Msg.GetChunkSize())
-	if chunkSize <= 0 {
-		chunkSize = 512
 	}
 
 	embModel := coll.EmbeddingModel
@@ -187,7 +191,7 @@ func (s *Server) AddDocuments(ctx context.Context, req *connect.Request[memorypb
 	var allDocIDs []string
 	totalChunks := 0
 
-	for _, doc := range req.Msg.GetDocuments() {
+	for docIndex, doc := range documents {
 		docs := []memory.Document{{
 			Content:  doc.GetContent(),
 			Metadata: doc.GetMetadata(),
@@ -200,7 +204,7 @@ func (s *Server) AddDocuments(ctx context.Context, req *connect.Request[memorypb
 		}
 		allDocIDs = append(allDocIDs, docIDs...)
 
-		chunks := memory.ChunkText(doc.GetContent(), chunkSize)
+		chunks := plan.chunks[docIndex]
 		embeddings, err := s.embedder.EmbedBatch(ctx, embModel, chunks)
 		if err != nil {
 			s.logRequest(tenantID, coll.ID, collName, "add_documents", "admin", start, nil, nil, err.Error())
@@ -293,10 +297,7 @@ func (s *Server) QueryCollection(ctx context.Context, req *connect.Request[memor
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("embedding: %w", err))
 	}
 
-	topK := int(req.Msg.GetTopK())
-	if topK <= 0 {
-		topK = 5
-	}
+	topK := clampTopK(int(req.Msg.GetTopK()))
 
 	results, err := s.store.Query(ctx, coll.ID, embedding, memory.QueryOptions{
 		TopK:           topK,

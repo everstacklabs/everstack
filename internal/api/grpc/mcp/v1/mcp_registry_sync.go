@@ -20,7 +20,10 @@ func (s *Server) ensureServerRegistered(ctx context.Context, tenantID, serverID 
 		return connect.NewError(connect.CodeInvalidArgument, errors.New("server_id is required"))
 	}
 
-	if _, ok := s.registry.Get(serverID); ok {
+	// The registry is shared by every tenant on a managed gateway, so a hit
+	// only counts when the caller owns it. Another tenant's live server falls
+	// through to the tenant-scoped DB load below and comes back NotFound.
+	if s.registry.OwnedBy(tenantID, serverID) {
 		return nil
 	}
 
@@ -51,11 +54,23 @@ func (s *Server) ensureServerRegistered(ctx context.Context, tenantID, serverID 
 	}
 
 	// Another request may have restored the server while we were loading from DB.
-	if _, ok := s.registry.Get(serverID); ok {
+	if s.registry.OwnedBy(tenantID, serverID) {
 		return nil
 	}
 
 	cfg := buildServerConfig(serverID, ownerTenantID, name, serverURL, transportType, authType, authConfigJSON, headersJSON, stdioConfigJSON)
+	// Pre-existing stdio rows (written before the write-path guard, or by
+	// a deployment that later became shared) must never be started here.
+	// The registry refuses them too; this check gives the caller the same
+	// code and message as the write path instead of Internal.
+	if cfg.TransportType == mcp.TransportStdio && !s.stdioAllowed() {
+		logger.WithFields(
+			"server_id", serverID,
+			"tenant_id", tenantID,
+			"name", name,
+		).Warn("mcp: refusing to start tenant stdio server on shared gateway")
+		return stdioRefusedError()
+	}
 	if cfg.AuthConfig != nil && cfg.AuthConfig.Type == mcp.AuthTypeOAuth2 {
 		if cfg.AuthConfig.AccessToken == "" {
 			return connect.NewError(connect.CodeFailedPrecondition,
@@ -65,6 +80,9 @@ func (s *Server) ensureServerRegistered(ctx context.Context, tenantID, serverID 
 	}
 
 	if _, err := s.registry.Register(ctx, cfg); err != nil {
+		if errors.Is(err, mcp.ErrStdioNotAllowed) {
+			return stdioRefusedError()
+		}
 		return connect.NewError(connect.CodeInternal, fmt.Errorf("register mcp server in live registry: %w", err))
 	}
 
@@ -113,7 +131,7 @@ func (s *Server) HydrateRegistryForTenant(ctx context.Context, tenantID string) 
 	var pending []serverRow
 	for rows.Next() {
 		var (
-			id                                                                                int64
+			id                                                                              int64
 			name, url, transport, authType, authJSON, headersJSON, stdioJSON, ownerTenantID string
 		)
 		if err := rows.Scan(&id, &name, &url, &transport, &authType, &authJSON, &headersJSON, &stdioJSON, &ownerTenantID); err != nil {
@@ -138,6 +156,18 @@ func (s *Server) HydrateRegistryForTenant(ctx context.Context, tenantID string) 
 	registered := 0
 	for _, sr := range pending {
 		cfg := buildServerConfig(sr.id, sr.ownerTenantID, sr.name, sr.url, sr.transport, sr.authType, sr.authJSON, sr.headersJSON, sr.stdioJSON)
+		if cfg.TransportType == mcp.TransportStdio && !s.stdioAllowed() {
+			// Pre-existing row from before the stdio guard. Skipped, not
+			// errored: the row stays visible on the MCP page (its health
+			// will read unknown) and nothing is exec'd. Logged at Warn so
+			// operators can find the rows to clean up.
+			logger.WithFields(
+				"server_id", sr.id,
+				"tenant_id", tenantID,
+				"name", sr.name,
+			).Warn("mcp: skipping tenant stdio server; stdio transport is disabled on shared gateways")
+			continue
+		}
 		if cfg.AuthConfig != nil && cfg.AuthConfig.Type == mcp.AuthTypeOAuth2 {
 			if cfg.AuthConfig.AccessToken == "" {
 				// OAuth server that hasn't completed authorization yet —
@@ -218,10 +248,10 @@ func (s *Server) resolveServerIDForToolFromDB(ctx context.Context, tenantID, too
 		`SELECT t.server_id
 		 FROM mcp_server_tools t
 		 JOIN mcp_servers s ON s.id = t.server_id
-		 WHERE s.deleted_at IS NULL AND s.enabled = true AND t.name = $1
+		 WHERE s.deleted_at IS NULL AND s.enabled = true AND t.name = $1 AND s.tenant_id = $2
 		 ORDER BY t.last_seen_at DESC
 		 LIMIT 1`,
-		toolName,
+		toolName, tenantID,
 	).Scan(&serverID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

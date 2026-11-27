@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":9,"error":{"code":-32600,"message":"streaming (message/stream) is not supported; use message/send"}}

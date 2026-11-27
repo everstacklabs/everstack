@@ -36,7 +36,7 @@ function getJsonStatus(value: string): {
   } catch {
     return {
       label: 'invalid',
-      className: 'text-red-400 light:text-red-600',
+      className: 'text-danger',
     }
   }
 }

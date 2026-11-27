@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"path"
 	"strconv"
@@ -14,6 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/everstacklabs/everstack/internal/github"
+	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	agentspb "github.com/everstacklabs/everstack/pkg/grpc/everstack/agents/v1"
 )
@@ -34,12 +34,9 @@ func (s *Server) ListGitHubInstallations(ctx context.Context, req *connect.Reque
 		}), nil
 	}
 
-	tenantID := req.Msg.TenantId
-	if strings.TrimSpace(tenantID) == "" {
-		tenantID = req.Header().Get("x-tenant-id")
-	}
-	if strings.TrimSpace(tenantID) == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("tenant_id is required"))
+	tenantID, err := githubRequestTenant(ctx, req.Msg.TenantId, req.Header().Get("x-tenant-id"))
+	if err != nil {
+		return nil, err
 	}
 	installations, err := s.githubStore.ListActiveInstallations(ctx, tenantID)
 	if err != nil {
@@ -73,12 +70,9 @@ func (s *Server) RemoveGitHubInstallation(ctx context.Context, req *connect.Requ
 		return nil, connect.NewError(connect.CodeUnimplemented, ErrGitHubNotConfigured)
 	}
 
-	tenantID := req.Msg.TenantId
-	if strings.TrimSpace(tenantID) == "" {
-		tenantID = req.Header().Get("x-tenant-id")
-	}
-	if strings.TrimSpace(tenantID) == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("tenant_id is required"))
+	tenantID, err := githubAdminTenant(ctx, req.Msg.TenantId, req.Header().Get("x-tenant-id"))
+	if err != nil {
+		return nil, err
 	}
 	installationID := req.Msg.InstallationId
 
@@ -109,27 +103,20 @@ func (s *Server) LinkGitHubInstallation(ctx context.Context, req *connect.Reques
 		return nil, connect.NewError(connect.CodeUnimplemented, ErrGitHubNotConfigured)
 	}
 
-	tenantID := req.Msg.TenantId
-	if strings.TrimSpace(tenantID) == "" {
-		tenantID = req.Header().Get("x-tenant-id")
-	}
-	if strings.TrimSpace(tenantID) == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("tenant_id is required"))
+	tenantID, err := githubAdminTenant(ctx, req.Msg.TenantId, req.Header().Get("x-tenant-id"))
+	if err != nil {
+		return nil, err
 	}
 	installationID := req.Msg.InstallationId
 
-	// Fetch the installation (may be in 'pending' state from webhook)
-	inst, err := s.githubStore.GetInstallation(ctx, installationID)
+	// Claim the installation (pending from the shared app's webhook, or
+	// already ours). Another tenant's installation is never re-pointed, and
+	// is indistinguishable from a missing one.
+	inst, err := s.githubStore.ClaimInstallation(ctx, tenantID, installationID)
 	if err != nil {
-		logger.WithFields("installation_id", installationID, "error", err.Error()).
-			Error("github: failed to get installation for linking")
-		return nil, connect.NewError(connect.CodeNotFound, github.ErrInstallationNotFound)
-	}
-
-	// Link to tenant and activate
-	inst.TenantID = tenantID
-	inst.Status = "active"
-	if err := s.githubStore.UpsertInstallation(ctx, inst); err != nil {
+		if errors.Is(err, github.ErrInstallationNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, github.ErrInstallationNotFound)
+		}
 		logger.WithFields("installation_id", installationID, "error", err.Error()).
 			Error("github: failed to link installation")
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -146,12 +133,9 @@ func (s *Server) ListGitHubRepositories(ctx context.Context, req *connect.Reques
 		return nil, connect.NewError(connect.CodeUnimplemented, ErrGitHubNotConfigured)
 	}
 
-	tenantID := req.Msg.TenantId
-	if strings.TrimSpace(tenantID) == "" {
-		tenantID = req.Header().Get("x-tenant-id")
-	}
-	if strings.TrimSpace(tenantID) == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("tenant_id is required"))
+	tenantID, err := githubRequestTenant(ctx, req.Msg.TenantId, req.Header().Get("x-tenant-id"))
+	if err != nil {
+		return nil, err
 	}
 	installationID := req.Msg.InstallationId
 
@@ -203,12 +187,9 @@ func (s *Server) ListGitHubBranches(ctx context.Context, req *connect.Request[ag
 		return nil, connect.NewError(connect.CodeUnimplemented, ErrGitHubNotConfigured)
 	}
 
-	tenantID := req.Msg.TenantId
-	if strings.TrimSpace(tenantID) == "" {
-		tenantID = req.Header().Get("x-tenant-id")
-	}
-	if strings.TrimSpace(tenantID) == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("tenant_id is required"))
+	tenantID, err := githubRequestTenant(ctx, req.Msg.TenantId, req.Header().Get("x-tenant-id"))
+	if err != nil {
+		return nil, err
 	}
 	installationID := req.Msg.InstallationId
 
@@ -270,9 +251,9 @@ func (s *Server) resolveGitHubAppForTenant(ctx context.Context, tenantID string)
 // search (optional substring search across all file paths).
 // Returns the same format as the sandbox file listing for frontend compatibility.
 func (s *Server) handleListGitHubRepoTree(w http.ResponseWriter, r *http.Request, _ map[string]string) {
-	tenantID := r.Header.Get("x-tenant-id")
-	if tenantID == "" {
-		http.Error(w, `{"error":"tenant_id required"}`, http.StatusBadRequest)
+	tenantID, err := github.AuthorizedTenantID(r.Context(), r.Header.Get("x-tenant-id"))
+	if err != nil {
+		http.Error(w, `{"error":"tenant not authorized"}`, http.StatusForbidden)
 		return
 	}
 
@@ -298,12 +279,15 @@ func (s *Server) handleListGitHubRepoTree(w http.ResponseWriter, r *http.Request
 		ref = "HEAD"
 	}
 
-	// Verify installation belongs to tenant
-	if s.githubStore != nil {
-		if _, err := s.githubStore.GetInstallationForTenant(r.Context(), tenantID, installationID); err != nil {
-			http.Error(w, `{"error":"installation not found"}`, http.StatusNotFound)
-			return
-		}
+	// Verify installation belongs to tenant. Without a store there is no
+	// ownership record to check, so refuse rather than trust the caller.
+	if s.githubStore == nil {
+		http.Error(w, `{"error":"github not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+	if _, err := s.githubStore.GetInstallationForTenant(r.Context(), tenantID, installationID); err != nil {
+		http.Error(w, `{"error":"installation not found"}`, http.StatusNotFound)
+		return
 	}
 
 	appClient, err := s.resolveGitHubAppForTenant(r.Context(), tenantID)
@@ -448,4 +432,37 @@ func installationToProto(inst *github.Installation) *agentspb.GitHubInstallation
 		pb.InstalledBy = *inst.InstalledBy
 	}
 	return pb
+}
+
+// githubRequestTenant resolves the tenant a GitHub integration RPC acts on
+// from the authenticated principal. The body tenant_id (or, when empty, the
+// x-tenant-id header) is only a selector among the principal's own ids; a
+// value naming any other tenant is refused.
+// githubAdminTenant is githubRequestTenant for calls that change the
+// organization's GitHub integration (link, remove). Those are owner/admin
+// actions: a viewer must not be able to disconnect the org's repositories or
+// attach an installation to it.
+func githubAdminTenant(ctx context.Context, bodyTenantID, headerTenantID string) (string, error) {
+	tenantID, err := githubRequestTenant(ctx, bodyTenantID, headerTenantID)
+	if err != nil {
+		return "", err
+	}
+	if !contextkeys.IsVerifiedOrgAdmin(ctx) {
+		return "", connect.NewError(connect.CodePermissionDenied, errGitHubAdminRequired)
+	}
+	return tenantID, nil
+}
+
+var errGitHubAdminRequired = errors.New("only organization owners and admins can change the GitHub integration")
+
+func githubRequestTenant(ctx context.Context, bodyTenantID, headerTenantID string) (string, error) {
+	requested := strings.TrimSpace(bodyTenantID)
+	if requested == "" {
+		requested = strings.TrimSpace(headerTenantID)
+	}
+	tenantID, err := github.AuthorizedTenantID(ctx, requested)
+	if err != nil {
+		return "", connect.NewError(connect.CodePermissionDenied, errors.New("tenant not authorized for this caller"))
+	}
+	return tenantID, nil
 }

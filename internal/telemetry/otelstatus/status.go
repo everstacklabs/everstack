@@ -32,6 +32,7 @@ const Column = "StatusCode"
 var (
 	errorSpellings = []string{"error", "status_code_error"}
 	okSpellings    = []string{"ok", "status_code_ok"}
+	unsetSpellings = []string{"unset", "status_code_unset"}
 )
 
 // IsErrorValue reports whether a status value read back from ClickHouse is an
@@ -84,6 +85,73 @@ func IsOK(column string) string {
 // success, which includes both errors and an unset status.
 func IsNotOK(column string) string {
 	return membership(column, "NOT IN", okSpellings)
+}
+
+// IsUnset renders a predicate matching spans that carry no explicit status.
+// This is the overwhelming majority of stored spans, so it exists mainly so a
+// caller-supplied "UNSET" filter can be honoured rather than silently matching
+// nothing.
+func IsUnset(column string) string {
+	return membership(column, "IN", unsetSpellings)
+}
+
+// IsNotUnset renders the negation of IsUnset: spans explicitly marked either
+// successful or failed.
+func IsNotUnset(column string) string {
+	return membership(column, "NOT IN", unsetSpellings)
+}
+
+// The canonical short names this package hands back from Normalize. They are
+// the vocabulary the trace APIs have always exposed to callers, so they are
+// what an API validator should echo in an error message.
+const (
+	CanonicalOK    = "OK"
+	CanonicalError = "ERROR"
+	CanonicalUnset = "UNSET"
+)
+
+// Normalize maps any spelling a caller might send for a span status onto one of
+// the canonical short names, reporting whether it was recognised at all.
+//
+// It deliberately accepts more than the API has historically documented: the
+// uppercase short names callers already send ("OK"/"ERROR"/"UNSET"), the mixed
+// case spellings actually stored by the collector exporter ("Ok"/"Error"/
+// "Unset"), and the protobuf enum names written by the Everstack OTLP HTTP
+// handler. Accepting a spelling here never widens what a query can reach --
+// every one of them compiles to the same membership predicate.
+func Normalize(value string) (string, bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "ok", "status_code_ok":
+		return CanonicalOK, true
+	case "error", "status_code_error":
+		return CanonicalError, true
+	case "unset", "status_code_unset":
+		return CanonicalUnset, true
+	default:
+		return "", false
+	}
+}
+
+// Equals renders an equality predicate for a caller-supplied status value.
+//
+// Binding the caller's value straight into `StatusCode = ?` is the shape of
+// this bug: the value a caller is allowed to send is not the value the column
+// stores, so the filter returns an empty result set instead of an error. Route
+// caller-facing status filters through here so the two vocabularies stay
+// connected.
+func Equals(column, value string) (string, error) {
+	canonical, ok := Normalize(value)
+	if !ok {
+		return "", fmt.Errorf("unknown OTel status %q: want one of %s, %s, %s", value, CanonicalOK, CanonicalError, CanonicalUnset)
+	}
+	switch canonical {
+	case CanonicalOK:
+		return IsOK(column), nil
+	case CanonicalError:
+		return IsError(column), nil
+	default:
+		return IsUnset(column), nil
+	}
 }
 
 func membership(column, op string, spellings []string) string {

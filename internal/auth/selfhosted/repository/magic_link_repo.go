@@ -16,7 +16,7 @@ import (
 type MagicLinkToken struct {
 	ID        uuid.UUID  `db:"id"`
 	Email     string     `db:"email"`
-	Token     string     `db:"token"`
+	Token     string     `db:"token"` // raw token from Create; the stored SHA-256 hex when read back
 	ExpiresAt time.Time  `db:"expires_at"`
 	UsedAt    *time.Time `db:"used_at"`
 	CreatedAt time.Time  `db:"created_at"`
@@ -51,7 +51,7 @@ func (r *MagicLinkRepository) Create(ctx context.Context, email string, expiresI
 		INSERT INTO everstack.magic_link_tokens (id, email, token, expires_at, created_at)
 		VALUES ($1, $2, $3, $4, $5)
 	`
-	_, err = r.db.ExecContext(ctx, query, ml.ID, ml.Email, ml.Token, ml.ExpiresAt, ml.CreatedAt)
+	_, err = r.db.ExecContext(ctx, query, ml.ID, ml.Email, hashToken(ml.Token), ml.ExpiresAt, ml.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -63,32 +63,34 @@ func (r *MagicLinkRepository) Create(ctx context.Context, email string, expiresI
 func (r *MagicLinkRepository) GetByToken(ctx context.Context, token string) (*MagicLinkToken, error) {
 	query := `SELECT * FROM everstack.magic_link_tokens WHERE token = $1`
 	var ml MagicLinkToken
-	err := r.db.GetContext(ctx, &ml, query, token)
+	err := r.db.GetContext(ctx, &ml, query, hashToken(token))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	return &ml, err
 }
 
-// GetValidByToken retrieves a valid (unused, not expired) magic link token
-func (r *MagicLinkRepository) GetValidByToken(ctx context.Context, token string) (*MagicLinkToken, error) {
+// Consume atomically marks a valid (unused, unexpired) magic link token as
+// used and returns it, or returns nil when the token is unknown, expired or
+// already used. It is a single UPDATE, so of any number of concurrent
+// verifications of the same link exactly one gets the token; reading the
+// token and marking it used in separate statements let two of them through.
+func (r *MagicLinkRepository) Consume(ctx context.Context, token string) (*MagicLinkToken, error) {
 	query := `
-		SELECT * FROM everstack.magic_link_tokens 
-		WHERE token = $1 AND used_at IS NULL AND expires_at > NOW()
+		UPDATE everstack.magic_link_tokens
+		   SET used_at = NOW()
+		 WHERE token = $1 AND used_at IS NULL AND expires_at > NOW()
+		RETURNING id, email, token, expires_at, used_at, created_at
 	`
 	var ml MagicLinkToken
-	err := r.db.GetContext(ctx, &ml, query, token)
+	err := r.db.GetContext(ctx, &ml, query, hashToken(token))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
-	return &ml, err
-}
-
-// MarkUsed marks a magic link token as used
-func (r *MagicLinkRepository) MarkUsed(ctx context.Context, id uuid.UUID) error {
-	query := `UPDATE everstack.magic_link_tokens SET used_at = $2 WHERE id = $1`
-	_, err := r.db.ExecContext(ctx, query, id, time.Now())
-	return err
+	if err != nil {
+		return nil, err
+	}
+	return &ml, nil
 }
 
 // DeleteByEmail deletes all magic link tokens for an email

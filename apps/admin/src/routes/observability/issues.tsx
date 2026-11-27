@@ -86,10 +86,10 @@ function IssuesPage() {
               <IssueLevelDot status={row.status} />
             </span>
             <div className="min-w-0 leading-tight">
-              <div className="truncate text-sm font-semibold text-white/90 light:text-black/90" title={row.title}>
+              <div className="truncate text-sm font-semibold text-white/90 light:text-black/90">
                 {row.title || row.signature || '(no message)'}
               </div>
-              <div className="mt-1 h-3.5 truncate font-mono text-[11px] text-white/35 light:text-black/35" title={row.signature}>
+              <div className="mt-1 h-3.5 truncate font-mono text-[11px] text-white/35 light:text-black/35">
                 {row.signature}
               </div>
               <div className="mt-1.5 flex items-center gap-2">

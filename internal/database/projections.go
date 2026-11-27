@@ -9,11 +9,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/everstacklabs/everstack/internal/lib/apikey"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	storagecredentials "github.com/everstacklabs/everstack/internal/storage/credentials"
 	"github.com/everstacklabs/everstack/internal/telemetry/metrics"
 	"github.com/everstacklabs/everstack/internal/usage"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 // ProjectionManager manages read model projections from events.
@@ -106,7 +108,7 @@ func (pm *ProjectionManager) registerEventHandlers() error {
 	}
 
 	// API key projections
-	if err := pm.bus.Subscribe(
+	if err := pm.bus.SubscribeCritical(
 		"api-key-created-projection",
 		"api.key.created",
 		"api-keys",
@@ -114,7 +116,7 @@ func (pm *ProjectionManager) registerEventHandlers() error {
 	); err != nil {
 		return err
 	}
-	if err := pm.bus.Subscribe(
+	if err := pm.bus.SubscribeCritical(
 		"api-key-revoked-projection",
 		"api.key.revoked",
 		"api-keys",
@@ -615,11 +617,26 @@ func (pm *ProjectionManager) handleApiKeyCreated(ctx context.Context, event Even
 	if pm.db == nil {
 		return nil
 	}
+	var surfaces []string
+	if value := payload["surfaces"]; value != nil {
+		raw, ok := value.([]interface{})
+		if !ok {
+			return fmt.Errorf("invalid API key surfaces")
+		}
+		surfaces = make([]string, 0, len(raw))
+		for _, v := range raw {
+			surface, ok := v.(string)
+			if !ok {
+				return fmt.Errorf("invalid API key surfaces")
+			}
+			surfaces = append(surfaces, surface)
+		}
+	}
 	_, err := pm.db.ExecContext(ctx, `
-		INSERT INTO api_keys (id, name, hash, type, sensitive_id, user_id, org_id, instance_id, created_at, updated_at, revoked)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10::timestamptz,FALSE)
-		ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, hash=EXCLUDED.hash, type=EXCLUDED.type, sensitive_id=EXCLUDED.sensitive_id, user_id=EXCLUDED.user_id, org_id=EXCLUDED.org_id, instance_id=EXCLUDED.instance_id, updated_at=EXCLUDED.updated_at, revoked=FALSE, revoked_at=NULL
-	`, payload["id"], payload["name"], payload["hash"], payload["type"], payload["sensitive_id"], payload["user_id"], payload["org_id"], payload["instance_id"], payload["created_at"], payload["updated_at"])
+		INSERT INTO api_keys (id, name, hash, type, sensitive_id, user_id, org_id, instance_id, created_at, updated_at, revoked, surfaces)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10::timestamptz,FALSE,$11)
+		ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, hash=EXCLUDED.hash, type=EXCLUDED.type, sensitive_id=EXCLUDED.sensitive_id, user_id=EXCLUDED.user_id, org_id=EXCLUDED.org_id, instance_id=EXCLUDED.instance_id, updated_at=EXCLUDED.updated_at, revoked=FALSE, revoked_at=NULL, surfaces=EXCLUDED.surfaces
+	`, payload["id"], payload["name"], payload["hash"], payload["type"], payload["sensitive_id"], payload["user_id"], payload["org_id"], payload["instance_id"], payload["created_at"], payload["updated_at"], pq.Array(surfaces))
 	return err
 }
 
@@ -646,6 +663,11 @@ func (pm *ProjectionManager) handleApiKeyRevoked(ctx context.Context, event Even
 	_, err := pm.db.ExecContext(ctx, `
 		UPDATE api_keys SET revoked=TRUE, revoked_at=$2::timestamptz, updated_at=$2::timestamptz WHERE id=$1 AND org_id=$3
 	`, payload["id"], payload["revoked_at"], orgID)
+	if err == nil {
+		if id, ok := payload["id"].(string); ok {
+			apikey.InvalidateCaches("", id)
+		}
+	}
 	return err
 }
 
@@ -1291,6 +1313,10 @@ func (pm *ProjectionManager) handleAgentUpdated(ctx context.Context, event Event
 		logger.Warn("handleAgentUpdated: db is nil, skipping projection")
 		return nil
 	}
+	tenantID := getString(payload, "tenant_id")
+	if tenantID == "" {
+		return errors.New("agent.updated projection requires tenant_id")
+	}
 	logger.WithFields(
 		"agent_id", payload["id"],
 		"has_config", payload["config"] != nil,
@@ -1508,8 +1534,9 @@ func (pm *ProjectionManager) handleAgentUpdated(ctx context.Context, event Event
 		argIndex++
 	}
 
-	query := fmt.Sprintf("UPDATE agent_definitions SET %s WHERE id = $1",
-		joinStrings(setClauses, ", "))
+	query := fmt.Sprintf("UPDATE agent_definitions SET %s WHERE id = $1 AND tenant_id = $%d",
+		joinStrings(setClauses, ", "), argIndex)
+	args = append(args, tenantID)
 
 	result, err := pm.db.ExecContext(ctx, query, args...)
 	if err != nil {
@@ -1540,27 +1567,37 @@ func (pm *ProjectionManager) handleAgentDeleted(ctx context.Context, event Event
 	}
 
 	agentID, _ := payload["id"].(string)
+	tenantID := getString(payload, "tenant_id")
+	if tenantID == "" {
+		return errors.New("agent.deleted projection requires tenant_id")
+	}
 	deletedAt := payload["deleted_at"]
 
 	_, err := pm.db.ExecContext(ctx, `
 		UPDATE agent_definitions
 		SET deleted_at = $2::timestamptz, enabled = FALSE, updated_at = $2::timestamptz
-		WHERE id = $1 AND deleted_at IS NULL
-	`, agentID, deletedAt)
+		WHERE id = $1 AND tenant_id = $3 AND deleted_at IS NULL
+	`, agentID, deletedAt, tenantID)
 	if err != nil {
 		return err
 	}
 
 	// Clean up crons and webhooks scoped to this agent's sessions.
 	// Disable rather than delete so history is preserved.
-	pm.db.ExecContext(ctx, `
+	if _, err := pm.db.ExecContext(ctx, `
 		UPDATE sandbox_crons SET enabled = FALSE, updated_at = NOW()
-		WHERE session_id IN (SELECT id FROM agent_sessions WHERE agent_id = $1)
-	`, agentID)
-	pm.db.ExecContext(ctx, `
+		WHERE tenant_id = $2
+		AND session_id IN (SELECT id::text FROM agent_sessions WHERE agent_id = $1 AND tenant_id::text = $2)
+	`, agentID, tenantID); err != nil {
+		return fmt.Errorf("disable agent sandbox crons: %w", err)
+	}
+	if _, err := pm.db.ExecContext(ctx, `
 		UPDATE sandbox_webhooks SET enabled = FALSE, updated_at = NOW()
-		WHERE session_id IN (SELECT id FROM agent_sessions WHERE agent_id = $1)
-	`, agentID)
+		WHERE tenant_id = $2
+		AND session_id IN (SELECT id::text FROM agent_sessions WHERE agent_id = $1 AND tenant_id::text = $2)
+	`, agentID, tenantID); err != nil {
+		return fmt.Errorf("disable agent sandbox webhooks: %w", err)
+	}
 
 	return nil
 }
@@ -3155,6 +3192,10 @@ func (pm *ProjectionManager) handleTrooperUpdated(ctx context.Context, event Eve
 	if pm.db == nil {
 		return nil
 	}
+	tenantID := getString(payload, "tenant_id")
+	if tenantID == "" {
+		return errors.New("trooper.updated projection requires tenant_id")
+	}
 
 	id := getString(payload, "id")
 	now := time.Now().Format(time.RFC3339)
@@ -3182,9 +3223,9 @@ func (pm *ProjectionManager) handleTrooperUpdated(ctx context.Context, event Eve
 	}
 
 	_, err := pm.db.ExecContext(ctx, fmt.Sprintf(
-		"UPDATE troopers SET %s WHERE id = $%d",
-		strings.Join(sets, ", "), argIdx,
-	), append(args, id)...)
+		"UPDATE troopers SET %s WHERE id = $%d AND tenant_id = $%d",
+		strings.Join(sets, ", "), argIdx, argIdx+1,
+	), append(args, id, tenantID)...)
 	return err
 }
 
@@ -3196,11 +3237,15 @@ func (pm *ProjectionManager) handleTrooperDeleted(ctx context.Context, event Eve
 	if pm.db == nil {
 		return nil
 	}
+	tenantID := getString(payload, "tenant_id")
+	if tenantID == "" {
+		return errors.New("trooper.deleted projection requires tenant_id")
+	}
 
 	now := time.Now().Format(time.RFC3339)
 	_, err := pm.db.ExecContext(ctx,
-		"UPDATE troopers SET deleted_at = $1::timestamptz, updated_at = $1::timestamptz WHERE id = $2",
-		now, getString(payload, "id"),
+		"UPDATE troopers SET deleted_at = $1::timestamptz, updated_at = $1::timestamptz WHERE id = $2 AND tenant_id = $3",
+		now, getString(payload, "id"), tenantID,
 	)
 	return err
 }

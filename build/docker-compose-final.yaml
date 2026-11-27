@@ -1,0 +1,281 @@
+name: "everstack"
+
+# =============================================================================
+# Everstack Docker Compose Configuration
+# =============================================================================
+# 
+# Configuration Loading Options (in priority order):
+# 
+# 1. Local mounted config (shown below):
+#    volumes:
+#      - ./gateway.yaml:/app/config/gateway.yaml:ro
+#    command: 'serve --config /app/config/gateway.yaml'
+#
+# 2. Remote config URL via command:
+#    command: 'serve --config https://raw.githubusercontent.com/org/repo/main/gateway.yaml'
+#
+# 3. Remote config URL via environment variable:
+#    environment:
+#      - EVS_CONFIG_URL=https://example.com/config/gateway.yaml
+#    (no command override needed - uses default 'serve')
+#
+# 4. Private remote config with authentication:
+#    environment:
+#      - EVS_CONFIG_URL=https://api.github.com/repos/org/repo/contents/gateway.yaml
+#      - EVS_CONFIG_AUTH_TOKEN=ghp_your_github_token_here
+#
+# 5. Zero-config startup (uses bundled defaults + env vars):
+#    Remove the 'command' line and volume mount - just set env vars below
+#
+# =============================================================================
+
+services:
+  # Everstack Gateway - The main application
+  everstack:
+    image: everstacklabs/everstack:latest
+    container_name: everstack-gateway
+    restart: unless-stopped
+    ports:
+      - "8089:8089"  # Everstack gateway port
+    
+    # Default: Uses bundled default config at /app/config/default.yaml
+    # The serve command will auto-detect config in this order:
+    # 1. --config flag (if provided)
+    # 2. EVS_CONFIG_URL env var (if set)
+    # 3. /app/config/gateway.yaml (if mounted)
+    # 4. /app/config/default.yaml (bundled default)
+    command: 'serve'
+    
+    # Alternative: Use a specific local config (uncomment and add volume mount):
+    # command: 'serve --config /app/config/gateway.yaml'
+    
+    # Alternative: Use a remote config URL:
+    # command: 'serve --config https://raw.githubusercontent.com/your-org/configs/main/gateway.yaml'
+    
+    environment:
+      # =======================================================================
+      # Remote Config Authentication (for private repos/URLs)
+      # =======================================================================
+      # Uncomment and set your token for authenticated remote configs:
+      # - EVS_CONFIG_AUTH_TOKEN=ghp_your_github_personal_access_token
+      
+      # Or use EVS_CONFIG_URL instead of --config flag:
+      # - EVS_CONFIG_URL=https://example.com/config/gateway.yaml
+      
+      # =======================================================================
+      # Database configuration (DSN format)
+      # =======================================================================
+      # Enable hybrid mode to use both Postgres (transactional) and ClickHouse (analytics/logs)
+      - EVS_DATABASE_MODE=hybrid
+      - EVS_POSTGRES_DSN=postgres://postgres:postgres@db:5432/everstack?sslmode=disable
+      
+      # =======================================================================
+      # Redis configuration
+      # =======================================================================
+      - EVS_CACHE_REDIS_ADDRESS=redis:6379
+      - EVS_CACHE_REDIS_PASSWORD=mysecretpassword
+      
+      # =======================================================================
+      # ClickHouse configuration (for hybrid mode analytics)
+      # =======================================================================
+      - EVS_CLICKHOUSE_DSN=clickhouse://clickhouse:clickhouse@clickhouse:9000/everstack
+      
+      # =======================================================================
+      # Server configuration
+      # =======================================================================
+      - EVS_SERVER_PORT=8089
+      - EVS_SERVER_HOST=0.0.0.0
+      
+      # =======================================================================
+      # OpenTelemetry Configuration
+      # =======================================================================
+      # Enable OTEL logging and tracing
+      - EVS_SERVER_TELEMETRY_OTEL_ENABLED=true
+      - EVS_SERVER_TELEMETRY_OTEL_MODE=external
+      - EVS_SERVER_TELEMETRY_OTEL_COLLECTOR_URL=otel-collector:4317
+      - EVS_SERVER_TELEMETRY_OTEL_SERVICE_NAME=everstack-gateway
+      - EVS_SERVER_TELEMETRY_OTEL_TENANT_TYPE=self_hosted
+      - EVS_SERVER_TELEMETRY_OTEL_INSTANCE_OWNER=user
+      
+      # Optional: Enable tracing (10% sampling)
+      - EVS_SERVER_TELEMETRY_OTEL_TRACING_ENABLED=true
+      - EVS_SERVER_TELEMETRY_OTEL_TRACING_SAMPLING_RATE=0.1
+      
+      # =======================================================================
+      # Feature flags
+      # =======================================================================
+      - EVS_FEATURES_GATEWAY_ENABLE_STREAMING=true
+      - EVS_FEATURES_GATEWAY_ENABLE_RESPONSE_CACHING=true
+      - EVS_FEATURES_GATEWAY_ENABLE_REQUEST_LOGGING=true
+      
+    volumes:
+      # Optional: Mount your own config file
+      # IMPORTANT: Only uncomment if the file exists, otherwise Docker creates a directory
+      # - ./gateway.yaml:/app/config/gateway.yaml:ro
+      
+      # Mount the updated default config with env var substitution support
+      - ./cmd/config/gateway/defaults/gateway-default.yaml:/app/config/default.yaml:ro
+      
+      - everstack-logs:/app/logs
+      - everstack-data:/app/data
+    networks:
+      - everstack
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8089/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+  # Database
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    container_name: everstack-postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data:rw
+    environment:
+      POSTGRES_DB: everstack
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    ports:
+      - "5432:5432"
+    networks:
+      - everstack
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+      start_period: 20s
+
+  # Cache & Session Store
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    container_name: everstack-redis
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server 
+      --requirepass mysecretpassword
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - everstack
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+      start_period: 20s
+
+  # Analytics & Logging Database
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    restart: unless-stopped
+    container_name: everstack-clickhouse
+    hostname: clickhouse
+    environment:
+      CLICKHOUSE_DB: everstack
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: clickhouse
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse:rw
+      - clickhouse-logs:/var/log/clickhouse-server:rw
+    networks:
+      - everstack
+    ports:
+      - "8123:8123"  # HTTP interface
+      - "9000:9000"  # Native TCP interface
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # Distributed Tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: everstack-jaeger
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14250:14250"  # gRPC collector
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+    networks:
+      - everstack
+    restart: unless-stopped
+
+  # Metrics & Monitoring
+  grafana:
+    image: grafana/grafana-enterprise:latest
+    container_name: everstack-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
+    networks:
+      - everstack
+    volumes:
+      - grafana-storage:/var/lib/grafana
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: everstack-otel-collector
+    command: ["--config=/otel-collector-config.yaml"]
+    environment:
+      - DEPLOYMENT_ENV=production
+      - SERVICE_NAME=everstack-gateway
+    volumes:
+      - ./build/otel-collector-config.yaml:/otel-collector-config.yaml:ro
+    ports:
+      - "4319:4317"  # OTLP gRPC (external)
+      - "4320:4318"  # OTLP HTTP (external)
+    networks:
+      - everstack
+    restart: unless-stopped
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+
+networks:
+  everstack:
+    driver: bridge
+
+volumes:
+  grafana-storage:
+    driver: local
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  clickhouse-data:
+    driver: local
+  clickhouse-logs:
+    driver: local
+  everstack-logs:
+    driver: local
+  everstack-data:
+    driver: local

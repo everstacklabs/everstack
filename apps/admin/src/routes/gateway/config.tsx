@@ -149,6 +149,10 @@ function ConfigSection<T extends ConfigSectionName>({
 }) {
   const apiSection = SECTION_API_MAP[section] ?? section
   const { data, isLoading, error } = useRuntimeConfigSection(apiSection)
+  // Cloud instances bill every inference attempt to the organization's
+  // credit; the load balancer form says so. Unknown mode shows nothing.
+  const { data: authMode } = useAuthMode()
+  const billedAttempts = authMode?.mode === 'cloud'
   const sectionStates = useSectionStates()
   const {
     setSectionConfig,
@@ -240,7 +244,7 @@ function ConfigSection<T extends ConfigSectionName>({
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-48 text-red-400 light:text-red-600">
+      <div className="flex items-center justify-center h-48 text-danger">
         <Iconify.Icon icon="mdi:alert-circle" className="h-5 w-5 mr-2" />
         Failed to load configuration
       </div>
@@ -266,6 +270,7 @@ function ConfigSection<T extends ConfigSectionName>({
         return (
           <LoadBalancerForm
             config={localConfig as LoadBalancerConfig}
+            billedAttempts={billedAttempts}
             onChange={(config) =>
               handleConfigChange(config as SectionConfig[T])
             }
