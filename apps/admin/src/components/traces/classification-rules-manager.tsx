@@ -136,7 +136,7 @@ export function ClassificationRulesManager() {
                                         placeholder="retriever.%"
                                         className={INPUT_CLASS}
                                     />
-                                    <p className={pattern !== '' && !patternValid ? 'min-h-4 text-[11px] leading-snug text-red-400' : HELP_CLASS}>
+                                    <p className={pattern !== '' && !patternValid ? 'min-h-4 text-[11px] leading-snug text-danger' : HELP_CLASS}>
                                         {pattern !== '' && !patternValid
                                             ? 'Use % as the wildcard; letters, numbers, . _ : / - only.'
                                             : 'Use % for wildcard matches.'}
@@ -150,7 +150,7 @@ export function ClassificationRulesManager() {
                                         placeholder="retrieval"
                                         className={INPUT_CLASS}
                                     />
-                                    <p className={kind !== '' && !kindValid ? 'min-h-4 text-[11px] leading-snug text-red-400' : HELP_CLASS}>
+                                    <p className={kind !== '' && !kindValid ? 'min-h-4 text-[11px] leading-snug text-danger' : HELP_CLASS}>
                                         {kind !== '' && !kindValid
                                             ? 'Letters, numbers, space, _ and - only.'
                                             : 'Shown as a Type badge.'}

@@ -3,6 +3,7 @@ package trigger
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 type PostgresStore struct {
 	db *sqlx.DB
 }
+
+var ErrTriggerNotFound = errors.New("trigger not found")
 
 // postgresTriggerRow mirrors the nullable PostgreSQL representation while
 // keeping Trigger as the non-null domain model consumed by the runtime and API.
@@ -169,8 +172,14 @@ func (s *PostgresStore) UpdateTrigger(ctx context.Context, t *Trigger) error {
 
 func (s *PostgresStore) DeleteTrigger(ctx context.Context, id, tenantID string) error {
 	q := `DELETE FROM agent_triggers WHERE id = $1 AND tenant_id = $2`
-	_, err := s.db.ExecContext(ctx, q, id, tenantID)
-	return err
+	result, err := s.db.ExecContext(ctx, q, id, tenantID)
+	if err != nil {
+		return err
+	}
+	if rows, err := result.RowsAffected(); err == nil && rows == 0 {
+		return ErrTriggerNotFound
+	}
+	return nil
 }
 
 // ─── Cron Queries ─────────────────────────────────────────────────────
@@ -197,12 +206,12 @@ func (s *PostgresStore) GetTriggerByWebhookPath(ctx context.Context, path string
 
 // ─── Event Queries ────────────────────────────────────────────────────
 
-func (s *PostgresStore) ListEventTriggers(ctx context.Context, sourceAgentID, eventType string) ([]*Trigger, error) {
+func (s *PostgresStore) ListEventTriggers(ctx context.Context, sourceAgentID, eventType, tenantID string) ([]*Trigger, error) {
 	var rows []postgresTriggerRow
 	q := `SELECT * FROM agent_triggers
 		WHERE trigger_type = 'event' AND enabled = TRUE AND circuit_state != 'open'
-		AND event_source_agent_id = $1::UUID AND event_type = $2`
-	if err := s.db.SelectContext(ctx, &rows, q, sourceAgentID, eventType); err != nil {
+		AND event_source_agent_id = $1::UUID AND event_type = $2 AND tenant_id = $3`
+	if err := s.db.SelectContext(ctx, &rows, q, sourceAgentID, eventType, tenantID); err != nil {
 		return nil, fmt.Errorf("list event triggers: %w", err)
 	}
 	return materializeTriggers(rows), nil
@@ -273,20 +282,20 @@ func (s *PostgresStore) CompleteExecution(ctx context.Context, id string, status
 	return err
 }
 
-func (s *PostgresStore) ListExecutions(ctx context.Context, triggerID string, limit, offset int) ([]*Execution, int, error) {
+func (s *PostgresStore) ListExecutions(ctx context.Context, triggerID, tenantID string, limit, offset int) ([]*Execution, int, error) {
 	if limit <= 0 {
 		limit = 50
 	}
 
 	var total int
-	countQ := `SELECT COUNT(*) FROM agent_trigger_executions WHERE trigger_id = $1`
-	if err := s.db.GetContext(ctx, &total, countQ, triggerID); err != nil {
+	countQ := `SELECT COUNT(*) FROM agent_trigger_executions WHERE trigger_id = $1 AND tenant_id = $2`
+	if err := s.db.GetContext(ctx, &total, countQ, triggerID, tenantID); err != nil {
 		return nil, 0, fmt.Errorf("count executions: %w", err)
 	}
 
 	var executions []*Execution
-	q := `SELECT * FROM agent_trigger_executions WHERE trigger_id = $1 ORDER BY started_at DESC LIMIT $2 OFFSET $3`
-	if err := s.db.SelectContext(ctx, &executions, q, triggerID, limit, offset); err != nil {
+	q := `SELECT * FROM agent_trigger_executions WHERE trigger_id = $1 AND tenant_id = $2 ORDER BY started_at DESC LIMIT $3 OFFSET $4`
+	if err := s.db.SelectContext(ctx, &executions, q, triggerID, tenantID, limit, offset); err != nil {
 		return nil, 0, fmt.Errorf("list executions: %w", err)
 	}
 	return executions, total, nil

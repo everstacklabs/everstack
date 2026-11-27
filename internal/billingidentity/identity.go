@@ -83,3 +83,22 @@ func ListOrganizationAliases(ctx context.Context, db *sqlx.DB, organizationID st
 	}
 	return aliases, nil
 }
+
+const listOrganizationIDsQuery = `
+	SELECT id::text AS organization_id
+	FROM everstack.organizations
+	ORDER BY id`
+
+// ListOrganizationIDs returns every organization. Reporters that must file a
+// value for each organization (zeros included) enumerate from here rather than
+// from the tenants that happen to own rows on the serving plane.
+func ListOrganizationIDs(ctx context.Context, db *sqlx.DB) ([]string, error) {
+	if db == nil {
+		return nil, fmt.Errorf("managed organization database is required")
+	}
+	var ids []string
+	if err := db.SelectContext(ctx, &ids, listOrganizationIDsQuery); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}

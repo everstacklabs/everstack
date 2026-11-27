@@ -18,7 +18,7 @@ type Store interface {
 	GetTriggerByWebhookPath(ctx context.Context, path string) (*Trigger, error)
 
 	// Event queries
-	ListEventTriggers(ctx context.Context, sourceAgentID, eventType string) ([]*Trigger, error)
+	ListEventTriggers(ctx context.Context, sourceAgentID, eventType, tenantID string) ([]*Trigger, error)
 
 	// Circuit breaker
 	IncrementFailures(ctx context.Context, id string) (int, error)
@@ -30,7 +30,7 @@ type Store interface {
 	// Executions
 	RecordExecution(ctx context.Context, e *Execution) error
 	CompleteExecution(ctx context.Context, id string, status ExecutionStatus, output, errorMsg string, durationMs int) error
-	ListExecutions(ctx context.Context, triggerID string, limit, offset int) ([]*Execution, int, error)
+	ListExecutions(ctx context.Context, triggerID, tenantID string, limit, offset int) ([]*Execution, int, error)
 
 	// Concurrency check
 	CountRunningExecutions(ctx context.Context, triggerID string) (int, error)

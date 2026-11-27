@@ -182,6 +182,49 @@ providers:
             requests_per_minute: 1800
             tokens_per_minute: 120000
             concurrent_requests: 40
+    baseten:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: BASETEN_API_KEY
+        base_url: https://inference.baseten.co/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: false
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: false
+        display_name: Baseten
+        model_families:
+            deepseek:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: DeepSeek V4 family on Baseten Model APIs
+            glm:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: GLM family on Baseten Model APIs, including Fast variants
+            kimi:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: Kimi family on Baseten Model APIs
+        name: baseten
+        provider_type: meta
+        rate_limits:
+            requests_per_minute: 1200
+            tokens_per_minute: 240000
+            concurrent_requests: 30
     cerebras:
         api_version: "2024-01-01"
         auth:
@@ -222,6 +265,55 @@ providers:
             requests_per_minute: 1500
             tokens_per_minute: 400000
             concurrent_requests: 40
+    chutes:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: CHUTES_API_KEY
+        base_url: https://llm.chutes.ai/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: false
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: false
+        display_name: Chutes
+        model_families:
+            deepseek:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: DeepSeek family on Chutes
+            glm:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: GLM family on Chutes
+            kimi:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: Kimi family on Chutes
+            qwen:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: Qwen family on Chutes, including TEE variants
+        name: chutes
+        provider_type: meta
+        rate_limits:
+            requests_per_minute: 1200
+            tokens_per_minute: 240000
+            concurrent_requests: 30
     cohere:
         api_version: "2024-01-01"
         auth:
@@ -271,6 +363,55 @@ providers:
             requests_per_minute: 1000
             tokens_per_minute: 30000
             concurrent_requests: 20
+    deepinfra:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: DEEPINFRA_API_KEY
+        base_url: https://api.deepinfra.com/v1/openai
+        capabilities:
+            assistants: false
+            chat: true
+            completions: false
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: false
+        display_name: DeepInfra
+        model_families:
+            deepseek:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: DeepSeek V4 family via DeepInfra
+            glm:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: GLM family via DeepInfra
+            kimi:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: Kimi family via DeepInfra
+            qwen:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: Qwen family via DeepInfra
+        name: deepinfra
+        provider_type: meta
+        rate_limits:
+            requests_per_minute: 1200
+            tokens_per_minute: 240000
+            concurrent_requests: 30
     deepseek:
         api_version: v1
         auth:
@@ -491,6 +632,89 @@ providers:
             tokens_per_minute: 30000
             concurrent_requests: 20
         supports_model_discovery: true
+    kev:
+        api_version: ""
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: KEV_API_KEY
+        base_url: ""
+        capabilities:
+            chat: false
+            decisions: true
+            embeddings: false
+            streaming: false
+        display_name: Kev (self-hosted)
+        name: kev
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 0
+            tokens_per_minute: 0
+            concurrent_requests: 0
+    laya:
+        api_version: ""
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: LAYA_API_KEY
+        base_url: ""
+        capabilities:
+            chat: false
+            decisions: true
+            embeddings: false
+            streaming: false
+        display_name: Laya (self-hosted)
+        name: laya
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 0
+            tokens_per_minute: 0
+            concurrent_requests: 0
+    meta:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: META_MODEL_API_KEY
+        base_url: https://api.meta.ai/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: false
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: false
+        display_name: Meta
+        model_families:
+            muse-ember:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: Muse Ember, the low-cost Muse model
+            muse-spark:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: Muse Spark multimodal reasoning models, Standard and Contributor modes
+            muse-wonder:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: Muse Wonder, in preview on the Model API
+        name: meta
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 1200
+            tokens_per_minute: 240000
+            concurrent_requests: 30
     minimax:
         api_version: v1
         auth:
@@ -661,6 +885,103 @@ providers:
             requests_per_minute: 500
             tokens_per_minute: 1000000
             concurrent_requests: 50
+    nebius:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: NEBIUS_API_KEY
+        base_url: https://api.tokenfactory.nebius.com/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: false
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: false
+        display_name: Nebius Token Factory
+        model_families:
+            glm:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: GLM family via Nebius Token Factory
+            kimi:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: Kimi family via Nebius Token Factory
+            nemotron:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: NVIDIA Nemotron family via Nebius Token Factory
+            qwen:
+                capabilities:
+                    - chat
+                    - function_calling
+                description: Qwen family via Nebius Token Factory
+        name: nebius
+        provider_type: meta
+        rate_limits:
+            requests_per_minute: 1200
+            tokens_per_minute: 240000
+            concurrent_requests: 30
+    novita:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: NOVITA_API_KEY
+        base_url: https://api.novita.ai/openai/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: false
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: false
+        display_name: Novita AI
+        model_families:
+            deepseek:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: DeepSeek V4 family via Novita AI
+            glm:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: GLM family via Novita AI
+            kimi:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: Kimi family via Novita AI
+            qwen:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: Qwen family via Novita AI
+        name: novita
+        provider_type: meta
+        rate_limits:
+            requests_per_minute: 1200
+            tokens_per_minute: 240000
+            concurrent_requests: 30
     nvidia-nim:
         api_version: "2024-01-01"
         auth:
@@ -981,6 +1302,80 @@ providers:
             requests_per_minute: 500
             tokens_per_minute: 1000000
             concurrent_requests: 50
+    sambanova:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: SAMBANOVA_API_KEY
+        base_url: https://api.sambanova.ai/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: false
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: false
+        display_name: SambaNova
+        model_families:
+            glm:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: GLM-5.3 on SambaNova Cloud
+            minimax:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: MiniMax M3.1 Flash on SambaNova Cloud
+            open-weight:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: Gemma 4 and gpt-oss on SambaNova Cloud
+        name: sambanova
+        provider_type: meta
+        rate_limits:
+            requests_per_minute: 1200
+            tokens_per_minute: 240000
+            concurrent_requests: 30
+    tencent:
+        api_version: "2024-01-01"
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: TENCENT_TOKENHUB_API_KEY
+        base_url: https://tokenhub-intl.tencentcloudmaas.com/v1
+        capabilities:
+            assistants: false
+            chat: true
+            completions: false
+            embeddings: false
+            fine_tuning: false
+            function_calling: true
+            streaming: true
+            vision: false
+        display_name: Tencent TokenHub
+        model_families:
+            hy:
+                capabilities:
+                    - chat
+                    - function_calling
+                    - reasoning
+                description: Tencent Hy (Hunyuan) reasoning models
+        name: tencent
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 1200
+            tokens_per_minute: 240000
+            concurrent_requests: 30
     together:
         api_version: "2024-01-01"
         auth:
@@ -1025,6 +1420,26 @@ providers:
             requests_per_minute: 1200
             tokens_per_minute: 240000
             concurrent_requests: 30
+    typesafe:
+        api_version: ""
+        auth:
+            type: api_key
+            header_name: Authorization
+            header_format: Bearer {api_key}
+            env_var: TYPESAFE_API_KEY
+        base_url: https://api.typesafe.ai/v1
+        capabilities:
+            chat: false
+            decisions: true
+            embeddings: false
+            streaming: false
+        display_name: TypeSafe AI
+        name: typesafe
+        provider_type: static
+        rate_limits:
+            requests_per_minute: 0
+            tokens_per_minute: 0
+            concurrent_requests: 0
     vertex-ai:
         api_version: v1
         auth:

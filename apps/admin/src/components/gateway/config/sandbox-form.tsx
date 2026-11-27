@@ -468,7 +468,7 @@ export function SandboxForm({
                   <p className="text-[11px] text-brand-main-200">
                     Base hourly estimate
                   </p>
-                  <p className="text-sm font-semibold text-emerald-200 light:text-emerald-600">
+                  <p className="text-sm font-semibold text-success">
                     {formatCurrency(
                       estimatedPricing.hourly,
                       sandboxPricing.currency,
@@ -479,7 +479,7 @@ export function SandboxForm({
                   <p className="text-[11px] text-brand-main-200">
                     Est. monthly total (30 days)
                   </p>
-                  <p className="text-sm font-semibold text-sky-200 light:text-sky-700">
+                  <p className="text-sm font-semibold text-info">
                     {formatCurrency(
                       estimatedPricing.monthly,
                       sandboxPricing.currency,
@@ -535,20 +535,20 @@ export function SandboxForm({
                           Window Totals
                         </p>
                         <div className="mt-1 grid grid-cols-3 gap-2">
-                          <div className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1.5">
-                            <p className="text-[10px] text-emerald-200 light:text-emerald-600">
+                          <div className="rounded border border-success-border bg-success-surface px-2 py-1.5">
+                            <p className="text-[10px] text-success">
                               Hourly
                             </p>
-                            <p className="text-xs font-semibold text-emerald-100 light:text-emerald-900">
+                            <p className="text-xs font-semibold text-success">
                               {formatCurrency(
                                 estimatedPricing.hourly,
                                 sandboxPricing.currency,
                               )}
                             </p>
                           </div>
-                          <div className="rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1.5">
-                            <p className="text-[10px] text-sky-200 light:text-sky-700">24 Hours</p>
-                            <p className="text-xs font-semibold text-sky-100 light:text-sky-900">
+                          <div className="rounded border border-info-border bg-info-surface px-2 py-1.5">
+                            <p className="text-[10px] text-info">24 Hours</p>
+                            <p className="text-xs font-semibold text-info">
                               {formatCurrency(
                                 estimatedPricing.daily,
                                 sandboxPricing.currency,
@@ -680,7 +680,7 @@ export function SandboxForm({
                 </Collapsible>
               </div>
               {!sandboxPricing.enabled && (
-                <p className="mt-2 text-[11px] text-amber-300 light:text-amber-700">
+                <p className="mt-2 text-[11px] text-warning">
                   Internal pricing is currently disabled, so estimates resolve
                   to zero.
                 </p>

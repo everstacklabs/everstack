@@ -11,6 +11,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { ui } from '@everstack/ui'
+import { Code, ConnectError } from '@everstack/client'
 import { toast } from '@everstack/ui/components'
 import {
   useCreateAgent,
@@ -52,6 +53,8 @@ import {
   sandboxMachineProfilesForTier,
 } from '@/lib/sandbox-pricing'
 import { Iconify } from '@everstack/ui/icons'
+import { PlanLimitNotice } from '@/components/billing/plan-limit-notice'
+import { isPlanLimitError } from '@/lib/plan-limit-error'
 import { getApiBaseUrl } from '@/lib/api-url'
 import { getCloudBillingUrl, isCloudManaged } from '@/lib/cloud-mode'
 import { ConfigureProviderSheet } from '@/components/providers'
@@ -236,6 +239,33 @@ function matchTemplateSlug(
   if (!image) return 'custom'
   const match = templates.find((t) => t.image === image)
   return match?.slug ?? 'custom'
+}
+
+// Server errors the user can act on carry a message worth showing; anything
+// else (internal, unavailable) falls back to the generic text so backend
+// details never reach the toast.
+const USER_ACTIONABLE_CODES = new Set<Code>([
+  Code.InvalidArgument,
+  Code.FailedPrecondition,
+  Code.ResourceExhausted,
+  Code.PermissionDenied,
+  Code.NotFound,
+])
+
+function agentSaveErrorMessage(
+  err: unknown,
+  action: 'create' | 'update',
+  name: string,
+): string {
+  const fallback = `Failed to ${action} agent`
+  const connectErr = ConnectError.from(err)
+  if (connectErr.code === Code.AlreadyExists) {
+    return `An agent named "${name.trim()}" already exists. Choose a different name.`
+  }
+  if (USER_ACTIONABLE_CODES.has(connectErr.code) && connectErr.rawMessage) {
+    return `${fallback}: ${connectErr.rawMessage}`
+  }
+  return fallback
 }
 
 function formatCost(amount: number): string {
@@ -1317,7 +1347,7 @@ export function AgentFormDialog({
       !sandboxBillingEnabled
     ) {
       toast.error(
-        'Your sandbox starter credit is exhausted. Add billing to continue',
+        "You have used this month's included sandbox hours. Add credit to keep running.",
       )
       return
     }
@@ -1653,8 +1683,10 @@ export function AgentFormDialog({
       }
       onOpenChange(false)
     } catch (err) {
+      // A plan cap is shown inline with an Upgrade link, not as an error.
+      if (isPlanLimitError(err)) return
       toast.error(
-        isEditing ? 'Failed to update agent' : 'Failed to create agent',
+        agentSaveErrorMessage(err, isEditing ? 'update' : 'create', name),
       )
     }
   }
@@ -2531,7 +2563,7 @@ export function AgentFormDialog({
                                 <button
                                   type="button"
                                   onClick={() => removeFallbackModel(fm)}
-                                  className="p-0.5 text-white/30 hover:text-red-400 light:text-black/30"
+                                  className="p-0.5 text-white/30 hover:text-danger light:text-black/30"
                                 >
                                   <X className="w-3 h-3" />
                                 </button>
@@ -2913,14 +2945,14 @@ export function AgentFormDialog({
                   {sandboxEnabled && (
                     <div className="space-y-4">
                       {managedCloud && !sandboxBillingEnabled && (
-                        <div className="flex items-start justify-between gap-3 rounded border border-amber-500/25 bg-amber-500/5 p-3">
+                        <div className="flex items-start justify-between gap-3 rounded border border-warning-border bg-warning-surface/60 p-3">
                           <div>
                             <p className="text-xs font-medium text-white/85 light:text-black/85">
                               Sandbox compute is paused
                             </p>
                             <p className="mt-1 text-[11px] text-white/50 light:text-black/55">
-                              The organization starter credit is exhausted. Add
-                              or restore billing to continue.
+                              This month&apos;s included sandbox hours are used
+                              up. Add credit to keep running.
                             </p>
                           </div>
                           <Button
@@ -2939,10 +2971,9 @@ export function AgentFormDialog({
                         sandboxBillingEnabled &&
                         sandboxMode === 'new' && (
                           <div className="rounded border border-brand-secondary-500/20 bg-brand-secondary-500/5 p-3 text-[11px] leading-relaxed text-white/55 light:text-black/60">
-                            New organizations start with $5 of sandbox compute
-                            credit. The selected VM consumes credit or billed
-                            usage at approximately{' '}
-                            {formatCost(computeCost.perHour)}/hr.
+                            Your plan includes sandbox hours each month.
+                            Beyond them, the selected VM uses credit at
+                            approximately {formatCost(computeCost.perHour)}/hr.
                           </div>
                         )}
 
@@ -3372,7 +3403,7 @@ export function AgentFormDialog({
                                               prev.filter((h) => h !== host),
                                             )
                                           }
-                                          className="text-white/30 hover:text-red-400 light:text-black/30"
+                                          className="text-white/30 hover:text-danger light:text-black/30"
                                         >
                                           <X className="w-3 h-3" />
                                         </button>
@@ -3817,7 +3848,7 @@ export function AgentFormDialog({
                             <button
                               type="button"
                               onClick={() => removeSkill(skill.source)}
-                              className="text-zinc-500 hover:text-red-400 transition-colors shrink-0"
+                              className="text-zinc-500 hover:text-danger transition-colors shrink-0"
                             >
                               <X className="w-3.5 h-3.5" />
                             </button>
@@ -3933,7 +3964,7 @@ export function AgentFormDialog({
                                 {rs.name}
                               </span>
                               {isInstalled && (
-                                <span className="text-[9px] text-green-400 shrink-0">
+                                <span className="text-[9px] text-success shrink-0">
                                   installed
                                 </span>
                               )}
@@ -4198,7 +4229,7 @@ export function AgentFormDialog({
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className="h-7 w-7 p-0 text-zinc-500 hover:text-red-400"
+                              className="h-7 w-7 p-0 text-zinc-500 hover:text-danger"
                               disabled={deleteLinkMutation.isPending}
                               onClick={() => {
                                 deleteLinkMutation.mutate(link.id, {
@@ -4223,6 +4254,13 @@ export function AgentFormDialog({
                   <Switch checked={enabled} onCheckedChange={setEnabled} />
                   <Label>Enabled</Label>
                 </div>
+              )}
+
+              {!isEditing && (
+                <PlanLimitNotice
+                  error={createMutation.error}
+                  className="mr-4"
+                />
               )}
 
               <div className="flex gap-3 pt-3 pr-4 border-t border-brand-main-700/60 shrink-0 w-full">

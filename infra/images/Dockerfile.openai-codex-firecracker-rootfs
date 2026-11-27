@@ -19,4 +19,4 @@ RUN npm install --global --include=optional \
     && printf 'openai-codex-%s-r3-source-%s\n' "$CODEX_VERSION" "$SOURCE_REVISION" > /etc/everstack-rootfs-version
 
 LABEL org.opencontainers.image.title="Everstack OpenAI executor Firecracker rootfs" \
-      org.opencontainers.image.source="https://github.com/everstacklabs/platform"
+      org.opencontainers.image.source="https://github.com/everstacklabs/everstack"

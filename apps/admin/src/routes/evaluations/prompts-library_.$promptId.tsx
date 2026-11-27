@@ -28,7 +28,7 @@ export const Route = createFileRoute('/evaluations/prompts-library_/$promptId')(
 })
 
 const roleStyles: Record<string, string> = {
-    system: 'text-amber-300/90 light:text-amber-700/90 border-amber-400/30 bg-amber-400/5',
+    system: 'text-warning/90 border-warning-border bg-warning-surface/60',
     user: 'text-brand-secondary-300 border-brand-secondary-500/30 bg-brand-secondary-500/5',
     assistant: 'text-emerald-300/90 light:text-emerald-600/90 border-emerald-400/30 bg-emerald-400/5',
 }
@@ -143,7 +143,7 @@ function PromptDetailContent() {
                                             <Badge
                                                 key={label}
                                                 variant="outline"
-                                                className="text-[10px] border-emerald-400/30 text-emerald-300 light:text-emerald-600"
+                                                className="text-[10px] border-success-border text-success"
                                             >
                                                 {label}
                                             </Badge>
@@ -250,14 +250,14 @@ function LabelsEditor({ promptId, version }: { promptId: string; version: Prompt
                 <Badge
                     key={label}
                     variant="outline"
-                    className="text-[10px] border-emerald-400/30 text-emerald-300 light:text-emerald-600 inline-flex items-center gap-1"
+                    className="text-[10px] border-success-border text-success inline-flex items-center gap-1"
                 >
                     {label}
                     <button
                         type="button"
                         onClick={() => void save(labels.filter((l) => l !== label))}
-                        className="hover:text-rose-300 light:hover:text-rose-600"
-                        title={`Remove ${label}`}
+                        className="hover:text-danger"
+                        title="Remove"
                     >
                         <X className="h-2.5 w-2.5" />
                     </button>
@@ -267,7 +267,7 @@ function LabelsEditor({ promptId, version }: { promptId: string; version: Prompt
                 <button
                     type="button"
                     onClick={() => void save([...labels, 'production'])}
-                    className="inline-flex items-center gap-1 text-[11px] text-white/50 light:text-black/50 hover:text-emerald-300 light:hover:text-emerald-600 border border-brand-main-500 rounded px-2 py-0.5 transition-colors"
+                    className="inline-flex items-center gap-1 text-[11px] text-white/50 light:text-black/50 hover:text-success border border-brand-main-500 rounded px-2 py-0.5 transition-colors"
                     title="Mark this version as production"
                 >
                     <Tag className="h-3 w-3" /> production

@@ -9,6 +9,7 @@ import (
 
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/everstacklabs/everstack/internal/providers/catalog"
+	"github.com/sirupsen/logrus"
 )
 
 // RateLimitInfo contains rate limit information from provider responses
@@ -118,29 +119,32 @@ func (m *Monitor) Update(info RateLimitInfo) {
 	}
 	m.mu.Unlock()
 
-	// Log rate limit status
-	logFields := map[string]interface{}{
-		"provider":          info.Provider,
-		"model":             info.Model,
-		"request_remaining": info.RequestRemaining,
-		"token_remaining":   info.TokenRemaining,
-		"is_rate_limited":   info.IsRateLimited,
-		"retry_after":       info.RetryAfter,
+	// Log rate limit status. This runs once per provider response, so the
+	// fields and the JSON payload are only built when the line will be written.
+	if logger.IsLevelEnabled(logrus.InfoLevel) {
+		logFields := map[string]interface{}{
+			"provider":          info.Provider,
+			"model":             info.Model,
+			"request_remaining": info.RequestRemaining,
+			"token_remaining":   info.TokenRemaining,
+			"is_rate_limited":   info.IsRateLimited,
+			"retry_after":       info.RetryAfter,
+		}
+		if info.KeyID != "" {
+			logFields["key_id"] = info.KeyID
+		}
+
+		// Build structured payload for rate limit update
+		payload := logger.NewPayload().
+			WithRateLimit(int64(info.RequestRemaining), int64(info.TokenRemaining), info.IsRateLimited).
+			WithProvider(info.Provider, info.Model, "", 0, 0).
+			Build()
+
+		logger.WithCategory(logger.CategoryOperational).
+			WithLogEvent(logger.EventRateLimitUpdated).
+			WithPayload(payload).
+			WithFields(logFields).Info("rate limit status updated")
 	}
-	if info.KeyID != "" {
-		logFields["key_id"] = info.KeyID
-	}
-	
-	// Build structured payload for rate limit update
-	payload := logger.NewPayload().
-		WithRateLimit(int64(info.RequestRemaining), int64(info.TokenRemaining), info.IsRateLimited).
-		WithProvider(info.Provider, info.Model, "", 0, 0).
-		Build()
-	
-	logger.WithCategory(logger.CategoryOperational).
-		WithLogEvent(logger.EventRateLimitUpdated).
-		WithPayload(payload).
-		WithFields(logFields).Info("rate limit status updated")
 
 	// Notify subscribers
 	for _, callback := range subscribers {

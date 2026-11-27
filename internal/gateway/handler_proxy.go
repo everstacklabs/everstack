@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/everstacklabs/everstack/internal/lib/logger"
@@ -39,6 +40,9 @@ type ProxyHandler struct {
 	// signer, when non-nil, validates signed preview URL tokens. If nil,
 	// token validation is skipped (all requests pass through as before).
 	signer *previewtoken.Signer
+	// tenantActiveFn reports whether a tenant's instance may run compute.
+	// Nil treats every tenant as active.
+	tenantActiveFn atomic.Pointer[func(ctx context.Context, tenantID string) bool]
 }
 
 // NewProxyHandler creates a new reverse proxy handler.
@@ -53,6 +57,28 @@ func NewProxyHandler(lookup PortMappingLookup, transport *TransportPool) *ProxyH
 // URL tokens. Passing nil keeps unsigned direct preview access enabled.
 func (h *ProxyHandler) SetPreviewSigner(s *previewtoken.Signer) {
 	h.signer = s
+}
+
+// SetTenantActiveFn installs the paused-instance gate. fn returns false when
+// the tenant's instance is paused; preview traffic to it is then refused with
+// 403. Passing nil treats every tenant as active. Safe for concurrent use.
+func (h *ProxyHandler) SetTenantActiveFn(fn func(ctx context.Context, tenantID string) bool) {
+	if fn == nil {
+		h.tenantActiveFn.Store(nil)
+		return
+	}
+	h.tenantActiveFn.Store(&fn)
+}
+
+func (h *ProxyHandler) tenantActive(ctx context.Context, tenantID string) bool {
+	if strings.TrimSpace(tenantID) == "" {
+		return true
+	}
+	ptr := h.tenantActiveFn.Load()
+	if ptr == nil {
+		return true
+	}
+	return (*ptr)(ctx, tenantID)
 }
 
 // SetRequirePreviewToken rejects unsigned subdomain preview access when true.
@@ -229,6 +255,12 @@ func (h *ProxyHandler) ServeByID(w http.ResponseWriter, r *http.Request, sandbox
 
 // proxyToBackend creates a reverse proxy and forwards the request.
 func (h *ProxyHandler) proxyToBackend(w http.ResponseWriter, r *http.Request, mapping *sandbox.PortMapping) {
+	if !h.tenantActive(r.Context(), mapping.TenantID) {
+		logger.WithFields("tenant_id", mapping.TenantID, "sandbox_id", mapping.SandboxID, "port", mapping.Port).
+			Info("gateway: refusing preview; instance is paused")
+		sandbox.WriteInstancePaused(w)
+		return
+	}
 	target, err := url.Parse("http://" + mapping.BackendTarget)
 	if err != nil {
 		http.Error(w, `{"error":"invalid backend target"}`, http.StatusInternalServerError)

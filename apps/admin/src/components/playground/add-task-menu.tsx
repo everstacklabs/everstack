@@ -13,9 +13,9 @@ const TYPES: {
     disabled?: boolean
 }[] = [
     { type: 'prompt', label: 'Prompt', hint: 'Messages + model', icon: MessageSquare, color: 'text-brand-secondary-300' },
-    { type: 'workflow', label: 'Workflow', hint: 'Runs through workflow execution', icon: Workflow, color: 'text-amber-300' },
-    { type: 'remote', label: 'Remote eval', hint: 'Backend proxy needed', icon: Globe, color: 'text-sky-300', disabled: true },
-    { type: 'scorer', label: 'Scorer', hint: 'Column runner coming later', icon: Triangle, color: 'text-emerald-300', disabled: true },
+    { type: 'workflow', label: 'Workflow', hint: 'Runs through workflow execution', icon: Workflow, color: 'text-warning' },
+    { type: 'remote', label: 'Remote eval', hint: 'Backend proxy needed', icon: Globe, color: 'text-info', disabled: true },
+    { type: 'scorer', label: 'Scorer', hint: 'Column runner coming later', icon: Triangle, color: 'text-success', disabled: true },
 ]
 
 /**

@@ -1,0 +1,39 @@
+# Verified 2026-11-24.
+# Source: https://www.baseten.co/pricing
+name: "deepseek-ai/DeepSeek-V4.1-Flash-Fast"
+display_name: "DeepSeek V4.1 Flash Fast (Baseten)"
+family: "deepseek-flash"
+status: "stable"
+release_date: "2026-09-10"
+
+cost:
+  input_per_1k: 0.0006
+  output_per_1k: 0.0024
+  cache_read_per_1k: 0.000014
+
+limits:
+  max_tokens: 1048576
+  max_completion_tokens: 32768
+
+capabilities:
+  - chat
+  - function_calling
+  - reasoning
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+
+knowledge_cutoff: "2025-05"
+notes: "Fast DeepSeek model for efficient chat, coding help, and agent loops"
+
+structured_output: true
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 32768
+    has_max_value: true
+added_in_version: "2.11.0"

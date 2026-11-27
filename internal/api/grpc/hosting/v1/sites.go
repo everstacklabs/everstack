@@ -182,6 +182,10 @@ func (s *Server) resolveAndRegister(ctx context.Context, tenantID, ip, requested
 		if errors.As(err, &quotaExceeded) {
 			return "", 0, quotaConnectError(err)
 		}
+		var connectErr *connect.Error
+		if errors.As(err, &connectErr) {
+			return "", 0, connectErr // e.g. quota temporarily unavailable
+		}
 		if isUniqueViolation(err) && attempt < 5 {
 			if site == nil && requestedSlug == "" {
 				slug = "" // regenerate

@@ -71,7 +71,7 @@ export function ShellSessionsPanel({ sandboxId }: ShellSessionsPanelProps) {
                         Retry
                     </button>
                 </div>
-                <p className="text-xs text-red-400 light:text-red-600">Couldn't load sessions.</p>
+                <p className="text-xs text-danger">Couldn't load sessions.</p>
             </div>
         )
     }
@@ -163,7 +163,7 @@ function ShellSessionRowItem({
                     <button
                         onClick={onConfirmKill}
                         disabled={disabled}
-                        className="text-xs text-red-400 light:text-red-600 hover:text-red-300 light:hover:text-red-600 disabled:opacity-50"
+                        className="text-xs text-danger disabled:opacity-50"
                     >
                         Confirm
                     </button>
@@ -179,7 +179,7 @@ function ShellSessionRowItem({
                 <button
                     onClick={onPendingKill}
                     disabled={disabled}
-                    className="text-xs text-white/50 light:text-black/50 hover:text-red-400 light:hover:text-red-600 disabled:opacity-50 shrink-0"
+                    className="text-xs text-white/50 light:text-black/50 hover:text-danger disabled:opacity-50 shrink-0"
                 >
                     Kill
                 </button>
@@ -191,8 +191,8 @@ function ShellSessionRowItem({
 function SessionStatusBadge({ attachedClients }: { attachedClients: number }) {
     if (attachedClients > 0) {
         return (
-            <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-green-400 light:text-green-600">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+            <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-success">
+                <span className="w-1.5 h-1.5 rounded-full bg-success-solid" />
                 Attached
             </span>
         )

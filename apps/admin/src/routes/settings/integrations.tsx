@@ -50,11 +50,11 @@ const STATUS_META: Record<
 > = {
     live: {
         label: 'Enabled',
-        className: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+        className: 'border-success-border bg-success-surface text-success',
     },
     beta: {
         label: 'Beta',
-        className: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
+        className: 'border-info-border bg-info-surface text-info',
     },
     coming_soon: {
         label: 'Planned',

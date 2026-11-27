@@ -203,9 +203,9 @@ export function VersionPreviewDialog({ open, onOpenChange, version, onRestore }:
 
                 {!isLoading && error && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-                        <Icon icon="lucide:alert-circle" className="h-6 w-6 text-red-400/60 light:text-red-600/60 mb-2" />
-                        <p className="text-sm text-red-400/80 light:text-red-600/80">Failed to load version</p>
-                        <p className="text-xs text-red-400/50 light:text-red-600/50 mt-1">{error.message}</p>
+                        <Icon icon="lucide:alert-circle" className="h-6 w-6 text-danger/60 mb-2" />
+                        <p className="text-sm text-danger/80">Failed to load version</p>
+                        <p className="text-xs text-danger/50 mt-1">{error.message}</p>
                     </div>
                 )}
 

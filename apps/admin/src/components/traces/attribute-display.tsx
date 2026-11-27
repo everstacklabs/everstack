@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react'
+import { replayBlock } from '@/lib/replay-privacy'
 import { ui } from '@everstack/ui'
 import { Check, Copy, ExternalLink, CheckCircle, XCircle } from 'lucide-react'
 import { cn } from '@everstack/utils/functions/cn'
@@ -105,6 +106,7 @@ export function AttributeDisplay({
       case 'url':
         return (
           <a
+            {...replayBlock}
             href={valueText}
             target="_blank"
             rel="noopener noreferrer"
@@ -210,13 +212,11 @@ export function AttributeDisplay({
       <div className="min-w-0">
         <div
           className="truncate text-xs font-medium text-brand-main-50 light:text-black"
-          title={formattedName}
         >
           {formattedName}
         </div>
         <div
           className="truncate text-[10px] text-brand-main-50 light:text-black"
-          title={attrKey}
         >
           {attrKey}
         </div>

@@ -73,7 +73,7 @@ function AcceptInvitePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {error && (
-            <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400 light:text-red-600">
+            <div className="rounded-lg border border-danger-border bg-danger-surface p-3 text-sm text-danger">
               {typeof error === 'string' ? error : (error as Error).message || 'An error occurred'}
             </div>
           )}
@@ -124,7 +124,7 @@ function AcceptInvitePage() {
             </div>
             <Button
               type="submit"
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white"
+              className="w-full bg-success-solid hover:bg-success-solid/90 text-success-solid-foreground"
               disabled={isLoading}
             >
               {isLoading ? (

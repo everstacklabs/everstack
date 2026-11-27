@@ -33,7 +33,17 @@ class Responses:
         metadata: Optional[Dict[str, str]] = None,
         **kwargs: Any,
     ) -> Any:
-        """Create a response (agentic orchestration)."""
+        """Create a response (agentic orchestration).
+
+        With ``stream=True`` this returns an iterator of the gateway's stream
+        frames, each a dict wrapped as ``{"result": {...}}``: full snapshots
+        of the response when its structure changes, delta frames (no
+        ``status``, no ``output``) whose ``result.delta`` carries
+        ``item_id`` plus ``content_delta`` (message text) or
+        ``arguments_delta`` (function call arguments) to append to that item,
+        and the final full response last. See "Streaming responses" in the
+        README.
+        """
         body: Dict[str, Any] = {"model": model, "input": input}
         if instructions is not None:
             body["instructions"] = instructions

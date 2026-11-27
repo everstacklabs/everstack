@@ -38,11 +38,16 @@ type Reconciler struct {
 	BatchSize     int
 	Workers       int           // max rows in flight at once
 	PerRowTimeout time.Duration // Step budget per row
-	LeaseTimeout  time.Duration // lease validity; expired leases are reclaimable
-	MaxAttempts   int
-	LeaderLockKey string
-	LeaderID      string
-	OnTransition  func(row Row) // optional hook for tests / metrics
+	// TransferRowTimeout is the Step budget for states that move the
+	// workspace tarball to or from object storage (stopping, reviving,
+	// archiving): snapshot + upload + verify, or download + verify +
+	// create + restore. Must stay below LeaseTimeout.
+	TransferRowTimeout time.Duration
+	LeaseTimeout       time.Duration // lease validity; expired leases are reclaimable
+	MaxAttempts        int
+	LeaderLockKey      string
+	LeaderID           string
+	OnTransition       func(row Row) // optional hook for tests / metrics
 
 	inflight atomic.Int64
 }
@@ -51,20 +56,23 @@ type Reconciler struct {
 // Callers can override fields on the returned struct before calling Run.
 func NewReconciler(repo *Repository, executor Executor, db *sqlx.DB) *Reconciler {
 	return &Reconciler{
-		repo:     repo,
-		executor: executor,
-		db:       db,
-		Interval: 200 * time.Millisecond,
+		repo:      repo,
+		executor:  executor,
+		db:        db,
+		Interval:  200 * time.Millisecond,
 		BatchSize: 20,
 		Workers:   4,
 		// 90s covers the worst observed fcagent create (rootfs clone +
 		// boot under load); the lease outlives the row budget so a
 		// healthy in-flight step is never reclaimed mid-run.
 		PerRowTimeout: 90 * time.Second,
-		LeaseTimeout:  2 * time.Minute,
-		MaxAttempts:   6,
-		LeaderLockKey: "sandbox-reconciler",
-		LeaderID:      defaultLeaderID(),
+		// A 1 GiB workspace is tarred, uploaded and re-read for
+		// verification on sleep, and downloaded and verified on wake.
+		TransferRowTimeout: 5 * time.Minute,
+		LeaseTimeout:       6 * time.Minute,
+		MaxAttempts:        6,
+		LeaderLockKey:      "sandbox-reconciler",
+		LeaderID:           defaultLeaderID(),
 	}
 }
 
@@ -157,12 +165,23 @@ func (r *Reconciler) tick(ctx context.Context) {
 	}
 }
 
+// rowTimeout returns the Step budget for a row in state.
+func (r *Reconciler) rowTimeout(state string) time.Duration {
+	switch state {
+	case StateStopping, StateReviving, StateArchiving:
+		if r.TransferRowTimeout > r.PerRowTimeout {
+			return r.TransferRowTimeout
+		}
+	}
+	return r.PerRowTimeout
+}
+
 // processRow runs Step on one leased row and writes the result back.
 // All write-backs are guarded by lease ownership; ErrLeaseLost means
 // another claimer took over after our lease expired and our result is
 // discarded (steps are idempotent, so the new owner converges).
 func (r *Reconciler) processRow(ctx context.Context, row Row) {
-	rctx, cancel := context.WithTimeout(ctx, r.PerRowTimeout)
+	rctx, cancel := context.WithTimeout(ctx, r.rowTimeout(row.LifecycleState))
 	defer cancel()
 
 	logger.WithFields(

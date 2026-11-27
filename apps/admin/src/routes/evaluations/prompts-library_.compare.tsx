@@ -37,7 +37,7 @@ export const Route = createFileRoute('/evaluations/prompts-library_/compare')({
 })
 
 const roleStyles: Record<string, string> = {
-    system: 'text-amber-300/90 light:text-amber-700/90 border-amber-400/30 bg-amber-400/5',
+    system: 'text-warning/90 border-warning-border bg-warning-surface/60',
     user: 'text-brand-secondary-300 border-brand-secondary-500/30 bg-brand-secondary-500/5',
     assistant: 'text-emerald-300/90 light:text-emerald-600/90 border-emerald-400/30 bg-emerald-400/5',
 }
@@ -87,7 +87,7 @@ function PromptCompareContent() {
                 />
                 <SideSelector
                     label="B"
-                    accent="text-amber-300 light:text-amber-700"
+                    accent="text-warning"
                     prompts={prompts}
                     promptId={search.rp}
                     versions={rightVersions}
@@ -210,10 +210,10 @@ function ConfigDiff({ left, right }: { left: PromptVersion; right: PromptVersion
                             return (
                                 <tr key={r.k} className="border-b border-brand-main-700/30 last:border-0">
                                     <td className="py-1.5 pr-3 text-white/40 light:text-black/40 w-32">{r.k}</td>
-                                    <td className={cn('py-1.5 px-3 font-mono', differs ? 'text-rose-300 light:text-rose-600' : 'text-white/80 light:text-black/80')}>
+                                    <td className={cn('py-1.5 px-3 font-mono', differs ? 'text-danger' : 'text-white/80 light:text-black/80')}>
                                         {r.av}
                                     </td>
-                                    <td className={cn('py-1.5 px-3 font-mono', differs ? 'text-emerald-300 light:text-emerald-600' : 'text-white/80 light:text-black/80')}>
+                                    <td className={cn('py-1.5 px-3 font-mono', differs ? 'text-success' : 'text-white/80 light:text-black/80')}>
                                         {r.bv}
                                     </td>
                                 </tr>
@@ -238,8 +238,8 @@ function MessagesDiff({ left, right }: { left: PromptVersion; right: PromptVersi
             <CardHeader className="!pb-1.5 flex flex-row items-center justify-between">
                 <CardTitle className="text-white light:text-brand-main-50 text-sm">Messages</CardTitle>
                 <span className="text-[10px] text-white/30 light:text-black/30">
-                    <span className="text-rose-300 light:text-rose-600">removed</span> ·{' '}
-                    <span className="text-emerald-300 light:text-emerald-600">added</span>
+                    <span className="text-danger">removed</span> ·{' '}
+                    <span className="text-success">added</span>
                 </span>
             </CardHeader>
             <CardContent className="!pt-0 space-y-2">
@@ -304,8 +304,8 @@ function DiffPane({
                             <span
                                 key={i}
                                 className={cn(
-                                    op.type === 'delete' && 'bg-rose-500/20 text-rose-300 light:text-rose-600 line-through',
-                                    op.type === 'insert' && 'bg-emerald-500/20 text-emerald-200 light:text-emerald-600',
+                                    op.type === 'delete' && 'bg-danger-surface-strong text-danger line-through',
+                                    op.type === 'insert' && 'bg-success-surface-strong text-success',
                                     op.type === 'equal' && 'text-zinc-200 light:text-zinc-800',
                                 )}
                             >

@@ -461,7 +461,8 @@
         },
         "avgTtftMs": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "description": "avg_ttft_ms and avg_throughput_tps are streaming-only measures: they are\nderived from the subset of requests that actually streamed. They are\n`optional` so that \"no publishable sample\" is a distinct state from a\ngenuine zero -- an unset field is omitted from the JSON entirely, while a\nreal 0 ms TTFT (a first chunk inside the same millisecond) is emitted as\n0. The server leaves them unset when the streaming sample is too thin to\nmean anything; see MinimumStreamSamples / MinimumStreamCoverage in\ninternal/modelmetrics/service.go."
         },
         "avgThroughputTps": {
           "type": "number",

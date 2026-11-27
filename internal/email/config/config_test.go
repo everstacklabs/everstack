@@ -18,7 +18,6 @@ func TestApplySenderOverridesReplacesEveryIdentity(t *testing.T) {
 		types.EmailTypeInvitation,
 		types.EmailTypeWelcome,
 		types.EmailTypePaymentSuccess,
-		types.EmailTypeActivationToken,
 		types.EmailTypeEmailVerification,
 	} {
 		sender := cfg.SenderFor(kind)

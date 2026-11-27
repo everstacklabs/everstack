@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/everstacklabs/everstack/internal/sandbox"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -120,6 +121,10 @@ func (rc *RecoveryChecker) tick(ctx context.Context) {
 		SELECT id, desired_state, recovery_attempts
 		FROM sandbox_instances
 		WHERE lifecycle_state = 'error'
+		  -- A lost or corrupt saved workspace is permanent: re-running the
+		  -- revive cannot bring the data back. Leave it for a human.
+		  AND COALESCE(error, '') NOT LIKE $5
+		  AND COALESCE(error, '') NOT LIKE $6
 		  AND COALESCE(recovery_attempts, 0) < $1
 		  AND (error_at IS NULL
 		       OR error_at < NOW() - make_interval(
@@ -135,7 +140,8 @@ func (rc *RecoveryChecker) tick(ctx context.Context) {
 	}
 	var rows []errRow
 	if err := tx.SelectContext(ctx, &rows, q,
-		rc.MaxAttempts, rc.MaxBackoff.Seconds(), rc.BaseBackoff.Seconds(), rc.BatchLimit); err != nil {
+		rc.MaxAttempts, rc.MaxBackoff.Seconds(), rc.BaseBackoff.Seconds(), rc.BatchLimit,
+		sandbox.WorkspaceErrorCodeRestoreFailed+"%", sandbox.WorkspaceErrorCodeNeedsAttention+"%"); err != nil {
 		logger.WithFields("error", err.Error()).
 			Warn("sandbox_recovery_checker: query failed")
 		return

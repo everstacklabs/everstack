@@ -30,5 +30,5 @@ When deploying Everstack:
 - Keep your instance updated to the latest supported version.
 - Use strong, unique database and API-key hash secrets.
 - Enable built-in authentication or OIDC before exposing the dashboard. The
-  local quickstart intentionally sets `EVS_AUTH_MODE=none` and is not a
-  production security profile.
+  local quickstart uses built-in authentication over plain HTTP with example
+  secrets and is not a production security profile.

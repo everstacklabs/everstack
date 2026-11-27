@@ -13,6 +13,11 @@ import (
 // the row its owner controls.
 var ErrConfigKeyDuplicatesManual = errors.New("config API key duplicates a user-managed key")
 
+// ErrKeyNotFound reports that no API key matched. The tenant-scoped methods
+// return it for keys whose configuration another tenant (or the platform)
+// owns, so callers cannot tell "foreign" from "missing".
+var ErrKeyNotFound = errors.New("provider API key not found")
+
 // ProviderAPIKey represents a single API key for a provider configuration
 type ProviderAPIKey struct {
 	ID               string
@@ -21,7 +26,7 @@ type ProviderAPIKey struct {
 	KeyEncrypted     string
 	Weight           int
 	IsActive         bool
-	Source           string // "manual" or "config"
+	Source           string // SourceBYOK or SourcePlatform: how the row was written, not who owns it (see BillingSource)
 	RateLimitData    map[string]interface{}
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
@@ -54,4 +59,26 @@ type Repository interface {
 
 	// DeactivateConfigKeys marks all config-sourced keys as inactive for a provider
 	DeactivateConfigKeys(ctx context.Context, providerConfigID string) error
+
+	// The *ForOrg methods act only on keys whose provider configuration is
+	// owned by orgID (provider_configurations.organization_id = orgID).
+	// Platform-owned configurations (organization_id NULL) never match. A
+	// key outside that scope is reported as ErrKeyNotFound, exactly like a
+	// key that does not exist. Request-handling code must use these.
+
+	// ListByProviderConfigForOrg returns the keys of a configuration orgID
+	// owns, or an empty list when it owns no such configuration.
+	ListByProviderConfigForOrg(ctx context.Context, orgID, providerConfigID string) ([]*ProviderAPIKey, error)
+
+	// GetByIDForOrg retrieves a key whose configuration orgID owns.
+	GetByIDForOrg(ctx context.Context, orgID, id string) (*ProviderAPIKey, error)
+
+	// CreateForOrg inserts key only when orgID owns key.ProviderConfigID.
+	CreateForOrg(ctx context.Context, orgID string, key *ProviderAPIKey) error
+
+	// UpdateForOrg updates a key whose configuration orgID owns.
+	UpdateForOrg(ctx context.Context, orgID string, key *ProviderAPIKey) error
+
+	// DeleteForOrg deletes a key whose configuration orgID owns.
+	DeleteForOrg(ctx context.Context, orgID, id string) error
 }

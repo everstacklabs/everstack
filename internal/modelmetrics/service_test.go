@@ -275,7 +275,12 @@ func TestServiceBuildsPrivacySafeCumulativeSeries(t *testing.T) {
 	if got := report.Summary.AvgLatencyMS; got != 316.6666666666667 {
 		t.Fatalf("average latency = %v, want weighted average", got)
 	}
-	if got := report.Summary.AvgThroughputTPS; got != 35 {
+	// 260 TTFT samples across 300 requests clears both the absolute floor and
+	// the coverage floor, so the figure is published.
+	if report.Summary.AvgThroughputTPS == nil {
+		t.Fatal("average throughput suppressed for a well-sampled bucket")
+	}
+	if got := *report.Summary.AvgThroughputTPS; got != 35 {
 		t.Fatalf("average throughput = %v, want 35", got)
 	}
 	if got := report.Coverage.SuppressedBuckets; got != 1 {
@@ -561,5 +566,190 @@ func TestResolveQueryAllowsAllTimeMonthlyReports(t *testing.T) {
 	}, time.Date(2026, time.July, 28, 12, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatalf("resolveQuery() all-time monthly error = %v", err)
+	}
+}
+
+// TestDerivePublicMetricsSuppressesThroughputFromASampleOfOne reproduces the
+// exact production shape that made this fix necessary: openai/gpt-5.4-mini
+// published an avg_throughput_tps of exactly 200 -- 4 streamed output tokens
+// over a 20 ms generation window, one streamed request out of 510 in the
+// bucket. The arithmetic was right and the number was meaningless.
+func TestDerivePublicMetricsSuppressesThroughputFromASampleOfOne(t *testing.T) {
+	t.Parallel()
+
+	public := derivePublicMetrics(Metrics{
+		Requests:             510,
+		Errors:               10,
+		LatencyTotalMS:       510_000,
+		LatencySamples:       510,
+		TTFTTotalMS:          1_263,
+		TTFTSamples:          1,
+		StreamOutputTokens:   4,
+		GenerationDurationMS: 20,
+	})
+
+	if public.AvgThroughputTPS != nil {
+		t.Fatalf(
+			"avg_throughput_tps = %v from a sample of 1 over 510 requests, want suppressed",
+			*public.AvgThroughputTPS,
+		)
+	}
+	if public.AvgTTFTMS != nil {
+		t.Fatalf(
+			"avg_ttft_ms = %v from a sample of 1 over 510 requests, want suppressed",
+			*public.AvgTTFTMS,
+		)
+	}
+	// Everything not derived from the streaming sample must survive.
+	if public.Requests != 510 || public.AvgLatencyMS != 1_000 {
+		t.Fatalf(
+			"suppression leaked into non-streaming metrics: requests=%d avg_latency_ms=%v",
+			public.Requests, public.AvgLatencyMS,
+		)
+	}
+}
+
+func TestDerivePublicMetricsSuppressesBelowStreamCoverageOnHighVolume(t *testing.T) {
+	t.Parallel()
+
+	// Clears MinimumStreamSamples outright, but 25 streams out of 100k
+	// requests is a rounding-error slice of the traffic the figure is
+	// labelled with.
+	public := derivePublicMetrics(Metrics{
+		Requests:             100_000,
+		TTFTTotalMS:          25_000,
+		TTFTSamples:          25,
+		StreamOutputTokens:   2_500,
+		GenerationDurationMS: 25_000,
+	})
+
+	if public.AvgTTFTMS != nil || public.AvgThroughputTPS != nil {
+		t.Fatalf(
+			"streaming averages published at %.4f%% coverage, want suppressed",
+			100*float64(25)/float64(100_000),
+		)
+	}
+}
+
+func TestDerivePublicMetricsKeepsAGenuineZeroDistinctFromSuppression(t *testing.T) {
+	t.Parallel()
+
+	// A first chunk that arrives inside the same millisecond is a real 0 ms
+	// TTFT, and attributes.SetLLMStreamMetrics records it on purpose. It must
+	// reach the wire as 0, not as "no data".
+	public := derivePublicMetrics(Metrics{
+		Requests:             100,
+		TTFTTotalMS:          0,
+		TTFTSamples:          100,
+		StreamOutputTokens:   0,
+		GenerationDurationMS: 5_000,
+	})
+
+	if public.AvgTTFTMS == nil {
+		t.Fatal("a genuine 0 ms TTFT over 100 samples must be published, not suppressed")
+	}
+	if got := *public.AvgTTFTMS; got != 0 {
+		t.Fatalf("avg_ttft_ms = %v, want 0", got)
+	}
+	if public.AvgThroughputTPS == nil {
+		t.Fatal("a genuine zero throughput over 100 samples must be published")
+	}
+	if got := *public.AvgThroughputTPS; got != 0 {
+		t.Fatalf("avg_throughput_tps = %v, want 0", got)
+	}
+}
+
+func TestDerivePublicMetricsSuppressesThroughputWithoutAGenerationWindow(t *testing.T) {
+	t.Parallel()
+
+	// Enough TTFT samples to publish a TTFT, but nothing ever timed a
+	// generation window, so there is no throughput to report.
+	public := derivePublicMetrics(Metrics{
+		Requests:             100,
+		TTFTTotalMS:          0,
+		TTFTSamples:          100,
+		StreamOutputTokens:   400,
+		GenerationDurationMS: 0,
+	})
+
+	if public.AvgTTFTMS == nil {
+		t.Fatal("avg_ttft_ms suppressed despite 100 samples")
+	}
+	if public.AvgThroughputTPS != nil {
+		t.Fatalf(
+			"avg_throughput_tps = %v with a zero generation window, want suppressed",
+			*public.AvgThroughputTPS,
+		)
+	}
+}
+
+// TestCompareReportsInsufficientDataForASuppressedStreamingMetric pins the
+// wire behaviour of the comparison endpoint: ComparisonPoint carries a plain
+// double, so a suppressed metric would chart as a real zero. The series status
+// carries the distinction instead, and the compare view already renders
+// "insufficient_data" per series.
+func TestCompareReportsInsufficientDataForASuppressedStreamingMetric(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, time.September, 1, 12, 0, 0, 0, time.UTC)
+	dayStart := time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC)
+	service := NewService(stubRepository{report: RawReport{
+		DataSince: now.Add(-48 * time.Hour),
+		Buckets: []Bucket{{
+			Period:      dayStart.AddDate(0, 0, -1),
+			TenantCount: 6,
+			Metrics: Metrics{
+				Requests:             510,
+				LatencyTotalMS:       510_000,
+				LatencySamples:       510,
+				TTFTTotalMS:          1_263,
+				TTFTSamples:          1,
+				StreamOutputTokens:   4,
+				GenerationDurationMS: 20,
+			},
+		}},
+	}}, Config{
+		MinimumTenants:  5,
+		MinimumRequests: 100,
+		Now:             func() time.Time { return now },
+	})
+
+	comparison, err := service.Compare(context.Background(), CompareQuery{
+		Kind:     KindModel,
+		Keys:     []string{"openai/gpt-5.4-mini", "openai/gpt-5.5"},
+		Metric:   MetricThroughput,
+		Window:   Window30Days,
+		Interval: IntervalDay,
+	})
+	if err != nil {
+		t.Fatalf("Compare() error = %v", err)
+	}
+	for _, series := range comparison.Series {
+		if series.Status != StatusInsufficientData {
+			t.Fatalf(
+				"series %q status = %q, want %q for a suppressed throughput",
+				series.Key, series.Status, StatusInsufficientData,
+			)
+		}
+		if series.Total != 0 {
+			t.Fatalf("series %q total = %v, want 0", series.Key, series.Total)
+		}
+	}
+
+	// The same buckets compared on a non-streaming metric stay available.
+	requestComparison, err := service.Compare(context.Background(), CompareQuery{
+		Kind:     KindModel,
+		Keys:     []string{"openai/gpt-5.4-mini", "openai/gpt-5.5"},
+		Metric:   MetricRequests,
+		Window:   Window30Days,
+		Interval: IntervalDay,
+	})
+	if err != nil {
+		t.Fatalf("Compare() error = %v", err)
+	}
+	for _, series := range requestComparison.Series {
+		if series.Status == StatusInsufficientData {
+			t.Fatalf("series %q wrongly suppressed for a non-streaming metric", series.Key)
+		}
 	}
 }

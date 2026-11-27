@@ -55,19 +55,19 @@ const STATUS_STYLES: Record<number, { label: string; className: string }> = {
   },
   [SessionStatus.WAITING_FOR_INPUT]: {
     label: 'Waiting',
-    className: 'bg-yellow-500/15 text-yellow-300 light:text-yellow-700',
+    className: 'bg-warning-surface-strong text-warning',
   },
   [SessionStatus.WAITING_FOR_APPROVAL]: {
     label: 'Approval',
-    className: 'bg-orange-500/15 text-orange-300 light:text-orange-600',
+    className: 'bg-warning-surface-strong text-warning',
   },
   [SessionStatus.COMPLETED]: {
     label: 'Completed',
-    className: 'bg-green-500/15 text-green-300 light:text-green-600',
+    className: 'bg-success-surface-strong text-success',
   },
   [SessionStatus.FAILED]: {
     label: 'Failed',
-    className: 'bg-red-500/15 text-red-300 light:text-red-600',
+    className: 'bg-danger-surface-strong text-danger',
   },
   [SessionStatus.CANCELLED]: {
     label: 'Cancelled',
@@ -90,7 +90,7 @@ type SandboxHealthState =
 const SANDBOX_PAUSED: SandboxHealthState = {
   status: 'paused',
   message:
-    'The organization starter credit is exhausted. Add or restore billing to continue.',
+    "This month's included sandbox hours are used up. Add credit to keep running.",
 }
 
 function useSandboxHealth(
@@ -256,8 +256,8 @@ function SandboxHealthIndicator({
   if (health.status === 'paused') {
     return (
       <div className="mx-4 mt-2">
-        <div className="flex items-start gap-3 rounded-md border border-amber-500/25 bg-amber-500/5 px-3 py-2.5">
-          <AlertTriangle className="w-4 h-4 text-amber-400/80 light:text-amber-600/80 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 rounded-md border border-warning-border bg-warning-surface/60 px-3 py-2.5">
+          <AlertTriangle className="w-4 h-4 text-warning/80 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-xs font-medium text-white/85 light:text-black/85">
               Sandbox compute is paused
@@ -282,9 +282,9 @@ function SandboxHealthIndicator({
   // Failed / terminated — needs user action
   return (
     <div className="mx-4 mt-2">
-      <div className="flex items-center gap-3 rounded-md border border-red-500/20 bg-red-500/5 px-3 py-2.5">
-        <AlertTriangle className="w-4 h-4 text-red-400/70 light:text-red-600/70 shrink-0" />
-        <span className="text-xs text-red-300/80 light:text-red-600/80 flex-1">{health.message}</span>
+      <div className="flex items-center gap-3 rounded-md border border-danger-border bg-danger-surface/60 px-3 py-2.5">
+        <AlertTriangle className="w-4 h-4 text-danger/70 shrink-0" />
+        <span className="text-xs text-danger/80 flex-1">{health.message}</span>
         <button
           type="button"
           onClick={onRetry}
@@ -363,9 +363,9 @@ function AgentDetailLayout() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center">
         <div className="relative mb-6">
-          <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl" />
+          <div className="absolute inset-0 bg-danger-surface-strong rounded-full blur-xl" />
           <div className="relative rounded-xl border border-brand-main-600 bg-brand-main-800/80 p-4">
-            <AlertTriangle className="size-8 text-red-400 light:text-red-600" />
+            <AlertTriangle className="size-8 text-danger" />
           </div>
         </div>
         <h3 className="text-base font-medium text-white light:text-brand-main-50 mb-2">
@@ -496,7 +496,7 @@ function AgentDetailLayout() {
         {isProvisioning && isOnChatTab ? (
           sandboxHealth.status === 'paused' ? (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-6">
-              <AlertTriangle className="w-6 h-6 text-amber-400/80 light:text-amber-600/80" />
+              <AlertTriangle className="w-6 h-6 text-warning/80" />
               <div className="flex flex-col gap-1.5">
                 <span className="text-white/80 light:text-black/80 text-sm font-medium">
                   Sandbox compute is paused
@@ -518,7 +518,7 @@ function AgentDetailLayout() {
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
               <div className="flex items-center gap-3">
-                <span className="h-5 w-5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
+                <span className="h-5 w-5 rounded-full border-2 border-info-solid border-t-transparent animate-spin" />
                 <span className="text-white/80 light:text-black/80 text-sm font-medium">
                   Provisioning agent...
                 </span>
@@ -589,8 +589,8 @@ function ChatStatusBar({
         </span>
       )}
       {sessionId && (isStreaming || storeStreaming) && (
-        <span className="flex items-center gap-1.5 text-[10px] text-blue-400 light:text-blue-600">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+        <span className="flex items-center gap-1.5 text-[10px] text-info">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-info-solid animate-pulse" />
           Streaming
         </span>
       )}

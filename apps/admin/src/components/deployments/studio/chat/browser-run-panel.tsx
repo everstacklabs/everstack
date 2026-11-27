@@ -231,7 +231,7 @@ export function BrowserRunPanel({ events, tenantId }: BrowserRunPanelProps) {
       <div className="flex items-center justify-between border-b border-brand-main-700 px-3 py-2">
         <div className="flex items-center gap-2">
           <span
-            className={`size-1.5 rounded-full ${isRunning ? 'bg-emerald-400 animate-pulse' : 'bg-brand-main-500'}`}
+            className={`size-1.5 rounded-full ${isRunning ? 'bg-success-solid animate-pulse' : 'bg-brand-main-500'}`}
           />
           <span className="text-xs font-medium text-brand-main-100">
             Computer use run
@@ -338,7 +338,7 @@ export function BrowserRunPanel({ events, tenantId }: BrowserRunPanelProps) {
                   <span
                     className={`flex size-5 items-center justify-center rounded ${
                       step.kind === 'error'
-                        ? 'bg-red-500/10 text-red-400'
+                        ? 'bg-danger-surface text-danger'
                         : step.kind === 'snapshot'
                           ? 'bg-brand-secondary-500/10 text-brand-secondary-300'
                           : 'bg-brand-main-800 text-brand-main-300'

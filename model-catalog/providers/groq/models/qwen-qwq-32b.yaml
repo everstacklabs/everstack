@@ -1,7 +1,7 @@
 name: "qwen-qwq-32b"
 display_name: "Qwen QwQ 32B"
 family: "qwen"
-status: "stable"
+status: "deprecated"
 
 cost:
   input_per_1k: 0.00029
@@ -60,3 +60,4 @@ parameters:
   - key: "seed"
     display_name: "Seed"
     type: "integer"
+notes: "Shut down by Groq on 2025-07-14. Groq named qwen/qwen3-32b as the replacement, itself shut down; use openai/gpt-oss-120b."

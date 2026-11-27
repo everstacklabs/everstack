@@ -1,0 +1,822 @@
+server:
+  config:
+    port: 8089 # EVS_SERVER_PORT
+    external_port: 8089 # EVS_SERVER_EXTERNAL_PORT
+    external_domain: 127.0.0.1.sslip.io # EVS_SERVER_EXTERNAL_DOMAIN
+    external_secure: false # EVS_SERVER_EXTERNAL_SECURE
+
+  log:
+    level: trace # EVS_LOG_LEVEL
+    include_levels: ["info", "trace", "warn", "error", "fatal", "panic"]
+    exclude_levels: []
+    formatter:
+      format: text # EVS_LOG_FORMATTER_FORMAT
+
+  # Exposes metrics on /debug/metrics
+  metrics:
+    # Select type otel (OpenTelemetry) or none (disables collection and endpoint)
+    type: otel # EVS_METRICS_TYPE
+
+  # Exposes profiling on /debug/pprof
+  tracing:
+    # Select type none (disables collection and endpoint) or otel (OpenTelemetry)
+    type: otel # EVS_TRACING_TYPE (none, otel)
+    fraction: 0.1 # EVS_TRACING_FRACTION (0.0 to 1.0)
+
+    # OpenTelemetry configuration
+    otel:
+      # The endpoint to send traces to (e.g., Jaeger, Zipkin, OTLP collector)
+      endpoint: "" # EVS_TRACING_OTEL_ENDPOINT
+      # Examples:
+      # - "http://localhost:14268/api/traces" (Jaeger HTTP)
+      # - "http://localhost:9411/api/v2/spans" (Zipkin)
+      # - "http://localhost:4317" (OTLP HTTP)
+      # - "grpc://localhost:4317" (OTLP gRPC)
+
+      # Service information
+      service_name: "everstack-gateway" # EVS_TRACING_OTEL_SERVICE_NAME
+      service_version: "1.0.0" # EVS_TRACING_OTEL_SERVICE_VERSION
+
+      # Connection settings
+      timeout: 30s # EVS_TRACING_OTEL_TIMEOUT
+      retry:
+        enabled: true # EVS_TRACING_OTEL_RETRY_ENABLED
+        max_attempts: 3 # EVS_TRACING_OTEL_RETRY_MAX_ATTEMPTS
+        backoff_duration: 1s # EVS_TRACING_OTEL_RETRY_BACKOFF_DURATION
+
+      # TLS configuration (if needed)
+      tls:
+        enabled: false # EVS_TRACING_OTEL_TLS_ENABLED
+        ca_cert: "" # EVS_TRACING_OTEL_TLS_CA_CERT
+        client_cert: "" # EVS_TRACING_OTEL_TLS_CLIENT_CERT
+        client_key: "" # EVS_TRACING_OTEL_TLS_CLIENT_KEY
+        insecure_skip_verify: false # EVS_TRACING_OTEL_TLS_INSECURE_SKIP_VERIFY
+
+  # General telemetry configuration (metrics, logs, etc.)
+  telemetry:
+    # The endpoint to send telemetry data to (e.g., Prometheus, DataDog, etc.)
+    endpoint: "http://localhost:4317" # EVS_TELEMETRY_ENDPOINT
+    # Examples:
+    # - "http://localhost:9090/api/v1/write" (Prometheus remote write)
+    # - "https://api.datadoghq.com/api/v1/series" (DataDog)
+
+    # Telemetry types to send
+    types:
+      - metrics # EVS_TELEMETRY_TYPES (metrics, logs, events)
+      - logs
+      - events
+
+    # Batch configuration
+    batch:
+      enabled: true # EVS_TELEMETRY_BATCH_ENABLED
+      max_size: 100 # EVS_TELEMETRY_BATCH_MAX_SIZE
+      interval: 10s # EVS_TELEMETRY_BATCH_INTERVAL
+
+  tls:
+    # If enabled, the server will use TLS to encrypt the connection.
+    enabled: false # EVS_TLS_ENABLED
+    key_path: "examples/certs/key.pem" # EVS_TLS_KEY_PATH
+    key: "" # EVS_TLS_KEY
+    cert_path: "examples/certs/cert.pem" # EVS_TLS_CERT_PATH
+    cert: # EVS_TLS_CERT
+
+  cors:
+    enabled: true # EVS_CORS_ENABLED
+    allowed_origins:
+      - https://127.0.0.1.sslip.io
+      - http://localhost
+      - http://localhost
+    allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allowed_headers: ["content-type", "authorization", "x-evs-api-key"]
+    allow_credentials: true
+
+  security:
+    api_key_hash_secret: "${EVS_API_KEY_HASH_SECRET}"
+
+  custom_headers:
+    enabled: false # EVS_CUSTOM_HEADERS_ENABLED
+    headers:
+      - name: "X-Custom-Header"
+        value: "Custom-Value"
+      - name: "X-Custom-Header-2"
+        value: "Custom-Value-2"
+
+  quotas:
+    access:
+      # If enabled, authenticated requests are counted and potentially limited depending on the configured quota of the instance
+      enabled: false # EVS_QUOTAS_ACCESS_ENABLED
+      debounce:
+        min_frequency: 0s # EVS_QUOTAS_ACCESS_DEBOUNCE_MINFREQUENCY
+        max_bulk_size: 0 # EVS_QUOTAS_ACCESS_DEBOUNCE_MAXBULKSIZE
+      exhausted_cookie_key: "MF.quota.exhausted" # EVS_QUOTAS_ACCESS_EXHAUSTEDCOOKIEKEY
+      exhausted_cookie_max_age: "300s" # EVS_QUOTAS_ACCESS_EXHAUSTEDCOOKIEMAXAGE
+    execution:
+      # If enabled, all action executions are counted and potentially limited depending on the configured quota of the instance
+      enabled: false # EVS_QUOTAS_EXECUTION_DATABASE_ENABLED
+      debounce:
+        min_frequency: 0s # EVS_QUOTAS_EXECUTION_DEBOUNCE_MINFREQUENCY
+        max_bulk_size: 0 # EVS_QUOTAS_EXECUTION_DEBOUNCE_MAXBULKSIZE
+
+database:
+  # Mode controls how databases are used: single (default) or hybrid (Postgres + ClickHouse)
+  mode: single # EVS_DATABASE_MODE (single, hybrid)
+  type: postgres # EVS_DATABASE_TYPE (memory, postgres, clickhouse)
+  # In-memory database for development/testing
+  memory:
+    enabled: false # EVS_DATABASE_MEMORY_ENABLED
+    data_file: "" # EVS_DATABASE_MEMORY_DATA_FILE (optional, for persistence)
+    journal_mode: "WAL" # EVS_DATABASE_MEMORY_JOURNAL_MODE (DELETE, WAL, MEMORY, OFF)
+    cache_size: 1000 # EVS_DATABASE_MEMORY_CACHE_SIZE
+    busy_timeout: 5000 # EVS_DATABASE_MEMORY_BUSY_TIMEOUT (ms)
+
+  postgres:
+    dsn: "postgres://postgres:postgres@localhost:5432/everstack" # EVS_DATABASE_POSTGRES_DSN
+    max_open_conns: 200 # EVS_DATABASE_POSTGRES_MAX_OPEN_CONNS
+    max_idle_conns: 200 # EVS_DATABASE_POSTGRES_MAX_IDLE_CONNS
+    conn_max_lifetime: 5m # EVS_DATABASE_POSTGRES_CONN_MAX_LIFETIME
+    ssl_mode: disable # EVS_DATABASE_POSTGRES_SSL_MODE
+    ssl_root_cert: "" # EVS_DATABASE_POSTGRES_SSL_ROOT_CERT
+    ssl_cert: "" # EVS_DATABASE_POSTGRES_SSL_CERT
+    ssl_key: "" # EVS_DATABASE_POSTGRES_SSL_KEY
+    ssl_insecure: false # EVS_DATABASE_POSTGRES_SSL_INSECURE
+    ssl_server_name: "" # EVS_DATABASE_POSTGRES_SSL_SERVER_NAME
+    ssl_cipher_suites: "" # EVS_DATABASE_POSTGRES_SSL_CIPHER_SUITES
+    ssl_min_version: "" # EVS_DATABASE_POSTGRES_SSL_MIN_VERSION
+    ssl_max_version: "" # EVS_DATABASE_POSTGRES_SSL_MAX_VERSION
+    ssl_prefer_server_cipher_suites: false # EVS_DATABASE_POSTGRES_SSL_PREFER_SERVER_CIPHER_SUITES
+
+  clickhouse:
+    dsn: "clickhouse://clickhouse:clickhouse@localhost:9000/everstack" # EVS_DATABASE_CLICKHOUSE_DSN
+    max_open_conns: 100 # EVS_DATABASE_CLICKHOUSE_MAX_OPEN_CONNS (higher for analytics)
+    max_idle_conns: 50 # EVS_DATABASE_CLICKHOUSE_MAX_IDLE_CONNS
+    conn_max_lifetime: 10m # EVS_DATABASE_CLICKHOUSE_CONN_MAX_LIFETIME
+    conn_max_idle_time: 5m # EVS_DATABASE_CLICKHOUSE_CONN_MAX_IDLE_TIME
+    query_timeout: 30s # EVS_DATABASE_CLICKHOUSE_QUERY_TIMEOUT
+    read_timeout: 30s # EVS_DATABASE_CLICKHOUSE_READ_TIMEOUT
+    write_timeout: 30s # EVS_DATABASE_CLICKHOUSE_WRITE_TIMEOUT
+    compression: true # EVS_DATABASE_CLICKHOUSE_COMPRESSION
+    settings:
+      max_memory_usage: "1073741824" # EVS_DATABASE_CLICKHOUSE_SETTINGS_MAX_MEMORY_USAGE (1GB)
+      max_bytes_before_external_group_by: "536870912" # EVS_DATABASE_CLICKHOUSE_SETTINGS_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY (512MB)
+      max_threads: 8 # EVS_DATABASE_CLICKHOUSE_SETTINGS_MAX_THREADS
+    tls:
+      enabled: false # EVS_DATABASE_CLICKHOUSE_TLS_ENABLED
+      ca_cert: "" # EVS_DATABASE_CLICKHOUSE_TLS_CA_CERT
+      client_cert: "" # EVS_DATABASE_CLICKHOUSE_TLS_CLIENT_CERT
+      client_key: "" # EVS_DATABASE_CLICKHOUSE_TLS_CLIENT_KEY
+      insecure_skip_verify: false # EVS_DATABASE_CLICKHOUSE_TLS_INSECURE_SKIP_VERIFY
+
+# Cache configuration
+cache:
+  enabled: true # EVS_CACHE_ENABLED
+  type: memory # EVS_CACHE_TYPE (memory, redis)
+
+  # In-memory cache
+  memory:
+    max_size: 50000 # EVS_CACHE_MEMORY_MAX_SIZE
+    ttl: 10m # EVS_CACHE_MEMORY_TTL
+
+  # Redis cache
+  redis:
+    address: "" # EVS_CACHE_REDIS_ADDRESS
+    password: "" # EVS_CACHE_REDIS_PASSWORD
+    db: 0 # EVS_CACHE_REDIS_DB
+    ttl: 10m # EVS_CACHE_REDIS_TTL
+
+# Core LLM Gateway Configuration
+gateway:
+  # Model configurations
+  models: # EVS_MODELS_CONFIG
+    # - provider: anthropic
+    #   model:
+    #     - claude-3-5-sonnet-20241022
+    #     # - claude-3-5-haiku-20241022
+    #   api_key: ${ANTHROPIC_API_KEY}
+    #   base_url: https://api.anthropic.com/v1
+    #   max_tokens: 1000
+    #   temperature: 0.5
+    #   top_p: 1
+    #   frequency_penalty: 0
+    #   presence_penalty: 0
+    #   stop:
+    #   rate_limit:
+    #     enabled: true
+    #     requests_per_minute: 1000
+    #     burst: 200
+    #     key_source: "api_key" # or "ip" or "user_id"
+
+    # - provider: openai
+    #   model:
+    #     - gpt-3.5-turbo
+    #   api_key: ${OPENAI_API_KEY}
+    #   base_url: https://api.openai.com/v1
+    #   max_tokens: 1000
+    #   temperature: 0.5
+    #   top_p: 1
+    #   frequency_penalty: 0
+    #   presence_penalty: 0
+    #   stop: null
+    #   rate_limit:
+    #     enabled: true
+    #     requests_per_minute: 1000
+    #     burst: 200
+    #     key_source: "api_key" # or "ip" or "user_id"
+    #   default: true
+    #   default_alias: gpt-3.5-turbo
+
+    - provider: openai
+      model:
+        - gpt-4o-mini
+        - gpt-4-turbo
+      api_key: ${OPENAI_API_KEY}
+      base_url: https://api.openai.com/v1
+      max_tokens: 1000
+      temperature: 0.5
+      top_p: 1
+      frequency_penalty: 0
+      presence_penalty: 0
+      stop:
+      default: true
+      rate_limit:
+        enabled: true
+        requests_per_minute: 1000
+        burst: 200
+        key_source: "api_key" # or "ip" or "user_id"
+
+    - provider: anthropic
+      model:
+        - claude-3-5-sonnet-20241022
+        - claude-3-5-haiku-20241022
+      api_key: ${ANTHROPIC_API_KEY}
+      base_url: https://api.anthropic.com/v1
+      max_tokens: 1000
+      temperature: 0.5
+      top_p: 1
+      frequency_penalty: 0
+      presence_penalty: 0
+      stop:
+      rate_limit:
+        enabled: true
+        requests_per_minute: 1000
+        burst: 200
+        key_source: "api_key" # or "ip" or "user_id"
+
+  # Gateway-level rate limiting (safety net)
+  rate_limit:
+    enabled: true # EVS_RATE_LIMIT_ENABLED
+    requests_per_minute: 500 # EVS_RATE_LIMIT_REQUESTS_PER_MINUTE (more restrictive than model-level 1000)
+    burst: 100 # EVS_RATE_LIMIT_BURST (more restrictive than model-level 200)
+    key_source: "correlation" # or "ip" or "user_id" or "api_key" or "correlation" # EVS_RATE_LIMIT_KEY_SOURCE
+
+  # Load balancing and routing
+  load_balancer:
+    enabled: true # EVS_LOAD_BALANCER_ENABLED
+    strategy: round_robin # EVS_LOAD_BALANCER_STRATEGY
+    key_source: "correlation" # or "ip" or "user_id" or "api_key" or "correlation" # EVS_LOAD_BALANCER_KEY_SOURCE
+    weights:
+      openai: 1 # EVS_LOAD_BALANCER_WEIGHTS_OPENAI
+      anthropic: 1 # EVS_LOAD_BALANCER_WEIGHTS_ANTHROPIC
+    fallback: # EVS_FALLBACK_CONFIG
+      enabled: false # EVS_FALLBACK_ENABLED
+      default:
+        enabled: true
+        provider: openai
+        model: gpt-4o-mini
+        max_tokens: 500
+        temperature: 0.5
+      factors:
+        - name: "model_unavailable" # EVS_FALLBACK_MODEL_UNAVAILABLE_NAME
+          priority: 1 # EVS_FALLBACK_MODEL_UNAVAILABLE_PRIORITY
+          criteria: # EVS_FALLBACK_MODEL_UNAVAILABLE_CRITERIA
+            - error_codes: [503, 504] # server unavailable, timeout
+            - health_check_failed: true
+          timeout_ms: 1200 # EVS_FALLBACK_MODEL_UNAVAILABLE_TIMEOUT_MS
+          backoff_ms: 50 # EVS_FALLBACK_MODEL_UNAVAILABLE_BACKOFF_MS
+          max_attempts: 1 # EVS_FALLBACK_MODEL_UNAVAILABLE_MAX_ATTEMPTS
+          strategy: priority # try fallbacks in order # EVS_FALLBACK_MODEL_UNAVAILABLE_STRATEGY
+          models: # EVS_FALLBACK_MODEL_UNAVAILABLE_MODELS
+            - provider: openai # EVS_FALLBACK_MODEL_UNAVAILABLE_MODEL_PROVIDER
+              model: gpt-4o-mini # EVS_FALLBACK_MODEL_UNAVAILABLE_MODEL_MODEL
+              max_tokens: 500 # EVS_FALLBACK_MODEL_UNAVAILABLE_MODEL_MAX_TOKENS
+              temperature: 1 # EVS_FALLBACK_MODEL_UNAVAILABLE_MODEL_TEMPERATURE
+            - provider: anthropic # EVS_FALLBACK_MODEL_UNAVAILABLE_MODEL_PROVIDER
+              model: claude-3-5-haiku-20241022 # EVS_FALLBACK_MODEL_UNAVAILABLE_MODEL_MODEL
+              max_tokens: 400 # EVS_FALLBACK_MODEL_UNAVAILABLE_MODEL_MAX_TOKENS
+              temperature: 0.7 # EVS_FALLBACK_MODEL_UNAVAILABLE_MODEL_TEMPERATURE
+        - name: "rate_limit_exceeded" # EVS_FALLBACK_RATE_LIMIT_EXCEEDED_NAME
+          priority: 2 # EVS_FALLBACK_RATE_LIMIT_EXCEEDED_PRIORITY
+          criteria: # EVS_FALLBACK_RATE_LIMIT_EXCEEDED_CRITERIA
+            - rate_limit_hit: true
+          strategy: round_robin # EVS_FALLBACK_RATE_LIMIT_EXCEEDED_STRATEGY
+          timeout_ms: 600 # EVS_FALLBACK_RATE_LIMIT_EXCEEDED_TIMEOUT_MS
+          backoff_ms: 50 # EVS_FALLBACK_RATE_LIMIT_EXCEEDED_BACKOFF_MS
+          max_attempts: 1 # EVS_FALLBACK_RATE_LIMIT_EXCEEDED_MAX_ATTEMPTS
+          models: # EVS_FALLBACK_RATE_LIMIT_EXCEEDED_MODELS
+            - provider: openai # EVS_FALLBACK_RATE_LIMIT_EXCEEDED_MODEL_PROVIDER
+              model: gpt-3.5-turbo # EVS_FALLBACK_RATE_LIMIT_EXCEEDED_MODEL_MODEL
+              max_tokens: 300 # EVS_FALLBACK_RATE_LIMIT_EXCEEDED_MODEL_MAX_TOKENS
+              temperature: 0.7 # EVS_FALLBACK_RATE_LIMIT_EXCEEDED_MODEL_TEMPERATURE
+            - provider: anthropic # EVS_FALLBACK_RATE_LIMIT_EXCEEDED_MODEL_PROVIDER
+              model: claude-3-5-haiku-20241022 # EVS_FALLBACK_RATE_LIMIT_EXCEEDED_MODEL_MODEL
+              max_tokens: 300 # EVS_FALLBACK_RATE_LIMIT_EXCEEDED_MODEL_MAX_TOKENS
+              temperature: 0.6 # EVS_FALLBACK_RATE_LIMIT_EXCEEDED_MODEL_TEMPERATURE
+        - name: "latency_threshold_exceeded" # EVS_FALLBACK_LATENCY_THRESHOLD_EXCEEDED_NAME
+          priority: 3 # EVS_FALLBACK_LATENCY_THRESHOLD_EXCEEDED_PRIORITY
+          criteria: # EVS_FALLBACK_LATENCY_THRESHOLD_EXCEEDED_CRITERIA
+            - latency_ms: ">1000"
+          strategy: parallel # call multiple fallbacks concurrently and pick fastest # EVS_FALLBACK_LATENCY_THRESHOLD_EXCEEDED_STRATEGY
+          timeout_ms: 1500 # EVS_FALLBACK_LATENCY_THRESHOLD_EXCEEDED_TIMEOUT_MS
+          backoff_ms: 100 # EVS_FALLBACK_LATENCY_THRESHOLD_EXCEEDED_BACKOFF_MS
+          max_attempts: 1 # EVS_FALLBACK_LATENCY_THRESHOLD_EXCEEDED_MAX_ATTEMPTS
+          models: # EVS_FALLBACK_LATENCY_THRESHOLD_EXCEEDED_MODELS
+            - provider: openai # EVS_FALLBACK_LATENCY_THRESHOLD_EXCEEDED_MODEL_PROVIDER
+              model: gpt-4o-mini # EVS_FALLBACK_LATENCY_THRESHOLD_EXCEEDED_MODEL_MODEL
+              max_tokens: 400 # EVS_FALLBACK_LATENCY_THRESHOLD_EXCEEDED_MODEL_MAX_TOKENS
+              temperature: 0.5 # EVS_FALLBACK_LATENCY_THRESHOLD_EXCEEDED_MODEL_TEMPERATURE
+            - provider: anthropic # EVS_FALLBACK_LATENCY_THRESHOLD_EXCEEDED_MODEL_PROVIDER
+              model: claude-3-5-sonnet-20241022 # EVS_FALLBACK_LATENCY_THRESHOLD_EXCEEDED_MODEL_MODEL
+              max_tokens: 400 # EVS_FALLBACK_LATENCY_THRESHOLD_EXCEEDED_MODEL_MAX_TOKENS
+              temperature: 0.6 # EVS_FALLBACK_LATENCY_THRESHOLD_EXCEEDED_MODEL_TEMPERATURE
+        - name: "cost_limit_exceeded" # EVS_FALLBACK_COST_LIMIT_EXCEEDED_NAME
+          priority: 4 # EVS_FALLBACK_COST_LIMIT_EXCEEDED_PRIORITY
+          criteria: # EVS_FALLBACK_COST_LIMIT_EXCEEDED_CRITERIA
+            - cost_limit_hit: true
+          strategy: priority # EVS_FALLBACK_COST_LIMIT_EXCEEDED_STRATEGY
+          timeout_ms: 10000 # EVS_FALLBACK_COST_LIMIT_EXCEEDED_TIMEOUT_MS
+          backoff_ms: 1000 # EVS_FALLBACK_COST_LIMIT_EXCEEDED_BACKOFF_MS
+          max_attempts: 3 # EVS_FALLBACK_COST_LIMIT_EXCEEDED_MAX_ATTEMPTS
+          models: # EVS_FALLBACK_COST_LIMIT_EXCEEDED_MODELS
+            - provider: openai # EVS_FALLBACK_COST_LIMIT_EXCEEDED_MODEL_PROVIDER
+              model: gpt-3.5-turbo # EVS_FALLBACK_COST_LIMIT_EXCEEDED_MODEL_MODEL
+              max_tokens: 200 # EVS_FALLBACK_COST_LIMIT_EXCEEDED_MODEL_MAX_TOKENS
+              temperature: 0.5 # EVS_FALLBACK_COST_LIMIT_EXCEEDED_MODEL_TEMPERATURE
+
+  # Memory store configuration for conversation history and context
+  memory:
+    enabled: true # EVS_MEMORY_ENABLED
+    type: redis # EVS_MEMORY_TYPE (redis, postgres, memory, vector)
+    ttl: 24h # EVS_MEMORY_TTL (how long to keep conversation history)
+    max_tokens: 10000 # EVS_MEMORY_MAX_TOKENS (max tokens per conversation)
+
+    # Redis memory store
+    redis:
+      address: "" # EVS_MEMORY_REDIS_ADDRESS
+      password: "" # EVS_MEMORY_REDIS_PASSWORD
+      db: 1 # EVS_MEMORY_REDIS_DB (separate from cache)
+      key_prefix: "memory:" # EVS_MEMORY_REDIS_KEY_PREFIX
+
+    # Vector database for semantic memory
+    vector:
+      type: pinecone # EVS_MEMORY_VECTOR_TYPE (pinecone, weaviate, qdrant, chroma)
+      dimension: 1536 # EVS_MEMORY_VECTOR_DIMENSION
+      metric: cosine # EVS_MEMORY_VECTOR_METRIC (cosine, euclidean, dot)
+
+      # Pinecone configuration
+      pinecone:
+        api_key: "" # EVS_MEMORY_VECTOR_PINECONE_API_KEY
+        environment: "" # EVS_MEMORY_VECTOR_PINECONE_ENVIRONMENT
+        index_name: "" # EVS_MEMORY_VECTOR_PINECONE_INDEX_NAME
+
+      # Weaviate configuration
+      weaviate:
+        url: "" # EVS_MEMORY_VECTOR_WEAVIATE_URL
+        api_key: "" # EVS_MEMORY_VECTOR_WEAVIATE_API_KEY
+        class_name: "ConversationMemory" # EVS_MEMORY_VECTOR_WEAVIATE_CLASS_NAME
+
+  # Model capabilities and function types
+  capabilities:
+    # Function calling configuration
+    function_calling:
+      enabled: true # EVS_CAPABILITIES_FUNCTION_CALLING_ENABLED
+      providers:
+        - openai # EVS_CAPABILITIES_FUNCTION_CALLING_PROVIDERS
+        - anthropic
+      max_functions: 10 # EVS_CAPABILITIES_FUNCTION_CALLING_MAX_FUNCTIONS
+      auto_execute: false # EVS_CAPABILITIES_FUNCTION_CALLING_AUTO_EXECUTE
+
+    # Embedding generation
+    embeddings:
+      enabled: true # EVS_CAPABILITIES_EMBEDDINGS_ENABLED
+      providers:
+        - openai # EVS_CAPABILITIES_EMBEDDINGS_PROVIDERS
+        - cohere
+        - huggingface
+      default_model: "text-embedding-ada-002" # EVS_CAPABILITIES_EMBEDDINGS_DEFAULT_MODEL
+      max_batch_size: 100 # EVS_CAPABILITIES_EMBEDDINGS_MAX_BATCH_SIZE
+
+    # Agent capabilities
+    agents:
+      enabled: true # EVS_CAPABILITIES_AGENTS_ENABLED
+      max_iterations: 10 # EVS_CAPABILITIES_AGENTS_MAX_ITERATIONS
+      tools_enabled: true # EVS_CAPABILITIES_AGENTS_TOOLS_ENABLED
+      memory_enabled: true # EVS_CAPABILITIES_AGENTS_MEMORY_ENABLED
+      reasoning_enabled: true # EVS_CAPABILITIES_AGENTS_REASONING_ENABLED
+
+    # Streaming capabilities
+    streaming:
+      enabled: true # EVS_CAPABILITIES_STREAMING_ENABLED
+      chunk_size: 100 # EVS_CAPABILITIES_STREAMING_CHUNK_SIZE
+      buffer_size: 1024 # EVS_CAPABILITIES_STREAMING_BUFFER_SIZE
+
+  # Backup configuration
+  backup:
+    enabled: true # EVS_BACKUP_ENABLED
+    backup_interval: 24h # EVS_BACKUP_INTERVAL
+    retention:
+      days: 30 # EVS_BACKUP_RETENTION_DAYS
+      max_backups: 100 # EVS_BACKUP_MAX_BACKUPS
+    compression:
+      enabled: true # EVS_BACKUP_COMPRESSION_ENABLED
+      algorithm: gzip # EVS_BACKUP_COMPRESSION_ALGORITHM (gzip, lz4, zstd)
+    encryption:
+      enabled: false # EVS_BACKUP_ENCRYPTION_ENABLED
+      key: "" # EVS_BACKUP_ENCRYPTION_KEY
+
+    storage:
+      type: local # EVS_BACKUP_STORAGE_TYPE (local, s3, gcs, azure_blob, ftp)
+
+      # Local storage config
+      local:
+        path: "/var/backups/everstack" # EVS_BACKUP_STORAGE_LOCAL_PATH
+
+      # S3 storage config
+      s3:
+        bucket: "" # EVS_BACKUP_STORAGE_S3_BUCKET
+        region: "" # EVS_BACKUP_STORAGE_S3_REGION
+        access_key_id: "" # EVS_BACKUP_STORAGE_S3_ACCESS_KEY_ID
+        secret_access_key: "" # EVS_BACKUP_STORAGE_S3_SECRET_ACCESS_KEY
+        endpoint: "" # EVS_BACKUP_STORAGE_S3_ENDPOINT (optional)
+        path_style: false # EVS_BACKUP_STORAGE_S3_PATH_STYLE
+
+      # GCS storage config
+      gcs:
+        bucket: "" # EVS_BACKUP_STORAGE_GCS_BUCKET
+        credentials_file: "" # EVS_BACKUP_STORAGE_GCS_CREDENTIALS_FILE
+        project_id: "" # EVS_BACKUP_STORAGE_GCS_PROJECT_ID
+
+      # Azure Blob storage config
+      azure_blob:
+        container: "" # EVS_BACKUP_STORAGE_AZURE_CONTAINER
+        account_name: "" # EVS_BACKUP_STORAGE_AZURE_ACCOUNT_NAME
+        account_key: "" # EVS_BACKUP_STORAGE_AZURE_ACCOUNT_KEY
+        connection_string: "" # EVS_BACKUP_STORAGE_AZURE_CONNECTION_STRING (optional)
+
+      # FTP storage config
+      ftp:
+        host: "" # EVS_BACKUP_STORAGE_FTP_HOST
+        port: 21 # EVS_BACKUP_STORAGE_FTP_PORT
+        username: "" # EVS_BACKUP_STORAGE_FTP_USERNAME
+        password: "" # EVS_BACKUP_STORAGE_FTP_PASSWORD
+        remote_path: "" # EVS_BACKUP_STORAGE_FTP_REMOTE_PATH
+
+  # File upload and processing
+  file_processing:
+    enabled: false # EVS_FILE_PROCESSING_ENABLED
+    upload:
+      max_file_size: "100MB" # EVS_FILE_PROCESSING_UPLOAD_MAX_FILE_SIZE
+      allowed_types: ["pdf", "txt", "docx", "csv", "json"] # EVS_FILE_PROCESSING_UPLOAD_ALLOWED_TYPES
+      storage: local # EVS_FILE_PROCESSING_UPLOAD_STORAGE (local, s3, gcs)
+
+    # Processing pipelines
+    pipelines:
+      - name: "text_extraction" # EVS_FILE_PROCESSING_PIPELINES_NAME
+        enabled: true # EVS_FILE_PROCESSING_PIPELINES_ENABLED
+        steps: ["ocr", "text_extract", "chunk"] # EVS_FILE_PROCESSING_PIPELINES_STEPS
+      - name: "vector_embedding"
+        enabled: true
+        steps: ["embed", "index"]
+
+  # Plugin and extension system
+  plugins:
+    enabled: false # EVS_PLUGINS_ENABLED
+
+    # Everstack-curated plugins (user selection)
+    curated:
+      enabled: true # EVS_PLUGINS_CURATED_ENABLED
+      plugins:
+        - name: "openai_functions" # EVS_PLUGINS_CURATED_PLUGINS_NAME
+          description: "OpenAI function calling support" # EVS_PLUGINS_CURATED_PLUGINS_DESCRIPTION
+          enabled: false # EVS_PLUGINS_CURATED_PLUGINS_ENABLED
+          version: "1.0.0" # EVS_PLUGINS_CURATED_PLUGINS_VERSION
+        - name: "anthropic_tools"
+          description: "Anthropic tools support"
+          enabled: false
+          version: "1.0.0"
+        - name: "web_search"
+          description: "Web search capabilities"
+          enabled: false
+          version: "1.0.0"
+        - name: "file_processor"
+          description: "Advanced file processing"
+          enabled: false
+          version: "1.0.0"
+        - name: "code_interpreter"
+          description: "Code execution and interpretation"
+          enabled: false
+          version: "1.0.0"
+
+    # Custom plugins (user-created)
+    custom:
+      enabled: false # EVS_PLUGINS_CUSTOM_ENABLED
+      directory: "./plugins" # EVS_PLUGINS_CUSTOM_DIRECTORY
+      auto_load: true # EVS_PLUGINS_CUSTOM_AUTO_LOAD
+
+      # Supported plugin formats
+      formats:
+        - "js" # JavaScript/TypeScript plugins
+        - "py" # Python plugins
+        - "yaml" # YAML-based function definitions
+        - "json" # JSON-based configurations
+
+  # Content safety and guardrails
+  guardrails:
+    enabled: true # EVS_GUARDRAILS_ENABLED
+
+    # Input validation and safety
+    input:
+      enabled: true # EVS_GUARDRAILS_INPUT_ENABLED
+
+      # Prompt injection protection
+      prompt_injection:
+        enabled: true # EVS_GUARDRAILS_INPUT_PROMPT_INJECTION_ENABLED
+        detection_methods: ["pattern", "semantic"] # EVS_GUARDRAILS_INPUT_PROMPT_INJECTION_DETECTION_METHODS
+        patterns: ["ignore previous", "system:", "assistant:"] # EVS_GUARDRAILS_INPUT_PROMPT_INJECTION_PATTERNS
+        action: "block" # EVS_GUARDRAILS_INPUT_PROMPT_INJECTION_ACTION (block, sanitize, warn)
+
+      # Content filtering
+      content_filtering:
+        enabled: true # EVS_GUARDRAILS_INPUT_CONTENT_FILTERING_ENABLED
+        provider: openai # EVS_GUARDRAILS_INPUT_CONTENT_FILTERING_PROVIDER (openai, azure, custom)
+        categories: ["hate", "harassment", "self-harm", "sexual", "violence"] # EVS_GUARDRAILS_INPUT_CONTENT_FILTERING_CATEGORIES
+        threshold: 0.7 # EVS_GUARDRAILS_INPUT_CONTENT_FILTERING_THRESHOLD
+        action: "block" # EVS_GUARDRAILS_INPUT_CONTENT_FILTERING_ACTION (block, flag, warn)
+
+      # PII detection
+      pii_detection:
+        enabled: false # EVS_GUARDRAILS_INPUT_PII_DETECTION_ENABLED
+        types: ["email", "phone", "ssn", "credit_card"] # EVS_GUARDRAILS_INPUT_PII_DETECTION_TYPES
+        action: "redact" # EVS_GUARDRAILS_INPUT_PII_DETECTION_ACTION (redact, block, warn)
+
+      # Token limits
+      token_limits:
+        max_input_tokens: 100000 # EVS_GUARDRAILS_INPUT_TOKEN_LIMITS_MAX_INPUT_TOKENS
+        max_total_tokens: 200000 # EVS_GUARDRAILS_INPUT_TOKEN_LIMITS_MAX_TOTAL_TOKENS
+        action: "truncate" # EVS_GUARDRAILS_INPUT_TOKEN_LIMITS_ACTION (truncate, block, warn)
+
+    # Output validation and safety
+    output:
+      enabled: true # EVS_GUARDRAILS_OUTPUT_ENABLED
+
+      # Content validation
+      content_validation:
+        enabled: true # EVS_GUARDRAILS_OUTPUT_CONTENT_VALIDATION_ENABLED
+        check_hallucination: true # EVS_GUARDRAILS_OUTPUT_CONTENT_VALIDATION_CHECK_HALLUCINATION
+        check_facts: false # EVS_GUARDRAILS_OUTPUT_CONTENT_VALIDATION_CHECK_FACTS
+        check_sources: true # EVS_GUARDRAILS_OUTPUT_CONTENT_VALIDATION_CHECK_SOURCES
+
+      # Output filtering
+      content_filtering:
+        enabled: true # EVS_GUARDRAILS_OUTPUT_CONTENT_FILTERING_ENABLED
+        provider: openai # EVS_GUARDRAILS_OUTPUT_CONTENT_FILTERING_PROVIDER
+        categories: ["hate", "harassment", "self-harm", "sexual", "violence"] # EVS_GUARDRAILS_OUTPUT_CONTENT_FILTERING_CATEGORIES
+        threshold: 0.7 # EVS_GUARDRAILS_OUTPUT_CONTENT_FILTERING_THRESHOLD
+        action: "block" # EVS_GUARDRAILS_OUTPUT_CONTENT_FILTERING_ACTION
+
+      # Jailbreak detection
+      jailbreak_detection:
+        enabled: true # EVS_GUARDRAILS_OUTPUT_JAILBREAK_DETECTION_ENABLED
+        methods: ["pattern", "semantic", "behavioral"] # EVS_GUARDRAILS_OUTPUT_JAILBREAK_DETECTION_METHODS
+        action: "block" # EVS_GUARDRAILS_OUTPUT_JAILBREAK_DETECTION_ACTION
+
+    # Custom guardrails (user-defined rules)
+    custom:
+      enabled: false # EVS_GUARDRAILS_CUSTOM_ENABLED
+      rules: [] # EVS_GUARDRAILS_CUSTOM_RULES
+
+      # Example custom rule structure:
+      # - name: "no_code_execution"
+      #   description: "Prevent code execution in responses"
+      #   type: "pattern"
+      #   pattern: "exec\\(|eval\\(|system\\("
+      #   action: "block"
+      #   severity: "high"
+
+  # Agent definitions and configurations
+  agents:
+    enabled: true # EVS_AGENTS_ENABLED
+
+    # Built-in agents (Everstack-provided)
+    builtin:
+      enabled: true # EVS_AGENTS_BUILTIN_ENABLED
+      agents:
+        - name: "research_agent" # EVS_AGENTS_BUILTIN_AGENTS_NAME
+          description: "Research and information gathering agent" # EVS_AGENTS_BUILTIN_AGENTS_DESCRIPTION
+          enabled: false # EVS_AGENTS_BUILTIN_AGENTS_ENABLED
+          model: "gpt-4o" # EVS_AGENTS_BUILTIN_AGENTS_MODEL
+          tools: ["web_search", "file_reader"] # EVS_AGENTS_BUILTIN_AGENTS_TOOLS
+        - name: "code_agent"
+          description: "Code generation and analysis agent"
+          enabled: false
+          model: "claude-3-5-sonnet"
+          tools: ["code_interpreter", "github_search"]
+        - name: "data_agent"
+          description: "Data analysis and visualization agent"
+          enabled: false
+          model: "gpt-4o"
+          tools: ["data_analyzer", "chart_generator"]
+
+    # Custom agents (user-defined)
+    custom:
+      enabled: false # EVS_AGENTS_CUSTOM_ENABLED
+      agents: [] # EVS_AGENTS_CUSTOM_AGENTS
+
+      # Example custom agent structure:
+      # - name: "my_custom_agent"
+      #   description: "My custom agent for specific tasks"
+      #   model: "gpt-4o"
+      #   system_prompt: "You are a specialized agent for..."
+      #   tools:
+      #     - name: "custom_tool_1"
+      #       type: "function"
+      #       description: "My custom tool"
+      #       parameters:
+      #         - name: "param1"
+      #           type: "string"
+      #           required: true
+      #   memory:
+      #     enabled: true
+      #     type: "conversation"
+      #     max_tokens: 5000
+      #   reasoning:
+      #     enabled: true
+      #     max_iterations: 10
+      #     strategy: "chain_of_thought"
+      #   constraints:
+      #     max_tokens_per_response: 2000
+      #     max_tool_calls: 5
+      #     timeout: 60s
+
+# Global alerting configuration for the entire application
+alerts:
+  # Server-level alerts (infrastructure/operational)
+  server:
+    enabled: true # EVS_ALERTS_SERVER_ENABLED
+    rules: [] # EVS_ALERTS_SERVER_RULES
+    # Example server alerts:
+    # - name: "high_cpu_usage"
+    #   description: "Alert when CPU usage is high"
+    #   enabled: true
+    #   condition: "cpu_usage > 0.8" # 80% CPU usage
+    #   duration: "5m"
+    #   severity: "warning"
+    #
+    # - name: "database_connection_failed"
+    #   description: "Alert when database connections fail"
+    #   enabled: true
+    #   condition: "db_connection_errors > 5"
+    #   duration: "1m"
+    #   severity: "critical"
+
+  # Gateway-level alerts (application/business logic)
+  gateway:
+    enabled: true # EVS_ALERTS_GATEWAY_ENABLED
+    rules: [] # EVS_ALERTS_GATEWAY_RULES
+    # Example gateway alerts:
+    # - name: "model_unavailable"
+    #   description: "Alert when models become unavailable"
+    #   enabled: true
+    #   condition: "model_health_check_failed"
+    #   duration: "30s"
+    #   severity: "critical"
+    #
+    # - name: "high_cost"
+    #   description: "Alert when API costs exceed threshold"
+    #   enabled: true
+    #   condition: "hourly_cost > 100" # $100 per hour
+    #   duration: "10m"
+    #   severity: "warning"
+
+  # Shared notification channels
+  notifications:
+    # Email notifications
+    email:
+      enabled: false # EVS_ALERTS_NOTIFICATIONS_EMAIL_ENABLED
+      smtp_host: "" # EVS_ALERTS_NOTIFICATIONS_EMAIL_SMTP_HOST
+      smtp_port: 587 # EVS_ALERTS_NOTIFICATIONS_EMAIL_SMTP_PORT
+      username: "" # EVS_ALERTS_NOTIFICATIONS_EMAIL_USERNAME
+      password: "" # EVS_ALERTS_NOTIFICATIONS_EMAIL_PASSWORD
+      from: "" # EVS_ALERTS_NOTIFICATIONS_EMAIL_FROM
+      to: [] # EVS_ALERTS_NOTIFICATIONS_EMAIL_TO
+      tls_enabled: true # EVS_ALERTS_NOTIFICATIONS_EMAIL_TLS_ENABLED
+
+    # Slack notifications
+    slack:
+      enabled: false # EVS_ALERTS_NOTIFICATIONS_SLACK_ENABLED
+      webhook_url: "" # EVS_ALERTS_NOTIFICATIONS_SLACK_WEBHOOK_URL
+      channel: "#alerts" # EVS_ALERTS_NOTIFICATIONS_SLACK_CHANNEL
+      username: "Everstack Alerts" # EVS_ALERTS_NOTIFICATIONS_SLACK_USERNAME
+
+    # Discord notifications
+    discord:
+      enabled: false # EVS_ALERTS_NOTIFICATIONS_DISCORD_ENABLED
+      webhook_url: "" # EVS_ALERTS_NOTIFICATIONS_DISCORD_WEBHOOK_URL
+      channel: "alerts" # EVS_ALERTS_NOTIFICATIONS_DISCORD_CHANNEL
+
+    # Webhook notifications
+    webhook:
+      enabled: false # EVS_ALERTS_NOTIFICATIONS_WEBHOOK_ENABLED
+      url: "" # EVS_ALERTS_NOTIFICATIONS_WEBHOOK_URL
+      method: "POST" # EVS_ALERTS_NOTIFICATIONS_WEBHOOK_METHOD
+      headers: {} # EVS_ALERTS_NOTIFICATIONS_WEBHOOK_HEADERS
+      timeout: 30s # EVS_ALERTS_NOTIFICATIONS_WEBHOOK_TIMEOUT
+
+  # Alert routing and escalation
+  routing:
+    # Route alerts based on severity
+    by_severity:
+      info: ["email", "slack"] # EVS_ALERTS_ROUTING_BY_SEVERITY_INFO
+      warning: ["email", "slack"] # EVS_ALERTS_ROUTING_BY_SEVERITY_WARNING
+      critical: ["email", "slack", "webhook"] # EVS_ALERTS_ROUTING_BY_SEVERITY_CRITICAL
+
+    # Route alerts based on rule name
+    by_rule: {} # EVS_ALERTS_ROUTING_BY_RULE
+    # Example:
+    # high_error_rate: ["pagerduty"]
+    # model_unavailable: ["pagerduty", "webhook"]
+
+    # Escalation policies
+    escalation:
+      enabled: true # EVS_ALERTS_ROUTING_ESCALATION_ENABLED
+      policies:
+        - name: "default" # EVS_ALERTS_ROUTING_ESCALATION_POLICIES_NAME
+          steps:
+            - delay: "5m" # EVS_ALERTS_ROUTING_ESCALATION_POLICIES_STEPS_DELAY
+              notify: ["slack"] # EVS_ALERTS_ROUTING_ESCALATION_POLICIES_STEPS_NOTIFY
+            - delay: "15m"
+              notify: ["email"]
+            - delay: "1h"
+              notify: ["webhook"]
+
+  # Alert management
+  management:
+    # Alert grouping and deduplication
+    grouping:
+      enabled: true # EVS_ALERTS_MANAGEMENT_GROUPING_ENABLED
+      group_by: ["rule_name", "severity"] # EVS_ALERTS_MANAGEMENT_GROUPING_GROUP_BY
+      group_wait: "30s" # EVS_ALERTS_MANAGEMENT_GROUPING_GROUP_WAIT
+      group_interval: "5m" # EVS_ALERTS_MANAGEMENT_GROUPING_GROUP_INTERVAL
+      repeat_interval: "4h" # EVS_ALERTS_MANAGEMENT_GROUPING_REPEAT_INTERVAL
+
+    # Alert silencing
+    silence:
+      enabled: true # EVS_ALERTS_MANAGEMENT_SILENCE_ENABLED
+      rules: [] # EVS_ALERTS_MANAGEMENT_SILENCE_RULES
+      # Example silence rule:
+      # - rule_name: "high_error_rate"
+      #   duration: "1h"
+      #   reason: "Scheduled maintenance"
+
+    # Alert history and retention
+    history:
+      enabled: true # EVS_ALERTS_MANAGEMENT_HISTORY_ENABLED
+      retention_days: 90 # EVS_ALERTS_MANAGEMENT_HISTORY_RETENTION_DAYS
+      max_alerts: 10000 # EVS_ALERTS_MANAGEMENT_HISTORY_MAX_ALERTS
+
+# Global feature flags for the entire application
+features:
+  # Server-level features (infrastructure/deployment)
+  server:
+    enable_new_load_balancer: false # EVS_FEATURES_SERVER_ENABLE_NEW_LOAD_BALANCER
+    enable_experimental_api_v2: true # EVS_FEATURES_SERVER_ENABLE_EXPERIMENTAL_API_V2
+    enable_debug_endpoints: false # EVS_FEATURES_SERVER_ENABLE_DEBUG_ENDPOINTS
+    enable_profiling: false # EVS_FEATURES_SERVER_ENABLE_PROFILING
+
+  # Gateway-level features (application/business logic)
+  gateway:
+    # Model and provider features
+    enable_function_calling: true # EVS_FEATURES_GATEWAY_ENABLE_FUNCTION_CALLING
+    enable_embeddings: true # EVS_FEATURES_GATEWAY_ENABLE_EMBEDDINGS
+    enable_agents: true # EVS_FEATURES_GATEWAY_ENABLE_AGENTS
+    enable_streaming: true # EVS_FEATURES_GATEWAY_ENABLE_STREAMING
+
+    # Advanced features
+    enable_model_fine_tuning: false # EVS_FEATURES_GATEWAY_ENABLE_MODEL_FINE_TUNING
+    enable_custom_models: false # EVS_FEATURES_GATEWAY_ENABLE_CUSTOM_MODELS
+    enable_model_metrics: true # EVS_FEATURES_GATEWAY_ENABLE_MODEL_METRICS
+    enable_cost_tracking: true # EVS_FEATURES_GATEWAY_ENABLE_COST_TRACKING
+
+    # Security features
+    enable_api_key_rotation: false # EVS_FEATURES_GATEWAY_ENABLE_API_KEY_ROTATION
+    enable_request_signing: false # EVS_FEATURES_GATEWAY_ENABLE_REQUEST_SIGNING
+    enable_response_encryption: false # EVS_FEATURES_GATEWAY_ENABLE_RESPONSE_ENCRYPTION
+
+    # Performance features
+    enable_response_caching: true # EVS_FEATURES_GATEWAY_ENABLE_RESPONSE_CACHING
+    enable_request_batching: true # EVS_FEATURES_GATEWAY_ENABLE_REQUEST_BATCHING
+    enable_connection_pooling: true # EVS_FEATURES_GATEWAY_ENABLE_CONNECTION_POOLING
+    enable_sse: false # EVS_FEATURES_GATEWAY_ENABLE_SSE
+
+    # Monitoring features
+    enable_request_logging: true # EVS_FEATURES_GATEWAY_ENABLE_REQUEST_LOGGING
+    enable_performance_monitoring: true # EVS_FEATURES_GATEWAY_ENABLE_PERFORMANCE_MONITORING
+    enable_health_checks: true # EVS_FEATURES_GATEWAY_ENABLE_HEALTH_CHECKS

@@ -117,7 +117,10 @@ func TestSelectedChildRuntimeConfigUsesProjectedSandboxPolicy(t *testing.T) {
 		SandboxGitBranch:      sql.NullString{String: "release", Valid: true},
 		SandboxSSHEnabled:     sql.NullBool{Bool: true, Valid: true},
 	})
-	sandboxConfig := sandbox.ParseSandboxConfig(config)
+	sandboxConfig, err := sandbox.ParseSandboxConfig(config)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if sandboxConfig.MemoryMB != 2048 || sandboxConfig.NetworkMode != "deny" || sandboxConfig.TimeoutSeconds != 900 {
 		t.Fatalf("projected child sandbox policy = %#v", sandboxConfig)
 	}
@@ -141,7 +144,10 @@ func TestSelectedEphemeralChildRuntimeConfigPreservesProjectSandboxPolicy(t *tes
 		SandboxEnvVars:        []byte(`{}`),
 	})
 
-	sandboxConfig := sandbox.ParseSandboxConfig(config)
+	sandboxConfig, err := sandbox.ParseSandboxConfig(config)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if sandboxConfig.MemoryMB != 1536 || sandboxConfig.NetworkMode != "deny" {
 		t.Fatalf("ephemeral child sandbox policy = %#v", sandboxConfig)
 	}
@@ -161,7 +167,10 @@ func TestPersistentAgentRuntimeConfigPreservesNestedPolicyWhenProjectionContains
 		SandboxEnvVars:     []byte(`{}`),
 	})
 
-	sandboxConfig := sandbox.ParseSandboxConfig(config)
+	sandboxConfig, err := sandbox.ParseSandboxConfig(config)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !sandboxConfig.Enabled || !sandboxConfig.Persistent {
 		t.Fatalf("persistent sandbox flags = %#v", sandboxConfig)
 	}
@@ -184,7 +193,10 @@ func TestPersistentAgentRuntimeConfigBuildsPolicyFromTypedSandboxFields(t *testi
 	if err := projectruntime.ValidateFunctionSandboxPolicy(config); err != nil {
 		t.Fatalf("typed persistent sandbox policy was rejected: %v", err)
 	}
-	sandboxConfig := sandbox.ParseSandboxConfig(config)
+	sandboxConfig, err := sandbox.ParseSandboxConfig(config)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !sandboxConfig.Enabled || !sandboxConfig.Persistent || sandboxConfig.NetworkMode != "deny" {
 		t.Fatalf("typed persistent sandbox policy = %#v", sandboxConfig)
 	}

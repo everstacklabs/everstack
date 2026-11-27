@@ -81,11 +81,15 @@ func (m *PublicMetricValues) validate(all bool) error {
 
 	// no validation rules for AvgLatencyMs
 
-	// no validation rules for AvgTtftMs
-
-	// no validation rules for AvgThroughputTps
-
 	// no validation rules for SuccessRate
+
+	if m.AvgTtftMs != nil {
+		// no validation rules for AvgTtftMs
+	}
+
+	if m.AvgThroughputTps != nil {
+		// no validation rules for AvgThroughputTps
+	}
 
 	if len(errors) > 0 {
 		return PublicMetricValuesMultiError(errors)

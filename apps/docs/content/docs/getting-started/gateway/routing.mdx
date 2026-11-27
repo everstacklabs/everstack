@@ -22,7 +22,7 @@ The first match wins. This means a custom model alias always takes priority over
 
 Custom models let you define aliases that map to a specific provider, model, and optional parameter overrides.
 
-For example, you could create an alias called `fast` that routes to `gpt-4o-mini` on OpenAI with a lower `max_tokens` ceiling, or an alias called `smart` that routes to `claude-sonnet-4-20250514` on Anthropic with a specific `temperature`.
+For example, you could create an alias called `fast` that routes to `gpt-5.4-mini` on OpenAI with a lower `max_tokens` ceiling, or an alias called `smart` that routes to `claude-sonnet-5-5` on Anthropic with a specific `temperature`.
 
 These mappings are tenant-scoped. Each tenant can define their own aliases without affecting other tenants.
 
@@ -52,7 +52,7 @@ Model-not-found errors do **not** trigger fallback. If a model does not exist on
 
 Each entry in a fallback chain can override request parameters for that specific provider. This is useful because different providers have different limits and defaults.
 
-For example, a chain might use `claude-sonnet-4-20250514` as the primary with `max_tokens: 8192`, then fall back to `gpt-4o` with `max_tokens: 4096` and a lower `temperature`. Each fallback entry carries its own provider, model, and parameter overrides.
+For example, a chain might use `claude-sonnet-5-5` as the primary with `max_tokens: 8192`, then fall back to `gpt-5.4` with `max_tokens: 4096` and a lower `temperature`. Each fallback entry carries its own provider, model, and parameter overrides.
 
 ## Events
 

@@ -948,7 +948,7 @@ function DagNodeInspector({
             type="button"
             onClick={onDelete}
             title="Delete node"
-            className={`rounded border border-brand-main-700 p-1 text-white/40 hover:border-red-500/50 hover:text-red-400 light:border-brand-main-200 light:text-black/40 ${pressableClass}`}
+            className={`rounded border border-brand-main-700 p-1 text-white/40 hover:border-danger-border hover:text-danger light:border-brand-main-200 light:text-black/40 ${pressableClass}`}
           >
             <Trash2 className="h-3 w-3" />
           </button>
@@ -1034,7 +1034,7 @@ function DagNodeInspector({
                   <button
                     type="button"
                     onClick={() => removeEdge(i)}
-                    className="shrink-0 text-white/35 hover:text-red-400 light:text-black/35"
+                    className="shrink-0 text-white/35 hover:text-danger light:text-black/35"
                     aria-label="Remove route"
                   >
                     <Trash2 className="h-3.5 w-3.5" />

@@ -76,7 +76,7 @@ export function UserMenu() {
           {user?.avatarUrl ? (
             <img
               src={user.avatarUrl}
-              alt={user.name || user.email || ''}
+              alt=""
               className="size-8 rounded-full object-cover"
               referrerPolicy="no-referrer"
             />
@@ -158,7 +158,7 @@ export function UserMenu() {
             <DropdownMenuItem
               onClick={handleSignOut}
               disabled={signOutMutation.isPending}
-              className="cursor-pointer text-red-400 focus:bg-red-500/10 focus:text-red-400 light:text-red-600 light:focus:text-red-600"
+              className="cursor-pointer text-danger focus:bg-danger-surface focus:text-danger"
             >
               <Iconify.Icon icon="lucide:log-out" className="size-4" />
               {signOutMutation.isPending ? 'Signing out...' : 'Logout'}

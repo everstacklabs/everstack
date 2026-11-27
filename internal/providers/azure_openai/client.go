@@ -11,13 +11,16 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/everstacklabs/everstack/internal/lib/correlation"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	providerutil "github.com/everstacklabs/everstack/internal/providers"
+	"github.com/everstacklabs/everstack/internal/providers/anthropic"
 	clientx "github.com/everstacklabs/everstack/internal/providers/httpclient"
+	"github.com/everstacklabs/everstack/internal/providers/openai"
 	"github.com/everstacklabs/everstack/internal/providers/ratelimit"
 	attrs "github.com/everstacklabs/everstack/internal/telemetry/attributes"
 )
@@ -31,10 +34,19 @@ type Provider struct {
 	// since a unary upstream withholds response headers until the completion
 	// is finished.
 	unaryClient *http.Client
+
+	// Clients for the two formats this package does not implement itself;
+	// built on first use. See hosted.go.
+	hostedOnce   sync.Once
+	responses    *openai.Provider
+	responsesErr error
+	claude       *anthropic.Provider
+	claudeErr    error
 }
 
 type azureChatMessage struct {
 	Role       string             `json:"role"`
+	Name       string             `json:"name,omitempty"`
 	Content    []azureContentPart `json:"content,omitempty"`
 	ToolCalls  []azureToolCall    `json:"tool_calls,omitempty"`
 	ToolCallID string             `json:"tool_call_id,omitempty"`
@@ -66,6 +78,7 @@ type azureToolFuncDef struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description,omitempty"`
 	Parameters  map[string]interface{} `json:"parameters,omitempty"`
+	Strict      *bool                  `json:"strict,omitempty"`
 }
 
 type azureChatRequest struct {
@@ -85,6 +98,13 @@ type azureChatRequest struct {
 	PresencePenalty     float64                `json:"presence_penalty,omitempty"`
 	Seed                *int64                 `json:"seed,omitempty"`
 	Verbosity           string                 `json:"verbosity,omitempty"`
+	ParallelToolCalls   *bool                  `json:"parallel_tool_calls,omitempty"`
+	// ResponseFormat's JSON tags already match the response_format shape
+	// Azure OpenAI shares with OpenAI.
+	ResponseFormat *gw.ChatResponseFormat `json:"response_format,omitempty"`
+	Logprobs       *bool                  `json:"logprobs,omitempty"`
+	TopLogprobs    *int                   `json:"top_logprobs,omitempty"`
+	LogitBias      map[string]float64     `json:"logit_bias,omitempty"`
 }
 
 type azureStreamOptions struct {
@@ -151,7 +171,7 @@ func (p *Provider) Name() string { return "azure-openai" }
 
 func (p *Provider) SupportsModel(model string) bool {
 	if len(p.cfg.SupportedModels) == 0 {
-		return strings.HasPrefix(model, "gpt-") || strings.HasPrefix(model, "text-embedding-") || strings.HasPrefix(model, "o")
+		return strings.HasPrefix(model, "gpt-") || strings.HasPrefix(model, "text-embedding-") || strings.HasPrefix(model, "o") || isClaudeModel(model)
 	}
 	model = strings.ToLower(model)
 	for _, m := range p.cfg.SupportedModels {
@@ -168,6 +188,21 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	}
 	if req.Stream {
 		return gw.ChatCompletionResponse{}, gw.ErrNotImplemented("chat_stream_unary")
+	}
+
+	switch p.routeFor(req.Model) {
+	case routeResponses:
+		client, err := p.responsesClient()
+		if err != nil {
+			return gw.ChatCompletionResponse{}, err
+		}
+		return client.Chat(ctx, req)
+	case routeClaude:
+		client, err := p.claudeClient()
+		if err != nil {
+			return gw.ChatCompletionResponse{}, err
+		}
+		return client.Chat(ctx, req)
 	}
 
 	payload := toAzureChatRequest(req)
@@ -221,6 +256,21 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest, onChunk func(gw.ChatResponseChunk) error) error {
 	if strings.TrimSpace(p.cfg.APIKey) == "" {
 		return fmt.Errorf("azure-openai api key not provided")
+	}
+
+	switch p.routeFor(req.Model) {
+	case routeResponses:
+		client, err := p.responsesClient()
+		if err != nil {
+			return err
+		}
+		return client.ChatStream(ctx, req, onChunk)
+	case routeClaude:
+		client, err := p.claudeClient()
+		if err != nil {
+			return err
+		}
+		return client.ChatStream(ctx, req, onChunk)
 	}
 
 	payload := toAzureChatRequest(req)
@@ -444,6 +494,11 @@ func toAzureChatRequest(req gw.ChatCompletionRequest) azureChatRequest {
 	msgs := make([]azureChatMessage, 0, len(req.Messages))
 	for _, m := range req.Messages {
 		msg := azureChatMessage{Role: string(m.Role)}
+		// name is documented on system, user and assistant messages (and
+		// required on the legacy function role), not on tool messages.
+		if m.Role != gw.RoleTool {
+			msg.Name = m.Name
+		}
 		if len(m.Content) > 0 {
 			parts := make([]azureContentPart, 0, len(m.Content))
 			for _, c := range m.Content {
@@ -454,7 +509,11 @@ func toAzureChatRequest(req gw.ChatCompletionRequest) azureChatRequest {
 					}
 				case "image_url":
 					if c.ImageURL != nil {
-						parts = append(parts, azureContentPart{Type: "image_url", ImageURL: map[string]string{"url": *c.ImageURL}})
+						image := map[string]string{"url": *c.ImageURL}
+						if c.ImageDetail != "" {
+							image["detail"] = c.ImageDetail
+						}
+						parts = append(parts, azureContentPart{Type: "image_url", ImageURL: image})
 					}
 				}
 			}
@@ -478,8 +537,7 @@ func toAzureChatRequest(req gw.ChatCompletionRequest) azureChatRequest {
 
 	maxTokens := req.Sampling.MaxTokens
 	maxCompletionTokens := req.Sampling.MaxCompletionTokens
-	requiresMaxCompletionTokens := strings.HasPrefix(req.Model, "o1") || strings.HasPrefix(req.Model, "o3-mini") || strings.HasPrefix(req.Model, "gpt-5")
-	if requiresMaxCompletionTokens {
+	if requiresMaxCompletionTokens(req.Model) {
 		if maxCompletionTokens == 0 && maxTokens > 0 {
 			maxCompletionTokens = maxTokens
 		}
@@ -499,6 +557,11 @@ func toAzureChatRequest(req gw.ChatCompletionRequest) azureChatRequest {
 		PresencePenalty:     req.Sampling.PresencePenalty,
 		Seed:                req.Sampling.Seed,
 		Verbosity:           req.Sampling.Verbosity,
+		ParallelToolCalls:   req.ParallelToolCalls,
+		ResponseFormat:      req.ResponseFormat,
+		Logprobs:            req.Sampling.Logprobs,
+		TopLogprobs:         req.Sampling.TopLogprobs,
+		LogitBias:           req.Sampling.LogitBias,
 	}
 	for _, t := range req.Tools {
 		azureReq.Tools = append(azureReq.Tools, azureTool{
@@ -507,6 +570,7 @@ func toAzureChatRequest(req gw.ChatCompletionRequest) azureChatRequest {
 				Name:        t.Function.Name,
 				Description: t.Function.Description,
 				Parameters:  t.Function.Parameters,
+				Strict:      t.Function.Strict,
 			},
 		})
 	}
@@ -514,6 +578,23 @@ func toAzureChatRequest(req gw.ChatCompletionRequest) azureChatRequest {
 		azureReq.ToolChoice = req.ToolChoice
 	}
 	return azureReq
+}
+
+// requiresMaxCompletionTokens reports whether model rejects max_tokens:
+// OpenAI documents max_tokens as "not compatible with o-series models"
+// (https://developers.openai.com/api/reference/resources/chat), and every
+// o-series name is "o" followed by a digit. The GPT-5 and GPT-6 families
+// take max_completion_tokens too. On Azure the model is the deployment name,
+// so this only matches deployments named after the model.
+func requiresMaxCompletionTokens(model string) bool {
+	m := strings.ToLower(strings.TrimSpace(model))
+	if i := strings.LastIndex(m, "/"); i >= 0 {
+		m = m[i+1:]
+	}
+	if len(m) >= 2 && m[0] == 'o' && m[1] >= '0' && m[1] <= '9' {
+		return true
+	}
+	return strings.HasPrefix(m, "gpt-5") || strings.HasPrefix(m, "gpt-6")
 }
 
 func optionalTemperature(sampling gw.SamplingParams) *float64 {

@@ -55,6 +55,9 @@ func (s *Server) CreateSandbox(ctx context.Context, req *connect.Request[agentsp
 		telemetry.RecordError(span, err)
 		return nil, err
 	}
+	if err := validateSandboxName(msg.GetName()); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
 	if err := s.sandboxMgr.RequireSandboxBilling(tenantID); err != nil {
 		telemetry.RecordError(span, err)
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
@@ -265,6 +268,18 @@ func (s *Server) CreateSandbox(ctx context.Context, req *connect.Request[agentsp
 		telemetry.RecordError(span, err)
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
+	admissionCtx, admissionCancel := context.WithTimeout(ctx, 3*time.Second)
+	defer admissionCancel()
+	if err := s.sandboxMgr.RequireConcurrentSandboxSlot(admissionCtx, tenantID, ""); err != nil {
+		telemetry.RecordError(span, err)
+		if errors.Is(err, sandbox.ErrConcurrentSandboxLimit) {
+			return nil, connect.NewError(connect.CodeResourceExhausted, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if err := s.sessionIDAvailableToTenant(admissionCtx, sessionID, tenantID); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
 
 	s.injectPortExposureDomain(&cfg)
 
@@ -302,7 +317,7 @@ func (s *Server) CreateSandbox(ctx context.Context, req *connect.Request[agentsp
 	if err != nil {
 		logger.WithFields("error", err.Error()).Error("CreateSandbox: failed to create sandbox")
 		telemetry.RecordError(span, err)
-		if errors.Is(err, sandbox.ErrSandboxBillingRequired) {
+		if errors.Is(err, sandbox.ErrTenantPaused) || errors.Is(err, sandbox.ErrSandboxBillingRequired) {
 			return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 		}
 		if errors.Is(err, sandbox.ErrConcurrentSandboxLimit) {
@@ -346,6 +361,10 @@ func (s *Server) CreateSandbox(ctx context.Context, req *connect.Request[agentsp
 		ExpiresAt:   inst.ExpiresAt.Format(time.RFC3339),
 		Name:        inst.Name,
 	}), nil
+}
+
+func validateSandboxName(name string) error {
+	return sandbox.ValidateSandboxName(name)
 }
 
 // createSandboxAsync writes a pending sandbox_instances row and returns
@@ -496,22 +515,16 @@ func (s *Server) createSandboxAsync(
 
 	insCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	if err := s.sandboxMgr.RequireConcurrentSandboxSlot(insCtx, tenantID, row.ID); err != nil {
-		telemetry.RecordError(span, err)
-		if errors.Is(err, sandbox.ErrConcurrentSandboxLimit) {
-			return nil, connect.NewError(connect.CodeResourceExhausted, err)
-		}
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
 	concurrentLimit := s.sandboxMgr.ConcurrentSandboxLimit(tenantID)
-	inserted, err := s.lifecycleRepo.InsertPendingWithLimit(insCtx, row, concurrentLimit)
+	concurrencyScope := s.sandboxMgr.ConcurrencyScope(insCtx, tenantID)
+	inserted, err := s.lifecycleRepo.InsertPendingWithLimit(insCtx, row, concurrentLimit, concurrencyScope)
 	if errors.Is(err, sandboxlc.ErrTerminalRow) {
 		// A previous sandbox with this id terminated; can't resurrect.
 		// Append a uniqueness suffix and try once more — most callers
 		// use a fresh sessionID per Create so this is rare, but we
 		// avoid hard-failing on the user's click.
 		row.ID = row.ID + "_" + uuid.New().String()[:6]
-		inserted, err = s.lifecycleRepo.InsertPendingWithLimit(insCtx, row, concurrentLimit)
+		inserted, err = s.lifecycleRepo.InsertPendingWithLimit(insCtx, row, concurrentLimit, concurrencyScope)
 	}
 	if err != nil {
 		logger.WithFields("sandbox_id", row.ID, "error", err.Error()).
@@ -619,8 +632,39 @@ func (s *Server) RecreateSandbox(ctx context.Context, req *connect.Request[agent
 		telemetry.RecordError(span, err)
 		return nil, err
 	}
-	inst, err := sandboxcp.NewLifecycleService(s.lifecycleRepo, s.sandboxMgr).Recreate(ctx, sandboxcp.RecreateRequest{
-		SandboxID: msg.GetSandboxId(),
+	source, ok := s.sandboxMgr.GetBySandboxIDOrNameScoped(msg.GetSandboxId(), tenantID)
+	if !ok || source == nil {
+		dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
+		source, err = s.sandboxMgr.LookupInstanceByIDFromDBScoped(dbCtx, msg.GetSandboxId(), tenantID)
+	}
+	if err != nil || source == nil {
+		connErr := connect.NewError(connect.CodeNotFound, errors.New("sandbox not found"))
+		telemetry.RecordError(span, connErr)
+		return nil, connErr
+	}
+	if err := validateSandboxName(source.Name); err != nil {
+		connErr := connect.NewError(connect.CodeInvalidArgument, err)
+		telemetry.RecordError(span, connErr)
+		return nil, connErr
+	}
+	if err := s.sandboxMgr.RequireSandboxBilling(tenantID); err != nil {
+		connErr := mapLifecycleError(err)
+		telemetry.RecordError(span, connErr)
+		return nil, connErr
+	}
+	if err := s.sandboxMgr.RequireConcurrentSandboxSlot(ctx, tenantID, ""); err != nil {
+		connErr := mapLifecycleError(err)
+		telemetry.RecordError(span, connErr)
+		return nil, connErr
+	}
+	if err := s.sessionIDAvailableToTenant(ctx, sessionID, tenantID); err != nil {
+		connErr := connect.NewError(connect.CodeInvalidArgument, err)
+		telemetry.RecordError(span, connErr)
+		return nil, connErr
+	}
+	inst, err := s.lifecycleService().Recreate(ctx, sandboxcp.RecreateRequest{
+		SandboxID: source.ID,
 		SessionID: sessionID,
 		TenantID:  tenantID,
 	})
@@ -716,17 +760,7 @@ func (s *Server) SetupMemory(ctx context.Context, _ *connect.Request[agentspb.Se
 		}
 		memStore := memory.NewTracedVectorStore(pgStore)
 
-		if s.engine != nil {
-			registry, router, providerErr := s.engine.ProvidersForContext(ctx)
-			if providerErr != nil {
-				telemetry.RecordError(span, providerErr)
-				return nil, connect.NewError(connect.CodeInternal, providerErr)
-			}
-			memEmbedder := memory.NewTracedEmbedder(memory.NewEmbedder(registry, router))
-			s.SetMemoryBackend(memStore, memEmbedder)
-		} else {
-			s.memoryStore = memStore
-		}
+		s.memoryStore = memStore
 	}
 	span.SetAttributes(attribute.String("memory.backend", "pgvector"))
 	telemetry.AddSpanEvent(span, attrs.EventRequestComplete)

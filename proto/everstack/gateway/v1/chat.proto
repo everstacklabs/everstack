@@ -25,6 +25,9 @@ message ContentPart {
     string function_call = 6;
   }
   string provider_json = 7;
+  // OpenAI image_url.detail ("auto", "low", "high", ...) for an image_url
+  // part. Empty means the provider default.
+  string image_detail = 8;
 }
 
 // Tool call function details
@@ -45,6 +48,8 @@ message ToolFunctionDef {
   string name = 1;
   string description = 2;
   google.protobuf.Struct parameters = 3; // JSON Schema
+  // OpenAI function.strict: enforce exact schema adherence for tool calls.
+  optional bool strict = 4;
 }
 
 message Tool {
@@ -85,12 +90,33 @@ message SamplingParams {
   optional int32 top_k = 11;
   optional int64 seed = 12;
   optional string verbosity = 13;
+  // Return log probabilities of the output tokens (OpenAI logprobs).
+  optional bool logprobs = 14;
+  // Number of most likely tokens to return per position (0-20); requires logprobs.
+  optional int32 top_logprobs = 15;
+  // Token ID (as a string) to bias in [-100, 100] (OpenAI logit_bias).
+  map<string, double> logit_bias = 16;
 }
 
 message Usage {
   int32 prompt_tokens = 1;
   int32 completion_tokens = 2;
   int32 total_tokens = 3;
+  // Breakdown of prompt_tokens, OpenAI-shaped. Set only when the provider
+  // reports one.
+  UsageTokenDetails prompt_tokens_details = 4;
+  // Breakdown of completion_tokens, OpenAI-shaped. reasoning_tokens counts
+  // thinking tokens already included in completion_tokens (OpenAI reasoning,
+  // Gemini thoughts). Set only when the provider reports one.
+  UsageTokenDetails completion_tokens_details = 5;
+}
+
+// OpenAI-compatible token breakdown for Usage. Each count is a subset of the
+// parent prompt_tokens or completion_tokens, never additional to it.
+message UsageTokenDetails {
+  int32 cached_tokens = 1;
+  int32 reasoning_tokens = 2;
+  int32 audio_tokens = 3;
 }
 
 message Choice {
@@ -139,6 +165,10 @@ message ChatCompletionRequest {
 
   // Whether to run parallel tool calls (default: true)
   optional bool parallel_tool_calls = 9;
+
+  // Processing tier requested from the provider (OpenAI service_tier:
+  // "auto", "default", "flex", "priority", ...).
+  optional string service_tier = 10;
 }
 
 message FallbackInfo {

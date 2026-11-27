@@ -85,11 +85,11 @@ function StudioNodeComponent({ id, data, selected }: NodeProps<StudioNode>) {
 
     // Build execution overlay classes
     const executionClasses = isActive
-        ? 'ring-2 ring-blue-500 animate-pulse border-blue-500/50'
+        ? 'ring-2 ring-info-solid animate-pulse border-info-border'
         : isError
-            ? 'ring-2 ring-red-500 border-red-500/50'
+            ? 'ring-2 ring-danger-solid border-danger-border'
             : isCompleted
-                ? 'border-emerald-500/50'
+                ? 'border-success-border'
                 : ''
 
     // Build version diff overlay classes
@@ -137,7 +137,7 @@ function StudioNodeComponent({ id, data, selected }: NodeProps<StudioNode>) {
                         </div>
                     </div>
                     {nodeData.isConfigured && (
-                        <div className="h-2 w-2 rounded-full bg-emerald-500" title="Configured" />
+                        <div className="h-2 w-2 rounded-full bg-success-solid" title="Configured" />
                     )}
                 </div>
 

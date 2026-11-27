@@ -186,6 +186,14 @@ func (s *Service) ConfigureProvider(ctx context.Context, req ConfigureProviderRe
 		return nil, fmt.Errorf("api_key is required for initial configuration")
 	}
 
+	// Keeping the stored key while moving the base URL would send that key
+	// to the new host. Require it to be re-entered, as the command handler
+	// does (this unscoped path has no callers; it cannot check pooled keys).
+	if existingConfig != nil && (inputKey == "" || isMaskedKeyPlaceholder(inputKey)) &&
+		provider_config.BaseURLChanged(existingConfig.CustomBaseURL, req.CustomBaseURL, catalogEntry.BaseURL) {
+		return nil, fmt.Errorf("re-enter the API key when changing the base URL")
+	}
+
 	// Auto-set as default if this is the first/only provider
 	if req.CustomSettings == nil || req.CustomSettings["default"] != "true" {
 		// Check if there are any other configured providers

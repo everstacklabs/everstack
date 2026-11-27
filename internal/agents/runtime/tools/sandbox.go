@@ -355,6 +355,7 @@ func ensureSandbox(ctx context.Context, sctx *SandboxSessionContext) (*sandbox.I
 		}
 		inst, err = sctx.Manager.GetOrCreateTrooper(ctx, sctx.AgentID, sctx.SessionID, sctx.TenantID, sctx.Config)
 	} else {
+		sctx.Config = sandbox.DropReservedAgentSandboxName(sctx.Config, sctx.AgentID)
 		inst, err = sctx.Manager.GetOrCreate(ctx, sctx.SessionID, sctx.TenantID, sctx.Config)
 	}
 	if err != nil {

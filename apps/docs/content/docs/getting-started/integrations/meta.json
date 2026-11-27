@@ -1,4 +1,4 @@
 {
   "title": "Integrations",
-  "pages": ["overview", "github", "channels", "webhooks"]
+  "pages": ["overview", "github", "channels", "webhooks", "personal-bots"]
 }

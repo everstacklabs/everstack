@@ -33,13 +33,17 @@ func NewClient(apiKey string) *Client {
 
 // SendEmailParams holds parameters for sending an email
 type SendEmailParams struct {
-	From    string   `json:"from"`
-	To      []string `json:"to"`
-	Subject string   `json:"subject"`
-	HTML    string   `json:"html,omitempty"`
-	Text    string   `json:"text,omitempty"`
-	ReplyTo string   `json:"reply_to,omitempty"`
-	Tags    []Tag    `json:"tags,omitempty"`
+	From    string            `json:"from"`
+	To      []string          `json:"to"`
+	Subject string            `json:"subject"`
+	HTML    string            `json:"html,omitempty"`
+	Text    string            `json:"text,omitempty"`
+	ReplyTo string            `json:"reply_to,omitempty"`
+	Tags    []Tag             `json:"tags,omitempty"`
+	Headers map[string]string `json:"headers,omitempty"`
+	// IdempotencyKey, when set, is sent as the Idempotency-Key header so a
+	// retry of a request whose response was lost does not send twice.
+	IdempotencyKey string `json:"-"`
 }
 
 // Tag represents an email tag for tracking
@@ -67,6 +71,9 @@ func (c *Client) SendEmail(ctx context.Context, params SendEmailParams) (*SendEm
 
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Content-Type", "application/json")
+	if params.IdempotencyKey != "" {
+		req.Header.Set("Idempotency-Key", params.IdempotencyKey)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

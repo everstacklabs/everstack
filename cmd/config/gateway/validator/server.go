@@ -3,6 +3,7 @@ package validator
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/everstacklabs/everstack/internal/config/network"
 	"github.com/everstacklabs/everstack/internal/lib/idgenerator"
@@ -32,6 +33,33 @@ type ServerConfigConfig struct {
 	ExternalSecure        bool     `mapstructure:"external_secure"`
 	PublicHostHeaders     []string `mapstructure:"public_host_headers"`
 	InstanceHostHeaders   []string `mapstructure:"instance_host_headers"`
+	// ShutdownDrainTimeout is how long in-flight HTTP requests get to finish
+	// after SIGTERM (a Go duration, default 10s). Other shutdown stages have
+	// their own budgets. terminationGracePeriodSeconds must cover the sum.
+	ShutdownDrainTimeout string `mapstructure:"shutdown_drain_timeout"`
+}
+
+const (
+	defaultShutdownDrainTimeout = 10 * time.Second
+	maxShutdownDrainTimeout     = 10 * time.Minute
+)
+
+// ParseShutdownDrainTimeout parses server.config.shutdown_drain_timeout. An
+// empty value means the default; anything else must be a positive duration of
+// at most ten minutes.
+func ParseShutdownDrainTimeout(raw string) (time.Duration, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return defaultShutdownDrainTimeout, nil
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil {
+		return 0, fmt.Errorf("invalid shutdown_drain_timeout %q: %w", raw, err)
+	}
+	if d <= 0 || d > maxShutdownDrainTimeout {
+		return 0, fmt.Errorf("invalid shutdown_drain_timeout %q (must be > 0 and <= %s)", raw, maxShutdownDrainTimeout)
+	}
+	return d, nil
 }
 
 type MetricsConfig struct {
@@ -243,6 +271,10 @@ func validateServerConfigAgainstDefaults(userConfig ServerConfig) error {
 	// Validate port configuration
 	if userConfig.Config.Port <= 0 || userConfig.Config.Port > 65535 {
 		errors = append(errors, fmt.Sprintf("invalid server port: %d (must be between 1-65535)", userConfig.Config.Port))
+	}
+
+	if _, err := ParseShutdownDrainTimeout(userConfig.Config.ShutdownDrainTimeout); err != nil {
+		errors = append(errors, err.Error())
 	}
 
 	// Validate TLS configuration if enabled

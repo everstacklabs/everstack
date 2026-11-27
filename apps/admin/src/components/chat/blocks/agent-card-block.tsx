@@ -10,15 +10,15 @@ interface AgentCardBlockProps {
 function statusColor(status: string): string {
   switch (status) {
     case 'running':
-      return 'bg-green-500'
+      return 'bg-success-solid'
     case 'idle':
-      return 'bg-blue-500'
+      return 'bg-info-solid'
     case 'created':
-      return 'bg-yellow-500'
+      return 'bg-warning-solid'
     case 'deleted':
-      return 'bg-red-500'
+      return 'bg-danger-solid'
     case 'error':
-      return 'bg-red-500'
+      return 'bg-danger-solid'
     default:
       return 'bg-gray-500'
   }
@@ -67,7 +67,7 @@ export function AgentCardBlock({ data }: AgentCardBlockProps) {
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="shrink-0 rounded-md border border-brand-main-600 bg-brand-main-900 p-1.5">
             {isDeleted ? (
-              <Trash2 className="size-4 text-red-400" />
+              <Trash2 className="size-4 text-danger" />
             ) : (
               <Bot className="size-4 text-brand-secondary-400" />
             )}

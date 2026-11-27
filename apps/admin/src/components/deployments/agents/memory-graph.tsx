@@ -53,7 +53,7 @@ export const MemoryGraphContext = createContext<MemoryGraphContextValue | null>(
 
 const EDGE_STYLES: Record<string, CSSProperties> = {
   superseded: {
-    stroke: '#fbbf24',
+    stroke: 'var(--color-warning-solid)',
     strokeWidth: 2,
     strokeDasharray: '6 4',
   },
@@ -72,7 +72,7 @@ const EDGE_STYLES: Record<string, CSSProperties> = {
 // neutral strokes lightened so they read as subtle links rather than heavy lines.
 const EDGE_STYLES_LIGHT: Record<string, CSSProperties> = {
   superseded: {
-    stroke: '#d97706',
+    stroke: 'var(--color-warning-solid)',
     strokeWidth: 2,
     strokeDasharray: '6 4',
   },
@@ -338,7 +338,7 @@ function DetailPanel({
               <span className="text-[10px] text-zinc-600 italic">inactive</span>
             )}
             {memory.supersededBy && (
-              <span className="text-[10px] text-amber-500/70 light:text-amber-700/70 italic">
+              <span className="text-[10px] text-warning/70 italic">
                 superseded
               </span>
             )}
@@ -374,10 +374,10 @@ function DetailPanel({
                 <div
                   className={`h-full rounded-full ${
                     confidencePercent >= 80
-                      ? 'bg-emerald-500/70'
+                      ? 'bg-success-solid/70'
                       : confidencePercent >= 50
-                        ? 'bg-amber-500/70'
-                        : 'bg-red-500/70'
+                        ? 'bg-warning-solid/70'
+                        : 'bg-danger-solid/70'
                   }`}
                   style={{ width: `${confidencePercent}%` }}
                 />

@@ -262,9 +262,13 @@ func metricValuesProto(values modelmetrics.PublicMetrics) *modelmetricspb.Public
 		TotalTokens:              values.TotalTokens,
 		CostUsd:                  values.CostUSD,
 		AvgLatencyMs:             values.AvgLatencyMS,
-		AvgTtftMs:                values.AvgTTFTMS,
-		AvgThroughputTps:         values.AvgThroughputTPS,
-		SuccessRate:              values.SuccessRate,
+		// Both streaming averages are optional on the wire. The nil is passed
+		// straight through so a suppressed figure is omitted from the JSON
+		// instead of being flattened to a zero the client would read as a
+		// measurement.
+		AvgTtftMs:        values.AvgTTFTMS,
+		AvgThroughputTps: values.AvgThroughputTPS,
+		SuccessRate:      values.SuccessRate,
 	}
 }
 

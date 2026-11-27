@@ -28,15 +28,17 @@ services:
       EVS_POSTGRES_DSN: postgres://everstack:everstack-local@postgres:5432/everstack?sslmode=disable
       EVS_CACHE_TYPE: memory
       EVS_TELEMETRY_ENABLED: "false"
-      EVS_AUTH_MODE: none
+      EVS_AUTH_MODE: builtin
       # Development-only value. Generate a unique secret before any shared or
       # production deployment.
       EVS_API_KEY_HASH_SECRET: 9d7c48af6af76dcdbf1cbf0ac83cb7a4498077c8f53a7f80dcc917f401728b8d
     depends_on:
       postgres:
         condition: service_healthy
+    # Plain HTTP and example secrets. Publish on the loopback interface only.
+    # The first account registered in the dashboard becomes the owner.
     ports:
-      - "8089:8089"
+      - "127.0.0.1:8089:8089"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8089/debug/healthz"]
       interval: 5s

@@ -36,6 +36,11 @@ type TenantQuota struct {
 	Tier            string
 	MaxSites        int64
 	MaxStorageBytes int64
+	// ScopeKey and ScopeTenantIDs widen the quota from one tenant id to its
+	// organization on a managed gateway: usage of every id counts, and the
+	// lock is per organization. Empty means the tenant alone.
+	ScopeKey       string
+	ScopeTenantIDs []string
 }
 
 // TenantUsage represents either current retained usage or a proposed
@@ -56,15 +61,44 @@ type QuotaExceededError struct {
 	Added    int64
 }
 
+// UpgradeURL is where a capped customer can compare plans.
+const UpgradeURL = "https://everstack.ai/pricing"
+
 func (e *QuotaExceededError) Error() string {
 	switch e.Resource {
 	case QuotaResourceSites:
-		return fmt.Sprintf("%s plan hosted-site limit reached (limit %d, current %d, requested +%d)", e.Tier, e.Limit, e.Current, e.Added)
+		if e.Limit == 0 {
+			return "Hosted sites are not included in your current plan. Upgrade your plan to publish sites: " + UpgradeURL
+		}
+		return fmt.Sprintf("Hosted site limit reached: your plan includes %d and you have %d. Delete a site or upgrade your plan to add more hosted sites: %s",
+			e.Limit, e.Current, UpgradeURL)
 	case QuotaResourceStorage:
-		return fmt.Sprintf("%s plan hosting-storage limit exceeded (limit %d bytes, current %d bytes, requested +%d bytes)", e.Tier, e.Limit, e.Current, e.Added)
+		return fmt.Sprintf("Hosting storage limit reached: your plan includes %s and you are using %s, so this %s publish would not fit. Delete old versions or upgrade your plan: %s",
+			formatBytes(e.Limit), formatBytes(e.Current), formatBytes(e.Added), UpgradeURL)
 	default:
-		return fmt.Sprintf("%s plan hosting quota exceeded", e.Tier)
+		return "Hosting limit reached. Upgrade your plan: " + UpgradeURL
 	}
+}
+
+// UsageType is the plan limit name that refused the increase.
+func (e *QuotaExceededError) UsageType() string {
+	if e.Resource == QuotaResourceStorage {
+		return UsageLimitHostingStorageBytes
+	}
+	return UsageLimitHostedSites
+}
+
+func formatBytes(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	div, exp := int64(unit), 0
+	for v := n / unit; v >= unit; v /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB", float64(n)/float64(div), "KMGTPE"[exp])
 }
 
 // Check verifies that adding requested usage would remain within the quota.

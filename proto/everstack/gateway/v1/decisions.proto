@@ -1,0 +1,35 @@
+syntax = "proto3";
+package everstack.gateway.v1;
+import "google/protobuf/struct.proto";
+option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/gateway/v1;gateway";
+
+// Shared Jev, Kev and Laya System One request. State and instructions may be any JSON.
+message DecisionQuestion {
+  string type = 1;
+  google.protobuf.Value instructions = 2;
+  // choice: object keyed by option; score: ordered array; noul: true/false object.
+  google.protobuf.Value criteria = 3;
+}
+message SystemOneRequest {
+  string model = 1;
+  google.protobuf.Value state = 2;
+  map<string, DecisionQuestion> questions = 3;
+}
+message DecisionAnswer {
+  string type = 1;
+  optional double noul = 2;
+  optional string choice = 3;
+  optional double score = 4;
+  optional double confidence = 5;
+  map<string, double> probabilities = 6;
+  map<string, string> legend = 7;
+}
+message DecisionUsage {
+  int32 input_tokens = 1;
+  int32 output_tokens = 2;
+}
+message SystemOneResponse {
+  string model = 1;
+  map<string, DecisionAnswer> answers = 2;
+  DecisionUsage usage = 3;
+}

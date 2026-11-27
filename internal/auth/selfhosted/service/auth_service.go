@@ -12,6 +12,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/domain"
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/repository"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/everstacklabs/everstack/internal/lib/secretlog"
 	"github.com/google/uuid"
 )
 
@@ -56,11 +57,7 @@ func (s *AuthService) GetConfig() *domain.InternalConfig {
 
 // ValidateSession validates a session token and returns the session if valid
 func (s *AuthService) ValidateSession(ctx context.Context, token string) (*domain.Session, error) {
-	tokenPrefix := token
-	if len(token) > 8 {
-		tokenPrefix = token[:8] + "..."
-	}
-	logger.Debugf("auth: ValidateSession - looking up token: %s", tokenPrefix)
+	logger.WithFields("token_sha256", secretlog.Fingerprint(token)).Debug("auth: ValidateSession - looking up session")
 
 	session, err := s.sessionRepo.GetByToken(ctx, token)
 	if err != nil {
@@ -121,6 +118,20 @@ func (s *AuthService) SignOutAll(ctx context.Context, userID uuid.UUID) error {
 // CleanupExpiredSessions removes all expired sessions
 func (s *AuthService) CleanupExpiredSessions(ctx context.Context) (int64, error) {
 	return s.sessionRepo.DeleteExpired(ctx)
+}
+
+// FindCloudUser returns the local user GetOrCreateUser would resolve for a
+// cloud identity (by external_id, then by email), or nil, without writing
+// anything.
+func (s *AuthService) FindCloudUser(ctx context.Context, externalID, email string) (*domain.User, error) {
+	user, err := s.userRepo.GetByExternalID(ctx, externalID)
+	if err != nil || user != nil {
+		return user, err
+	}
+	if email == "" {
+		return nil, nil
+	}
+	return s.userRepo.GetByEmail(ctx, email)
 }
 
 // GetOrCreateUser gets or creates a user from an external identity profile.
@@ -208,26 +219,51 @@ func (s *AuthService) SetSessionCookieForRequest(w http.ResponseWriter, r *http.
 	s.setSessionCookie(w, r, session)
 }
 
-func (s *AuthService) setSessionCookie(w http.ResponseWriter, r *http.Request, session *domain.Session) {
+// CookieSecurity returns the Secure and SameSite attributes for a session
+// cookie set in response to r: the configured values, relaxed to non-Secure
+// for a plain-HTTP request to a loopback, private or Tailscale (CGNAT) host so
+// local, port-forward and tailnet access keep working. Public hosts keep the
+// configured flag. The HTTP routes and the Connect Login/Register path both
+// use it so they cannot disagree.
+func (s *AuthService) CookieSecurity(r *http.Request) (bool, http.SameSite) {
 	secure := s.config.Session.Secure
 	sameSite := parseSameSite(s.config.Session.SameSite)
 	if shouldRelaxSecureCookie(r) {
 		secure = false
+		// Browsers reject SameSite=None cookies without Secure.
 		if sameSite == http.SameSiteNoneMode {
 			sameSite = http.SameSiteLaxMode
 		}
 	}
+	return secure, sameSite
+}
 
-	cookie := &http.Cookie{
+// SessionCookie returns the session cookie for session, set in response to
+// r. It and the expired form share one builder, so a cookie set by any login
+// path (HTTP or Connect) is always the one sign-out clears: same Name, Path,
+// Domain, HttpOnly, Secure and SameSite.
+func (s *AuthService) SessionCookie(r *http.Request, session *domain.Session) *http.Cookie {
+	return s.sessionCookie(r, session.Token, session.ExpiresAt, 0)
+}
+
+// sessionCookie is the one place the session cookie's attributes are set.
+func (s *AuthService) sessionCookie(r *http.Request, value string, expires time.Time, maxAge int) *http.Cookie {
+	secure, sameSite := s.CookieSecurity(r)
+	return &http.Cookie{
 		Name:     s.config.Session.CookieName,
-		Value:    session.Token,
+		Value:    value,
 		Path:     "/",
 		Domain:   sanitizeSessionDomain(s.config.Session.Domain),
-		Expires:  session.ExpiresAt,
+		Expires:  expires,
+		MaxAge:   maxAge,
 		HttpOnly: s.config.Session.HTTPOnly,
 		Secure:   secure,
 		SameSite: sameSite,
 	}
+}
+
+func (s *AuthService) setSessionCookie(w http.ResponseWriter, r *http.Request, session *domain.Session) {
+	cookie := s.SessionCookie(r, session)
 	logger.Debugf("auth: Setting session cookie: Name=%s, Domain=%s, Secure=%v, HttpOnly=%v, SameSite=%d, Path=%s, Expires=%v",
 		cookie.Name, cookie.Domain, cookie.Secure, cookie.HttpOnly, cookie.SameSite, cookie.Path, cookie.Expires)
 	http.SetCookie(w, cookie)
@@ -298,28 +334,20 @@ func (s *AuthService) ClearSessionCookieForRequest(w http.ResponseWriter, r *htt
 	s.clearSessionCookie(w, r)
 }
 
-func (s *AuthService) clearSessionCookie(w http.ResponseWriter, r *http.Request) {
-	secure := s.config.Session.Secure
-	sameSite := parseSameSite(s.config.Session.SameSite)
-	if shouldRelaxSecureCookie(r) {
-		secure = false
-		if sameSite == http.SameSiteNoneMode {
-			sameSite = http.SameSiteLaxMode
-		}
-	}
+// ExpiredSessionCookie returns the session cookie in delete form, with the
+// same request-aware policy used to set it. For handlers that cannot write
+// to an http.ResponseWriter, such as Connect RPCs.
+func (s *AuthService) ExpiredSessionCookie(r *http.Request) *http.Cookie {
+	return s.expiredSessionCookie(r)
+}
 
-	cookie := &http.Cookie{
-		Name:     s.config.Session.CookieName,
-		Value:    "",
-		Path:     "/",
-		Domain:   sanitizeSessionDomain(s.config.Session.Domain),
-		Expires:  time.Unix(0, 0),
-		MaxAge:   -1,
-		HttpOnly: s.config.Session.HTTPOnly,
-		Secure:   secure,
-		SameSite: sameSite,
-	}
-	http.SetCookie(w, cookie)
+func (s *AuthService) clearSessionCookie(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, s.expiredSessionCookie(r))
+}
+
+// expiredSessionCookie is the session cookie in delete form.
+func (s *AuthService) expiredSessionCookie(r *http.Request) *http.Cookie {
+	return s.sessionCookie(r, "", time.Unix(0, 0), -1)
 }
 
 // GetSessionFromRequest extracts session token from request cookie

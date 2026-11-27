@@ -6,17 +6,25 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/everstacklabs/everstack/internal/auth/selfhosted/domain"
+	"github.com/everstacklabs/everstack/internal/auth/selfhosted/service"
+	"github.com/everstacklabs/everstack/internal/enterprise"
+	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/lib/jtiseen"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/everstacklabs/everstack/internal/lib/returnurl"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/hkdf"
 )
 
@@ -91,6 +99,25 @@ func (h *SelfHostedAuthHandler) handleTokenExchange(w http.ResponseWriter, r *ht
 		return
 	}
 
+	// Bind the token to this instance before consuming its jti, so a token
+	// presented at the wrong host is refused without burning the legitimate
+	// redemption. The cloud names the target in instance_url; a token is
+	// redeemable only on that host (and, on a managed gateway, only when the
+	// host resolves to an instance of the token's organization). Without
+	// this, a token minted for instance A (or for an attacker-chosen
+	// instance_url via CompleteInstanceConnect) opened a session on B.
+	requestScope, hasRequestScope := contextkeys.RequestInstanceScopeFromContext(r.Context())
+	if err := bindExchangeTokenToInstance(claims, r, requestScope, hasRequestScope, enterprise.ManagedGateway()); err != nil {
+		logger.WithFields(
+			"audit_event", true,
+			"event_type", "session.exchange.rejected",
+			"host", r.Host,
+			"reason", err.Error(),
+		).Warn("auth: instance token not bound to this instance")
+		http.Redirect(w, r, "/login?error=invalid_token", http.StatusFound)
+		return
+	}
+
 	// Single-use enforcement via jti. Closes the in-window-replay gap left
 	// by exp alone — even within the 60s exp window, the token can only
 	// redeem once. Without this, an attacker who intercepts the redirect
@@ -122,9 +149,22 @@ func (h *SelfHostedAuthHandler) handleTokenExchange(w http.ResponseWriter, r *ht
 		avatarURL = &v
 	}
 
-	user, _, err := h.selfHostedSvc.GetOrCreateUser(r.Context(), externalID, email, name, avatarURL)
+	orgID, _ := claims["organization_id"].(string)
+	orgSlug, _ := claims["organization_slug"].(string)
+	workspaceID, _ := claims["workspace_id"].(string)
+	workspaceSlug, _ := claims["workspace_slug"].(string)
+	instanceURL, _ := claims["instance_url"].(string)
+	user, err := h.admitCloudSignIn(r.Context(), cloudSignIn{
+		ExternalID: externalID, Email: email, Name: name, AvatarURL: avatarURL,
+		OrgID: orgID, OrgSlug: orgSlug, OrgRole: cloudOrganizationRole(claims, orgID),
+		WorkspaceID: workspaceID, WorkspaceSlug: workspaceSlug, InstanceURL: instanceURL,
+	})
 	if err != nil {
-		logger.WithError(err).Error("auth: exchange - failed to get or create user")
+		if errors.Is(err, service.ErrNoOrganization) {
+			http.Redirect(w, r, "/login?error=no_organization", http.StatusFound)
+			return
+		}
+		logger.WithError(err).Error("auth: exchange - failed to admit user")
 		http.Redirect(w, r, "/login?error=user_error", http.StatusFound)
 		return
 	}
@@ -138,21 +178,200 @@ func (h *SelfHostedAuthHandler) handleTokenExchange(w http.ResponseWriter, r *ht
 		return
 	}
 
-	orgID, _ := claims["organization_id"].(string)
-	orgSlug, _ := claims["organization_slug"].(string)
-	workspaceID, _ := claims["workspace_id"].(string)
-	workspaceSlug, _ := claims["workspace_slug"].(string)
-	instanceURL, _ := claims["instance_url"].(string)
-	if err := h.selfHostedSvc.SetCloudManaged(r.Context(), orgID, orgSlug, workspaceID, workspaceSlug, instanceURL); err != nil {
-		logger.WithError(err).Warn("auth: failed to persist cloud-managed auth mode")
-	}
-	if _, err := h.selfHostedSvc.EnsureUserHasConfiguredCloudOrganization(r.Context(), user.ID, nil); err != nil {
-		logger.WithError(err).Warn("auth: exchange - failed to attach user to cloud organization")
-	}
-
 	h.selfHostedSvc.SetSessionCookieForRequest(w, r, session)
 	logger.Infof("auth: exchange - user %s authenticated on instance via cloud token", user.Email)
 	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+// recordCloudLogin persists that this instance is cloud-managed after a
+// cloud-brokered sign-in.
+//
+// A self-hosted gateway connected to the cloud is one instance with one
+// auth_config row, so the row records the cloud org/workspace and the user is
+// attached to that org.
+//
+// A managed gateway serves every tenant from one process and one auth_config
+// row. Writing the signing-in tenant's org into that row on every login made
+// it name whichever tenant logged in last, and attaching the user to "the
+// configured cloud organization" then read that row back and upserted the
+// user as OWNER of whatever org it named: a member was promoted to owner of
+// their own org on every login, and two concurrent logins could make a user
+// owner of the other tenant's org. On a managed gateway, membership already
+// lives in the platform's organization_members (the cloud verified it before
+// minting the token or launch code), so the only thing recorded is the
+// tenant-independent fact that the gateway is in cloud mode, which keeps
+// local registration and password login disabled.
+//
+// orgRole is the user's role in that organization as the cloud vouched for
+// it in this sign-in; the local membership takes that role (never a blanket
+// owner), or least privilege when the cloud named none.
+func (h *SelfHostedAuthHandler) recordCloudLogin(ctx context.Context, userID uuid.UUID, orgID, orgSlug, orgRole, workspaceID, workspaceSlug, instanceURL string) {
+	if enterprise.ManagedGateway() {
+		if err := h.selfHostedSvc.MarkCloudManaged(ctx); err != nil {
+			logger.WithError(err).Warn("auth: failed to persist cloud-managed auth mode")
+		}
+		return
+	}
+	if err := h.selfHostedSvc.SetCloudManaged(ctx, orgID, orgSlug, workspaceID, workspaceSlug, instanceURL); err != nil {
+		logger.WithError(err).Warn("auth: failed to persist cloud-managed auth mode")
+	}
+	if _, err := h.selfHostedSvc.EnsureUserHasConfiguredCloudOrganization(ctx, userID, orgRole, nil); err != nil {
+		logger.WithError(err).Warn("auth: failed to attach user to cloud organization")
+	}
+}
+
+// cloudSignIn is a sign-in the cloud vouched for: the cloud identity and,
+// when the cloud named one, the organization (with the user's role in it)
+// the user enters this instance through.
+type cloudSignIn struct {
+	ExternalID, Email                       string
+	Name, AvatarURL                         *string
+	OrgID, OrgSlug, OrgRole                 string
+	WorkspaceID, WorkspaceSlug, InstanceURL string
+}
+
+// admitCloudSignIn resolves the local user for a cloud sign-in and decides,
+// before any session exists, whether they may have one. With an
+// organization, the user is created or linked and attached to it with
+// their cloud role (recordCloudLogin; it also persists cloud-managed mode
+// and context). On a self-hosted gateway the user must then belong to an
+// organization here; a sign-in that names none is checked against an
+// existing account without writing anything, so a refusal never leaves an
+// account behind. A managed gateway's memberships are the platform's and are
+// checked per request. Every cloud sign-in path (exchange token, launch
+// code, OIDC) goes through here.
+func (h *SelfHostedAuthHandler) admitCloudSignIn(ctx context.Context, in cloudSignIn) (*domain.User, error) {
+	managed := enterprise.ManagedGateway()
+	if !managed && in.OrgID == "" {
+		user, err := h.selfHostedSvc.FindCloudUser(ctx, in.ExternalID, in.Email)
+		if err != nil {
+			return nil, err
+		}
+		if user == nil {
+			return nil, service.ErrNoOrganization
+		}
+		if err := h.requireMembership(ctx, user.ID); err != nil {
+			return nil, err
+		}
+		return user, nil
+	}
+	user, _, err := h.selfHostedSvc.GetOrCreateUser(ctx, in.ExternalID, in.Email, in.Name, in.AvatarURL)
+	if err != nil {
+		return nil, err
+	}
+	h.recordCloudLogin(ctx, user.ID, in.OrgID, in.OrgSlug, in.OrgRole, in.WorkspaceID, in.WorkspaceSlug, in.InstanceURL)
+	if !managed {
+		if err := h.requireMembership(ctx, user.ID); err != nil {
+			return nil, err
+		}
+	}
+	return user, nil
+}
+
+// requireMembership returns service.ErrNoOrganization unless userID belongs
+// to an organization here.
+func (h *SelfHostedAuthHandler) requireMembership(ctx context.Context, userID uuid.UUID) error {
+	withOrgs, err := h.selfHostedSvc.GetUserWithOrganizations(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if withOrgs == nil || len(withOrgs.Organizations) == 0 {
+		return service.ErrNoOrganization
+	}
+	return nil
+}
+
+// cloudOrganizationRole returns the user's role in orgID from an instance
+// exchange token's "orgs" claim (a JSON list of {id, slug, name, role}), or
+// "" when the token does not say.
+func cloudOrganizationRole(claims jwt.MapClaims, orgID string) string {
+	raw, _ := claims["orgs"].(string)
+	if raw == "" || orgID == "" {
+		return ""
+	}
+	var orgs []struct {
+		ID   string `json:"id"`
+		Role string `json:"role"`
+	}
+	if err := json.Unmarshal([]byte(raw), &orgs); err != nil {
+		return ""
+	}
+	for _, o := range orgs {
+		if strings.EqualFold(o.ID, orgID) {
+			return o.Role
+		}
+	}
+	return ""
+}
+
+// bindExchangeTokenToInstance verifies that an instance-exchange token was
+// issued for the instance serving this request. Both cloud mint paths
+// (instance-token and CompleteInstanceConnect) always set instance_url and
+// tokens live 60s, so a token without one is refused outright.
+//
+// The token's instance_url host must equal the request host. On a managed
+// gateway that host must also resolve to an instance (scope, set by the
+// gateway's host resolution) owned by the token's organization. A
+// self-hosted gateway is a single instance and may sit behind a proxy that
+// rewrites Host, so there X-Forwarded-Host is accepted too, matching how
+// handleCloudSignIn built the origin the cloud was told to return to.
+func bindExchangeTokenToInstance(claims jwt.MapClaims, r *http.Request, scope contextkeys.RequestInstanceScope, hasScope, managed bool) error {
+	instanceURL, _ := claims["instance_url"].(string)
+	instanceURL = strings.TrimSpace(instanceURL)
+	if instanceURL == "" {
+		return errors.New("token names no instance")
+	}
+	parsed, err := url.Parse(instanceURL)
+	if err != nil || parsed.Host == "" {
+		return errors.New("token instance_url is not an absolute URL")
+	}
+	tokenHost := normalizeExchangeHost(parsed.Host)
+	if tokenHost == "" {
+		return errors.New("token instance_url has no host")
+	}
+
+	hostMatches := tokenHost == normalizeExchangeHost(r.Host)
+	if !managed && !hostMatches {
+		if fwd := r.Header.Get("X-Forwarded-Host"); fwd != "" {
+			hostMatches = tokenHost == normalizeExchangeHost(fwd)
+		}
+	}
+	if !hostMatches {
+		return errors.New("token was issued for a different instance")
+	}
+	if !managed {
+		return nil
+	}
+
+	if !hasScope {
+		return errors.New("request host is not a managed instance")
+	}
+	tokenOrg, _ := claims["organization_id"].(string)
+	if !sameOrganization(tokenOrg, scope.OrganizationID) {
+		return errors.New("token organization does not own this instance")
+	}
+	return nil
+}
+
+// sameOrganization reports whether a and b are the same, valid org UUID.
+func sameOrganization(a, b string) bool {
+	aID, err := uuid.Parse(strings.TrimSpace(a))
+	if err != nil {
+		return false
+	}
+	bID, err := uuid.Parse(strings.TrimSpace(b))
+	return err == nil && aID == bID
+}
+
+// normalizeExchangeHost canonicalises a host the same way the gateway's
+// tenant resolution does: lowercase, no port, no trailing dot.
+func normalizeExchangeHost(host string) string {
+	host = strings.TrimSpace(host)
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	host = strings.TrimSuffix(host, ".")
+	return strings.ToLower(host)
 }
 
 func instanceOriginFromRequest(r *http.Request) string {
@@ -208,6 +427,9 @@ type launchCodeExchangeResponse struct {
 	AvatarURL        string `json:"avatar_url,omitempty"`
 	OrganizationID   string `json:"organization_id,omitempty"`
 	OrganizationSlug string `json:"organization_slug,omitempty"`
+	// OrganizationRole is the user's role in that organization. Older
+	// clouds do not send it.
+	OrganizationRole string `json:"organization_role,omitempty"`
 	CodeID           string `json:"code_id"`
 }
 
@@ -220,10 +442,7 @@ func (h *SelfHostedAuthHandler) handleCloudCallback(w http.ResponseWriter, r *ht
 
 	// `next` is the post-login destination on this tenant; must be a relative
 	// path so an attacker can't smuggle in an open-redirect via the URL.
-	next := r.URL.Query().Get("next")
-	if next == "" || !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") {
-		next = "/"
-	}
+	next := returnurl.Path(r.URL.Query().Get("next"), "/")
 
 	masterKeyB64 := os.Getenv("EVS_M2M_SIGNING_KEY")
 	if masterKeyB64 == "" {
@@ -244,9 +463,35 @@ func (h *SelfHostedAuthHandler) handleCloudCallback(w http.ResponseWriter, r *ht
 		return
 	}
 
-	exch, err := exchangeLaunchCode(r.Context(), authSvcURL, masterKeyB64, code, instanceHost(r))
+	// The cloud bound the launch code to the host it redirected to. On a
+	// managed gateway, redeem it for the host this request was served and
+	// resolved on (normalized r.Host, never X-Forwarded-Host), and only when
+	// that host is one of our instances.
+	managed := enterprise.ManagedGateway()
+	callbackHost := instanceHost(r)
+	requestScope, hasRequestScope := contextkeys.RequestInstanceScopeFromContext(r.Context())
+	if managed {
+		if !hasRequestScope {
+			logger.WithFields("host", r.Host).Warn("auth: cloud-callback on a host that is not a managed instance")
+			http.Redirect(w, r, "/login?error=invalid_code", http.StatusFound)
+			return
+		}
+		callbackHost = normalizeExchangeHost(r.Host)
+	}
+
+	exch, err := exchangeLaunchCode(r.Context(), authSvcURL, masterKeyB64, code, callbackHost)
 	if err != nil {
 		logger.WithError(err).Warn("auth: cloud-callback launch-code exchange failed")
+		http.Redirect(w, r, "/login?error=invalid_code", http.StatusFound)
+		return
+	}
+	if managed && !sameOrganization(exch.OrganizationID, requestScope.OrganizationID) {
+		logger.WithFields(
+			"audit_event", true,
+			"event_type", "session.cloud_callback.rejected",
+			"host", r.Host,
+			"reason", "launch code organization does not own this instance",
+		).Warn("auth: cloud-callback launch code not bound to this instance")
 		http.Redirect(w, r, "/login?error=invalid_code", http.StatusFound)
 		return
 	}
@@ -264,9 +509,16 @@ func (h *SelfHostedAuthHandler) handleCloudCallback(w http.ResponseWriter, r *ht
 
 	// GetOrCreateUser keys on external_id (the cloud user id). Idempotent on
 	// repeat sign-ins — same external_id → same local user row.
-	user, _, err := h.selfHostedSvc.GetOrCreateUser(r.Context(), exch.UserID, exch.Email, name, avatar)
+	user, err := h.admitCloudSignIn(r.Context(), cloudSignIn{
+		ExternalID: exch.UserID, Email: exch.Email, Name: name, AvatarURL: avatar,
+		OrgID: exch.OrganizationID, OrgSlug: exch.OrganizationSlug, OrgRole: exch.OrganizationRole,
+	})
 	if err != nil {
-		logger.WithError(err).Error("auth: cloud-callback - GetOrCreateUser failed")
+		if errors.Is(err, service.ErrNoOrganization) {
+			http.Redirect(w, r, "/login?error=no_organization", http.StatusFound)
+			return
+		}
+		logger.WithError(err).Error("auth: cloud-callback - admitting user failed")
 		http.Redirect(w, r, "/login?error=user_error", http.StatusFound)
 		return
 	}
@@ -278,15 +530,6 @@ func (h *SelfHostedAuthHandler) handleCloudCallback(w http.ResponseWriter, r *ht
 		logger.WithError(err).Error("auth: cloud-callback - CreateSession failed")
 		http.Redirect(w, r, "/login?error=session_error", http.StatusFound)
 		return
-	}
-
-	// Persist cloud-managed mode + workspace context so the rest of the
-	// instance knows it's running under the cloud's org/workspace identity.
-	if err := h.selfHostedSvc.SetCloudManaged(r.Context(), exch.OrganizationID, exch.OrganizationSlug, "", "", ""); err != nil {
-		logger.WithError(err).Warn("auth: cloud-callback - SetCloudManaged failed")
-	}
-	if _, err := h.selfHostedSvc.EnsureUserHasConfiguredCloudOrganization(r.Context(), user.ID, nil); err != nil {
-		logger.WithError(err).Warn("auth: cloud-callback - failed to attach user to cloud organization")
 	}
 
 	h.selfHostedSvc.SetSessionCookieForRequest(w, r, session)
@@ -353,8 +596,22 @@ func (h *SelfHostedAuthHandler) handleInstanceSignout(w http.ResponseWriter, r *
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{
-		"redirect_to": instanceSignoutRedirect(h.selfHostedSvc.CloudOrganizationSlug(r.Context())),
+		"redirect_to": instanceSignoutRedirect(h.signoutOrganizationSlug(r)),
 	})
+}
+
+// signoutOrganizationSlug names the org whose instances picker to land on
+// after sign-out. On a managed gateway the host-resolved instance knows its
+// own org; the auth_config row is shared by every tenant and must not be
+// consulted there.
+func (h *SelfHostedAuthHandler) signoutOrganizationSlug(r *http.Request) string {
+	if scope, ok := contextkeys.RequestInstanceScopeFromContext(r.Context()); ok {
+		return strings.TrimSpace(scope.OrganizationSlug)
+	}
+	if enterprise.ManagedGateway() {
+		return ""
+	}
+	return h.selfHostedSvc.CloudOrganizationSlug(r.Context())
 }
 
 // instanceSignoutRedirect builds the cloud URL to land on after an instance

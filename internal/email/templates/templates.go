@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"regexp"
 	"strings"
+	texttemplate "text/template"
+	"unicode"
 
 	"github.com/everstacklabs/everstack/internal/email/types"
 )
@@ -24,11 +27,8 @@ import (
 const darkModeStyleBlock = `<style>
 /* ─── Default (light mode) overrides applied to all clients ───────────── */
 
-/* Logo asset is designed for dark backgrounds (white wordmark on transparent
-   + white-bg icon containing a dark "E"). On light email backgrounds the
-   wordmark would be invisible, so we invert by default. Dark mode removes
-   the invert below so the natively-correct version renders on dark bg. */
-img[alt="Everstack"] { filter: invert(1) hue-rotate(180deg); }
+/* Logo: see logoBlock. The default logo is the dark wordmark on a
+   transparent background, shown as is in light mode. */
 
 /* Monochrome CTAs: any indigo button (templates use #6366f1) becomes black
    in light mode. Dark mode flips to white-on-black below. */
@@ -77,15 +77,63 @@ img[alt="Everstack"] { filter: invert(1) hue-rotate(180deg); }
   [style*="color: #b91c1c"] { color: #fca5a5 !important; }
   [style*="background: #fffbeb"] { background-color: #78350f !important; }
   [style*="color: #b45309"] { color: #fbbf24 !important; }
-  /* Logo: un-invert in dark mode so the natively dark-designed asset renders correctly */
-  img[alt="Everstack"] { filter: none !important; }
+  /* Logo: swap to the light wordmark and drop the light chip behind it
+     (only when a light variant exists; see logoBlock). */
+  .evs-logo-chip { background-color: transparent !important; background-image: none !important; }
+  .evs-logo-on-light { display: none !important; }
+  .evs-logo-on-dark { display: block !important; width: 142px !important; height: 30px !important; max-height: none !important; }
 }
 </style>`
+
+// optionalTemplateSets holds template sets that register themselves from
+// their own file with registerTemplateSet, so no other file names them and
+// the file can be left out of a build. They are filled by package-level
+// variable initialisers, which all run before init.
+var optionalTemplateSets []map[types.EmailType]*EmailTemplate
+
+func registerTemplateSet(set map[types.EmailType]*EmailTemplate) bool {
+	optionalTemplateSets = append(optionalTemplateSets, set)
+	return true
+}
 
 // init prepends darkModeStyleBlock to every template's <head> so callers
 // don't have to think about it. Templates that have no <head> are left alone.
 func init() {
+	// Templates kept in their own files register here, before the dark-mode
+	// block is injected into every template.
+	for typ, tmpl := range lifecycleTemplates {
+		emailTemplates[typ] = tmpl
+	}
+	for typ, tmpl := range cardTemplates {
+		emailTemplates[typ] = tmpl
+	}
+	for typ, tmpl := range creditTemplates {
+		emailTemplates[typ] = tmpl
+	}
+	for typ, tmpl := range autoTopUpTemplates {
+		emailTemplates[typ] = tmpl
+	}
+	for typ, tmpl := range spendLimitTemplates {
+		emailTemplates[typ] = tmpl
+	}
+	for typ, tmpl := range billingNoticeTemplates {
+		emailTemplates[typ] = tmpl
+	}
+	for typ, tmpl := range instanceLimitTemplates {
+		emailTemplates[typ] = tmpl
+	}
+	for typ, tmpl := range accountTemplates {
+		emailTemplates[typ] = tmpl
+	}
+	for _, set := range optionalTemplateSets {
+		for typ, tmpl := range set {
+			emailTemplates[typ] = tmpl
+		}
+	}
 	for _, tmpl := range emailTemplates {
+		tmpl.HTMLTemplate = logoTag.ReplaceAllStringFunc(tmpl.HTMLTemplate, func(tag string) string {
+			return logoBlock(logoTag.FindStringSubmatch(tag)[1])
+		})
 		if !strings.Contains(tmpl.HTMLTemplate, "<head>") {
 			continue
 		}
@@ -98,6 +146,41 @@ func init() {
 	}
 }
 
+// logoTag matches the logo every template writes. init replaces each with
+// logoBlock, keeping its bottom margin.
+var logoTag = regexp.MustCompile(`<img src="\{\{\.logo_url\}\}" alt="Everstack" style="height: 40px; margin-bottom: (\d+)px;">`)
+
+// logoBlock renders the logo so it reads on light and dark backgrounds.
+//
+// logo_url is the dark wordmark on a transparent background. It sits on a
+// small white chip whose colour is pinned with a background-image gradient:
+// clients that recolour emails for dark mode without honouring
+// prefers-color-scheme (the Gmail apps, Outlook.com) recolour background
+// colours but leave background images alone, so the dark wordmark keeps a
+// light backdrop there.
+//
+// When logo_dark_url (a light wordmark) is set, clients that do honour
+// prefers-color-scheme (Apple Mail, iOS Mail, Outlook for Mac) drop the chip
+// and swap to it via darkModeStyleBlock. A custom logo_url without a dark
+// variant keeps its chip in dark mode instead.
+//
+// Size: the default assets (everstack-wordmark-{dark,light}-email.png) are
+// 568x120, drawn at 142x30. The glyph fills 546x88 of that canvas, so it
+// lands at 22px tall, and the rest is a transparent frame: 2.75px left and
+// right, 4px top and bottom. The chip has no padding of its own; that frame
+// is its padding, so the 6px corner radius only ever reaches transparent
+// pixels and cannot clip the wordmark, and the glyph sits within 3px of the
+// headline's left edge. 142x30 is the canvas's exact ratio (4.733), set as
+// attributes as well as CSS because Outlook and Gmail honour only the
+// attributes. Changing the asset means changing these numbers with it.
+func logoBlock(marginBottom string) string {
+	return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 ` + marginBottom + `px; border-collapse: separate;"><tr>` +
+		`<td class="{{if .logo_dark_url}}evs-logo-chip{{else}}evs-logo-chip-fixed{{end}}" style="padding: 0; border-radius: 6px; background-color: #ffffff; background-image: linear-gradient(#ffffff, #ffffff);">` +
+		`<img class="{{if .logo_dark_url}}evs-logo-on-light{{end}}" src="{{.logo_url}}" alt="Everstack" width="142" height="30" style="display: block; width: 142px; height: 30px; border: 0;">` +
+		`{{if .logo_dark_url}}<img class="evs-logo-on-dark" src="{{.logo_dark_url}}" alt="Everstack" width="142" height="30" style="display: none; width: 0; height: 0; max-height: 0; overflow: hidden; mso-hide: all; border: 0;">{{end}}` +
+		`</td></tr></table>`
+}
+
 // EmailTemplate represents an email template
 type EmailTemplate struct {
 	Subject      string
@@ -106,8 +189,10 @@ type EmailTemplate struct {
 
 // Render renders the template with the given data
 func (t *EmailTemplate) Render(data map[string]interface{}) (subject string, html string, err error) {
-	// Render subject
-	subjectTmpl, err := template.New("subject").Parse(t.Subject)
+	// The subject is a plain-text header, so it renders with text/template:
+	// html/template would turn "O'Brien & Co" into "O&#39;Brien &amp; Co".
+	// The body stays on html/template, which escapes every value.
+	subjectTmpl, err := texttemplate.New("subject").Parse(t.Subject)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to parse subject template: %w", err)
 	}
@@ -126,7 +211,34 @@ func (t *EmailTemplate) Render(data map[string]interface{}) (subject string, htm
 		return "", "", fmt.Errorf("failed to execute HTML template: %w", err)
 	}
 
-	return subjectBuf.String(), htmlBuf.String(), nil
+	return cleanSubject(subjectBuf.String()), htmlBuf.String(), nil
+}
+
+// MaxSubjectLength caps a rendered subject, in characters. Subjects carry
+// organization, inviter and user names, which their owners choose.
+const MaxSubjectLength = 160
+
+// cleanSubject makes a rendered subject one line of printable text: control
+// characters and bidirectional overrides and isolates (which can make a name
+// read as something else) are dropped, runs of whitespace, line breaks
+// included, become one space, and anything past MaxSubjectLength is cut.
+func cleanSubject(raw string) string {
+	cleaned := strings.Map(func(r rune) rune {
+		switch {
+		case unicode.IsSpace(r):
+			return ' '
+		case unicode.IsControl(r),
+			r >= 0x202A && r <= 0x202E,
+			r >= 0x2066 && r <= 0x2069:
+			return -1
+		}
+		return r
+	}, raw)
+	subject := strings.Join(strings.Fields(cleaned), " ")
+	if runes := []rune(subject); len(runes) > MaxSubjectLength {
+		subject = strings.TrimSpace(string(runes[:MaxSubjectLength-3])) + "..."
+	}
+	return subject
 }
 
 // GetTemplate returns the template for a given email type
@@ -139,188 +251,6 @@ func GetTemplate(emailType types.EmailType) (*EmailTemplate, error) {
 }
 
 var emailTemplates = map[types.EmailType]*EmailTemplate{
-	types.EmailTypeInvitation: {
-		Subject: "You've been invited to join {{.organization_name}} on Everstack",
-		HTMLTemplate: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Invitation to Join {{.organization_name}}</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background-color: #f4f4f5;">
-  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-    <img src="{{.logo_url}}" alt="Everstack" style="height: 40px; margin-bottom: 32px;">
-    
-    <h1 style="color: #18181b; font-size: 24px; margin: 0 0 16px;">You're invited!</h1>
-    
-    <p style="color: #52525b; font-size: 16px; line-height: 24px; margin: 0 0 24px;">
-      <strong>{{.inviter_name}}</strong> has invited you to join <strong>{{.organization_name}}</strong> on Everstack.
-    </p>
-    
-    <a href="{{.invite_link}}" style="display: inline-block; background: #6366f1; color: #ffffff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 500;">
-      Accept Invitation
-    </a>
-    
-    <p style="color: #a1a1aa; font-size: 14px; margin: 32px 0 0;">
-      If you didn't expect this invitation, you can ignore this email.
-    </p>
-  </div>
-</body>
-</html>
-`,
-	},
-	types.EmailTypeWelcome: {
-		Subject: "Welcome to Everstack, {{.user_name}}",
-		HTMLTemplate: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Everstack</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background-color: #f4f4f5; color: #18181b;">
-  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-    <img src="{{.logo_url}}" alt="Everstack" style="height: 40px; margin-bottom: 32px;">
-
-    <h1 style="color: #18181b; font-size: 24px; margin: 0 0 16px; font-weight: 600;">Hi {{.user_name}} 👋</h1>
-
-    <p style="color: #18181b; font-size: 16px; line-height: 24px; margin: 0 0 16px;">
-      Thanks for signing up - I'm Arnab, founder of Everstack. Genuinely excited you're here.
-    </p>
-
-    <p style="color: #52525b; font-size: 16px; line-height: 24px; margin: 0 0 28px;">
-      Everstack is the platform for running AI agents in isolated, observable sandboxes - bring your own LLM provider, deploy agents in seconds, and see exactly what they did and what it cost. No black boxes.
-    </p>
-
-    <h2 style="color: #18181b; font-size: 18px; margin: 0 0 16px; font-weight: 600;">Getting started - 5 minutes</h2>
-
-    <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 32px; width: 100%;">
-      <tr>
-        <td style="vertical-align: top; padding: 0 12px 16px 0; width: 28px;">
-          <div style="background: #eef2ff; color: #4338ca; width: 28px; height: 28px; border-radius: 14px; text-align: center; line-height: 28px; font-size: 13px; font-weight: 600;">1</div>
-        </td>
-        <td style="vertical-align: top; padding: 0 0 16px 0; color: #18181b; font-size: 15px; line-height: 22px;">
-          <strong>Connect a provider.</strong><br>
-          <span style="color: #52525b;">Drop in your OpenAI, Anthropic, or any compatible API key. Everstack proxies, logs, and meters every call.</span>
-        </td>
-      </tr>
-      <tr>
-        <td style="vertical-align: top; padding: 0 12px 16px 0;">
-          <div style="background: #eef2ff; color: #4338ca; width: 28px; height: 28px; border-radius: 14px; text-align: center; line-height: 28px; font-size: 13px; font-weight: 600;">2</div>
-        </td>
-        <td style="vertical-align: top; padding: 0 0 16px 0; color: #18181b; font-size: 15px; line-height: 22px;">
-          <strong>Spin up your first agent.</strong><br>
-          <span style="color: #52525b;">Pick from a template or define your own. It runs in a Firecracker microVM, fully isolated, ready in seconds.</span>
-        </td>
-      </tr>
-      <tr>
-        <td style="vertical-align: top; padding: 0 12px 16px 0;">
-          <div style="background: #eef2ff; color: #4338ca; width: 28px; height: 28px; border-radius: 14px; text-align: center; line-height: 28px; font-size: 13px; font-weight: 600;">3</div>
-        </td>
-        <td style="vertical-align: top; padding: 0 0 0 0; color: #18181b; font-size: 15px; line-height: 22px;">
-          <strong>Bring your team.</strong><br>
-          <span style="color: #52525b;">Invite teammates to your workspace, share agents, see usage rolled up across the org.</span>
-        </td>
-      </tr>
-    </table>
-
-    <a href="{{.cloud_url}}" style="display: inline-block; background: #6366f1; color: #ffffff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 15px;">
-      Open Everstack →
-    </a>
-
-    <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 36px 0 24px;">
-
-    <p style="color: #52525b; font-size: 15px; line-height: 22px; margin: 0 0 12px;">
-      <strong style="color: #18181b;">Stuck on something? Just hit reply.</strong> This email goes straight to me - I read every one and respond personally, especially in the early days.
-    </p>
-
-    <p style="color: #52525b; font-size: 15px; line-height: 22px; margin: 0 0 24px;">
-      The docs live at <a href="{{.docs_url}}" style="color: #6366f1; text-decoration: none;">{{.docs_url}}</a> if you want to dig in deeper before opening the app.
-    </p>
-
-    <p style="color: #18181b; font-size: 15px; line-height: 22px; margin: 0;">
-      - Arnab<br>
-      <span style="color: #71717a; font-size: 13px;">Founder, Everstack</span>
-    </p>
-  </div>
-
-  <p style="text-align: center; color: #a1a1aa; font-size: 12px; margin: 24px 0 0;">
-    You're receiving this because you signed up at {{.cloud_url}}.
-  </p>
-</body>
-</html>
-`,
-	},
-	types.EmailTypePaymentSuccess: {
-		Subject: "Receipt from Everstack - ${{.amount}}",
-		HTMLTemplate: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Payment receipt - Everstack</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background-color: #f4f4f5; color: #18181b;">
-  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-    <img src="{{.logo_url}}" alt="Everstack" style="height: 40px; margin-bottom: 28px;">
-
-    <h1 style="color: #18181b; font-size: 28px; margin: 0 0 8px; font-weight: 600;">
-      ${{.amount}}
-      <span style="display: inline-block; background: #ecfdf5; color: #047857; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; letter-spacing: 0.04em; text-transform: uppercase; vertical-align: 6px; margin-left: 8px;">Paid</span>
-    </h1>
-    <p style="color: #71717a; font-size: 14px; margin: 0 0 28px;">Receipt for {{.organization_name}}</p>
-
-    <table cellpadding="0" cellspacing="0" border="0" style="width: 100%; border-collapse: collapse; border-top: 1px solid #e4e4e7;">
-      {{if .plan_tier}}
-      <tr>
-        <td style="padding: 14px 0; color: #71717a; font-size: 14px; border-bottom: 1px solid #f4f4f5;">Plan</td>
-        <td style="padding: 14px 0; color: #18181b; font-size: 14px; font-weight: 500; text-align: right; border-bottom: 1px solid #f4f4f5;">{{.plan_tier}}</td>
-      </tr>
-      {{end}}
-      {{if .billing_period}}
-      <tr>
-        <td style="padding: 14px 0; color: #71717a; font-size: 14px; border-bottom: 1px solid #f4f4f5;">Billing period</td>
-        <td style="padding: 14px 0; color: #18181b; font-size: 14px; font-weight: 500; text-align: right; border-bottom: 1px solid #f4f4f5;">{{.billing_period}}</td>
-      </tr>
-      {{end}}
-      {{if .invoice_number}}
-      <tr>
-        <td style="padding: 14px 0; color: #71717a; font-size: 14px; border-bottom: 1px solid #f4f4f5;">Invoice</td>
-        <td style="padding: 14px 0; color: #18181b; font-size: 14px; font-weight: 500; text-align: right; border-bottom: 1px solid #f4f4f5; font-family: 'SF Mono', Monaco, monospace;">{{.invoice_number}}</td>
-      </tr>
-      {{end}}
-      <tr>
-        <td style="padding: 14px 0; color: #18181b; font-size: 14px; font-weight: 600;">Total paid</td>
-        <td style="padding: 14px 0; color: #18181b; font-size: 14px; font-weight: 600; text-align: right;">${{.amount}}</td>
-      </tr>
-    </table>
-
-    {{if .invoice_url}}
-    <a href="{{.invoice_url}}" style="display: inline-block; background: #18181b; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 14px; margin-top: 28px;">
-      View invoice →
-    </a>
-    {{end}}
-
-    <p style="color: #52525b; font-size: 14px; line-height: 22px; margin: 32px 0 0;">
-      Thanks for being on Everstack. Your services keep running uninterrupted, and your next bill will arrive at the start of the next period.
-    </p>
-
-    <p style="color: #71717a; font-size: 13px; line-height: 20px; margin: 20px 0 0;">
-      Questions about this charge? Reply to this email or reach <a href="mailto:billing@everstack.ai" style="color: #6366f1; text-decoration: none;">billing@everstack.ai</a>.
-    </p>
-  </div>
-
-  <p style="text-align: center; color: #a1a1aa; font-size: 12px; margin: 24px 0 0;">
-    Everstack · Manage your billing at <a href="{{.cloud_url}}/settings/billing" style="color: #a1a1aa;">{{.cloud_url}}/settings/billing</a>
-  </p>
-</body>
-</html>
-`,
-	},
 	types.EmailTypePaymentFailed: {
 		Subject: "Heads up - your Everstack payment didn't go through",
 		HTMLTemplate: `
@@ -341,17 +271,23 @@ var emailTemplates = map[types.EmailType]*EmailTemplate{
     </h1>
 
     <p style="color: #52525b; font-size: 16px; line-height: 24px; margin: 0 0 24px;">
-      We tried to charge {{if .amount}}<strong>${{.amount}}</strong> {{end}}for <strong>{{.organization_name}}</strong> and it was declined. Nothing's broken yet - your services are still running - but we need an updated payment method to keep things that way.
+      We tried to charge {{if .amount}}<strong>{{.amount}}</strong> {{end}}for <strong>{{.organization_name}}</strong> and it was declined. Nothing's broken yet - your services are still running - but we need an updated payment method to keep things that way.
     </p>
 
+    {{if .failure_reason}}
     <div style="background: #fafafa; border: 1px solid #e4e4e7; border-radius: 8px; padding: 16px 20px; margin: 0 0 24px;">
       <p style="margin: 0 0 6px; color: #71717a; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Reason from your bank</p>
       <p style="margin: 0; color: #18181b; font-size: 15px; line-height: 22px;">{{.failure_reason}}</p>
     </div>
+    {{end}}
 
-    <a href="{{.cloud_url}}/settings/billing" style="display: inline-block; background: #6366f1; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 15px;">
+    <a href="{{if .payment_url}}{{.payment_url}}{{else}}{{.billing_url}}{{end}}" style="display: inline-block; background: #6366f1; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 15px;">
       Update payment method →
     </a>
+
+    <p style="color: #71717a; font-size: 13px; line-height: 20px; margin: 16px 0 0;">
+      You can also manage cards and invoices any time at <a href="{{.billing_url}}" style="color: #6366f1; text-decoration: none;">{{.billing_url}}</a>.
+    </p>
 
     {{if .next_retry_at}}
     <p style="color: #52525b; font-size: 14px; line-height: 22px; margin: 24px 0 0;">
@@ -361,7 +297,7 @@ var emailTemplates = map[types.EmailType]*EmailTemplate{
 
     {{if .grace_period_end}}
     <p style="color: #52525b; font-size: 14px; line-height: 22px; margin: 12px 0 0;">
-      If we still can't collect by <strong>{{.grace_period_end}}</strong>, your services will be paused. Updating the card now avoids that.
+      If we still can't collect by <strong>{{.grace_period_end}}</strong>, your subscription ends and your organization moves to the Starter plan, pausing any instances beyond its limit. Until then, new instances and plan changes are on hold. Updating the card now avoids that.
     </p>
     {{end}}
 
@@ -439,165 +375,12 @@ var emailTemplates = map[types.EmailType]*EmailTemplate{
       </tr>
     </table>
 
-    <a href="{{.cloud_url}}/settings/billing" style="display: inline-block; background: #6366f1; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 15px;">
+    <a href="{{.billing_url}}" style="display: inline-block; background: #6366f1; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 15px;">
       Open billing →
     </a>
 
     <p style="color: #71717a; font-size: 13px; line-height: 20px; margin: 28px 0 0;">
       Questions on plans or limits? Reply to this email - it goes to <a href="mailto:billing@everstack.ai" style="color: #6366f1; text-decoration: none;">billing@everstack.ai</a>.
-    </p>
-  </div>
-</body>
-</html>
-`,
-	},
-	types.EmailTypeMagicLink: {
-		Subject: "Your Everstack sign-in link",
-		HTMLTemplate: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your Everstack sign-in link</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background-color: #f4f4f5;">
-  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-    <img src="{{.logo_url}}" alt="Everstack" style="height: 40px; margin-bottom: 32px;">
-
-    <h1 style="color: #18181b; font-size: 24px; margin: 0 0 16px;">Sign in to Everstack</h1>
-
-    <p style="color: #52525b; font-size: 16px; line-height: 24px; margin: 0 0 24px;">
-      Click the button below to sign in. This link expires in {{.expires_in}} and can be used once.
-    </p>
-
-    <a href="{{.magic_link}}" style="display: inline-block; background: #6366f1; color: #ffffff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 500;">
-      Sign in to Everstack
-    </a>
-
-    <p style="color: #71717a; font-size: 13px; line-height: 20px; margin: 32px 0 0;">
-      If the button doesn't work, paste this URL into your browser:<br>
-      <span style="color: #6366f1; word-break: break-all;">{{.magic_link}}</span>
-    </p>
-
-    <p style="color: #a1a1aa; font-size: 13px; line-height: 20px; margin: 24px 0 0;">
-      Didn't request this? You can safely ignore this email - your account is not affected.
-    </p>
-  </div>
-</body>
-</html>
-`,
-	},
-	types.EmailTypePasswordReset: {
-		Subject: "Reset your Everstack password",
-		HTMLTemplate: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reset your Everstack password</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background-color: #f4f4f5;">
-  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-    <img src="{{.logo_url}}" alt="Everstack" style="height: 40px; margin-bottom: 32px;">
-
-    <h1 style="color: #18181b; font-size: 24px; margin: 0 0 16px;">Reset your password</h1>
-
-    <p style="color: #52525b; font-size: 16px; line-height: 24px; margin: 0 0 24px;">
-      Click the button below to choose a new password. This link expires in {{.expires_in}} and can be used once.
-    </p>
-
-    <a href="{{.reset_link}}" style="display: inline-block; background: #6366f1; color: #ffffff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 500;">
-      Reset password
-    </a>
-
-    <p style="color: #71717a; font-size: 13px; line-height: 20px; margin: 32px 0 0;">
-      If the button doesn't work, paste this URL into your browser:<br>
-      <span style="color: #6366f1; word-break: break-all;">{{.reset_link}}</span>
-    </p>
-
-    <p style="color: #a1a1aa; font-size: 13px; line-height: 20px; margin: 24px 0 0;">
-      Didn't request this? You can safely ignore this email - your password will stay the same.
-    </p>
-  </div>
-</body>
-</html>
-`,
-	},
-	types.EmailTypeEmailVerification: {
-		Subject: "Verify your Everstack email",
-		HTMLTemplate: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Verify your Everstack email</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background-color: #f4f4f5;">
-  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-    <img src="{{.logo_url}}" alt="Everstack" style="height: 40px; margin-bottom: 32px;">
-
-    <h1 style="color: #18181b; font-size: 24px; margin: 0 0 16px;">Verify your email</h1>
-
-    <p style="color: #52525b; font-size: 16px; line-height: 24px; margin: 0 0 24px;">
-      Enter the code below to confirm this email address. The code expires in {{.expires_in}}.
-    </p>
-
-    <div style="background: #f9fafb; border: 1px solid #e4e4e7; border-radius: 8px; padding: 20px; margin: 0 0 24px; text-align: center;">
-      <p style="color: #71717a; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px; font-weight: 600;">Verification code</p>
-      <p style="color: #18181b; font-size: 28px; font-family: 'SF Mono', Monaco, 'Menlo', monospace; margin: 0; letter-spacing: 0.2em; font-weight: 600;">
-        {{.code}}
-      </p>
-    </div>
-
-    <p style="color: #a1a1aa; font-size: 13px; line-height: 20px; margin: 24px 0 0;">
-      Didn't request this? You can safely ignore this email - no changes have been made to your account.
-    </p>
-  </div>
-</body>
-</html>
-`,
-	},
-	types.EmailTypeActivationToken: {
-		Subject: "Your Gateway Activation Token - {{.plan_tier}} Plan",
-		HTMLTemplate: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gateway Activation Token</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px; background-color: #f4f4f5;">
-  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-    <img src="{{.logo_url}}" alt="Everstack" style="height: 40px; margin-bottom: 32px;">
-    
-    <h1 style="color: #18181b; font-size: 24px; margin: 0 0 16px;">Your Gateway Activation Token</h1>
-    
-    <p style="color: #52525b; font-size: 16px; line-height: 24px; margin: 0 0 24px;">
-      Your payment for the <strong>{{.plan_tier}}</strong> plan was successful! We couldn't automatically activate your gateway, so please use the activation token below to manually activate it.
-    </p>
-    
-    <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 0 0 24px;">
-      <p style="color: #6b7280; font-size: 12px; text-transform: uppercase; margin: 0 0 8px;">Activation Token</p>
-      <p style="color: #18181b; font-size: 14px; font-family: 'SF Mono', 'Monaco', 'Menlo', monospace; margin: 0; word-break: break-all;">
-        {{.activation_token}}
-      </p>
-    </div>
-    
-    <h2 style="color: #18181b; font-size: 18px; margin: 32px 0 16px;">How to Activate</h2>
-    
-    <ol style="color: #52525b; font-size: 14px; line-height: 24px; padding-left: 20px; margin: 0 0 24px;">
-      <li style="margin-bottom: 8px;">Go to your gateway admin panel{{if .gateway_url}} at <a href="{{.gateway_url}}" style="color: #6366f1;">{{.gateway_url}}</a>{{end}}</li>
-      <li style="margin-bottom: 8px;">Navigate to <strong>Settings → Billing</strong></li>
-      <li style="margin-bottom: 8px;">Click <strong>"Enter Activation Token"</strong></li>
-      <li style="margin-bottom: 8px;">Paste the token above and click <strong>Activate</strong></li>
-    </ol>
-    
-    <p style="color: #a1a1aa; font-size: 14px; margin: 32px 0 0;">
-      This token expires in 1 hour. If you need a new token, please contact support at <a href="mailto:support@everstack.ai" style="color: #6366f1;">support@everstack.ai</a>
     </p>
   </div>
 </body>

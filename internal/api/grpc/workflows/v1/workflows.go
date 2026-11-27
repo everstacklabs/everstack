@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	agentrt "github.com/everstacklabs/everstack/internal/agents/runtime"
 	workflowscmd "github.com/everstacklabs/everstack/internal/commands/handlers/workflows"
 	"github.com/everstacklabs/everstack/internal/cqrs"
 	"github.com/everstacklabs/everstack/internal/enterprise"
@@ -723,9 +724,9 @@ func (s *Server) executeWorkflowInternal(ctx context.Context, req *connect.Reque
 	eng.RegisterExecutor(&executors.STTExecutor{Registry: s.registry})
 	eng.RegisterExecutor(&executors.VoiceCloneExecutor{Registry: s.registry, VoiceCloneRepo: s.voiceCloneRepo, StorageServer: s.storageServer})
 
-	// 6. Execute — ensure tenant ID is on the context for downstream executors
+	// 6. Execute with the tenant identity required by provider and database routing.
 	if tenantID != "" {
-		ctx = contextkeys.WithTenantID(ctx, tenantID)
+		ctx = agentrt.ContextWithTenantIdentity(ctx, tenantID)
 	}
 
 	logger.WithFields("workflow_id", workflowID, "tenant_id", tenantID, "execution_id", executionID).

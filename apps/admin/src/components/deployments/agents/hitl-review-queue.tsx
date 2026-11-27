@@ -49,20 +49,20 @@ const REVIEW_STATUS_META: Record<number, { label: string; className: string }> =
   {
     [ApprovalReviewStatus.PENDING]: {
       label: 'Pending',
-      className: 'bg-amber-500/15 text-amber-300 border border-amber-500/20',
+      className: 'bg-warning-surface-strong text-warning border border-warning-border',
     },
     [ApprovalReviewStatus.APPROVED]: {
       label: 'Approved',
       className:
-        'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20',
+        'bg-success-surface-strong text-success border border-success-border',
     },
     [ApprovalReviewStatus.DENIED]: {
       label: 'Denied',
-      className: 'bg-red-500/15 text-red-300 border border-red-500/20',
+      className: 'bg-danger-surface-strong text-danger border border-danger-border',
     },
     [ApprovalReviewStatus.EXPIRED]: {
       label: 'Expired',
-      className: 'bg-orange-500/15 text-orange-300 border border-orange-500/20',
+      className: 'bg-warning-surface-strong text-warning border border-warning-border',
     },
     [ApprovalReviewStatus.CANCELLED]: {
       label: 'Cancelled',
@@ -228,7 +228,7 @@ export function HitlReviewQueue() {
 
   if (error) {
     return (
-      <div className="flex flex-1 items-center justify-center text-red-400">
+      <div className="flex flex-1 items-center justify-center text-danger">
         Error loading approvals: {error.message}
       </div>
     )
@@ -775,7 +775,7 @@ function ReviewDetailPanel({
               Loading transcript context...
             </div>
           ) : selectedSession.error ? (
-            <div className="text-sm text-red-300">
+            <div className="text-sm text-danger">
               Failed to load session context.
             </div>
           ) : relevantTurns.length === 0 ? (

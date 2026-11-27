@@ -306,13 +306,13 @@ export function AudioRecorder({ onRecorded }: AudioRecorderProps) {
                             step={0.1}
                             value={playbackTime}
                             onChange={handleSeek}
-                            className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-brand-main-700 accent-emerald-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500"
+                            className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-brand-main-700 accent-success [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-success-solid"
                         />
                         <div className="flex items-center justify-between">
                             <span className="text-[10px] text-white/40 light:text-black/40">
                                 {formatTime(playbackTime)} / {formatTime(recordedDuration)}
                             </span>
-                            <span className="text-[10px] text-emerald-400 light:text-emerald-600 flex items-center gap-1">
+                            <span className="text-[10px] text-success flex items-center gap-1">
                                 <Icon icon="lucide:check" className="h-3 w-3" />
                                 Recorded
                             </span>
@@ -330,10 +330,10 @@ export function AudioRecorder({ onRecorded }: AudioRecorderProps) {
                         <button
                             type="button"
                             onClick={clearRecording}
-                            className="p-1.5 rounded hover:bg-red-500/20 transition-colors"
+                            className="p-1.5 rounded hover:bg-danger-surface-strong transition-colors"
                             title="Remove recording"
                         >
-                            <Icon icon="lucide:x" className="h-3.5 w-3.5 text-white/50 light:text-black/50 hover:text-red-400 light:hover:text-red-600" />
+                            <Icon icon="lucide:x" className="h-3.5 w-3.5 text-white/50 light:text-black/50 hover:text-danger" />
                         </button>
                     </div>
                 </div>
@@ -368,7 +368,7 @@ export function AudioRecorder({ onRecorded }: AudioRecorderProps) {
                 <>
                     <div className="h-1 w-full rounded-full bg-brand-main-700 overflow-hidden">
                         <div
-                            className="h-full rounded-full bg-red-500 transition-all duration-1000"
+                            className="h-full rounded-full bg-danger-solid transition-all duration-1000"
                             style={{ width: `${(duration / MAX_DURATION_SECONDS) * 100}%` }}
                         />
                     </div>

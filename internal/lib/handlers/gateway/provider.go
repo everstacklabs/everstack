@@ -177,8 +177,7 @@ func (r *Registry) GetImageProvider(name string) (ImageProvider, bool) {
 	if !ok {
 		return nil, false
 	}
-	ip, ok := p.(ImageProvider)
-	return ip, ok
+	return UnwrapTo[ImageProvider](p)
 }
 
 // GetModerationProvider returns a ModerationProvider if the named provider supports moderation.
@@ -187,8 +186,7 @@ func (r *Registry) GetModerationProvider(name string) (ModerationProvider, bool)
 	if !ok {
 		return nil, false
 	}
-	mp, ok := p.(ModerationProvider)
-	return mp, ok
+	return UnwrapTo[ModerationProvider](p)
 }
 
 // GetRerankProvider returns a RerankProvider if the named provider supports reranking.
@@ -197,8 +195,7 @@ func (r *Registry) GetRerankProvider(name string) (RerankProvider, bool) {
 	if !ok {
 		return nil, false
 	}
-	rp, ok := p.(RerankProvider)
-	return rp, ok
+	return UnwrapTo[RerankProvider](p)
 }
 
 // GetResponsesProvider returns a ResponsesProvider if the named provider supports the Responses API.
@@ -265,30 +262,35 @@ func (r *Registry) FindAudioProviderForModel(model string) (AudioProvider, strin
 	return nil, "", false
 }
 
-// FindImageProvider finds a provider that supports image operations.
+// FindImageProvider finds a provider that supports image operations,
+// unwrapping middleware layers like FindAudioProvider. A metered platform
+// provider stays hidden: its billing wrapper deliberately does not implement
+// Unwrapper, so these modalities cannot reach a platform key unmetered.
 func (r *Registry) FindImageProvider() (ImageProvider, string, bool) {
 	for name, p := range r.byName {
-		if ip, ok := p.(ImageProvider); ok {
+		if ip, ok := UnwrapTo[ImageProvider](p); ok {
 			return ip, name, true
 		}
 	}
 	return nil, "", false
 }
 
-// FindModerationProvider finds a provider that supports moderation.
+// FindModerationProvider finds a provider that supports moderation,
+// unwrapping middleware layers (see FindImageProvider).
 func (r *Registry) FindModerationProvider() (ModerationProvider, string, bool) {
 	for name, p := range r.byName {
-		if mp, ok := p.(ModerationProvider); ok {
+		if mp, ok := UnwrapTo[ModerationProvider](p); ok {
 			return mp, name, true
 		}
 	}
 	return nil, "", false
 }
 
-// FindRerankProvider finds a provider that supports reranking.
+// FindRerankProvider finds a provider that supports reranking, unwrapping
+// middleware layers (see FindImageProvider).
 func (r *Registry) FindRerankProvider() (RerankProvider, string, bool) {
 	for name, p := range r.byName {
-		if rp, ok := p.(RerankProvider); ok {
+		if rp, ok := UnwrapTo[RerankProvider](p); ok {
 			return rp, name, true
 		}
 	}

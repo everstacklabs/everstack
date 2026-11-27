@@ -261,7 +261,10 @@ export type {
   ResponseOutputItem,
   ResponseUsage,
   ResponseStreamEvent,
+  ResponseDelta,
   DeleteResponseResult,
   ListResponsesParams,
   ListResponsesResult,
 } from "./resources/responses.js";
+
+export { Decisions, type DecisionParams, type DecisionQuestion, type DecisionAnswer, type DecisionResponse } from "./resources/decisions.js";

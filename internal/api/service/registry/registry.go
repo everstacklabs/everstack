@@ -1,8 +1,6 @@
 package registry
 
 import (
-	"strings"
-
 	"connectrpc.com/connect"
 	grpcserver "github.com/everstacklabs/everstack/internal/api/grpc/server"
 	"github.com/everstacklabs/everstack/internal/api/grpc/server/middleware"
@@ -14,18 +12,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// AuthPolicy defines which fully-qualified services (without leading slash)
-// should enforce M2M or JWT. Example values:
-// - "everstack.gateway.v1.GatewayService"
-// - "everstack.management.v1.ManagementService"
-type AuthPolicy struct {
-	M2MServices []string
-	JWTServices []string
-}
-
 type Registry struct {
-	m2m             map[string]struct{}
-	jwt             map[string]struct{}
 	DBConn          *database.Conn
 	Writer          database.Writer
 	LE              *httpmw.LicenseEnforcer
@@ -49,29 +36,16 @@ type Registry struct {
 	Authz connect.Interceptor
 }
 
-func New(policy AuthPolicy) *Registry {
-	toSet := func(services []string) map[string]struct{} {
-		m := make(map[string]struct{}, len(services))
-		for _, s := range services {
-			// normalize to "/<fqdn>/" so it matches req.Spec().Procedure prefix
-			m["/"+s+"/"] = struct{}{}
-		}
-		return m
-	}
+// New returns a registry with the default license policy. Authentication is
+// the API-key/session interceptor built in BuildInterceptors; there is no
+// separate M2M gate. The former M2M interceptor only checked that credential
+// headers were present, and its service match never fired because
+// MethodPrefix() has no leading slash (EVS-324 item 15). Procedures that
+// billing and license call on the gateway authenticate their own payloads.
+func New() *Registry {
 	return &Registry{
-		m2m: toSet(policy.M2MServices),
-		jwt: toSet(policy.JWTServices),
-		LP:  apilic.NewDefaultPolicy(),
+		LP: apilic.NewDefaultPolicy(),
 	}
-}
-
-func (r *Registry) match(set map[string]struct{}, procOrPrefix string) bool {
-	for svc := range set {
-		if strings.HasPrefix(procOrPrefix, svc) {
-			return true
-		}
-	}
-	return false
 }
 
 // SetDatabase wires a database connection and writer into the registry for later use.
@@ -113,8 +87,7 @@ func (r *Registry) SetCLIAuthorizationDB(db *sqlx.DB) {
 }
 
 // BuildInterceptors returns the interceptor chain for a service based on policy.
-// Chain order: apiKey → localTenant → license → spend_limit → callDuration → activity → validation → llmActivity → m2m
-// It always includes base interceptors, and conditionally adds M2M/JWT.
+// Chain order: apiKey → localTenant → license → spend_limit → callDuration → activity → validation → llmActivity → authz
 func (r *Registry) BuildInterceptors(service grpcserver.ConnectServer) []connect.Interceptor {
 	// Use DB-backed session interceptor for self-hosted (validates session cookies
 	// directly against the sessions table), or standard policy-only interceptor
@@ -148,13 +121,6 @@ func (r *Registry) BuildInterceptors(service grpcserver.ConnectServer) []connect
 		middleware.ValidationHandler(),
 		middleware.LLMActivityInterceptor(),
 	)
-
-	servicePrefix := service.MethodPrefix()
-
-	if r.match(r.m2m, servicePrefix) {
-		m2mMatch := func(proc string) bool { return r.match(r.m2m, proc) }
-		base = append(base, middleware.M2MAuthInterceptor(m2mMatch))
-	}
 
 	if r.Authz != nil {
 		base = append(base, r.Authz)

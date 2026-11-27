@@ -96,14 +96,7 @@ func (s *Service) syncToDatabase(ctx context.Context, modelsYAML, providersYAML 
 	catalogModels := make([]*CatalogModel, 0)
 	for providerName, providerModels := range modelsConfig.Providers {
 		for _, model := range providerModels.Models {
-			config := map[string]interface{}{
-				"api_type":                       model.APIType,
-				"cache_write_1h_cost_per_1k":     model.CacheWrite1hCostPer1k,
-				"long_context_threshold_tokens":  model.LongContextThresholdTokens,
-				"long_context_input_multiplier":  model.LongContextInputMultiplier,
-				"long_context_cache_multiplier":  model.LongContextCacheMultiplier,
-				"long_context_output_multiplier": model.LongContextOutputMultiplier,
-			}
+			config := modelConfig(model)
 			catalogModels = append(catalogModels, &CatalogModel{
 				ProviderName:        providerName,
 				ModelName:           model.Name,
@@ -180,6 +173,23 @@ providers:
 	return nil
 }
 
+// modelConfig holds the model fields that have no column of their own and are
+// persisted in the catalog_models config JSON instead.
+func modelConfig(model ModelDefinition) map[string]interface{} {
+	config := map[string]interface{}{
+		"api_type":                       model.APIType,
+		"cache_write_1h_cost_per_1k":     model.CacheWrite1hCostPer1k,
+		"long_context_threshold_tokens":  model.LongContextThresholdTokens,
+		"long_context_input_multiplier":  model.LongContextInputMultiplier,
+		"long_context_cache_multiplier":  model.LongContextCacheMultiplier,
+		"long_context_output_multiplier": model.LongContextOutputMultiplier,
+	}
+	if len(model.UnsupportedParameters) > 0 {
+		config["unsupported_parameters"] = model.UnsupportedParameters
+	}
+	return config
+}
+
 // convertModelsToYAML converts database models to YAML format
 func convertModelsToYAML(models []*CatalogModel) ([]byte, error) {
 	// Group models by provider
@@ -201,6 +211,7 @@ func convertModelsToYAML(models []*CatalogModel) ([]byte, error) {
 			LongContextOutputMultiplier: configFloat(model.Config, "long_context_output_multiplier"),
 			Capabilities:                model.Capabilities,
 			Status:                      model.Status,
+			UnsupportedParameters:       configStrings(model.Config, "unsupported_parameters"),
 		})
 	}
 
@@ -241,6 +252,29 @@ func configFloat(config map[string]interface{}, key string) float64 {
 
 func configInt(config map[string]interface{}, key string) int {
 	return int(configFloat(config, key))
+}
+
+// configStrings reads a string list from a model's config. The config is
+// stored as JSON, so a list read back from the database arrives as
+// []interface{}, while one built in memory is still []string.
+func configStrings(config map[string]interface{}, key string) []string {
+	switch value := config[key].(type) {
+	case []string:
+		return append([]string(nil), value...)
+	case []interface{}:
+		out := make([]string, 0, len(value))
+		for _, item := range value {
+			if s, ok := item.(string); ok {
+				out = append(out, s)
+			}
+		}
+		if len(out) == 0 {
+			return nil
+		}
+		return out
+	default:
+		return nil
+	}
 }
 
 // convertProvidersToYAML converts database providers to YAML format

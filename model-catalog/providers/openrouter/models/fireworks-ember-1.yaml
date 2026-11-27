@@ -1,0 +1,38 @@
+# Verified 2026-09-29.
+# Source: https://openrouter.ai/api/v1/models
+# Source: https://openrouter.ai/fireworks/ember-1
+name: "fireworks/ember-1"
+display_name: "Fireworks: Ember-1 (OpenRouter)"
+family: "fireworks"
+status: "stable"
+release_date: "2026-09-24"
+cost:
+  input_per_1k: 0.003
+  output_per_1k: 0.015
+  cache_read_per_1k: 0.0003
+limits:
+  max_tokens: 1048576
+  max_completion_tokens: 943718
+capabilities:
+  - "chat"
+  - "function_calling"
+  - "vision"
+  - "reasoning"
+modalities:
+  input:
+    - "text"
+    - "image"
+  output:
+    - "text"
+structured_output: true
+notes: "OpenRouter listing date, not necessarily the original model launch. Provider-route pricing and limits verified 2026-09-29; endpoint selection can change rates. Tool, audio, and other non-text charges are not represented by these text token rates."
+parameters:
+  -
+    key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 943718
+    has_max_value: true
+added_in_version: "2.9.0"

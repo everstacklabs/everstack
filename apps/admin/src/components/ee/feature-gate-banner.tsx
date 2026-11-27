@@ -79,20 +79,20 @@ export function FeatureGateInfoBanner({ message, upgradeUrl }: FeatureGateInfoBa
     const isExternal = upgradeUrl.startsWith('http')
 
     return (
-        <div className="flex items-center justify-between gap-4 border-b border-amber-500/20 bg-amber-500/5 px-4 py-2">
-            <p className="text-xs text-amber-300">
+        <div className="flex items-center justify-between gap-4 border-b border-warning-border bg-warning-surface/60 px-4 py-2">
+            <p className="text-xs text-warning">
                 {message}
             </p>
             {isExternal ? (
                 <a href={upgradeUrl} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                    <Button variant="outline" size="sm" className="h-7 gap-1 text-xs border-amber-500/30 text-amber-300 hover:bg-amber-500/10">
+                    <Button variant="outline" size="sm" className="h-7 gap-1 text-xs border-warning-border text-warning hover:bg-warning-surface">
                         Upgrade
                         <ArrowUpRight className="size-3" />
                     </Button>
                 </a>
             ) : (
                 <a href={upgradeUrl} className="shrink-0">
-                    <Button variant="outline" size="sm" className="h-7 gap-1 text-xs border-amber-500/30 text-amber-300 hover:bg-amber-500/10">
+                    <Button variant="outline" size="sm" className="h-7 gap-1 text-xs border-warning-border text-warning hover:bg-warning-surface">
                         Upgrade
                         <ArrowUpRight className="size-3" />
                     </Button>

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -35,6 +36,10 @@ type Configuration struct {
 	UpdatedAt       time.Time         `db:"updated_at"`
 	SyncedToYAMLAt  *time.Time        `db:"synced_to_yaml_at"`
 	LastUsedAt      *time.Time        `db:"last_used_at"`
+	// IsTrial marks the model trial's instance-level row (TrialProviderName).
+	// Only ListTrialOwned returns it; every other unscoped reader and writer
+	// here skips it. Selected only by the queries that need it.
+	IsTrial bool `db:"is_trial"`
 
 	// Catalog sync fields
 	CatalogStatus   string     `db:"catalog_status"`    // "available", "configured", "active", "deprecated"
@@ -51,6 +56,18 @@ type Configuration struct {
 	EnabledModelsJSON  []byte `db:"enabled_models"`
 	CustomSettingsJSON []byte `db:"custom_settings"`
 }
+
+// ErrNotFound reports that no provider configuration matched. The
+// tenant-scoped lookups return it for rows another tenant or the platform
+// owns, so callers cannot tell "foreign" from "missing".
+var ErrNotFound = errors.New("provider configuration not found")
+
+// TrialProviderName is the provider_name the model trial's row is stored
+// under (docs/design/free-trial-onboarding.md 3.1). No provider factory
+// registers it, and the instance-level openai row keeps its own name: the
+// gateway's trial path serves this row as openai in memory, and only for an
+// eligible organization.
+const TrialProviderName = "openai-trial"
 
 // Repository handles database operations for provider configurations
 type Repository struct {
@@ -84,6 +101,7 @@ func (r *Repository) List(ctx context.Context) ([]*Configuration, error) {
 		       discovery_api_endpoint,
 		       last_used_at
 		FROM provider_configurations
+		WHERE NOT is_trial
 		ORDER BY provider_name ASC
 	`
 
@@ -117,7 +135,7 @@ func (r *Repository) Get(ctx context.Context, providerName string) (*Configurati
 		       discovery_api_endpoint,
 		       last_used_at
 		FROM provider_configurations
-		WHERE provider_name = $1
+		WHERE provider_name = $1 AND NOT is_trial
 	`
 
 	var config Configuration
@@ -139,8 +157,8 @@ func (r *Repository) Get(ctx context.Context, providerName string) (*Configurati
 func (r *Repository) Exists(ctx context.Context, providerName string) (bool, error) {
 	query := `
 		SELECT EXISTS(
-			SELECT 1 FROM provider_configurations 
-			WHERE provider_name = $1
+			SELECT 1 FROM provider_configurations
+			WHERE provider_name = $1 AND NOT is_trial
 		)
 	`
 
@@ -161,6 +179,7 @@ func (r *Repository) ExistsTx(ctx context.Context, tx *sqlx.Tx, providerName str
 			SELECT 1 FROM provider_configurations
 			WHERE provider_name = $1
 			  AND organization_id IS NULL
+			  AND NOT is_trial
 		)
 	`
 	var exists bool
@@ -208,6 +227,7 @@ func (r *Repository) Upsert(ctx context.Context, config *Configuration) error {
 			is_active = EXCLUDED.is_active,
 			updated_at = EXCLUDED.updated_at,
 			last_used_at = COALESCE(EXCLUDED.last_used_at, provider_configurations.last_used_at)
+		WHERE NOT provider_configurations.is_trial
 		RETURNING id, created_at, updated_at, last_used_at
 	`
 
@@ -253,7 +273,7 @@ func (r *Repository) Upsert(ctx context.Context, config *Configuration) error {
 func (r *Repository) Delete(ctx context.Context, providerName string) error {
 	query := `
 		DELETE FROM provider_configurations
-		WHERE provider_name = $1
+		WHERE provider_name = $1 AND NOT is_trial
 	`
 
 	result, err := r.db.ExecContext(ctx, query, providerName)
@@ -278,7 +298,7 @@ func (r *Repository) UpdateSyncTime(ctx context.Context, providerName string) er
 	query := `
 		UPDATE provider_configurations
 		SET synced_to_yaml_at = $1
-		WHERE provider_name = $2
+		WHERE provider_name = $2 AND NOT is_trial
 	`
 
 	_, err := r.db.ExecContext(ctx, query, time.Now(), providerName)
@@ -294,7 +314,7 @@ func (r *Repository) GetLastSyncTime(ctx context.Context, providerName string) (
 	query := `
 		SELECT synced_to_yaml_at
 		FROM provider_configurations
-		WHERE provider_name = $1
+		WHERE provider_name = $1 AND NOT is_trial
 	`
 
 	var syncTime *time.Time
@@ -318,7 +338,7 @@ func (r *Repository) ListActive(ctx context.Context) ([]*Configuration, error) {
 		       discovery_api_endpoint,
 		       last_used_at
 		FROM provider_configurations
-		WHERE is_active = true
+		WHERE is_active = true AND NOT is_trial
 		ORDER BY provider_name ASC
 	`
 
@@ -431,6 +451,7 @@ func upsertProviderFromCatalog(ctx context.Context, executor catalogExecContext,
 			is_from_catalog = true,
 			catalog_synced_at = $4,
 			updated_at = $6
+		WHERE NOT provider_configurations.is_trial
 	`
 
 	_, err := executor.ExecContext(ctx, query,
@@ -452,7 +473,7 @@ func (r *Repository) MarkDeprecated(ctx context.Context, providerName string) er
 		SET catalog_status = 'deprecated',
 		    deprecated_at = $1,
 		    updated_at = $2
-		WHERE provider_name = $3 AND is_from_catalog = true
+		WHERE provider_name = $3 AND is_from_catalog = true AND NOT is_trial
 	`
 
 	result, err := r.db.ExecContext(ctx, query, &now, now, providerName)
@@ -485,7 +506,8 @@ func (r *Repository) ListAllWithCatalogStatus(ctx context.Context) ([]*Configura
 		       discovery_api_endpoint,
 		       last_used_at
 		FROM provider_configurations
-		ORDER BY 
+		WHERE NOT is_trial
+		ORDER BY
 			CASE catalog_status
 				WHEN 'active' THEN 1
 				WHEN 'configured' THEN 2
@@ -549,6 +571,105 @@ func (r *Repository) ListForOrg(ctx context.Context, orgID string) ([]*Configura
 	return configs, nil
 }
 
+// ListPlatformOwned returns the active provider configurations nobody owns
+// (organization_id IS NULL): the operator's YAML/env-seeded rows. On a shared
+// gateway these are the platform key pool
+// (docs/design/prepaid-credits-v2.md 6.2, option C). They are served, never
+// listed, returned, edited or deleted, through any tenant-facing path: the
+// only caller is the bundle builder, which merges them in memory after the
+// tenant's own keys for allowlisted organizations. The model trial's row
+// (is_trial) is never part of the pool, whatever the allowlist says; only
+// ListTrialOwned returns it.
+func (r *Repository) ListPlatformOwned(ctx context.Context) ([]*Configuration, error) {
+	query := `
+		SELECT id, organization_id, provider_name, api_key_encrypted, COALESCE(api_key_source, 'yaml') as api_key_source,
+		       enabled_models, custom_base_url, custom_settings, is_active, created_at, updated_at, synced_to_yaml_at,
+		       COALESCE(catalog_status, '') as catalog_status,
+		       COALESCE(is_from_catalog, false) as is_from_catalog,
+		       catalog_synced_at, deprecated_at,
+		       COALESCE(provider_type, 'static') as provider_type,
+		       COALESCE(supports_model_discovery, false) as supports_model_discovery,
+		       discovery_api_endpoint,
+		       last_used_at
+		FROM provider_configurations
+		WHERE organization_id IS NULL AND is_active = true AND NOT is_trial
+		ORDER BY provider_name ASC
+	`
+	var rows []Configuration
+	if err := r.db.SelectContext(ctx, &rows, query); err != nil {
+		return nil, fmt.Errorf("failed to list platform-owned provider configurations: %w", err)
+	}
+	configs := make([]*Configuration, 0, len(rows))
+	for i := range rows {
+		if err := rows[i].unmarshalJSONB(); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal JSONB for provider %s: %w", rows[i].ProviderName, err)
+		}
+		configs = append(configs, &rows[i])
+	}
+	return configs, nil
+}
+
+// ListTrialOwned returns the active model trial row, if any
+// (docs/design/free-trial-onboarding.md 3.1). Its only caller is the
+// gateway's trial path, which serves it as openai, for one model, behind the
+// per-request trial allowance and only for an eligible organization. It is
+// never listed, returned, edited or deleted through any tenant-facing path.
+func (r *Repository) ListTrialOwned(ctx context.Context) ([]*Configuration, error) {
+	query := `
+		SELECT id, organization_id, provider_name, api_key_encrypted, COALESCE(api_key_source, 'yaml') as api_key_source,
+		       enabled_models, custom_base_url, custom_settings, is_active, created_at, updated_at, synced_to_yaml_at,
+		       COALESCE(catalog_status, '') as catalog_status,
+		       COALESCE(is_from_catalog, false) as is_from_catalog,
+		       catalog_synced_at, deprecated_at,
+		       COALESCE(provider_type, 'static') as provider_type,
+		       COALESCE(supports_model_discovery, false) as supports_model_discovery,
+		       discovery_api_endpoint,
+		       last_used_at, is_trial
+		FROM provider_configurations
+		WHERE organization_id IS NULL AND is_active = true AND is_trial
+		ORDER BY provider_name ASC
+	`
+	var rows []Configuration
+	if err := r.db.SelectContext(ctx, &rows, query); err != nil {
+		return nil, fmt.Errorf("failed to list model trial provider configurations: %w", err)
+	}
+	configs := make([]*Configuration, 0, len(rows))
+	for i := range rows {
+		if err := rows[i].unmarshalJSONB(); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal JSONB for provider %s: %w", rows[i].ProviderName, err)
+		}
+		configs = append(configs, &rows[i])
+	}
+	return configs, nil
+}
+
+// UpsertTrial seeds the model trial row from the operator's environment at
+// boot, as platform rows are seeded from provider env vars: active, owned by
+// nobody, stored under TrialProviderName with the key in the legacy
+// api_key_encrypted column (no provider_api_keys rows, so key rotation never
+// applies to it). The partial unique index on is_trial is the arbiter, so
+// there is only ever one trial row.
+func (r *Repository) UpsertTrial(ctx context.Context, apiKey string) error {
+	if apiKey == "" {
+		return fmt.Errorf("model trial api key is required")
+	}
+	_, err := r.db.ExecContext(ctx, `
+		INSERT INTO provider_configurations
+			(id, provider_name, api_key_encrypted, api_key_source, enabled_models, custom_settings,
+			 is_active, is_trial, created_at, updated_at)
+		VALUES ($1, $2, $3, 'yaml', '[]'::jsonb, '{}'::jsonb, true, true, NOW(), NOW())
+		ON CONFLICT (is_trial) WHERE is_trial
+		DO UPDATE SET
+			api_key_encrypted = EXCLUDED.api_key_encrypted,
+			is_active = true,
+			updated_at = NOW()`,
+		uuid.New().String(), TrialProviderName, apiKey)
+	if err != nil {
+		return fmt.Errorf("failed to seed model trial provider configuration: %w", err)
+	}
+	return nil
+}
+
 // GetForOrg fetches a tenant's provider configuration by name.
 func (r *Repository) GetForOrg(ctx context.Context, orgID, providerName string) (*Configuration, error) {
 	if orgID == "" {
@@ -578,6 +699,57 @@ func (r *Repository) GetForOrg(ctx context.Context, orgID, providerName string) 
 		return nil, fmt.Errorf("failed to unmarshal JSONB: %w", err)
 	}
 	return &config, nil
+}
+
+// GetByIDForOrg fetches a provider configuration by id, only when orgID owns
+// it. Rows owned by another tenant or by the platform (organization_id NULL)
+// return ErrNotFound, exactly like an id that does not exist.
+func (r *Repository) GetByIDForOrg(ctx context.Context, orgID, id string) (*Configuration, error) {
+	if orgID == "" {
+		return nil, fmt.Errorf("org id is required")
+	}
+	query := `
+		SELECT id, organization_id, provider_name, api_key_encrypted, COALESCE(api_key_source, 'yaml') as api_key_source,
+		       enabled_models, custom_base_url, custom_settings, is_active, created_at, updated_at, synced_to_yaml_at,
+		       COALESCE(catalog_status, '') as catalog_status,
+		       COALESCE(is_from_catalog, false) as is_from_catalog,
+		       catalog_synced_at, deprecated_at,
+		       COALESCE(provider_type, 'static') as provider_type,
+		       COALESCE(supports_model_discovery, false) as supports_model_discovery,
+		       discovery_api_endpoint,
+		       last_used_at
+		FROM provider_configurations
+		WHERE organization_id = $1 AND id = $2
+	`
+	var config Configuration
+	if err := r.db.GetContext(ctx, &config, query, orgID, id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to get provider configuration: %w", err)
+	}
+	if err := config.unmarshalJSONB(); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSONB: %w", err)
+	}
+	return &config, nil
+}
+
+// EffectiveBaseURL is the upstream base URL the gateway calls for a
+// configuration: the custom base URL when set, else the catalog default.
+func EffectiveBaseURL(custom *string, catalogDefault string) string {
+	if custom != nil {
+		if v := strings.TrimSpace(*custom); v != "" {
+			return v
+		}
+	}
+	return strings.TrimSpace(catalogDefault)
+}
+
+// BaseURLChanged reports whether moving from stored to requested changes the
+// host a stored credential would be sent to. Unset and the catalog default
+// are the same host; any other difference counts as a change.
+func BaseURLChanged(stored, requested *string, catalogDefault string) bool {
+	return EffectiveBaseURL(stored, catalogDefault) != EffectiveBaseURL(requested, catalogDefault)
 }
 
 // ExistsForOrg reports whether a tenant has configured a given provider.
@@ -703,7 +875,7 @@ func (r *Repository) UpdateLastUsedAt(ctx context.Context, providerName string) 
 	query := `
 		UPDATE provider_configurations
 		SET last_used_at = $1
-		WHERE provider_name = $2
+		WHERE provider_name = $2 AND NOT is_trial
 	`
 
 	result, err := r.db.ExecContext(ctx, query, time.Now(), providerName)

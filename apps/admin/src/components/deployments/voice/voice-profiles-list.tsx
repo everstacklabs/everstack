@@ -176,7 +176,7 @@ export function VoiceProfilesList() {
             width: 100,
             minWidth: 80,
             render: (profile: VoiceCloneProfile) => (
-                <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-emerald-500/15 text-emerald-300 light:text-emerald-600">
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-success-surface-strong text-success">
                     {profile.provider}
                 </span>
             ),
@@ -227,7 +227,7 @@ export function VoiceProfilesList() {
                             title={playingRefId === profile.id ? 'Stop reference' : 'Play reference audio'}
                         >
                             {playingRefId === profile.id ? (
-                                <Icon icon="lucide:square" className="h-3.5 w-3.5 text-amber-300 light:text-amber-700" />
+                                <Icon icon="lucide:square" className="h-3.5 w-3.5 text-warning" />
                             ) : (
                                 <Icon icon="lucide:headphones" className="h-3.5 w-3.5 text-brand-main-200" />
                             )}
@@ -247,7 +247,7 @@ export function VoiceProfilesList() {
                         {tts.isPending && playingId === profile.id ? (
                             <Icon icon="lucide:loader-2" className="h-3.5 w-3.5 animate-spin text-brand-main-200" />
                         ) : playingId === profile.id ? (
-                            <Icon icon="lucide:square" className="h-3 w-3 text-emerald-300 light:text-emerald-600" />
+                            <Icon icon="lucide:square" className="h-3 w-3 text-success" />
                         ) : (
                             <Icon icon="lucide:play" className="h-3.5 w-3.5 text-brand-main-200" />
                         )}
@@ -266,7 +266,7 @@ export function VoiceProfilesList() {
                 <div className="flex items-center gap-2 justify-center" data-row-actions>
                     <button
                         type="button"
-                        className="p-1 rounded hover:bg-blue-500/20 hover:text-blue-400 light:hover:text-blue-600 transition-colors"
+                        className="p-1 rounded hover:bg-info-surface-strong hover:text-info transition-colors"
                         onClick={() => handleEdit(profile)}
                         title="Edit profile"
                     >
@@ -274,7 +274,7 @@ export function VoiceProfilesList() {
                     </button>
                     <button
                         type="button"
-                        className="p-1 rounded hover:bg-red-500/20 hover:text-red-400 light:hover:text-red-600 transition-colors"
+                        className="p-1 rounded hover:bg-danger-surface-strong hover:text-danger transition-colors"
                         onClick={() => {
                             setDeleteConfirmId(profile.id)
                             setDeleteConfirmName(profile.name)
@@ -292,11 +292,11 @@ export function VoiceProfilesList() {
         <div className="flex-1 min-h-0 w-full h-full overflow-hidden flex flex-col">
             {/* Storage warning */}
             {!storageLoading && !hasStorage && (
-                <div className="shrink-0 flex items-center gap-3 px-4 py-2.5 border-b border-amber-500/20 bg-amber-500/5">
-                    <Icon icon="lucide:hard-drive" className="h-4 w-4 text-amber-500 shrink-0" />
-                    <p className="text-xs text-amber-300/80 light:text-amber-700/80">
+                <div className="shrink-0 flex items-center gap-3 px-4 py-2.5 border-b border-warning-border bg-warning-surface/60">
+                    <Icon icon="lucide:hard-drive" className="h-4 w-4 text-warning shrink-0" />
+                    <p className="text-xs text-warning/80">
                         Object storage is required for voice profiles.{' '}
-                        <Link to="/storage/overview" className="underline hover:text-amber-200 light:hover:text-amber-700">
+                        <Link to="/storage/overview" className="underline hover:text-warning">
                             Configure storage
                         </Link>
                     </p>

@@ -1,7 +1,7 @@
 name: "open-mixtral-8x7b"
 display_name: "Mixtral 8x7B"
 family: "mixtral"
-status: "stable"
+status: "deprecated"
 release_date: "2023-12-11"
 
 cost:
@@ -21,7 +21,7 @@ modalities:
   output: ["text"]
 
 knowledge_cutoff: "2024-01"
-notes: "Mistral model for multilingual chat, reasoning, and tool-assisted workflows"
+notes: "Retired by Mistral on 2025-03-30. Replacement: Mistral Small 4 (mistral-small-latest)."
 parameters:
   - key: "max_output_tokens"
     display_name: "Max output tokens"

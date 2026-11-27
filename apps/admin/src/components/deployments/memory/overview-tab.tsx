@@ -49,11 +49,11 @@ export function OverviewTab() {
         return (
             <div className="flex-1 flex flex-col items-center justify-center pb-24 px-4">
                 <div className="relative mb-6">
-                    <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl" />
+                    <div className="absolute inset-0 bg-danger-surface-strong rounded-full blur-xl" />
                     <div className="relative rounded-xl border border-brand-main-600 bg-brand-main-800/80 p-4">
                         <Iconify.Icon
                             icon={isServiceDown ? 'lucide:cloud-off' : 'lucide:alert-triangle'}
-                            className="size-8 text-red-400 light:text-red-600"
+                            className="size-8 text-danger"
                         />
                     </div>
                 </div>

@@ -167,8 +167,8 @@ export function WorkflowResultCard({ resultJson }: { resultJson: string }) {
                 <span
                     className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
                         needsConfig
-                            ? 'bg-amber-500/15 text-amber-400'
-                            : 'bg-green-500/15 text-green-400'
+                            ? 'bg-warning-surface-strong text-warning'
+                            : 'bg-success-surface-strong text-success'
                     }`}
                 >
                     {needsConfig ? 'Needs Config' : 'Ready'}
@@ -213,7 +213,7 @@ export function WorkflowResultCard({ resultJson }: { resultJson: string }) {
                     type="button"
                     onClick={handleRun}
                     disabled={running}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium bg-green-500/15 text-green-400 hover:bg-green-500/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium bg-success-surface-strong text-success hover:bg-success-solid/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Play className="w-3 h-3" />
                     {running ? 'Running...' : 'Run'}
@@ -222,17 +222,17 @@ export function WorkflowResultCard({ resultJson }: { resultJson: string }) {
 
             {/* Run result */}
             {runResult && (
-                <div className="rounded bg-green-950/30 border border-green-500/15 px-3 py-2">
-                    <div className="text-[10px] uppercase tracking-wider text-green-400/60 mb-1">Result</div>
-                    <pre className="text-[11px] font-mono text-green-300/80 whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
+                <div className="rounded bg-success-surface border border-success-border px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wider text-success/60 mb-1">Result</div>
+                    <pre className="text-[11px] font-mono text-success/80 whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
                         {runResult}
                     </pre>
                 </div>
             )}
             {runError && (
-                <div className="rounded bg-red-950/30 border border-red-500/15 px-3 py-2">
-                    <div className="text-[10px] uppercase tracking-wider text-red-400/60 mb-1">Error</div>
-                    <pre className="text-[11px] font-mono text-red-300/80 whitespace-pre-wrap break-all">
+                <div className="rounded bg-danger-surface border border-danger-border px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wider text-danger/60 mb-1">Error</div>
+                    <pre className="text-[11px] font-mono text-danger/80 whitespace-pre-wrap break-all">
                         {runError}
                     </pre>
                 </div>

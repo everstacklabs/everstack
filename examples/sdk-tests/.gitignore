@@ -1,0 +1,19 @@
+# Shared secrets / config
+.env
+
+# Node
+node_modules
+package-lock.json
+pnpm-lock.yaml
+
+# Python
+.venv
+__pycache__/
+*.pyc
+
+# Go
+/go/everstack-sdk-tests
+
+# Misc
+*.log
+*.tgz

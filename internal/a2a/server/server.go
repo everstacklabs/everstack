@@ -1,7 +1,7 @@
 // Package server implements an A2A (Agent2Agent) server that exposes deployed
-// Everstack agents as A2A-discoverable agents. External A2A clients — notably
-// Google ADK — fetch an agent's "Agent Card" and then use the agent as a remote
-// sub-agent via JSON-RPC message/send.
+// Everstack agents as A2A-discoverable agents. External A2A clients, notably
+// Google ADK, fetch an agent's "Agent Card" and then use the agent as a remote
+// sub-agent via legacy message/send or A2A 1.0 SendMessage.
 //
 // This is the inbound A2A counterpart to the MCP server: where MCP exposes
 // Everstack *tools*, A2A exposes Everstack *agents* as peers. Both share the
@@ -22,6 +22,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	apikeylib "github.com/everstacklabs/everstack/internal/lib/apikey"
+	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"net/http"
 	"strings"
 
@@ -40,9 +42,12 @@ const (
 	codeInternalError  = -32603
 )
 
-// Authenticator resolves a request to a tenant id. It MUST fail closed.
+// Authenticator resolves a request to a tenant id and the verified API key's
+// id (api_keys.id; empty when unknown). It MUST fail closed. The key id rides
+// the agent run's context so its inference is attributed to that key
+// (docs/design/spend-limits-v2.md).
 type Authenticator interface {
-	Authenticate(r *http.Request) (tenantID string, ok bool)
+	AuthenticateKey(r *http.Request) (tenantID, apiKeyID string, ok bool)
 }
 
 // Router is the subset of the API needed to mount routes (satisfied by *api.API).
@@ -100,16 +105,24 @@ func (s *Server) Mount(r Router) {
 
 // AgentCard is the A2A discovery document describing one agent.
 type AgentCard struct {
-	Name               string            `json:"name"`
-	Description        string            `json:"description"`
-	URL                string            `json:"url"`
-	Version            string            `json:"version"`
-	ProtocolVersion    string            `json:"protocolVersion"`
-	Provider           AgentProvider     `json:"provider"`
-	Capabilities       AgentCapabilities `json:"capabilities"`
-	DefaultInputModes  []string          `json:"defaultInputModes"`
-	DefaultOutputModes []string          `json:"defaultOutputModes"`
-	Skills             []AgentSkill      `json:"skills"`
+	Name                string            `json:"name"`
+	Description         string            `json:"description"`
+	URL                 string            `json:"url"`
+	Version             string            `json:"version"`
+	ProtocolVersion     string            `json:"protocolVersion"`
+	Provider            AgentProvider     `json:"provider"`
+	Capabilities        AgentCapabilities `json:"capabilities"`
+	DefaultInputModes   []string          `json:"defaultInputModes"`
+	DefaultOutputModes  []string          `json:"defaultOutputModes"`
+	Skills              []AgentSkill      `json:"skills"`
+	SupportedInterfaces []AgentInterface  `json:"supportedInterfaces"`
+}
+
+// AgentInterface advertises a transport and protocol version in preference order.
+type AgentInterface struct {
+	URL             string `json:"url"`
+	ProtocolBinding string `json:"protocolBinding"`
+	ProtocolVersion string `json:"protocolVersion"`
 }
 
 type AgentProvider struct {
@@ -137,12 +150,16 @@ func (s *Server) handleAgentCard(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	tenantID, ok := s.d.Auth.Authenticate(r)
+	ctx, tenantID, _, ok := s.authenticate(r)
 	if !ok || tenantID == "" {
 		w.Header().Set("WWW-Authenticate", `Bearer realm="everstack-a2a"`)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
+	if apikeylib.WriteRateLimit(w, ctx) {
+		return
+	}
+	r = r.WithContext(contextkeys.ReadAgentHop(ctx, r.Header))
 	agentID := mux.Vars(r)["agentId"]
 	if !s.isPublished(r.Context(), tenantID, agentID) {
 		http.Error(w, "agent not found", http.StatusNotFound)
@@ -169,6 +186,10 @@ func (s *Server) handleAgentCard(w http.ResponseWriter, r *http.Request) {
 		Capabilities:       AgentCapabilities{Streaming: false, PushNotifications: false, StateTransitionHistory: false},
 		DefaultInputModes:  []string{"text/plain"},
 		DefaultOutputModes: []string{"text/plain"},
+		SupportedInterfaces: []AgentInterface{
+			{URL: base, ProtocolBinding: "JSONRPC", ProtocolVersion: "1.0"},
+			{URL: base, ProtocolBinding: "JSONRPC", ProtocolVersion: "0.3"},
+		},
 		Skills: []AgentSkill{{
 			ID:          "chat",
 			Name:        name,
@@ -203,7 +224,7 @@ type rpcError struct {
 // A2A message / part / task types (subset).
 type a2aPart struct {
 	Kind string `json:"kind"`
-	Text string `json:"text,omitempty"`
+	Text string `json:"text"` // required on a text part, even when empty
 }
 
 type a2aMessage struct {
@@ -237,21 +258,46 @@ type messageSendParams struct {
 	Message a2aMessage `json:"message"`
 }
 
+// maxRPCBodyBytes caps one JSON-RPC request body on both bindings.
+const maxRPCBodyBytes = 4 << 20
+
 func (s *Server) handleRPC(w http.ResponseWriter, r *http.Request) {
+	version := bindingVersion(r.Header.Get("A2A-Version"))
+	if version == "1.0" {
+		w.Header().Set("A2A-Version", "1.0")
+	}
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", "POST")
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	tenantID, ok := s.d.Auth.Authenticate(r)
+	ctx, tenantID, apiKeyID, ok := s.authenticate(r)
 	if !ok || tenantID == "" {
 		w.Header().Set("WWW-Authenticate", `Bearer realm="everstack-a2a"`)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
+	if apikeylib.WriteRateLimit(w, ctx) {
+		return
+	}
+	r = r.WithContext(contextkeys.ReadAgentHop(ctx, r.Header))
 	agentID := mux.Vars(r)["agentId"]
 	if !s.isPublished(r.Context(), tenantID, agentID) {
 		http.Error(w, "agent not found", http.StatusNotFound)
+		return
+	}
+	// A task is text. Bound the body so an authenticated caller cannot make
+	// the decoder buffer an arbitrarily large request.
+	r.Body = http.MaxBytesReader(w, r.Body, maxRPCBodyBytes)
+
+	if version == "1.0" {
+		s.handleV1RPC(w, r, contextkeys.WithAPIKeyID(r.Context(), apiKeyID), tenantID, agentID)
+		return
+	}
+	if version != "" && version != "0.2" && version != "0.3" {
+		var req rpcRequest
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		writeV1Error(w, &req, codeVersionNotSupported, "A2A version not supported")
 		return
 	}
 
@@ -267,7 +313,7 @@ func (s *Server) handleRPC(w http.ResponseWriter, r *http.Request) {
 
 	switch req.Method {
 	case "message/send":
-		s.handleMessageSend(w, r.Context(), tenantID, agentID, &req)
+		s.handleMessageSend(w, contextkeys.WithAPIKeyID(r.Context(), apiKeyID), tenantID, agentID, &req)
 	case "message/stream":
 		writeRPC(w, &rpcResponse{JSONRPC: jsonRPCVersion, ID: idValue(req.ID), Error: &rpcError{Code: codeInvalidRequest, Message: "streaming (message/stream) is not supported; use message/send"}})
 	default:
@@ -289,7 +335,12 @@ func (s *Server) handleMessageSend(w http.ResponseWriter, ctx context.Context, t
 		return
 	}
 
-	output, err := s.d.Runner.Run(ctx, tenantID, agentID, text)
+	runCtx, err := contextkeys.NextAgentHop(ctx)
+	if err != nil {
+		writeRPC(w, &rpcResponse{JSONRPC: jsonRPCVersion, ID: idValue(req.ID), Error: &rpcError{Code: codeInvalidRequest, Message: err.Error()}})
+		return
+	}
+	output, err := s.d.Runner.Run(runCtx, tenantID, agentID, text)
 	taskID := randID()
 	contextID := randID()
 	if err != nil {
@@ -370,4 +421,14 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 
 func writeRPC(w http.ResponseWriter, resp *rpcResponse) {
 	writeJSON(w, http.StatusOK, resp)
+}
+
+func (s *Server) authenticate(r *http.Request) (context.Context, string, string, bool) {
+	if auth, ok := s.d.Auth.(interface {
+		AuthenticateKeyContext(*http.Request) (context.Context, string, string, bool)
+	}); ok {
+		return auth.AuthenticateKeyContext(r)
+	}
+	tenant, key, ok := s.d.Auth.AuthenticateKey(r)
+	return r.Context(), tenant, key, ok
 }

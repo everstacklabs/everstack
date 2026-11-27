@@ -30,8 +30,12 @@ func (m *oidcSessionMinter) Mint(w http.ResponseWriter, r *http.Request, claims 
 		name = &n
 	}
 	// GetOrCreateUser keys on external_id (the cloud user id / id_token sub),
-	// so repeat sign-ins resolve to the same local user.
-	user, _, err := m.h.selfHostedSvc.GetOrCreateUser(r.Context(), claims.Subject, claims.Email, name, nil)
+	// so repeat sign-ins resolve to the same local user. Admission decides
+	// before any account or session is written.
+	user, err := m.h.admitCloudSignIn(r.Context(), cloudSignIn{
+		ExternalID: claims.Subject, Email: claims.Email, Name: name,
+		OrgID: claims.OrgID, OrgSlug: claims.OrgSlug, OrgRole: claims.OrgRole,
+	})
 	if err != nil {
 		return err
 	}
@@ -40,10 +44,6 @@ func (m *oidcSessionMinter) Mint(w http.ResponseWriter, r *http.Request, claims 
 	session, err := m.h.selfHostedSvc.CreateSession(r.Context(), user.ID, &ip, &ua)
 	if err != nil {
 		return err
-	}
-	if claims.OrgID != "" {
-		_ = m.h.selfHostedSvc.SetCloudManaged(r.Context(), claims.OrgID, claims.OrgSlug, "", "", "")
-		_, _ = m.h.selfHostedSvc.EnsureUserHasConfiguredCloudOrganization(r.Context(), user.ID, nil)
 	}
 	m.h.selfHostedSvc.SetSessionCookieForRequest(w, r, session)
 	logger.WithFields(

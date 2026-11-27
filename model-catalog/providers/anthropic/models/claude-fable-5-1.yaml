@@ -27,7 +27,7 @@ modalities:
   output: ["text"]
 
 knowledge_cutoff: "2026-06"
-notes: "Latest Claude Fable model for demanding reasoning and long-horizon agentic work with adaptive thinking always on"
+notes: "Claude Fable model for demanding reasoning and long-horizon agentic work with adaptive thinking always on"
 parameters:
   - key: "max_output_tokens"
     display_name: "Max output tokens"

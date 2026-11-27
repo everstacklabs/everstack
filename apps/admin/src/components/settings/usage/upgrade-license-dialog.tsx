@@ -112,7 +112,7 @@ export function UpgradeLicenseDialog({ open, onOpenChange, targetPlanId, billing
                 <DialogTitle>{isGenericUpgrade ? 'Activate License' : 'Upgrade Plan'}</DialogTitle>
                 <DialogDescription>
                     {isManualFallback
-                        ? 'Automatic activation timed out. An activation token has been sent to your email. Please enter it below to complete the upgrade.'
+                        ? 'Automatic activation timed out. Copy your activation token from the Billing page in the Everstack Cloud portal and enter it below to complete the upgrade.'
                         : isGenericUpgrade
                             ? 'Enter your activation token from the Everstack Cloud portal to activate or upgrade your license.'
                             : `Enter your activation token from the Everstack Cloud portal to ${isDowngrade ? 'downgrade' : 'upgrade'} your plan.`}
@@ -121,16 +121,16 @@ export function UpgradeLicenseDialog({ open, onOpenChange, targetPlanId, billing
                 <form onSubmit={handleSubmit} className="py-4 space-y-4">
                     {/* Manual fallback notice */}
                     {isManualFallback && (
-                        <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4">
+                        <div className="rounded-lg border border-warning-border bg-warning-surface p-4">
                             <div className="flex items-start gap-3">
-                                <Icon icon="lucide:mail" className="h-5 w-5 text-amber-400 light:text-amber-700 mt-0.5 shrink-0" />
+                                <Icon icon="lucide:key-round" className="h-5 w-5 text-warning mt-0.5 shrink-0" />
                                 <div>
-                                    <p className="text-sm text-amber-200 light:text-amber-800 font-medium mb-1">
-                                        Check your email for the activation token
+                                    <p className="text-sm text-warning font-medium mb-1">
+                                        Get your activation token from the Cloud portal
                                     </p>
-                                    <p className="text-xs text-amber-200/70 light:text-amber-800/70">
-                                        Your payment was successful! The automatic activation couldn't reach your gateway.
-                                        We've sent the activation token to your email address.
+                                    <p className="text-xs text-warning/70">
+                                        Your payment was successful, but the automatic activation couldn't reach your gateway.
+                                        Your activation token is on the Billing page in the Everstack Cloud portal.
                                     </p>
                                 </div>
                             </div>
@@ -159,12 +159,12 @@ export function UpgradeLicenseDialog({ open, onOpenChange, targetPlanId, billing
 
                     {/* Info for generic upgrade */}
                     {isGenericUpgrade && (
-                        <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-4">
+                        <div className="rounded-lg border border-info-border bg-info-surface p-4">
                             <div className="flex items-start gap-3">
-                                <Icon icon="lucide:info" className="h-5 w-5 text-blue-400 light:text-blue-600 mt-0.5 shrink-0" />
-                                <p className="text-sm text-blue-200 light:text-blue-700">
+                                <Icon icon="lucide:info" className="h-5 w-5 text-info mt-0.5 shrink-0" />
+                                <p className="text-sm text-info">
                                     The plan and billing period are determined by your activation token.
-                                    Get your token from <a href={import.meta.env.VITE_CLOUD_URL || 'https://app.everstack.ai'} target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-100 light:hover:text-blue-800">Everstack Cloud</a>.
+                                    Get your token from <a href={import.meta.env.VITE_CLOUD_URL || 'https://app.everstack.ai'} target="_blank" rel="noopener noreferrer" className="underline hover:text-info">Everstack Cloud</a>.
                                 </p>
                             </div>
                         </div>
@@ -197,9 +197,9 @@ export function UpgradeLicenseDialog({ open, onOpenChange, targetPlanId, billing
                     </div>
 
                     {isDowngrade && step === 'idle' && (
-                        <div className="flex items-start gap-3 p-3 rounded-lg border border-yellow-500/20 bg-yellow-500/10">
-                            <Icon icon="lucide:alert-triangle" className="h-5 w-5 text-yellow-400 light:text-yellow-700 mt-0.5 shrink-0" />
-                            <p className="text-sm text-yellow-200/80 light:text-yellow-800/80">
+                        <div className="flex items-start gap-3 p-3 rounded-lg border border-warning-border bg-warning-surface">
+                            <Icon icon="lucide:alert-triangle" className="h-5 w-5 text-warning mt-0.5 shrink-0" />
+                            <p className="text-sm text-warning/80">
                                 Downgrading may result in loss of access to certain features and lower usage limits.
                             </p>
                         </div>
@@ -207,30 +207,30 @@ export function UpgradeLicenseDialog({ open, onOpenChange, targetPlanId, billing
 
                     {/* Progress indicator */}
                     {isProcessing && (
-                        <div className="flex items-center gap-3 p-3 rounded-lg border border-blue-500/20 bg-blue-500/10">
-                            <Icon icon="lucide:loader-2" className="h-5 w-5 text-blue-400 light:text-blue-600 animate-spin shrink-0" />
-                            <p className="text-sm text-blue-200 light:text-blue-700">Activating license...</p>
+                        <div className="flex items-center gap-3 p-3 rounded-lg border border-info-border bg-info-surface">
+                            <Icon icon="lucide:loader-2" className="h-5 w-5 text-info animate-spin shrink-0" />
+                            <p className="text-sm text-info">Activating license...</p>
                         </div>
                     )}
 
                     {/* Success indicator */}
                     {step === 'success' && (
-                        <div className="flex items-center gap-3 p-3 rounded-lg border border-green-500/20 bg-green-500/10">
-                            <Icon icon="lucide:check-circle" className="h-5 w-5 text-green-400 light:text-green-600 shrink-0" />
-                            <p className="text-sm text-green-200 light:text-green-700">License activated successfully!</p>
+                        <div className="flex items-center gap-3 p-3 rounded-lg border border-success-border bg-success-surface">
+                            <Icon icon="lucide:check-circle" className="h-5 w-5 text-success shrink-0" />
+                            <p className="text-sm text-success">License activated successfully!</p>
                         </div>
                     )}
 
                     {/* Error indicator */}
                     {step === 'error' && errorMessage && (
-                        <div className="flex items-start gap-3 p-3 rounded-lg border border-red-500/20 bg-red-500/10">
-                            <Icon icon="lucide:alert-circle" className="h-5 w-5 text-red-400 light:text-red-600 mt-0.5 shrink-0" />
+                        <div className="flex items-start gap-3 p-3 rounded-lg border border-danger-border bg-danger-surface">
+                            <Icon icon="lucide:alert-circle" className="h-5 w-5 text-danger mt-0.5 shrink-0" />
                             <div className="flex-1">
-                                <p className="text-sm text-red-200 light:text-red-700">{errorMessage}</p>
+                                <p className="text-sm text-danger">{errorMessage}</p>
                                 <button
                                     type="button"
                                     onClick={() => { setStep('idle'); setErrorMessage(null); }}
-                                    className="mt-2 text-xs text-red-300 light:text-red-600 hover:text-red-200 light:hover:text-red-700 underline"
+                                    className="mt-2 text-xs text-danger underline"
                                 >
                                     Try again
                                 </button>

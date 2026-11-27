@@ -42,9 +42,9 @@ const TRIGGER_TYPE_LABELS: Record<string, string> = {
 }
 
 const CIRCUIT_STATE_COLORS: Record<string, string> = {
-  closed: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25',
-  open: 'bg-red-500/15 text-red-400 border border-red-500/25',
-  half_open: 'bg-amber-500/15 text-amber-300 border border-amber-500/25',
+  closed: 'bg-success-surface-strong text-success border border-success-border',
+  open: 'bg-danger-surface-strong text-danger border border-danger-border',
+  half_open: 'bg-warning-surface-strong text-warning border border-warning-border',
 }
 
 function formatDate(ts?: string | null): string {
@@ -323,7 +323,6 @@ export function AgentTriggersTab({ agentId }: { agentId: string }) {
       render: (cron) => (
         <span
           className="block truncate font-mono text-xs text-white/50 light:text-black/50"
-          title={cron.command}
         >
           {cron.command}
         </span>
@@ -337,7 +336,7 @@ export function AgentTriggersTab({ agentId }: { agentId: string }) {
       maxWidth: 90,
       render: (cron) => (
         <span
-          className={`inline-flex rounded px-2 py-0.5 text-[10px] font-medium ${cron.enabled ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25' : 'bg-brand-main-500/30 text-brand-main-200'}`}
+          className={`inline-flex rounded px-2 py-0.5 text-[10px] font-medium ${cron.enabled ? 'bg-success-surface-strong text-success border border-success-border' : 'bg-brand-main-500/30 text-brand-main-200'}`}
         >
           {cron.enabled ? 'Enabled' : 'Disabled'}
         </span>
@@ -353,7 +352,7 @@ export function AgentTriggersTab({ agentId }: { agentId: string }) {
         <span className="text-xs text-white/55 light:text-black/55">
           {cron.runCount}
           {cron.errorCount > 0 && (
-            <span className="ml-1 text-red-400">({cron.errorCount} err)</span>
+            <span className="ml-1 text-danger">({cron.errorCount} err)</span>
           )}
         </span>
       ),
@@ -431,7 +430,7 @@ export function AgentTriggersTab({ agentId }: { agentId: string }) {
             <Tooltip content="Delete">
               <button
                 type="button"
-                className="rounded p-1.5 text-red-400/60 transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
+                className="rounded p-1.5 text-danger/60 transition-colors hover:bg-danger-surface hover:text-danger disabled:opacity-50"
                 onClick={(e) => {
                   e.stopPropagation()
                   handleCronDelete(cron)
@@ -544,7 +543,7 @@ export function AgentTriggersTab({ agentId }: { agentId: string }) {
               <TabsTrigger value="runs" className={TAB_CLASS}>
                 Runs
                 {failedRuns.length > 0 && (
-                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-400/20 px-1 text-[10px] font-medium text-red-300">
+                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-danger-surface-strong px-1 text-[10px] font-medium text-danger">
                     {failedRuns.length}
                   </span>
                 )}
@@ -659,7 +658,7 @@ export function AgentTriggersTab({ agentId }: { agentId: string }) {
                         </span>
                       )}
                       <span
-                        className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${t.enabled ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25' : 'bg-brand-main-500/30 text-brand-main-200'}`}
+                        className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${t.enabled ? 'bg-success-surface-strong text-success border border-success-border' : 'bg-brand-main-500/30 text-brand-main-200'}`}
                       >
                         {t.enabled ? 'Active' : 'Disabled'}
                       </span>
@@ -712,7 +711,7 @@ export function AgentTriggersTab({ agentId }: { agentId: string }) {
                 Loading schedules...
               </div>
             ) : cronsError ? (
-              <div className="mx-4 my-3 rounded border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-300">
+              <div className="mx-4 my-3 rounded border border-danger-border bg-danger-surface/60 px-4 py-3 text-sm text-danger">
                 Failed to load sandbox schedules: {cronsError.message}
               </div>
             ) : filteredCrons.length === 0 ? (
@@ -756,12 +755,12 @@ export function AgentTriggersTab({ agentId }: { agentId: string }) {
             {/* Failures — always pinned at top */}
             {failedRuns.length > 0 && (
               <section>
-                <div className="flex items-center gap-2.5 border-b border-red-400/10 bg-red-400/[0.03] px-4 py-2">
+                <div className="flex items-center gap-2.5 border-b border-danger-border bg-danger-surface/60 px-4 py-2">
                   <Iconify.Icon
                     icon="heroicons:exclamation-triangle"
-                    className="size-3.5 text-red-400/70"
+                    className="size-3.5 text-danger/70"
                   />
-                  <span className="text-xs font-medium text-red-300/80">
+                  <span className="text-xs font-medium text-danger/80">
                     Failures ({failedRuns.length})
                   </span>
                 </div>
@@ -783,7 +782,7 @@ export function AgentTriggersTab({ agentId }: { agentId: string }) {
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-2 text-xs">
-                        <span className="rounded border border-red-500/25 bg-red-500/15 px-2 py-0.5 text-[10px] font-medium text-red-300">
+                        <span className="rounded border border-danger-border bg-danger-surface-strong px-2 py-0.5 text-[10px] font-medium text-danger">
                           failed
                         </span>
                         <span className="text-white/30 light:text-black/30">
@@ -792,7 +791,7 @@ export function AgentTriggersTab({ agentId }: { agentId: string }) {
                       </div>
                     </div>
                     {run.error && (
-                      <div className="mt-1.5 rounded border border-red-400/10 bg-red-400/[0.03] px-2 py-1 text-xs text-red-200/70 whitespace-pre-wrap break-all">
+                      <div className="mt-1.5 rounded border border-danger-border bg-danger-surface/60 px-2 py-1 text-xs text-danger/70 whitespace-pre-wrap break-all">
                         {run.error}
                       </div>
                     )}
@@ -859,7 +858,7 @@ export function AgentTriggersTab({ agentId }: { agentId: string }) {
                       </div>
                       <div className="flex shrink-0 items-center gap-2 text-xs">
                         <span
-                          className={`rounded px-2 py-0.5 text-[10px] font-medium ${run.status === 'completed' ? 'border border-emerald-500/25 bg-emerald-500/15 text-emerald-300' : 'border border-red-400/15 bg-red-400/10 text-red-300/80'}`}
+                          className={`rounded px-2 py-0.5 text-[10px] font-medium ${run.status === 'completed' ? 'border border-success-border bg-success-surface-strong text-success' : 'border border-danger-border bg-danger-surface text-danger/80'}`}
                         >
                           {run.status}
                         </span>
@@ -869,7 +868,7 @@ export function AgentTriggersTab({ agentId }: { agentId: string }) {
                       </div>
                     </div>
                     {run.error && (
-                      <div className="mt-1.5 rounded border border-red-400/10 bg-red-400/[0.03] px-2 py-1 text-xs text-red-200/70 whitespace-pre-wrap break-all">
+                      <div className="mt-1.5 rounded border border-danger-border bg-danger-surface/60 px-2 py-1 text-xs text-danger/70 whitespace-pre-wrap break-all">
                         {run.error}
                       </div>
                     )}
@@ -943,7 +942,7 @@ function StatBadge({
       <span className="text-white/70 font-medium light:text-black/70">{value}</span>
       <span>{label}</span>
       {active > 0 && (
-        <span className="text-emerald-400/70">({active} active)</span>
+        <span className="text-success/70">({active} active)</span>
       )}
     </div>
   )
@@ -1018,7 +1017,7 @@ function BulkActionBar({
       <button
         type="button"
         onClick={onDelete}
-        className="rounded px-2 py-0.5 text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200"
+        className="rounded px-2 py-0.5 text-danger transition-colors hover:bg-danger-surface"
       >
         Delete {noun}
       </button>

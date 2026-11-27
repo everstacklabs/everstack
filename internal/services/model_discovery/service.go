@@ -8,6 +8,10 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/everstacklabs/everstack/internal/enterprise"
+	"github.com/everstacklabs/everstack/internal/lib/outboundguard"
+	"github.com/everstacklabs/everstack/internal/providers/httpclient"
 )
 
 // DiscoveredModel represents a model discovered from a meta-provider's API
@@ -36,10 +40,19 @@ type Service struct {
 
 // NewService creates a new model discovery service
 func NewService() *Service {
+	return newService(enterprise.ManagedGateway())
+}
+
+func newService(managed bool) *Service {
+	client := httpclient.NewEgressClient(30 * time.Second)
+	if managed {
+		client = outboundguard.NewClient(outboundguard.Config{
+			AllowHTTP: true,
+			Timeout:   30 * time.Second,
+		}, nil)
+	}
 	return &Service{
-		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		httpClient: client,
 	}
 }
 

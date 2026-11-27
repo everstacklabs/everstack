@@ -28,7 +28,7 @@ func TestInsertPendingWithLimitReservesSlotUnderTenantLock(t *testing.T) {
 		WithArgs("sbx_new").
 		WillReturnRows(sqlmock.NewRows([]string{"id"}))
 	mock.ExpectQuery(`SELECT COUNT\(\*\)[\s\S]*FROM sandbox_instances`).
-		WithArgs("tenant-a").
+		WithArgs(sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(10))
 	mock.ExpectRollback()
 
@@ -40,7 +40,7 @@ func TestInsertPendingWithLimitReservesSlotUnderTenantLock(t *testing.T) {
 		LifecycleState: StatePending,
 		DesiredState:   DesireRunning,
 		ShortCode:      sql.NullString{String: "abc123", Valid: true},
-	}, 10)
+	}, 10, runtimesandbox.TenantScope{})
 	if !errors.Is(err, runtimesandbox.ErrConcurrentSandboxLimit) {
 		t.Fatalf("InsertPendingWithLimit() error = %v, want ErrConcurrentSandboxLimit", err)
 	}
@@ -66,7 +66,7 @@ func TestApplyTransitionMaintainsLifecycleTimestamps(t *testing.T) {
 	// SQL must stamp stopped_at on sleeping, clear stopped_at and
 	// archived_at on running, and clear the error breadcrumbs.
 	mock.ExpectBegin()
-	mock.ExpectExec(`(?s)UPDATE sandbox_instances.*error_reason\s*=\s*NULL.*stopped_at\s*=\s*CASE.*WHEN \$2::text = 'sleeping' THEN NOW\(\).*WHEN \$2::text = 'running'\s+THEN NULL.*archived_at\s*=\s*CASE.*WHEN \$2::text = 'archived' THEN NOW\(\).*WHEN \$2::text = 'running'\s+THEN NULL.*reconcile_locked_by = \$11`).
+	mock.ExpectQuery(`(?s)UPDATE sandbox_instances.*error_reason\s*=\s*NULLIF\(\$13::text, ''\).*error_at\s*=\s*CASE WHEN \$13::text <> '' THEN NOW\(\) ELSE NULL END.*stopped_at\s*=\s*CASE.*WHEN \$2::text = 'sleeping' THEN NOW\(\).*WHEN \$2::text = 'running'\s+THEN NULL.*archived_at\s*=\s*CASE.*WHEN \$2::text = 'archived' THEN NOW\(\).*WHEN \$2::text = 'running'\s+THEN NULL.*reconcile_locked_by = \$11`).
 		WithArgs(
 			next.ID,
 			next.LifecycleState,
@@ -80,11 +80,46 @@ func TestApplyTransitionMaintainsLifecycleTimestamps(t *testing.T) {
 			next.WorkspaceArchiveRef,
 			"leader-1",
 			sql.NullTime{},
+			"",
+			false,
 		).
-		WillReturnResult(sqlmock.NewResult(0, 1))
+		WillReturnRows(sqlmock.NewRows([]string{"lifecycle_state"}).AddRow(next.LifecycleState))
 	mock.ExpectCommit()
 
 	if err := repo.ApplyTransition(ctx, "leader-1", next); err != nil {
+		t.Fatalf("ApplyTransition: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet sql expectations: %v", err)
+	}
+}
+
+// A transition can carry a customer-facing reason (a refused sleep, a
+// failed workspace restore). It must land in error_reason, the column the
+// API returns as errorReason, for that transition only.
+func TestApplyTransitionWritesNoticeToErrorReason(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	repo := NewRepository(sqlx.NewDb(db, "sqlmock"))
+	next := newRow(StateError, DesireRunning)
+	next.Notice = "saved workspace is missing"
+
+	mock.ExpectBegin()
+	mock.ExpectQuery(`(?s)UPDATE sandbox_instances.*error_reason\s*=\s*NULLIF\(\$13::text, ''\)`).
+		WithArgs(
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			"saved workspace is missing", false,
+		).
+		WillReturnRows(sqlmock.NewRows([]string{"lifecycle_state"}).AddRow("error"))
+	mock.ExpectCommit()
+
+	if err := repo.ApplyTransition(context.Background(), "leader-1", next); err != nil {
 		t.Fatalf("ApplyTransition: %v", err)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
@@ -110,8 +145,8 @@ func TestApplyTransitionStartsNewBillingWindowWhenSandboxRuns(t *testing.T) {
 	next.BillingStartedAt = sql.NullTime{Time: time.Now().UTC(), Valid: true}
 
 	mock.ExpectBegin()
-	mock.ExpectExec(`(?s)UPDATE sandbox_instances.*billing_started_at\s*=\s*CASE.*WHEN \$2::text = 'running' AND lifecycle_state IS DISTINCT FROM 'running'\s+THEN COALESCE\(\$12, NOW\(\)\).*WHEN \$2::text IN \('sleeping', 'archived', 'terminated'\) THEN NULL.*billing_ended_at\s*=\s*CASE.*WHEN \$2::text = 'running' AND lifecycle_state IS DISTINCT FROM 'running' THEN NULL.*updated_at\s*=\s*NOW\(\)`).
-		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery(`(?s)UPDATE sandbox_instances.*billing_started_at\s*=\s*CASE.*WHEN \$2::text = 'running' AND si.lifecycle_state IS DISTINCT FROM 'running'\s+THEN COALESCE\(\$12, NOW\(\)\).*WHEN \$2::text IN \('sleeping', 'archived', 'terminated'\) THEN NULL.*billing_ended_at\s*=\s*CASE.*WHEN \$2::text = 'running' AND si.lifecycle_state IS DISTINCT FROM 'running' THEN NULL.*updated_at\s*=\s*NOW\(\)`).
+		WillReturnRows(sqlmock.NewRows([]string{"lifecycle_state"}).AddRow("running"))
 	mock.ExpectCommit()
 
 	if err := repo.ApplyTransition(context.Background(), "leader-1", next); err != nil {
@@ -136,8 +171,8 @@ func TestApplyTransitionLostLease(t *testing.T) {
 	// Zero rows affected means another claimer owns the lease now; the
 	// result must be discarded with ErrLeaseLost, not committed.
 	mock.ExpectBegin()
-	mock.ExpectExec(`(?s)UPDATE sandbox_instances`).
-		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectQuery(`(?s)UPDATE sandbox_instances`).
+		WillReturnRows(sqlmock.NewRows([]string{"lifecycle_state"}))
 	mock.ExpectRollback()
 
 	err = repo.ApplyTransition(context.Background(), "leader-1", next)

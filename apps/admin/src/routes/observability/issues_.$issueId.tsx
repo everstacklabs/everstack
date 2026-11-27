@@ -118,7 +118,7 @@ function HeaderBand({
     <div className="border-b border-brand-main-700 px-4 py-3">
       <div className="flex items-start justify-between gap-6">
         <div className="min-w-0">
-          <h1 className="truncate text-base font-semibold text-white light:text-brand-main-50" title={title}>
+          <h1 className="truncate text-base font-semibold text-white light:text-brand-main-50">
             {title}
           </h1>
           {culprit && <div className="mt-0.5 truncate font-mono text-[11px] text-white/45 light:text-black/45">{culprit}</div>}
@@ -150,7 +150,7 @@ function Stat({ label, value, big }: { label: string; value: string; big?: boole
   return (
     <div className="text-right">
       <div className="text-[10px] uppercase tracking-wide text-white/35 light:text-black/35">{label}</div>
-      <div className={`mt-0.5 font-semibold text-white light:text-brand-main-50 ${big ? 'text-xl' : 'text-sm'}`} title={value}>
+      <div className={`mt-0.5 font-semibold text-white light:text-brand-main-50 ${big ? 'text-xl' : 'text-sm'}`}>
         {value}
       </div>
     </div>
@@ -168,10 +168,10 @@ function TagSummary({ tags }: { tags: TagDistribution[] }) {
         const pct = top && Number(t.total) > 0 ? (Number(top.count) / Number(t.total)) * 100 : 0
         return (
           <div key={t.key} className="grid grid-cols-[100px_1fr_auto] items-center gap-2">
-            <span className="truncate font-mono text-[10px] text-white/40 light:text-black/40" title={t.key}>{t.key}</span>
+            <span className="truncate font-mono text-[10px] text-white/40 light:text-black/40">{t.key}</span>
             <div className="relative h-3.5 overflow-hidden rounded bg-brand-main-800/60">
               <div className="absolute inset-y-0 left-0 rounded bg-white/15 light:bg-black/15" style={{ width: `${pct}%` }} />
-              <span className="absolute inset-0 flex items-center truncate px-1.5 text-[10px] text-white/70 light:text-black/70" title={top?.value}>
+              <span className="absolute inset-0 flex items-center truncate px-1.5 text-[10px] text-white/70 light:text-black/70">
                 {top?.value}
               </span>
             </div>
@@ -197,14 +197,14 @@ function Breadcrumbs({ crumbs }: { crumbs: SpanCrumb[] }) {
           <div key={`${c.spanId}-${i}`} className="flex items-start gap-2.5 px-3 py-2">
             <Iconify.Icon
               icon={isErr ? 'lucide:circle-x' : ok ? 'lucide:circle-check' : 'lucide:circle-dot'}
-              className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${isErr ? 'text-rose-400/70 light:text-rose-600/70' : ok ? 'text-emerald-400/50 light:text-emerald-600/50' : 'text-white/30 light:text-black/30'}`}
+              className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${isErr ? 'text-danger/70' : ok ? 'text-success/50' : 'text-white/30 light:text-black/30'}`}
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="truncate font-mono text-[11px] text-white/80 light:text-black/80">{c.name}</span>
-                {isErr && <span className="rounded bg-rose-500/10 px-1 text-[10px] uppercase text-rose-300/80 light:text-rose-600/80">error</span>}
+                {isErr && <span className="rounded bg-danger-surface px-1 text-[10px] uppercase text-danger/80">error</span>}
               </div>
-              {c.statusMessage && <div className="mt-0.5 truncate text-[11px] text-white/45 light:text-black/45" title={c.statusMessage}>{c.statusMessage}</div>}
+              {c.statusMessage && <div className="mt-0.5 truncate text-[11px] text-white/45 light:text-black/45">{c.statusMessage}</div>}
             </div>
             <div className="shrink-0 text-right">
               {c.durationMs > 0 && <div className="font-mono text-[10px] text-white/40 light:text-black/40">{c.durationMs.toFixed(1)}ms</div>}
@@ -239,10 +239,10 @@ function TracePreview({ crumbs, onOpen }: { crumbs: SpanCrumb[]; onOpen: () => v
     <div className="space-y-1 px-3 py-2.5">
       {rows.map((r, i) => (
         <div key={i} className="grid grid-cols-[170px_1fr] items-center gap-2">
-          <span className="truncate font-mono text-[10px] text-white/55 light:text-black/55" title={r.name}>{r.name}</span>
+          <span className="truncate font-mono text-[10px] text-white/55 light:text-black/55">{r.name}</span>
           <div className="relative h-3 rounded bg-brand-main-800/40">
             <div
-              className={`absolute inset-y-0 rounded ${r.err ? 'bg-rose-400/60' : 'bg-white/25 light:bg-black/25'}`}
+              className={`absolute inset-y-0 rounded ${r.err ? 'bg-danger-solid/60' : 'bg-white/25 light:bg-black/25'}`}
               style={{ left: `${r.left}%`, width: `${r.width}%` }}
             />
           </div>
@@ -389,6 +389,7 @@ function IssueDetailPage() {
         {
           name: 'Events',
           type: 'bar',
+          barMaxWidth: 8,
           data: chartData.map((d) => d.count),
           itemStyle: { ...areaGradient(BRAND_PALETTE[0], 0.55, 0.15), borderRadius: [2, 2, 0, 0] },
         },
@@ -508,7 +509,7 @@ function IssueDetailPage() {
                         <div key={v.value} className="flex items-center gap-2">
                           <div className="relative h-4 flex-1 overflow-hidden rounded bg-brand-main-800/60">
                             <div className="absolute inset-y-0 left-0 rounded bg-white/15 light:bg-black/15" style={{ width: `${pct}%` }} />
-                            <span className="absolute inset-0 flex items-center truncate px-1.5 text-[11px] text-white/70 light:text-black/70" title={v.value}>{v.value}</span>
+                            <span className="absolute inset-0 flex items-center truncate px-1.5 text-[11px] text-white/70 light:text-black/70">{v.value}</span>
                           </div>
                           <span className="w-8 shrink-0 text-right font-mono text-[11px] text-white/45 light:text-black/45">{v.count.toString()}</span>
                         </div>
@@ -572,7 +573,7 @@ function IssueDetailPage() {
             </div>
             {assignee ? (
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-xs text-white/80 light:text-black/80" title={assignee}>{assignee}</span>
+                <span className="truncate text-xs text-white/80 light:text-black/80">{assignee}</span>
                 <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px] text-white/50 light:text-black/50" disabled={update.isPending} onClick={() => assign('')}>Unassign</Button>
               </div>
             ) : (

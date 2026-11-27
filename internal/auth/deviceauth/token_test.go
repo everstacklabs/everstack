@@ -31,6 +31,11 @@ func TestTokenManagerRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Verify() error = %v", err)
 	}
+	// Verify reports when the token was issued, for revocation checks.
+	if since := time.Since(got.IssuedAt); since < 0 || since > time.Minute {
+		t.Fatalf("Verify() IssuedAt = %s, want about now", got.IssuedAt)
+	}
+	got.IssuedAt = time.Time{}
 	if *got != want {
 		t.Fatalf("Verify() = %#v, want %#v", *got, want)
 	}

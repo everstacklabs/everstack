@@ -17,7 +17,7 @@ type Invitation struct {
 	ID             uuid.UUID  `db:"id"`
 	Email          string     `db:"email"`
 	Role           string     `db:"role"`
-	Token          string     `db:"token"`
+	Token          string     `db:"token"` // raw token from Create; the stored SHA-256 hex when read back
 	InvitedBy      *uuid.UUID `db:"invited_by"`
 	OrganizationID *uuid.UUID `db:"organization_id"`
 	ExpiresAt      time.Time  `db:"expires_at"`
@@ -64,7 +64,7 @@ func (r *InvitationRepository) Create(ctx context.Context, email, role string, i
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 	_, err = r.db.ExecContext(ctx, query,
-		inv.ID, inv.Email, inv.Role, inv.Token, inv.InvitedBy, inv.OrganizationID, inv.ExpiresAt, inv.CreatedAt,
+		inv.ID, inv.Email, inv.Role, hashToken(inv.Token), inv.InvitedBy, inv.OrganizationID, inv.ExpiresAt, inv.CreatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (r *InvitationRepository) Create(ctx context.Context, email, role string, i
 func (r *InvitationRepository) GetByToken(ctx context.Context, token string) (*Invitation, error) {
 	query := `SELECT * FROM everstack.invitations WHERE token = $1`
 	var inv Invitation
-	err := r.db.GetContext(ctx, &inv, query, token)
+	err := r.db.GetContext(ctx, &inv, query, hashToken(token))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -104,6 +104,36 @@ func (r *InvitationRepository) GetByEmail(ctx context.Context, email string) ([]
 	`
 	var invitations []Invitation
 	err := r.db.SelectContext(ctx, &invitations, query, email)
+	return invitations, err
+}
+
+// ListPendingForOrg lists one organization's pending invitations. Builtin
+// team invitations are created without an organization_id, so those are
+// attributed to their inviter's organization, and only when the inviter
+// belongs to exactly one: with several, the invitation is ambiguous and
+// shown in none rather than in all of them. Never
+// list pending invitations unscoped: the table holds every organization's
+// invitees.
+func (r *InvitationRepository) ListPendingForOrg(ctx context.Context, orgID uuid.UUID) ([]InvitationWithInviter, error) {
+	query := `
+		SELECT i.*, u.email as invited_by_email
+		FROM everstack.invitations i
+		LEFT JOIN everstack.users u ON i.invited_by = u.id
+		WHERE i.accepted_at IS NULL AND i.expires_at > NOW()
+		  AND (
+		    i.organization_id = $1
+		    OR (i.organization_id IS NULL
+		      AND EXISTS (
+		        SELECT 1 FROM everstack.organization_members m
+		        WHERE m.user_id = i.invited_by AND m.organization_id = $1
+		      )
+		      AND (SELECT COUNT(*) FROM everstack.organization_members m2
+		           WHERE m2.user_id = i.invited_by) = 1)
+		  )
+		ORDER BY i.created_at DESC
+	`
+	var invitations []InvitationWithInviter
+	err := r.db.SelectContext(ctx, &invitations, query, orgID)
 	return invitations, err
 }
 
@@ -146,6 +176,21 @@ func (r *InvitationRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM everstack.invitations WHERE id = $1`
 	_, err := r.db.ExecContext(ctx, query, id)
 	return err
+}
+
+// DeleteIfPending removes an invitation that has not been accepted and
+// reports how many rows went. The accepted_at guard makes a decline lose
+// cleanly to an accept that committed after the caller read the row: the
+// delete then matches nothing and the caller must not report success.
+// Deleting (rather than flagging) matches Delete, since the table has no
+// status column and a deleted token can never be redeemed.
+func (r *InvitationRepository) DeleteIfPending(ctx context.Context, id uuid.UUID) (int64, error) {
+	query := `DELETE FROM everstack.invitations WHERE id = $1 AND accepted_at IS NULL`
+	result, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 // DeleteExpired deletes all expired invitations

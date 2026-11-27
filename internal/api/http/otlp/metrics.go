@@ -148,8 +148,10 @@ func (h *MetricsHandler) insertMetrics(ctx context.Context, tenantID string, rms
 	mb := &metricBatch{batch: batch, tenantID: tenantID}
 
 	for _, rm := range rms {
+		stripClientKeyAttributes(rm.ProtoReflect())
 		resAttrs := attrsToMap(rm.GetResource().GetAttributes())
 		resAttrs["tenant.id"] = tenantID
+		stampKey(ctx, resAttrs)
 		resourceSchemaURL := rm.GetSchemaUrl()
 
 		for _, sm := range rm.GetScopeMetrics() {

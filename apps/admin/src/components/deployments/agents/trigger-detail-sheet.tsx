@@ -23,12 +23,12 @@ const {
 
 const STATUS_COLORS: Record<string, string> = {
   completed:
-    'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25',
-  failed: 'bg-red-500/15 text-red-400 border border-red-500/25',
+    'bg-success-surface-strong text-success border border-success-border',
+  failed: 'bg-danger-surface-strong text-danger border border-danger-border',
   running:
     'bg-brand-secondary-600/15 text-brand-secondary-300 border border-brand-secondary-500/25',
-  pending: 'bg-amber-500/15 text-amber-300 border border-amber-500/25',
-  timeout: 'bg-amber-500/15 text-amber-300 border border-amber-500/25',
+  pending: 'bg-warning-surface-strong text-warning border border-warning-border',
+  timeout: 'bg-warning-surface-strong text-warning border border-warning-border',
   skipped:
     'bg-brand-main-500/30 text-brand-main-200 border border-brand-main-500/25',
 }
@@ -62,7 +62,7 @@ export function TriggerDetailSheet({
           <SheetTitle className="flex items-center gap-2">
             {trigger.name}
             <span
-              className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${trigger.enabled ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25' : 'bg-brand-main-500/30 text-brand-main-200 border border-brand-main-500/25'}`}
+              className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${trigger.enabled ? 'bg-success-surface-strong text-success border border-success-border' : 'bg-brand-main-500/30 text-brand-main-200 border border-brand-main-500/25'}`}
             >
               {trigger.enabled ? 'Active' : 'Disabled'}
             </span>
@@ -176,10 +176,10 @@ export function TriggerDetailSheet({
                 <span
                   className={`rounded px-2 py-1 text-xs font-medium ${
                     trigger.circuitState === 'closed'
-                      ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25'
+                      ? 'bg-success-surface-strong text-success border border-success-border'
                       : trigger.circuitState === 'open'
-                        ? 'bg-red-500/15 text-red-400 border border-red-500/25'
-                        : 'bg-amber-500/15 text-amber-300 border border-amber-500/25'
+                        ? 'bg-danger-surface-strong text-danger border border-danger-border'
+                        : 'bg-warning-surface-strong text-warning border border-warning-border'
                   }`}
                 >
                   {trigger.circuitState || 'closed'}

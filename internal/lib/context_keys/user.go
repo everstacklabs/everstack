@@ -21,6 +21,11 @@ const (
 	// in the active tenant, resolved once at session-auth time. Consumed by the
 	// authorization layer to bridge session membership into per-resource checks.
 	UserRoleKey
+	// APIKeyIDKey stores the id (api_keys.id) of the verified gateway API key
+	// the request authenticated with. Set only by WithAuthenticatedAPIKeyID,
+	// after key verification. Not the upstream provider key.
+	APIKeyIDKey
+	APIKeySurfacesKey
 )
 
 // ExtractUserID extracts the user ID from the verified request context.
@@ -117,6 +122,34 @@ func WithAuthenticatedAPIKey(ctx context.Context, tenantID, hash string) context
 	return WithTenantAuthenticated(ctx)
 }
 
+// WithAuthenticatedAPIKeyID is WithAuthenticatedAPIKey plus the verified key's
+// id, which attributes the request's inference spend to that key
+// (docs/design/spend-limits-v2.md). Call this only after key verification
+// succeeds; the id comes from the key record, never from the request.
+func WithAuthenticatedAPIKeyID(ctx context.Context, tenantID, hash, keyID string) context.Context {
+	return WithAPIKeyID(WithAuthenticatedAPIKey(ctx, tenantID, hash), keyID)
+}
+
+// WithAPIKeyID installs only the verified key's id, for surfaces that resolve
+// the tenant themselves and pass it explicitly (the inbound MCP and A2A
+// servers). Call it only with an id taken from a verified key record.
+func WithAPIKeyID(ctx context.Context, keyID string) context.Context {
+	if keyID == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, APIKeyIDKey, keyID)
+}
+
+// GetAPIKeyID returns the id of the verified gateway API key the request
+// authenticated with, or "" when it did not use one (session, agent trigger,
+// internal call).
+func GetAPIKeyID(ctx context.Context) string {
+	if id, ok := ctx.Value(APIKeyIDKey).(string); ok {
+		return id
+	}
+	return ""
+}
+
 // WithTenantID returns a new context with the tenant ID stored.
 // Delegates to pkg/ctxkeys for cross-module compatibility.
 func WithTenantID(ctx context.Context, tenantID string) context.Context {
@@ -129,6 +162,23 @@ func GetUserID(ctx context.Context) string {
 		return userID
 	}
 	return ""
+}
+
+type cliOrganizationKey struct{}
+
+// WithCLIOrganizationID marks a request as authenticated by the CLI login
+// token and records the organization that token was issued for. Handlers
+// that accept an organization id from the request use it to keep a CLI
+// caller inside that one organization.
+func WithCLIOrganizationID(ctx context.Context, organizationID string) context.Context {
+	return context.WithValue(ctx, cliOrganizationKey{}, organizationID)
+}
+
+// CLIOrganizationID returns the organization a CLI login token is bound to,
+// and whether the request was authenticated that way.
+func CLIOrganizationID(ctx context.Context) (string, bool) {
+	id, ok := ctx.Value(cliOrganizationKey{}).(string)
+	return id, ok && id != ""
 }
 
 // WithUserRole returns a new context with the caller's active-tenant role
@@ -186,6 +236,22 @@ func HasVerifiedTenantPrincipal(ctx context.Context) bool {
 	return GetAPIKeyHash(ctx) != "" || GetAuthenticatedUserID(ctx) != ""
 }
 
+// IsVerifiedOrgAdmin reports whether the caller is a verified user principal
+// (HasVerifiedTenantPrincipal plus a concrete user id) whose role in the
+// active organization is owner or admin. API keys carry no role and never
+// qualify: operations gated on this (re-activating the gateway, changing
+// spend limits) are human admin actions.
+func IsVerifiedOrgAdmin(ctx context.Context) bool {
+	if !HasVerifiedTenantPrincipal(ctx) || GetAuthenticatedUserID(ctx) == "" {
+		return false
+	}
+	switch GetUserRole(ctx) {
+	case "owner", "admin":
+		return true
+	}
+	return false
+}
+
 // hashString creates a SHA256 hash of the input string.
 func hashString(s string) string {
 	h := sha256.Sum256([]byte(s))
@@ -240,4 +306,38 @@ func IsInternalCall(ctx context.Context) bool {
 		return v
 	}
 	return false
+}
+
+// WithAPIKeySurfaces carries the verified set, preserving nil versus empty.
+func WithAPIKeySurfaces(ctx context.Context, surfaces []string) context.Context {
+	if surfaces != nil {
+		surfaces = append([]string{}, surfaces...)
+	}
+	return context.WithValue(ctx, APIKeySurfacesKey, surfaces)
+}
+func GetAPIKeySurfaces(ctx context.Context) []string {
+	surfaces, _ := ctx.Value(APIKeySurfacesKey).([]string)
+	if surfaces == nil {
+		return nil
+	}
+	return append([]string{}, surfaces...)
+}
+
+// IsDashboardUser requires verified human identity, never tenant scope or an API key alone.
+func IsDashboardUser(ctx context.Context) bool {
+	return IsTenantAuthenticated(ctx) && GetAuthenticatedUserID(ctx) != "" && !hasAPIKeyIdentity(ctx)
+}
+
+func hasAPIKeyIdentity(ctx context.Context) bool {
+	return GetAPIKeyHash(ctx) != "" || GetAPIKeyID(ctx) != "" || GetAPIKeySurfaces(ctx) != nil
+}
+
+type apiKeyRateLimitKey struct{}
+
+func WithAPIKeyRateLimit(ctx context.Context, rpm *int) context.Context {
+	return context.WithValue(ctx, apiKeyRateLimitKey{}, rpm)
+}
+func GetAPIKeyRateLimit(ctx context.Context) *int {
+	n, _ := ctx.Value(apiKeyRateLimitKey{}).(*int)
+	return n
 }

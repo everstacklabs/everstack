@@ -43,8 +43,11 @@ type AccessChecker interface {
 
 // AccessIdentity is the org/instance context bound into the issued tokens.
 type AccessIdentity struct {
-	OrgID      string
-	OrgSlug    string
+	OrgID   string
+	OrgSlug string
+	// OrgRole is the user's role in OrgID, carried to the relying party
+	// in the ID token's org_role claim.
+	OrgRole    string
 	InstanceID string
 }
 
@@ -169,6 +172,7 @@ func (h *Handler) handleAuthorize(w http.ResponseWriter, r *http.Request) {
 		Name:                cu.Name,
 		OrgID:               ident.OrgID,
 		OrgSlug:             ident.OrgSlug,
+		OrgRole:             ident.OrgRole,
 		InstanceID:          ident.InstanceID,
 	})
 	if err != nil {

@@ -49,7 +49,7 @@ function FunctionsPage() {
             <Loader loaderText="Loading functions..." />
           </div>
         ) : error ? (
-          <div className="flex-1 flex items-center justify-center text-red-400 light:text-red-600">
+          <div className="flex-1 flex items-center justify-center text-danger">
             Error loading functions: {error.message}
           </div>
         ) : functions.length === 0 ? (

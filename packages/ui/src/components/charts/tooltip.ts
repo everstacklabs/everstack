@@ -11,6 +11,7 @@
  * the surrounding option object is memoized.
  */
 import { AXIS, panelColors } from './theme.js'
+import { SPARKLINE_BRIDGE } from './presets.js'
 
 /**
  * The subset of an ECharts tooltip callback parameter this module reads.
@@ -25,6 +26,8 @@ export interface EChartsTooltipParam {
     axisValue?: number | string
     axisValueLabel?: string
     data?: unknown
+    seriesId?: string
+    seriesType?: string
 }
 
 /** One series datum, normalised across `axis` and `item` triggers. */
@@ -32,6 +35,8 @@ interface TipRow {
     name: string
     color: string
     value: number
+    /** The datum was null/absent (a gap), not a number. */
+    missing: boolean
 }
 
 export interface BrandTooltipOptions {
@@ -46,6 +51,17 @@ export interface BrandTooltipOptions {
     valueFormatter?: (value: number, name: string, param: EChartsTooltipParam) => string
     /** Hide rows whose value is null/0 (e.g. empty buckets). */
     hideZero?: boolean
+    /**
+     * Text for a row whose datum is null (a gap, e.g. a bucket with no
+     * requests), instead of formatting it as 0. Such rows are kept even with
+     * `hideZero`.
+     */
+    nullText?: string
+    /**
+     * Shown under the header when every row was hidden (e.g. an empty bucket
+     * with `hideZero`), instead of showing no tooltip at all.
+     */
+    emptyText?: string
 }
 
 function esc(s: string): string {
@@ -56,8 +72,16 @@ function esc(s: string): string {
     )
 }
 
+function rawValue(p: EChartsTooltipParam): unknown {
+    return Array.isArray(p?.value) ? p.value[p.value.length - 1] : p?.value
+}
+
+function isMissing(v: unknown): boolean {
+    return v === null || v === undefined || v === '-' || (typeof v === 'number' && Number.isNaN(v))
+}
+
 function rowValue(p: EChartsTooltipParam): number {
-    const v = Array.isArray(p?.value) ? p.value[p.value.length - 1] : p?.value
+    const v = rawValue(p)
     return typeof v === 'number' ? v : Number(v ?? 0)
 }
 
@@ -71,6 +95,8 @@ export function brandTooltip(opts: BrandTooltipOptions = {}): Record<string, unk
         headerFormatter,
         valueFormatter = (v) => String(v),
         hideZero = false,
+        nullText,
+        emptyText,
     } = opts
 
     return {
@@ -85,7 +111,9 @@ export function brandTooltip(opts: BrandTooltipOptions = {}): Record<string, unk
             lineStyle: { color: AXIS.crosshair, width: 1 },
         },
         formatter: (params: EChartsTooltipParam | EChartsTooltipParam[]) => {
-            const list: EChartsTooltipParam[] = Array.isArray(params) ? params : [params]
+            const list: EChartsTooltipParam[] = (Array.isArray(params) ? params : [params]).filter(
+                (p) => p.seriesId !== SPARKLINE_BRIDGE,
+            )
             if (list.length === 0) return ''
 
             const panel = panelColors()
@@ -100,11 +128,24 @@ export function brandTooltip(opts: BrandTooltipOptions = {}): Record<string, unk
                     name: p.seriesName ?? '',
                     color: p.color ?? AXIS.label,
                     value: rowValue(p),
+                    // Without nullText a gap reads as 0, as it always has.
+                    missing: nullText !== undefined && isMissing(rawValue(p)),
                     param: p,
                 }))
-                .filter((r) => !hideZero || r.value !== 0)
+                .filter((r) => r.missing || !hideZero || r.value !== 0)
 
-            if (rows.length === 0) return ''
+            const frame = (inner: string) => `
+        <div style="border-radius:8px;border:1px solid ${panel.border};background:${panel.bg};backdrop-filter:blur(4px);padding:10px 12px;box-shadow:${panel.shadow}">
+          ${header ? `<div style="font-size:11px;color:${panel.header};margin-bottom:6px">${header}</div>` : ''}
+          ${inner}
+        </div>`
+
+            if (rows.length === 0) {
+                if (emptyText === undefined) return ''
+                return frame(
+                    `<div style="font-size:12px;line-height:1.4;color:${panel.name}">${esc(emptyText)}</div>`,
+                )
+            }
 
             const body = rows
                 .map(
@@ -114,16 +155,12 @@ export function brandTooltip(opts: BrandTooltipOptions = {}): Record<string, unk
                 <span style="display:inline-block;width:8px;height:8px;border-radius:9999px;background:${r.color}"></span>
                 ${esc(r.name)}
               </span>
-              <span style="font-family:${AXIS.monoFamily};color:${panel.value}">${esc(valueFormatter(r.value, r.name, r.param))}</span>
+              <span style="font-family:${AXIS.monoFamily};color:${panel.value}">${esc(r.missing ? (nullText ?? '') : valueFormatter(r.value, r.name, r.param))}</span>
             </div>`,
                 )
                 .join('')
 
-            return `
-        <div style="border-radius:8px;border:1px solid ${panel.border};background:${panel.bg};backdrop-filter:blur(4px);padding:10px 12px;box-shadow:${panel.shadow}">
-          ${header ? `<div style="font-size:11px;color:${panel.header};margin-bottom:6px">${header}</div>` : ''}
-          <div style="display:flex;flex-direction:column;gap:2px">${body}</div>
-        </div>`
+            return frame(`<div style="display:flex;flex-direction:column;gap:2px">${body}</div>`)
         },
     }
 }

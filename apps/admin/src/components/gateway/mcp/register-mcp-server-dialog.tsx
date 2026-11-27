@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { ui } from '@everstack/ui'
 import { toast } from '@everstack/ui/components'
 import { useRegisterMcpServer, useInitiateMcpOAuth } from '@/hooks/gateway/use-mcp'
 import type { McpTransportType, McpAuthType } from '@/server/mcp'
+import { isCloudManaged } from '@/lib/cloud-mode'
 
 const {
     Sheet, SheetContent, SheetHeader, SheetTitle, SheetBody,
@@ -33,6 +34,21 @@ const AUTH_OPTIONS: { value: McpAuthType; label: string }[] = [
     { value: 'MCP_AUTH_TYPE_OAUTH2', label: 'OAuth 2.0' },
 ]
 
+// Must match oauthResultChannel in internal/api/grpc/mcp/v1/mcp_oauth.go.
+const OAUTH_RESULT_CHANNEL = 'evs-mcp-oauth'
+
+// openOAuthPopup opens the authorization page without an opener link. The page
+// belongs to whoever runs the MCP server, and with window.opener it could
+// navigate this dashboard tab. Opening a blank same-origin window first keeps
+// pop-up blocker detection, which a 'noopener' window.open would lose.
+function openOAuthPopup(authorizationUrl: string): Window | null {
+    const popup = window.open('about:blank', '_blank', 'width=600,height=700,scrollbars=yes')
+    if (!popup) return null
+    popup.opener = null
+    popup.location.href = authorizationUrl
+    return popup
+}
+
 export function RegisterMcpServerDialog({ open, onOpenChange }: RegisterMcpServerDialogProps) {
     const [name, setName] = useState('')
     const [url, setUrl] = useState('')
@@ -48,11 +64,21 @@ export function RegisterMcpServerDialog({ open, onOpenChange }: RegisterMcpServe
 
     const registerMutation = useRegisterMcpServer()
     const oauthMutation = useInitiateMcpOAuth()
+    // Managed gateways serve many tenants from one process and refuse stdio
+    // servers, so the option is not offered there.
+    const managedCloud = useMemo(() => isCloudManaged(), [])
+    const transportOptions = useMemo(
+        () => (managedCloud ? TRANSPORT_OPTIONS.filter((opt) => opt.value !== 'MCP_TRANSPORT_TYPE_STDIO') : TRANSPORT_OPTIONS),
+        [managedCloud],
+    )
     const isStdio = transportType === 'MCP_TRANSPORT_TYPE_STDIO'
     const isOAuth = authType === 'MCP_AUTH_TYPE_OAUTH2'
 
-    // Listen for OAuth popup completion
+    // Listen for OAuth popup completion. The popup has no opener link (see
+    // openOAuthPopup), so the callback page reports on a same-origin
+    // BroadcastChannel; window messages are still accepted from this origin.
     const handleOAuthMessage = useCallback((event: MessageEvent) => {
+        if (event.origin !== window.location.origin) return
         if (event.data?.type === 'mcp-oauth-success') {
             setOauthPending(false)
             toast.success('OAuth authorization successful')
@@ -65,7 +91,12 @@ export function RegisterMcpServerDialog({ open, onOpenChange }: RegisterMcpServe
 
     useEffect(() => {
         window.addEventListener('message', handleOAuthMessage)
-        return () => window.removeEventListener('message', handleOAuthMessage)
+        const channel = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(OAUTH_RESULT_CHANNEL)
+        channel?.addEventListener('message', handleOAuthMessage)
+        return () => {
+            window.removeEventListener('message', handleOAuthMessage)
+            channel?.close()
+        }
     }, [handleOAuthMessage])
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -99,11 +130,7 @@ export function RegisterMcpServerDialog({ open, onOpenChange }: RegisterMcpServe
                     setOauthPending(true)
                     const oauthResp = await oauthMutation.mutateAsync(result.server.id)
                     // Open popup for authorization
-                    const popup = window.open(
-                        oauthResp.authorization_url,
-                        'mcp-oauth',
-                        'width=600,height=700,scrollbars=yes'
-                    )
+                    const popup = openOAuthPopup(oauthResp.authorization_url)
                     if (!popup) {
                         setOauthPending(false)
                         toast.error('Pop-up blocked. Please allow pop-ups for this site.')
@@ -167,13 +194,18 @@ export function RegisterMcpServerDialog({ open, onOpenChange }: RegisterMcpServe
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className={brandSelectContentClass}>
-                                    {TRANSPORT_OPTIONS.map((opt) => (
+                                    {transportOptions.map((opt) => (
                                         <SelectItem key={opt.value} value={opt.value}>
                                             {opt.label}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
+                            {managedCloud && (
+                                <p className="text-xs text-brand-main-200">
+                                    Stdio (subprocess) servers are only available on self-hosted gateways. Connect to a hosted MCP server over SSE or Streamable HTTP.
+                                </p>
+                            )}
                         </div>
 
                         {isStdio ? (

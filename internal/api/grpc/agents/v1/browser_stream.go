@@ -18,9 +18,9 @@ import (
 // frames/input between the client and the browser-streamer sidecar.
 //
 // The sidecar streamer runs at <pod>:6080/ws. This handler:
-//   1. Exposes port 6080 on the sandbox (creates port-forward)
-//   2. Connects to the sidecar streamer via WebSocket
-//   3. Relays binary frames (sidecar → client) and text input (client → sidecar)
+//  1. Exposes port 6080 on the sandbox (creates port-forward)
+//  2. Connects to the sidecar streamer via WebSocket
+//  3. Relays binary frames (sidecar → client) and text input (client → sidecar)
 //
 // Route: GET /v1/sandbox/{session_id}/browser/stream
 func (s *Server) HandleBrowserStream(w http.ResponseWriter, r *http.Request) {
@@ -46,29 +46,37 @@ func (s *Server) HandleBrowserStream(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"session_id is required"}`, http.StatusBadRequest)
 		return
 	}
+	tenantID, scoped, err := s.prepareShellLookup(r)
+	if err != nil {
+		writeShellAuthenticationRequired(w)
+		return
+	}
 
 	if s.sandboxMgr == nil {
 		http.Error(w, `{"error":"sandbox feature is not enabled"}`, http.StatusServiceUnavailable)
 		return
 	}
 
-	inst, ok := s.sandboxMgr.GetInstance(sessionID)
+	inst, ok := s.lookupShellInstanceBySession(r.Context(), sessionID, tenantID, scoped)
 	if !ok {
-		logger.WithFields("session_id", sessionID).Warn("browser_stream: no sandbox instance found for session")
-		http.Error(w, `{"error":"no sandbox for this session"}`, http.StatusNotFound)
-		return
-	}
-
-	// Check that browser sidecar is configured
-	if inst.Config.BrowserSidecar == nil {
-		http.Error(w, `{"error":"browser sidecar is not configured for this sandbox"}`, http.StatusBadRequest)
+		if scoped {
+			writeJSONError(w, http.StatusNotFound, "sandbox not found")
+		} else {
+			writeShellAuthenticationRequired(w)
+		}
 		return
 	}
 
 	// Authenticate: same-origin (admin UI) or SSH key signature (CLI)
 	if err := s.authenticateShellRequest(r, inst.ID, inst.Config.TenantID); err != nil {
 		logger.WithFields("session_id", sessionID, "error", err.Error()).Warn("browser_stream: auth failed")
-		http.Error(w, `{"error":"unauthorized: `+err.Error()+`"}`, http.StatusUnauthorized)
+		writeShellAuthenticationRequired(w)
+		return
+	}
+
+	// Check that browser sidecar is configured
+	if inst.Config.BrowserSidecar == nil {
+		http.Error(w, `{"error":"browser sidecar is not configured for this sandbox"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -138,7 +146,7 @@ func (s *Server) openBrowserStreamWebSocket(w http.ResponseWriter, r *http.Reque
 
 	// Increase read limit for binary frame data (frames can be large)
 	sidecarConn.SetReadLimit(4 * 1024 * 1024) // 4MB
-	clientConn.SetReadLimit(64 * 1024)          // 64KB for input events
+	clientConn.SetReadLimit(64 * 1024)        // 64KB for input events
 
 	logger.WithFields("session_id", sessionID, "sidecar_url", streamerWSURL).
 		Info("browser_stream: relay started, sidecar connected")
@@ -242,25 +250,34 @@ func (s *Server) HandleBrowserStreamByIDOrName(w http.ResponseWriter, r *http.Re
 		http.Error(w, `{"error":"sandbox_id is required"}`, http.StatusBadRequest)
 		return
 	}
+	tenantID, scoped, err := s.prepareShellLookup(r)
+	if err != nil {
+		writeShellAuthenticationRequired(w)
+		return
+	}
 
 	if s.sandboxMgr == nil {
 		http.Error(w, `{"error":"sandbox feature is not enabled"}`, http.StatusServiceUnavailable)
 		return
 	}
 
-	inst, ok := s.sandboxMgr.GetBySandboxIDOrName(identifier)
+	inst, ok := s.lookupShellInstanceByIDOrName(r.Context(), identifier, tenantID, scoped)
 	if !ok {
-		http.Error(w, `{"error":"sandbox not found"}`, http.StatusNotFound)
+		if scoped {
+			writeJSONError(w, http.StatusNotFound, "sandbox not found")
+		} else {
+			writeShellAuthenticationRequired(w)
+		}
+		return
+	}
+
+	if err := s.authenticateShellRequest(r, inst.ID, inst.Config.TenantID); err != nil {
+		writeShellAuthenticationRequired(w)
 		return
 	}
 
 	if inst.Config.BrowserSidecar == nil {
 		http.Error(w, `{"error":"browser sidecar is not configured"}`, http.StatusBadRequest)
-		return
-	}
-
-	if err := s.authenticateShellRequest(r, inst.ID, inst.Config.TenantID); err != nil {
-		http.Error(w, `{"error":"unauthorized: `+err.Error()+`"}`, http.StatusUnauthorized)
 		return
 	}
 
@@ -277,4 +294,3 @@ func (s *Server) HandleBrowserStreamByIDOrName(w http.ResponseWriter, r *http.Re
 
 	s.openBrowserStreamWebSocket(w, r, sessionID, streamPort)
 }
-

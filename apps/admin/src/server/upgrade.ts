@@ -22,7 +22,8 @@ const env = (
 const baseUrl = getApiBaseUrl()
 const connectBase = (env.VITE_CONNECT_BASE_PATH as string | undefined) ?? ''
 
-// Note: Upgrade callback endpoints don't require API key
+// StoreUpgradeCallbackSecret requires the operator session (sent by this
+// transport); ActivationCallback is verified by the cloud-signed JWT.
 const transport = createServerTransport(undefined, {
     baseUrl: `${baseUrl}${connectBase}`,
     interceptors: [],

@@ -1,4 +1,5 @@
 import { useState, useMemo, lazy, Suspense } from 'react'
+import { replayMask, replayBlock } from '@/lib/replay-privacy'
 import {
   Terminal,
   Database,
@@ -182,8 +183,8 @@ function SandboxBanner({
         <span
           className={`px-1.5 py-0.5 rounded font-mono font-medium ${
             sandboxExitCode === 0
-              ? 'bg-green-500/15 text-green-400'
-              : 'bg-red-500/15 text-red-400'
+              ? 'bg-success-surface-strong text-success'
+              : 'bg-danger-surface-strong text-danger'
           }`}
         >
           exit {sandboxExitCode}
@@ -283,8 +284,8 @@ function SandboxArgs({ args, toolName }: { args: string; toolName: string }) {
             Command
           </div>
           <div className="flex items-start gap-2 rounded bg-black/30 border border-brand-main-800/40 px-3 py-2">
-            <Terminal className="w-3.5 h-3.5 text-green-400/70 shrink-0 mt-0.5" />
-            <code className="text-[11px] font-mono text-green-300/90 whitespace-pre-wrap break-all">
+            <Terminal className="w-3.5 h-3.5 text-success/70 shrink-0 mt-0.5" />
+            <code className="text-[11px] font-mono text-success/90 whitespace-pre-wrap break-all">
               {command}
             </code>
           </div>
@@ -358,6 +359,7 @@ function PortResult({ result }: { result: string }) {
         <div className="flex items-center gap-2 rounded bg-brand-secondary-500/8 border border-brand-secondary-500/15 px-3 py-2">
           <ExternalLink className="w-3.5 h-3.5 text-brand-secondary-400/70 shrink-0" />
           <a
+            {...replayBlock}
             href={urlMatch[1]}
             target="_blank"
             rel="noopener noreferrer"
@@ -424,8 +426,8 @@ function SandboxResult({ result }: { result: string }) {
           <span
             className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-medium ${
               exitCode === 0
-                ? 'bg-green-500/15 text-green-400'
-                : 'bg-red-500/15 text-red-400'
+                ? 'bg-success-surface-strong text-success'
+                : 'bg-danger-surface-strong text-danger'
             }`}
           >
             {exitCode}
@@ -449,8 +451,8 @@ function SandboxResult({ result }: { result: string }) {
           <div className="text-[10px] uppercase tracking-wider text-white/30 mb-1 light:text-black/30">
             Stderr
           </div>
-          <div className="rounded bg-red-950/30 border border-red-500/15 px-3 py-2 max-h-48 overflow-y-auto">
-            <pre className="text-[11px] font-mono text-red-300/80 whitespace-pre-wrap break-all">
+          <div className="rounded bg-danger-surface border border-danger-border px-3 py-2 max-h-48 overflow-y-auto">
+            <pre className="text-[11px] font-mono text-danger/80 whitespace-pre-wrap break-all">
               {stderr}
             </pre>
           </div>
@@ -674,9 +676,9 @@ function WebSearchArgs({ args }: { args: string }) {
   return (
     <div className="space-y-2">
       {query && (
-        <div className="flex items-start gap-2 rounded bg-blue-500/8 border border-blue-500/15 px-3 py-2">
-          <Globe className="w-3.5 h-3.5 text-blue-400/70 shrink-0 mt-0.5" />
-          <span className="text-[11px] text-blue-300/90 font-medium">
+        <div className="flex items-start gap-2 rounded bg-info-surface border border-info-border px-3 py-2">
+          <Globe className="w-3.5 h-3.5 text-info/70 shrink-0 mt-0.5" />
+          <span className="text-[11px] text-info/90 font-medium">
             {query}
           </span>
           {maxResults && (
@@ -723,14 +725,15 @@ function WebSearchResult({ result }: { result: string }) {
           return (
             <a
               key={i}
+              {...replayBlock}
               href={src.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-lg bg-brand-main-800/50 border border-brand-main-700/30 hover:border-blue-500/30 hover:bg-brand-main-800/70 transition-all p-2.5 group"
+              className="rounded-lg bg-brand-main-800/50 border border-brand-main-700/30 hover:border-info-border hover:bg-brand-main-800/70 transition-all p-2.5 group"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="flex items-center justify-center w-4 h-4 rounded-full bg-blue-500/15 text-[9px] font-bold text-blue-400 shrink-0">
+                  <span className="flex items-center justify-center w-4 h-4 rounded-full bg-info-surface-strong text-[9px] font-bold text-info shrink-0">
                     {i + 1}
                   </span>
                   <img
@@ -772,9 +775,9 @@ function WebFetchArgs({ args }: { args: string }) {
   return (
     <div className="space-y-2">
       {url && (
-        <div className="flex items-start gap-2 rounded bg-blue-500/8 border border-blue-500/15 px-3 py-2">
-          <Globe className="w-3.5 h-3.5 text-blue-400/70 shrink-0 mt-0.5" />
-          <code className="text-[11px] font-mono text-blue-300/90 whitespace-pre-wrap break-all">
+        <div className="flex items-start gap-2 rounded bg-info-surface border border-info-border px-3 py-2">
+          <Globe className="w-3.5 h-3.5 text-info/70 shrink-0 mt-0.5" />
+          <code className="text-[11px] font-mono text-info/90 whitespace-pre-wrap break-all">
             {url}
           </code>
           {maxLength && (
@@ -809,7 +812,7 @@ function WebFetchResult({ result }: { result: string }) {
         </span>
         <span
           className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${
-            isJina ? 'bg-blue-500/15 text-blue-400' : 'bg-white/5 text-white/40 light:bg-black/5 light:text-black/40'
+            isJina ? 'bg-info-surface-strong text-info' : 'bg-white/5 text-white/40 light:bg-black/5 light:text-black/40'
           }`}
         >
           {methodBadge}
@@ -976,11 +979,11 @@ export function ToolCallCard({
 
   const statusIndicator =
     status === 'running' ? (
-      <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+      <span className="inline-block w-1.5 h-1.5 rounded-full bg-info-solid animate-pulse" />
     ) : status === 'failed' || toolSuccess === false ? (
-      <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400" />
+      <span className="inline-block w-1.5 h-1.5 rounded-full bg-danger-solid" />
     ) : (
-      <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400/70" />
+      <span className="inline-block w-1.5 h-1.5 rounded-full bg-success-solid/70" />
     )
 
   const toolIcon = isSandbox ? (
@@ -990,11 +993,11 @@ export function ToolCallCard({
   ) : isMemory ? (
     <Database className="w-3 h-3 text-white/25 light:text-black/25" />
   ) : isWeb ? (
-    <Globe className="w-3 h-3 text-blue-400/50" />
+    <Globe className="w-3 h-3 text-info/50" />
   ) : isWorkflow ? (
     <Workflow className="w-3 h-3 text-violet-400/50" />
   ) : isSkill ? (
-    <Sparkles className="w-3 h-3 text-amber-400/50" />
+    <Sparkles className="w-3 h-3 text-warning/50" />
   ) : null
 
   // Parse skill name from args for dynamic label
@@ -1089,7 +1092,7 @@ export function ToolCallCard({
       : 'text-white/40 light:text-black/40'
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
+    <Collapsible {...replayMask} open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger asChild>
         <button
           type="button"

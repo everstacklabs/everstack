@@ -15,7 +15,7 @@ function formatDate(ts?: string | null): string {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-    enabled: 'bg-green-500/20 text-green-400 light:text-green-600 border-green-500/30',
+    enabled: 'bg-success-surface-strong text-success border-success-border',
     disabled: 'bg-gray-500/20 text-gray-400 light:text-gray-600 border-gray-500/30',
 }
 
@@ -134,7 +134,7 @@ export function WebhooksTab() {
                         <Loader loaderText="Loading webhooks..." />
                     </div>
                 ) : error ? (
-                    <div className="flex items-center justify-center h-full text-red-400 light:text-red-600 text-sm">
+                    <div className="flex items-center justify-center h-full text-danger text-sm">
                         Error loading webhooks: {error.message}
                     </div>
                 ) : webhooks.length === 0 ? (
@@ -186,7 +186,7 @@ export function WebhooksTab() {
                                                 <span className="text-white/30 light:text-black/30 text-xs">--</span>
                                             )}
                                         </td>
-                                        <td className="py-2.5 px-3 font-mono text-xs text-white/50 light:text-black/50 max-w-[160px] truncate" title={wh.command}>
+                                        <td className="py-2.5 px-3 font-mono text-xs text-white/50 light:text-black/50 max-w-[160px] truncate">
                                             {wh.command}
                                         </td>
                                         <td className="py-2.5 px-3">
@@ -197,7 +197,7 @@ export function WebhooksTab() {
                                         <td className="py-2.5 px-3 text-white/50 light:text-black/50 text-xs">
                                             {wh.triggerCount}
                                             {wh.errorCount > 0 && (
-                                                <span className="text-red-400 light:text-red-600 ml-1">({wh.errorCount} err)</span>
+                                                <span className="text-danger ml-1">({wh.errorCount} err)</span>
                                             )}
                                         </td>
                                         <td className="py-2.5 px-3 text-white/50 light:text-black/50 text-xs">{wh.rateLimitRpm}/min</td>
@@ -206,7 +206,7 @@ export function WebhooksTab() {
                                             <button
                                                 onClick={() => handleDelete(String(wh.id), wh.name)}
                                                 disabled={deleteMutation.isPending}
-                                                className="p-1 rounded text-red-400 light:text-red-600 hover:text-red-300 light:hover:text-red-600 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                                className="p-1 rounded text-danger hover:bg-danger-surface transition-colors disabled:opacity-50"
                                                 title="Delete"
                                             >
                                                 <Iconify.Icon icon="heroicons:trash" className="size-4" />
@@ -303,7 +303,7 @@ export function WebhooksTab() {
                         <DialogTitle className="text-white light:text-brand-main-50">Webhook Secret</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-3 py-2">
-                        <div className="flex items-center gap-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded text-yellow-300 light:text-yellow-700 text-xs">
+                        <div className="flex items-center gap-2 p-3 bg-warning-surface border border-warning-border rounded text-warning text-xs">
                             <Iconify.Icon icon="heroicons:exclamation-triangle" className="size-4 shrink-0" />
                             <p>Save this secret now. It will not be shown again.</p>
                         </div>

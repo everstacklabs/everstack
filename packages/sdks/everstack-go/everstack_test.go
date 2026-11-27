@@ -262,3 +262,25 @@ func TestNotFoundError(t *testing.T) {
 		t.Errorf("expected 404, got %d", notFound.StatusCode)
 	}
 }
+
+func TestDecisionCreatePreservesZero(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/systemone" {
+			t.Fatalf("path=%s", r.URL.Path)
+		}
+		var body DecisionParams
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Model != "@kev/kev-latest" {
+			t.Errorf("body=%+v error=%v", body, err)
+		}
+		fmt.Fprint(w, `{"model":"@kev/kev-latest","answers":{"q":{"type":"noul","noul":0}},"usage":{"input_tokens":2,"output_tokens":0}}`)
+	}))
+	defer server.Close()
+	client := NewClient("pk_test", WithBaseURL(server.URL))
+	response, err := client.Decisions.Create(context.Background(), &DecisionParams{Model: "@kev/kev-latest", State: "hello", Questions: map[string]DecisionQuestion{"q": {Type: "noul"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Answers["q"].Noul == nil || *response.Answers["q"].Noul != 0 || response.Usage.InputTokens != 2 {
+		t.Fatalf("response=%+v", response)
+	}
+}

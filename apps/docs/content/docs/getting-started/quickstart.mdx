@@ -38,7 +38,7 @@ Go to **Vault → LLM Providers** and click **Add Provider**. Enter your credent
     | Provider | `openai` |
     | API Key | `sk-…` |
 
-    Supported models: `gpt-4o`, `gpt-4o-mini`, `o3-mini`, and more.
+    Supported models: `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano`, and more.
 
   </Tab>
   <Tab value="Anthropic">
@@ -47,7 +47,7 @@ Go to **Vault → LLM Providers** and click **Add Provider**. Enter your credent
     | Provider | `anthropic` |
     | API Key | `sk-ant-…` |
 
-    Supported models: `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5`, and more.
+    Supported models: `claude-opus-4-8`, `claude-sonnet-5-5`, `claude-haiku-4-5`, and more.
 
   </Tab>
   <Tab value="Google">
@@ -87,16 +87,18 @@ This is the key your applications will use when calling the gateway.
 <Step>
 ## Send Your First Request
 
-Everstack is OpenAI API-compatible — any existing OpenAI SDK or tool works by changing the base URL and API key.
+Everstack is OpenAI API-compatible: any existing OpenAI SDK or tool works by changing the base URL and API key.
+
+Use `https://{instance}.{region}.everstack.ai/v1` as the base URL. OpenAI SDKs expect the base URL to end in `/v1` and append the endpoint path, such as `/chat/completions`, themselves, so do not add it to `base_url`. The SDK sends your Everstack API key as `Authorization: Bearer`, which the gateway accepts.
 
 <Tabs items={["curl", "Python", "Node.js"]}>
   <Tab value="curl">
     ```bash
-    curl -X POST https://{instance}.{region}.everstack.ai/openai/v1/chat/completions \
+    curl -X POST https://{instance}.{region}.everstack.ai/v1/chat/completions \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer YOUR_EVERSTACK_API_KEY" \
       -d '{
-        "model": "gpt-4o-mini",
+        "model": "gpt-5.4-mini",
         "messages": [
           {"role": "user", "content": "Hello!"}
         ]
@@ -108,12 +110,12 @@ Everstack is OpenAI API-compatible — any existing OpenAI SDK or tool works by 
     from openai import OpenAI
 
     client = OpenAI(
-        base_url="https://{instance}.{region}.everstack.ai/openai/v1",
+        base_url="https://{instance}.{region}.everstack.ai/v1",
         api_key="YOUR_EVERSTACK_API_KEY",
     )
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-5.4-mini",
         messages=[{"role": "user", "content": "Hello!"}],
     )
 
@@ -126,12 +128,12 @@ Everstack is OpenAI API-compatible — any existing OpenAI SDK or tool works by 
     import OpenAI from "openai";
 
     const client = new OpenAI({
-      baseURL: "https://{instance}.{region}.everstack.ai/openai/v1",
+      baseURL: "https://{instance}.{region}.everstack.ai/v1",
       apiKey: "YOUR_EVERSTACK_API_KEY",
     });
 
     const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5.4-mini",
       messages: [{ role: "user", content: "Hello!" }],
     });
 

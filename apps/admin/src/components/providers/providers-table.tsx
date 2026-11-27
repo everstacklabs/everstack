@@ -74,7 +74,7 @@ export function ProvidersTable({
                     return (
                         <div className="flex items-center gap-2 flex-wrap">
                             {isDefault && (
-                                <Badge className="text-xs rounded-sm px-1.5 py-0.5 bg-blue-600/20 text-blue-400 light:text-blue-600 border border-blue-600/30">
+                                <Badge className="text-xs rounded-sm px-1.5 py-0.5 bg-info-surface-strong text-info border border-info-border">
                                     Default
                                 </Badge>
                             )}
@@ -151,7 +151,7 @@ export function ProvidersTable({
                 const baseUrl = provider.configuration?.customBaseUrl || provider.catalog?.baseUrl
                 if (!baseUrl) return <span className="text-white/30 light:text-black/30 text-xs">-</span>
                 return (
-                    <span className="text-xs text-white/50 light:text-black/50 truncate block max-w-[200px]" title={baseUrl}>
+                    <span className="text-xs text-white/50 light:text-black/50 truncate block max-w-[200px]">
                         {baseUrl}
                     </span>
                 )
@@ -219,14 +219,14 @@ function APIKeysCell({ provider }: { provider: ProviderStatus }) {
 
     if (apiKeys.length > 0) {
         return (
-            <Badge className="text-xs rounded-sm px-1.5 py-0.5 bg-blue-600/20 text-blue-400 light:text-blue-600 border border-blue-600/30">
+            <Badge className="text-xs rounded-sm px-1.5 py-0.5 bg-info-surface-strong text-info border border-info-border">
                 {apiKeys.length} Keys
             </Badge>
         )
     }
 
     return (
-        <Badge variant="outline" className="text-xs rounded-sm px-1.5 py-0.5 bg-orange-600/20 text-orange-400 light:text-orange-600 border border-orange-600/30">
+        <Badge variant="outline" className="text-xs rounded-sm px-1.5 py-0.5 bg-warning-surface-strong text-warning border border-warning-border">
             No Keys
         </Badge>
     )

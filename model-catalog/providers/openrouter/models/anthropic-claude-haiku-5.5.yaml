@@ -1,0 +1,46 @@
+# Verified 2026-11-24.
+# Source: https://openrouter.ai/api/v1/models
+# Source: https://openrouter.ai/anthropic/claude-haiku-5.5
+name: "anthropic/claude-haiku-5.5"
+display_name: "Anthropic: Claude Haiku 5.5 (OpenRouter)"
+family: "anthropic"
+status: "stable"
+release_date: "2026-10-07"
+cost:
+  input_per_1k: 0.0001
+  output_per_1k: 0.0005
+  cache_read_per_1k: 1e-05
+  cache_write_per_1k: 0.000125
+  cache_write_1h_per_1k: 0.0002
+  long_context:
+    threshold_tokens: 100000
+    input_multiplier: 5.0
+    output_multiplier: 5.0
+    cache_multiplier: 5.0
+limits:
+  max_tokens: 1000000
+  max_completion_tokens: 128000
+capabilities:
+  - "chat"
+  - "function_calling"
+  - "vision"
+  - "reasoning"
+modalities:
+  input:
+    - "text"
+    - "image"
+    - "pdf"
+  output:
+    - "text"
+structured_output: false
+notes: "OpenRouter listing date, not necessarily the original model launch. Provider-route pricing and limits verified 2026-11-24; endpoint selection can change rates. Tool, audio, and other non-text charges are not represented by these text token rates."
+parameters:
+  -
+    key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 128000
+    has_max_value: true
+added_in_version: "2.11.0"

@@ -61,6 +61,8 @@ func (m *ContentPart) validate(all bool) error {
 
 	// no validation rules for ProviderJson
 
+	// no validation rules for ImageDetail
+
 	switch v := m.Data.(type) {
 	case *ContentPart_Text:
 		if v == nil {
@@ -492,6 +494,10 @@ func (m *ToolFunctionDef) validate(all bool) error {
 				cause:  err,
 			}
 		}
+	}
+
+	if m.Strict != nil {
+		// no validation rules for Strict
 	}
 
 	if len(errors) > 0 {
@@ -1052,6 +1058,8 @@ func (m *SamplingParams) validate(all bool) error {
 
 	var errors []error
 
+	// no validation rules for LogitBias
+
 	if m.Temperature != nil {
 		// no validation rules for Temperature
 	}
@@ -1098,6 +1106,14 @@ func (m *SamplingParams) validate(all bool) error {
 
 	if m.Verbosity != nil {
 		// no validation rules for Verbosity
+	}
+
+	if m.Logprobs != nil {
+		// no validation rules for Logprobs
+	}
+
+	if m.TopLogprobs != nil {
+		// no validation rules for TopLogprobs
 	}
 
 	if len(errors) > 0 {
@@ -1205,6 +1221,64 @@ func (m *Usage) validate(all bool) error {
 
 	// no validation rules for TotalTokens
 
+	if all {
+		switch v := interface{}(m.GetPromptTokensDetails()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, UsageValidationError{
+					field:  "PromptTokensDetails",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, UsageValidationError{
+					field:  "PromptTokensDetails",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetPromptTokensDetails()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return UsageValidationError{
+				field:  "PromptTokensDetails",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetCompletionTokensDetails()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, UsageValidationError{
+					field:  "CompletionTokensDetails",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, UsageValidationError{
+					field:  "CompletionTokensDetails",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetCompletionTokensDetails()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return UsageValidationError{
+				field:  "CompletionTokensDetails",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
 	if len(errors) > 0 {
 		return UsageMultiError(errors)
 	}
@@ -1281,6 +1355,114 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = UsageValidationError{}
+
+// Validate checks the field values on UsageTokenDetails with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// first error encountered is returned, or nil if there are no violations.
+func (m *UsageTokenDetails) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on UsageTokenDetails with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// UsageTokenDetailsMultiError, or nil if none found.
+func (m *UsageTokenDetails) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *UsageTokenDetails) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for CachedTokens
+
+	// no validation rules for ReasoningTokens
+
+	// no validation rules for AudioTokens
+
+	if len(errors) > 0 {
+		return UsageTokenDetailsMultiError(errors)
+	}
+
+	return nil
+}
+
+// UsageTokenDetailsMultiError is an error wrapping multiple validation errors
+// returned by UsageTokenDetails.ValidateAll() if the designated constraints
+// aren't met.
+type UsageTokenDetailsMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m UsageTokenDetailsMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m UsageTokenDetailsMultiError) AllErrors() []error { return m }
+
+// UsageTokenDetailsValidationError is the validation error returned by
+// UsageTokenDetails.Validate if the designated constraints aren't met.
+type UsageTokenDetailsValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e UsageTokenDetailsValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e UsageTokenDetailsValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e UsageTokenDetailsValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e UsageTokenDetailsValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e UsageTokenDetailsValidationError) ErrorName() string {
+	return "UsageTokenDetailsValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e UsageTokenDetailsValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sUsageTokenDetails.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = UsageTokenDetailsValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = UsageTokenDetailsValidationError{}
 
 // Validate checks the field values on Choice with the rules defined in the
 // proto definition for this message. If any rules are violated, the first
@@ -1901,6 +2083,10 @@ func (m *ChatCompletionRequest) validate(all bool) error {
 
 	if m.ParallelToolCalls != nil {
 		// no validation rules for ParallelToolCalls
+	}
+
+	if m.ServiceTier != nil {
+		// no validation rules for ServiceTier
 	}
 
 	if len(errors) > 0 {

@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/everstacklabs/everstack/cmd/config/gateway/validator"
+	grpcserver "github.com/everstacklabs/everstack/internal/api/grpc/server"
 	"github.com/everstacklabs/everstack/internal/api/http/handlers"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/gorilla/mux"
@@ -48,6 +49,11 @@ func startGatewayServer(ctx context.Context, config *validator.Config, configPat
 		router.HandleFunc("/debug/fastpath/stats", handlers.FastPathStatsHandler).Methods("GET")
 		router.HandleFunc("/debug/fastpath/health", handlers.FastPathHealthHandler).Methods("GET")
 	}
+	// This process serves the router itself (listenAndServe below), so the REST
+	// gateway can reach the Connect handlers in memory rather than by dialing
+	// external_domain:port. Must be set before the API is built.
+	ctx = grpcserver.WithLoopback(ctx)
+
 	runtime := &GatewayAPIRuntime{}
 	_, err = startAPI(ctx, config, configPath, embeddedDefaults, router, runtime)
 	if err != nil {

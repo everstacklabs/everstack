@@ -37,7 +37,7 @@ const nativeStatus: Record<number, { label: string; className: string }> = {
   },
   [SessionStatus.FAILED]: {
     label: 'Failed',
-    className: 'bg-red-500/15 text-red-400 light:text-red-600',
+    className: 'bg-danger-surface-strong text-danger',
   },
   [SessionStatus.CANCELLED]: {
     label: 'Cancelled',
@@ -47,7 +47,7 @@ const nativeStatus: Record<number, { label: string; className: string }> = {
 const openAIStatus = (status: string) => ({
   label: status.replaceAll('_', ' '),
   className: /fail|error/.test(status)
-    ? 'bg-red-500/15 text-red-400 light:text-red-600'
+    ? 'bg-danger-surface-strong text-danger'
     : /complete/.test(status)
       ? 'bg-brand-secondary-400 text-brand-secondary-800'
       : /cancel|delete/.test(status)
@@ -228,7 +228,7 @@ export function SessionsList({
           <div data-row-actions>
             <button
               type="button"
-              className="rounded px-2 py-1 text-xs text-red-400 hover:bg-red-500/10"
+              className="rounded px-2 py-1 text-xs text-danger hover:bg-danger-surface"
               onClick={(event) => cancel(event, row.id)}
               disabled={cancelMutation.isPending}
             >

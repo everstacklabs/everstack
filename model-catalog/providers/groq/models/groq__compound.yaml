@@ -1,7 +1,7 @@
 name: "groq/compound"
 display_name: "Compound"
 family: "groq"
-status: "stable"
+status: "deprecated"
 release_date: "2025-09-04"
 
 cost:
@@ -19,7 +19,7 @@ modalities:
   input: ["text"]
   output: ["text"]
 
-notes: "General-purpose chat model for instruction following, writing, and analysis"
+notes: "Shut down by Groq on 2026-09-21; no replacement listed."
 parameters:
   - key: "max_output_tokens"
     display_name: "Max output tokens"

@@ -1,0 +1,17 @@
+# Verified 2026-09-29: https://github.com/jaredpalmer/kev
+# Self-hosted infrastructure is billed separately; zero here means no vendor per-token API fee. Context depends on deployed checkpoint and server configuration; unspecified here.
+name: "kev-latest"
+display_name: "Kev (configured checkpoint)"
+api_type: "systemone"
+family: "kev"
+status: "stable"
+added_in_version: "2.10.0"
+cost:
+  input_per_1k: 0
+  output_per_1k: 0
+limits:
+  max_tokens: 0
+capabilities: [decisions]
+modalities:
+  input: [text]
+  output: [json]

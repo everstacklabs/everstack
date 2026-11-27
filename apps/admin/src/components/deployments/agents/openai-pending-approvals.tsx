@@ -76,7 +76,7 @@ export function OpenAIPendingApprovals() {
         </p>
       )}
       {approvals.error && (
-        <p role="alert" className="text-xs text-amber-200 light:text-amber-800">
+        <p role="alert" className="text-xs text-warning">
           OpenAI approvals could not load. Everstack approvals remain available
           below.
         </p>
@@ -84,7 +84,7 @@ export function OpenAIPendingApprovals() {
       {!decisionsEnabled && approvals.data?.data.length ? (
         <p
           role="status"
-          className="text-xs text-amber-200 light:text-amber-800"
+          className="text-xs text-warning"
         >
           These saved results may be stale. Decisions are disabled until the
           OpenAI runtime is available and refreshed.
@@ -103,7 +103,7 @@ export function OpenAIPendingApprovals() {
         ))}
       </div>
       {resolve.error && (
-        <p role="alert" className="text-xs text-red-400 light:text-red-700">
+        <p role="alert" className="text-xs text-danger">
           {resolve.error instanceof Error
             ? resolve.error.message
             : 'The approval could not be resolved.'}
@@ -144,7 +144,7 @@ function ApprovalCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="rounded-full border border-amber-500/20 bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-300 light:text-amber-700">
+              <span className="rounded-full border border-warning-border bg-warning-surface-strong px-2 py-0.5 text-[10px] font-medium text-warning">
                 Pending
               </span>
               <span className="truncate text-sm font-medium text-white light:text-brand-main-50">

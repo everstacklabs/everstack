@@ -423,6 +423,14 @@ export function getProviderAbbrev(provider: string | null | undefined): string {
     perplexity: 'PPX',
     cerebras: 'CRB',
     'nvidia-nim': 'NIM',
+    deepinfra: 'DPI',
+    novita: 'NOV',
+    nebius: 'NEB',
+    baseten: 'BST',
+    sambanova: 'SBN',
+    chutes: 'CHT',
+    meta: 'MTA',
+    tencent: 'TCT',
   }
 
   return (
@@ -435,7 +443,7 @@ export function getStatusIcon(status: string | null | undefined): ReactNode {
     return (
       <Iconify.Icon
         icon="lucide:question-mark-circle"
-        className="size-4 text-yellow-400 light:text-yellow-700"
+        className="size-4 text-warning"
       />
     )
 
@@ -443,27 +451,27 @@ export function getStatusIcon(status: string | null | undefined): ReactNode {
     return (
       <Iconify.Icon
         icon="mi:circle-check"
-        className="size-4 text-emerald-400/50 light:text-emerald-600/60"
+        className="size-4 text-success/50 light:text-success/60"
       />
     )
   if (status === 'error')
     return (
       <Iconify.Icon
         icon="lucide:x-circle"
-        className="size-4 text-rose-400/50 light:text-rose-600/60"
+        className="size-4 text-danger/50 light:text-danger/60"
       />
     )
   if (status === 'pending')
     return (
       <Iconify.Icon
         icon="lucide:question-mark-circle"
-        className="size-4 text-yellow-400 light:text-yellow-700"
+        className="size-4 text-warning"
       />
     )
   return (
     <Iconify.Icon
       icon="lucide:question-mark-circle"
-      className="size-4 text-yellow-400 light:text-yellow-700"
+      className="size-4 text-warning"
     />
   )
 }

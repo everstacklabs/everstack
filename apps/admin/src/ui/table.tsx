@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { replayMask } from '@/lib/replay-privacy';
 import { ArrowUpDown, ArrowUp, ArrowDown, MoreVertical, ui } from '@everstack/ui';
 import { Check, Copy, Eye, GripVertical } from 'lucide-react';
 import { toast } from '@everstack/ui/components';
@@ -379,6 +380,7 @@ function DataCellInner<T>({
     const contentNode = (
         <div
             ref={contentRef}
+            {...replayMask}
             className={cn(
                 'min-w-0 max-w-full',
                 truncate ? 'w-fit truncate' : 'whitespace-normal break-words',
@@ -453,7 +455,7 @@ function DataCellInner<T>({
                             onClick={handleCopy}
                             className="rounded border border-brand-main-600 bg-brand-main-800/70 p-1 text-white/45 transition-colors hover:border-brand-secondary-500/50 hover:text-brand-secondary-300 light:text-black/45"
                         >
-                            {copied ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                            {copied ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
                         </button>
                     )}
                 </div>
@@ -1219,7 +1221,7 @@ function RowActionsMenu<T>({ row, actions }: { row: T; actions: RowAction<T>[] }
                                 className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors rounded ${isDisabled
                                     ?'cursor-not-allowed opacity-45'
                                     : action.variant === 'destructive'
-                                        ? 'text-red-400 hover:bg-red-500/20'
+                                        ? 'text-danger hover:bg-danger-surface-strong'
                                         : 'text-white/90 hover:bg-brand-main-700 light:text-black/90'
                                     }`}
                             >

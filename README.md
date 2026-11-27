@@ -1,295 +1,192 @@
 <div align="center">
   <h1>Everstack</h1>
 
-  <p><strong>The open-source control plane for production AI.</strong></p>
   <p>
-    Route models, run durable agents, execute code in isolated sandboxes,
-    connect tools and memory, and trace every step on infrastructure you control.
+    Self-hosted infrastructure for AI applications: an OpenAI-compatible model
+    gateway, an agent runtime, sandboxed code execution, memory, MCP tools and
+    tracing, in one Go server with a web dashboard.
   </p>
 
   <p>
-    <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/license-Apache_2.0-2563eb?style=flat-square" alt="Apache 2.0" /></a>
-    <a href="./examples/quickstart/README.md"><img src="https://img.shields.io/badge/self--hosted-ready-2ea44f?style=flat-square" alt="Self-hosted" /></a>
-    <a href="https://docs.everstack.ai"><img src="https://img.shields.io/badge/OpenTelemetry-native-7c3aed?style=flat-square&logo=opentelemetry&logoColor=white" alt="OpenTelemetry native" /></a>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-2563eb?style=flat-square" alt="Apache 2.0" /></a>
     <a href="./go.mod"><img src="https://img.shields.io/badge/Go-1.25%2B-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.25+" /></a>
     <a href="./examples/quickstart/README.md"><img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Compose" /></a>
   </p>
 
   <p>
-    <a href="https://everstack.ai">Website</a> ·
     <a href="https://docs.everstack.ai">Documentation</a> ·
-    <a href="#local-quickstart">Quickstart</a> ·
-    <a href="#platform-capabilities">Platform</a> ·
-    <a href="#architecture">Architecture</a> ·
+    <a href="#quickstart">Quickstart</a> ·
+    <a href="#community-edition">Community Edition</a> ·
+    <a href="#licence">Licence</a> ·
     <a href="./ROADMAP.md">Roadmap</a> ·
     <a href="./CONTRIBUTING.md">Contributing</a>
   </p>
 
   <br />
 
-  <a href="https://everstack.ai">
-    <img src="assets/everstack-app-cover.png" alt="Everstack platform control plane showing live AI observability" width="1200" />
-  </a>
+  <img src="assets/everstack-app-cover.png" alt="The Everstack dashboard" width="1200" />
 </div>
 
 ## What is Everstack?
 
-Everstack is a self-hosted AI infrastructure platform that brings the gateway,
-runtime, execution, data, and operations layers of production AI into one
-system. Applications use an OpenAI-compatible API while Everstack handles
-provider routing, agent sessions, isolated execution, memory, tools,
-evaluations, and telemetry behind it.
+Everstack is a server you run yourself that sits between your applications and
+model providers. Applications call one OpenAI-compatible API; Everstack routes
+the request to a provider using your own provider keys, runs agents and their
+tools, and records what happened.
 
-Teams commonly assemble these capabilities from separate gateways, agent
-frameworks, sandbox vendors, vector databases, workflow engines, and
-observability products. Everstack provides a shared control plane and a single
-operational boundary while keeping models, data, and infrastructure under your
-control.
+The public repository, `everstacklabs/everstack`, is the open-source Community
+Edition, licensed under Apache-2.0. Everstack Cloud and the Enterprise features
+are separate commercial offerings and their source is not included there. See
+[LICENSING.md](./LICENSING.md) and [EDITIONS.md](./EDITIONS.md).
 
-Use Everstack with an existing application or agent framework, or build directly
-against its Connect/gRPC APIs and generated SDKs.
+## Community Edition
 
-## Local quickstart
+The Community Edition is the Apache-2.0 code published in
+`everstacklabs/everstack`. The server binary is built from it with no tags or
+with `-tags ce`. It contains:
 
-Requirements: Docker with Compose v2, 6 GB of memory, and port `8089`. The
-first source build can take several minutes; later builds reuse Docker caches.
+| Area | What is in the code | Source |
+| --- | --- | --- |
+| Model gateway | OpenAI-compatible `/v1` API, provider adapters, routing and fallback | [`internal/providers/`](./internal/providers/), [`internal/gateway/`](./internal/gateway/) |
+| Agent runtime | Agents with sessions, streaming, tools, approvals, skills and triggers | [`internal/agents/`](./internal/agents/) |
+| Sandboxes | Isolated execution with Docker, Kubernetes and Firecracker backends | [`internal/sandbox/`](./internal/sandbox/) |
+| Memory | Vector memory on PgVector, Qdrant, Pinecone or Weaviate | [`internal/memory/`](./internal/memory/) |
+| MCP | MCP server registration, tool discovery and tool calls | [`internal/mcp/`](./internal/mcp/) |
+| Workflows and functions | DAG workflows and isolated functions callable as tools | [`internal/workflows/`](./internal/workflows/), [`internal/functions/`](./internal/functions/) |
+| Observability | Traces and logs stored in ClickHouse, OTLP/HTTP trace ingest, evaluations | [`internal/telemetry/`](./internal/telemetry/), [`internal/api/http/otlp/`](./internal/api/http/otlp/) |
+| Dashboard and tools | Embedded admin dashboard, `evs` CLI, Connect/gRPC and OpenAPI definitions, SDKs | [`apps/admin/`](./apps/admin/), [`cmd/`](./cmd/), [`proto/everstack/`](./proto/everstack/), [`packages/`](./packages/) |
+
+Model and provider metadata lives in [`model-catalog/`](./model-catalog/).
+With your own provider keys, each provider bills inference directly and the
+Everstack model-usage charge is $0.
+
+## Quickstart
+
+You need Docker with Compose v2, about 6 GB of memory for the first build, and
+port `8089` free. The Compose file builds the image from this repository; no
+prebuilt Everstack image is needed.
 
 ```bash
 git clone https://github.com/everstacklabs/everstack.git
 cd everstack
 docker compose -f examples/quickstart/compose.yaml up -d --build
-curl --fail --retry 30 --retry-delay 2 http://localhost:8089/debug/healthz
+curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8089/debug/healthz
 ```
 
-Open [http://localhost:8089](http://localhost:8089), then:
-
-1. Add a model-provider key under **Vault -> LLM Providers**.
-2. Create an Everstack API key under **Vault -> API Keys**.
-3. Send a request through the OpenAI-compatible gateway.
-4. Inspect the resulting logs, traces, latency, tokens, and provider cost in **Observability**.
+Open [http://localhost:8089](http://localhost:8089), register the first
+account (it becomes the instance owner), add a provider key under
+**Vault → LLM Providers**, create an Everstack API key under
+**Vault → API Keys**, then send a request:
 
 ```bash
 export EVERSTACK_API_KEY="replace-with-your-everstack-api-key"
 
 curl --fail-with-body http://localhost:8089/v1/chat/completions \
   -H 'content-type: application/json' \
-  -H "x-mf-api-key: $EVERSTACK_API_KEY" \
+  -H "Authorization: Bearer $EVERSTACK_API_KEY" \
   -d '{
     "model": "gpt-4o-mini",
     "messages": [{"role": "user", "content": "Say hello from Everstack"}]
   }'
 ```
 
-See the [complete local quickstart](./examples/quickstart/README.md) for
-shutdown, troubleshooting, configuration, and production-safety notes.
+Any OpenAI client library works with the base URL set to
+`http://localhost:8089/v1`. The `x-evs-api-key` header is accepted as well.
 
-When you bring a provider key, that provider bills inference directly and the
-Everstack model-usage charge is **$0**. Token counts and estimated provider cost
-remain available as observability data.
+### What the quickstart starts, and what it leaves out
 
-## Platform capabilities
+It starts two containers: the Everstack server with its embedded dashboard,
+built with the `ce` tag, and PostgreSQL 16 with pgvector. Migrations run when
+the server starts.
 
-| Layer | What it provides |
-| --- | --- |
-| **AI gateway** | OpenAI-compatible APIs, 17+ provider adapters, routing, fallback, load balancing, key rotation, semantic caching, and rate limits |
-| **Agent runtime** | Stateful sessions, streaming, approvals, child-agent spawning, skills, triggers, and deploy-as-API |
-| **Isolated execution** | isolated container and Kubernetes backends with shell, files, network policy, resource controls, and lifecycle management |
-| **Browser automation** | Browser sessions, screenshots, action events, navigation, and isolated execution |
-| **Memory** | PgVector, Qdrant, Pinecone, and Weaviate vector-memory backends |
-| **MCP and tools** | MCP server registration, tool discovery, federated tool calling, and serverless functions |
-| **Workflows** | Visual DAG pipelines for agents, tools, API calls, approvals, and scheduled or event-driven work |
-| **Observability** | OpenTelemetry-native traces, metrics, structured logs, model latency, token usage, provider cost, and alerts |
-| **Evaluations** | Datasets, scoring, LLM judges, evaluation runs, reviews, and regression analysis |
-| **Operator experience** | Embedded React admin application, `evs` CLI, Connect/gRPC APIs, OpenAPI specifications, and generated SDKs |
+It leaves out ClickHouse, Redis and sandbox access, and runs with telemetry
+switched off (`EVS_TELEMETRY_ENABLED=false`). Sign-in is on
+(`EVS_AUTH_MODE=builtin`), and the port is bound to `127.0.0.1` because the
+setup uses plain HTTP and example secrets. The [quickstart README](./examples/quickstart/README.md) explains
+each of these.
 
-## What you can build
+### From the quickstart to tracing
 
-- A multi-provider model gateway with routing, retries, fallback, caching, and usage controls.
-- Durable agents with sessions, tools, memory, approvals, child agents, and API deployments.
-- Secure code-execution products backed by containers or Kubernetes.
-- Retrieval and long-term memory systems that can move between supported vector stores.
-- MCP-powered tool platforms with centralized discovery, policy, and execution.
-- AI workflows that combine agents, functions, webhooks, schedules, and human checkpoints.
-- Evaluation and observability pipelines that connect application behavior to traces, scores, latency, tokens, and cost.
-- Self-hosted AI products that need a unified data and infrastructure boundary.
+Trace and log views read from ClickHouse, so they stay empty in the quickstart.
+To store traces, run ClickHouse and start the server with
+`EVS_DATABASE_MODE=hybrid` and `EVS_CLICKHOUSE_DSN`. The server then creates its
+ClickHouse tables at startup and accepts OpenTelemetry traces from your
+applications at `/api/public/otel/v1/traces`. A tested Compose file for this
+setup is not in the repository yet; see
+[Adding tracing](./examples/quickstart/README.md#adding-tracing).
 
-## How the pieces fit together
+### From the quickstart to sandboxes
 
-An application talks to one gateway. The gateway resolves a provider route,
-enforces policy, and records telemetry. Agent and workflow runs can call MCP
-tools, functions, memory, browsers, and isolated sandboxes. Every layer emits
-OpenTelemetry data into the shared operations surface.
+The Docker sandbox backend needs the server to reach a Docker daemon, which
+amounts to root on that host, and the default sandbox images are not yet
+published to a public registry. Their Dockerfiles are in
+[`internal/sandbox/docker/`](./internal/sandbox/docker/). There is no tested
+self-hosting guide for sandboxes yet.
 
-```text
-Your application or agent framework
-                 |
-                 v
-      OpenAI-compatible gateway
-      routing | fallback | cache
-                 |
-        +--------+--------+
-        |                 |
-        v                 v
-  Model providers    Agent runtime
-                          |
-             +------------+------------+
-             |            |            |
-             v            v            v
-          Memory       MCP/tools    Sandboxes
-                                      |
-                              Containers | Kubernetes
+## Documentation
 
-        Traces | metrics | logs | evals | alerts
+- [docs.everstack.ai](https://docs.everstack.ai): product and API documentation
+- [Docker deployment](https://docs.everstack.ai/deployment/docker/): running the
+  Community Edition with Docker Compose
+- [`examples/`](./examples/): configuration examples
+- [`proto/everstack/`](./proto/everstack/): API definitions, the source of
+  truth for the Connect/gRPC services, OpenAPI files and generated clients
+
+## Build from source
+
+Requirements: Go 1.25+, Node.js 20+, pnpm 10.5.2, and Buf with the protobuf
+plugins that `make install_grpc_dependencies` installs.
+
+```bash
+make build        # Community Edition server binary, ./everstack
+make build-local  # the same, with the admin dashboard embedded
+make test         # Go tests with the ce tag
+make validate     # repository boundary checks and a build
 ```
 
-## Architecture
-
-```mermaid
-flowchart LR
-    Client[Applications and SDKs] --> Gateway[OpenAI-compatible gateway]
-    Gateway --> Providers[Model providers]
-    Gateway --> Runtime[Agent and workflow runtime]
-    Runtime --> Tools[MCP and functions]
-    Runtime --> Sandbox[Isolated sandboxes]
-    Runtime --> Browser[Browser runtime]
-    Runtime --> Memory[Vector memory]
-    Gateway --> Telemetry[OpenTelemetry]
-    Runtime --> Telemetry
-    Telemetry --> Storage[(PostgreSQL / ClickHouse / Redis)]
-```
-
-The gateway and admin application ship together. PostgreSQL stores operational
-state, ClickHouse stores high-volume telemetry, and Redis supports caching and
-rate limiting. Configuration is layered from embedded defaults, a YAML file,
-and `EVS_` environment variables.
-
-Proto files under [`proto/everstack/`](./proto/everstack/) are the source of
-truth for Connect/gRPC services, OpenAPI specifications, and generated clients.
-
-## Deployment model
-
-| Component | Responsibility | Typical placement |
-| --- | --- | --- |
-| **Gateway and admin** | API ingress, provider routing, control plane, embedded operator UI | One or more application nodes |
-| **PostgreSQL** | Platform state, configuration, sessions, and metadata | Managed or self-hosted PostgreSQL |
-| **ClickHouse** | Traces, logs, metrics, usage, and evaluation data | Managed or self-hosted ClickHouse |
-| **Redis** | Cache, rate limits, and coordination | Managed or self-hosted Redis |
-| **Sandbox backend** | Isolated code, tools, browsers, and jobs | container hosts or Kubernetes |
-| **Telemetry export** | Optional downstream traces and metrics | Any OpenTelemetry-compatible backend |
-
-The Docker Compose quickstart is intended for evaluation and development.
-Production deployments should use durable databases, explicit secrets,
-restricted network policy, backups, and the sandbox backend appropriate for
-their isolation requirements.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the development workflow,
+generated-code rules and pull-request process.
 
 ## Repository layout
 
 ```text
 everstack/
-├── cmd/                  # evs CLI and gateway startup
-├── internal/
-│   ├── providers/        # model-provider adapters and routing
-│   ├── agents/           # agent runtime, sessions, skills, and deployment
-│   ├── sandbox/          # container and Kubernetes execution
-│   ├── memory/           # vector-memory interfaces and backends
-│   ├── mcp/              # MCP registration, discovery, and tool calls
-│   ├── workflows/        # workflow and DAG execution
-│   ├── functions/        # isolated serverless functions
-│   └── telemetry/        # OpenTelemetry instrumentation
-├── apps/admin/           # self-hosted operator dashboard
-├── packages/             # shared UI, API clients, proto clients, and SDKs
-├── proto/everstack/      # API source of truth
+├── cmd/                  # evs CLI and server startup
+├── internal/             # server packages (providers, agents, sandbox, memory, mcp, ...)
+├── apps/admin/           # self-hosted dashboard
+├── apps/docs/            # documentation site
+├── services/             # Firecracker sandbox host services
+├── packages/             # shared UI, API clients and SDKs
+├── proto/everstack/      # API definitions
 ├── model-catalog/        # provider and model metadata
-└── examples/             # quickstarts and configuration examples
+└── examples/             # quickstart and configuration examples
 ```
 
-## Build from source
+## Licence
 
-Requirements:
+The Community Edition is open source under the
+[Apache License 2.0](./LICENSE), and that licence covers every file in the
+public repository. Third-party components keep their own licences; see
+[NOTICE](./NOTICE).
 
-- Go 1.25+
-- Node.js 20+
-- pnpm 10.5.2
-- Buf and the protobuf plugins installed by the Make target below
-
-Build the Community Edition binary:
-
-```bash
-make install_grpc_dependencies
-make core_api
-go build -tags=ce -o ./evs .
-```
-
-Build the embedded admin UI and local binary:
-
-```bash
-make build-local
-```
-
-Useful development commands:
-
-```bash
-make core_apps
-air serve --config ./examples/gateway_hybrid.yaml
-go test ./...
-pnpm check-types
-pnpm build
-```
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for the complete development workflow,
-testing expectations, generated-code rules, and pull-request process.
-
-## Extend Everstack
-
-Everstack is designed around explicit extension points:
-
-| Extension | Source |
-| --- | --- |
-| Model providers | [`internal/providers/`](./internal/providers/) |
-| Sandbox backends | [`internal/sandbox/`](./internal/sandbox/) |
-| Memory stores | [`internal/memory/`](./internal/memory/) |
-| MCP integration | [`internal/mcp/`](./internal/mcp/) |
-| API contracts | [`proto/everstack/`](./proto/everstack/) |
-| Model metadata | [`model-catalog/`](./model-catalog/) |
-
-Please open a
-[design discussion](https://github.com/everstacklabs/everstack/discussions)
-before introducing a new public interface or persistence contract.
-
-## Releases and roadmap
-
-- Stable releases are published through [GitHub Releases](https://github.com/everstacklabs/everstack/releases).
-- Product direction and delivery status live in [ROADMAP.md](./ROADMAP.md).
-- Upgrade notes and compatibility changes are documented with each release.
-- Backward compatibility matters for self-hosted operators who cannot upgrade every deployment immediately.
-
-## Editions
-
-This repository is the Apache 2.0 Community Edition. Everstack Cloud operates
-the managed control plane and infrastructure; commercial enterprise offerings
-add deployment, governance, and support capabilities. Published Community
-Edition files remain Apache 2.0.
-
-See [EDITIONS.md](./EDITIONS.md) for the boundary and
-[GOVERNANCE.md](./GOVERNANCE.md) for project decision-making.
+Everstack Cloud (the managed service) and the Enterprise features are separate
+commercial offerings. Their source, which includes the hosted identity, billing,
+licensing and fleet-management services, the cloud dashboard and the enterprise
+build of the server, is not part of the public repository. See
+[LICENSING.md](./LICENSING.md) for the licence terms and
+[EDITIONS.md](./EDITIONS.md) for how the editions differ.
 
 ## Community
 
-- Ask usage and architecture questions in [GitHub Discussions](https://github.com/everstacklabs/everstack/discussions).
-- Report reproducible bugs through [GitHub Issues](https://github.com/everstacklabs/everstack/issues).
-- Read [SUPPORT.md](./SUPPORT.md) before requesting support.
-- Contributions follow [CONTRIBUTING.md](./CONTRIBUTING.md) and the [Code of Conduct](./CODE_OF_CONDUCT.md).
-- If Everstack is useful to your team, starring the repository helps other builders discover it.
+- Questions and design discussion: [GitHub Discussions](https://github.com/everstacklabs/everstack/discussions)
+- Reproducible bugs: [GitHub Issues](https://github.com/everstacklabs/everstack/issues)
+- Support expectations: [SUPPORT.md](./SUPPORT.md)
+- Contributing: [CONTRIBUTING.md](./CONTRIBUTING.md) and the [Code of Conduct](./CODE_OF_CONDUCT.md)
+- Governance: [GOVERNANCE.md](./GOVERNANCE.md)
 
 ## Security
 
-Do not open public issues for suspected vulnerabilities. Report security
-problems privately using the process in [SECURITY.md](./SECURITY.md).
-
-Never include API keys, provider credentials, license keys, or customer data in
-issues, discussions, traces, screenshots, or example configurations.
-
-## License
-
-Everstack Community Edition is licensed under the
-[Apache License 2.0](./LICENSE).
+Do not open public issues for suspected vulnerabilities. Report them privately
+as described in [SECURITY.md](./SECURITY.md). Never include API keys, provider
+credentials, licence keys or customer data in issues, discussions, traces,
+screenshots or example configuration.

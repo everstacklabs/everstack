@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":"failure","result":{"id":"<id>","contextId":"<id>","status":{"state":"failed","message":{"role":"agent","parts":[{"kind":"text","text":"fixture failure"}],"messageId":"<id>","kind":"message"}},"kind":"task"}}

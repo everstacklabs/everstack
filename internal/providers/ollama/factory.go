@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
+	"github.com/everstacklabs/everstack/internal/providers/billing"
 	"github.com/everstacklabs/everstack/internal/providers/factory"
 	"github.com/everstacklabs/everstack/internal/providers/logging"
 	"github.com/everstacklabs/everstack/internal/providers/tracing"
@@ -56,7 +57,7 @@ func init() {
 		})
 
 		// Wrap with tracing middleware (innermost) - with cost calculation if catalog available
-		tracedProvider := tracing.NewMiddlewareWithKey(baseProvider, in.CatalogCache, "", "", "")
+		tracedProvider := tracing.NewMiddlewareWithKey(billing.Wrap(baseProvider, in.BillingConfig("")), in.CatalogCache, "", "", "")
 
 		// Wrap with logging middleware (outermost)
 		return logging.NewMiddleware(

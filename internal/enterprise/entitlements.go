@@ -2,6 +2,7 @@ package enterprise
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -74,7 +75,50 @@ func ManagedGateway() bool { return managedGateway.Load() }
 // truth-table logic to resolveEntitlements.
 func ResolveEntitlements(ctx context.Context, monitor LicenseMonitor) Entitlements {
 	ent := resolveEntitlements(ctx, monitor)
+	ent = applyDetachedFloor(ctx, monitor, ent)
 	observeEntitlementResolution(ent)
+	return ent
+}
+
+// detachedFloorTypes are the caps that detached server paths (channel
+// sessions, internal triggers) on a managed gateway enforced before plan
+// enforcement existed, because those contexts fell through to Community
+// Edition limits: agent storage uploads (STORAGE_BYTES) and channel-started
+// persistent runs (CONCURRENT_RUNNING). They are the only CE caps those
+// paths consulted.
+var detachedFloorTypes = []UsageType{UsageTypeStorageBytes, UsageTypeConcurrentRunning}
+
+// applyDetachedFloor keeps those caps for a server-resolved (not verified)
+// tenant on a managed gateway: resolving the organization's plan may tighten
+// them, never loosen them below what applied before.
+func applyDetachedFloor(ctx context.Context, monitor LicenseMonitor, ent Entitlements) Entitlements {
+	if IsDev() || !ManagedGateway() || contextkeys.HasVerifiedTenantPrincipal(ctx) {
+		return ent
+	}
+	if marked, _ := ctx.Value(serverResolvedTenantKey{}).(string); marked == "" || marked != contextkeys.GetTenantID(ctx) {
+		return ent
+	}
+	legacy := selfHostedEntitlements(monitor)
+	var limits map[UsageType]int64
+	for _, t := range detachedFloorTypes {
+		floor, capped := legacy.Limit(t)
+		if !capped {
+			continue
+		}
+		if current, has := ent.Limit(t); has && current <= floor {
+			continue
+		}
+		if limits == nil {
+			limits = make(map[UsageType]int64, len(ent.Limits)+len(detachedFloorTypes))
+			for k, v := range ent.Limits {
+				limits[k] = v
+			}
+		}
+		limits[t] = floor
+	}
+	if limits != nil {
+		ent.Limits = limits
+	}
 	return ent
 }
 
@@ -86,6 +130,7 @@ func resolveEntitlements(ctx context.Context, monitor LicenseMonitor) Entitlemen
 	if tc := tenant.ConfigFromContext(ctx); tc != nil {
 		if tc.PlanTier != nil && *tc.PlanTier != "" {
 			if limits, ok := planLimitsForTier(*tc.PlanTier); ok {
+				limits = enforcedClasses(tc.InstanceID, *tc.PlanTier, limits)
 				return Entitlements{Tier: *tc.PlanTier, Source: "managed-plan", Limits: limits}
 			}
 			// Unknown tier string or unparseable plans data: fail open for
@@ -116,25 +161,47 @@ func resolveEntitlements(ctx context.Context, monitor LicenseMonitor) Entitlemen
 	// the context authenticated. HasVerifiedTenantPrincipal additionally
 	// requires validated API-key or user-session evidence, so spoofed headers
 	// retain the stricter default.
-	if ManagedGateway() && contextkeys.HasVerifiedTenantPrincipal(ctx) {
+	if ManagedGateway() && hasEntitlementPrincipal(ctx) {
 		// A gateway-side resolver can now supply the plan tier the tenant
 		// config never carried. Until enforcement is switched on, report what
 		// would apply and keep returning unlimited, because these tenants have
 		// been running without caps and abruptly capping them would break live
 		// workloads that are currently legal.
-		if tier, ok := resolveManagedPlanTier(ctx); ok {
-			if limits, found := planLimitsForTier(tier); found {
-				if ShadowEnforcement() {
-					reportShadowLimits(contextkeys.GetTenantID(ctx), tier, limits)
-					return Entitlements{Tier: tier, Source: "managed-shadow"}
-				}
-				return Entitlements{Tier: tier, Source: "managed-plan", Limits: limits}
-			}
-			logger.Warnf("entitlements: resolved unknown plan tier %q for managed tenant, applying managed bypass", tier)
+		if currentPlanResolver() == nil {
+			// No platform database to resolve against: nothing is known.
+			return Entitlements{Tier: "", Source: "managed-bypass"}
 		}
+		source := "managed-plan"
+		tier, ok := resolveManagedPlanTier(ctx)
+		if !ok {
+			// A verified tenant that maps to no live organization (a deleted
+			// instance whose key still authenticates, an orphan or contested
+			// id) or whose lookup failed gets Starter caps, never unlimited.
+			tier, source = "free", "managed-unresolved"
+		} else if managedTenantExempt(ctx) {
+			// Internal organizations (the organization exempt flag, set
+			// only by migration or ops tooling) run without plan caps.
+			return Entitlements{Tier: tier, Source: "managed-exempt"}
+		}
+		if limits, found := planLimitsForTier(tier); found {
+			if !TierEnforced(tier) {
+				reportShadowLimits(contextkeys.GetTenantID(ctx), tier, limits)
+				return Entitlements{Tier: tier, Source: "managed-shadow"}
+			}
+			limits = enforcedClasses(contextkeys.GetTenantID(ctx), tier, limits)
+			return Entitlements{Tier: tier, Source: source, Limits: limits}
+		}
+		logger.Warnf("entitlements: resolved unknown plan tier %q for managed tenant, applying managed bypass", tier)
 		return Entitlements{Tier: "", Source: "managed-bypass"}
 	}
 
+	return selfHostedEntitlements(monitor)
+}
+
+// selfHostedEntitlements is the licence-or-CE resolution every non-managed
+// request gets (and every detached managed request got before plan
+// enforcement).
+func selfHostedEntitlements(monitor LicenseMonitor) Entitlements {
 	if Edition() != "ce" && monitor != nil {
 		if state := monitor.GetLicenseState(); state != nil && state.Active {
 			if len(state.UsageLimits) == 0 {
@@ -154,8 +221,21 @@ func resolveEntitlements(ctx context.Context, monitor LicenseMonitor) Entitlemen
 	return Entitlements{Tier: "free", Source: "ce", Limits: ceLimitsCopy()}
 }
 
-// planLimitsForTier reads a tier's usage limits from the embedded canonical
-// plans data.
+// managedDisplayOnlyUsageTypes are plan limits a managed (Cloud) gateway shows
+// but never enforces through the entitlement path. Token and request volume
+// are BYOK usage for most tenants and are display only by owner decision
+// (2026-10-06); STORAGE_BYTES is a usage-type allowance whose overage model is
+// pending review, and its existing checks count per tenant id rather than per
+// organization. Self-hosted licences are unaffected: this applies only to
+// limits resolved from a managed organization's plan.
+var managedDisplayOnlyUsageTypes = map[UsageType]bool{
+	UsageTypeTokens:       true,
+	UsageTypeRequests:     true,
+	UsageTypeStorageBytes: true,
+}
+
+// planLimitsForTier reads a managed tier's enforceable usage limits from the
+// embedded canonical plans data.
 func planLimitsForTier(tier string) (map[UsageType]int64, bool) {
 	cfg, err := plans.Embedded()
 	if err != nil || cfg == nil {
@@ -167,6 +247,15 @@ func planLimitsForTier(tier string) (map[UsageType]int64, bool) {
 	}
 	limits := make(map[UsageType]int64, len(plan.UsageLimits))
 	for _, ul := range plan.UsageLimits {
+		if managedDisplayOnlyUsageTypes[UsageType(ul.Type)] {
+			continue
+		}
+		if ul.IsAllowance() {
+			// Cloud usage allowances are priced by the billing service's
+			// usage-debit loop (usage beyond them is paid from credit), never
+			// enforced as an entitlement cap.
+			continue
+		}
 		limits[UsageType(ul.Type)] = ul.Value
 	}
 	return limits, true
@@ -180,44 +269,47 @@ func ceLimitsCopy() map[UsageType]int64 {
 	return limits
 }
 
-// CheckResourceLimit is the creation-time quota gate, resolved through
-// ResolveEntitlements. countQuery MUST be tenant-scoped (WHERE tenant_id = ..)
-// — in the cloud shared schema an unscoped COUNT aggregates every tenant's
-// rows — and delta is how many resources the request creates (batch RPCs pass
-// the batch size, not 1).
+// ErrResourceLimit tags a genuine quota refusal from the cap checks: the plan
+// does not include the resource, or the organization is at its cap. Those
+// errors are *LimitError, written for end users. Any other error from the
+// checks (for example a failed count query, which wraps raw driver text) is an
+// internal failure and must not be shown to users.
+var ErrResourceLimit = errors.New("resource limit reached")
+
+// CheckResourceLimit is the legacy creation-time gate: countQuery binds its
+// own args and counts only what they select. New callers use CheckLimit,
+// which counts over the whole organization on a managed gateway.
 //
 // Known limitation (Phase 1 follow-up in editions-and-billing.md): the check
 // is COUNT-then-write at the transport layer, so concurrent requests can race
-// past the cap; canonical enforcement belongs in the command/domain
-// transaction.
+// past the cap; ReserveLimitSlot closes that.
 func CheckResourceLimit(ctx context.Context, db *sqlx.DB, monitor LicenseMonitor, limitType UsageType, countQuery string, args []interface{}, delta int64, resourceName string) error {
 	ent := ResolveEntitlements(ctx, monitor)
 	limit, capped := ent.Limit(limitType)
 	if !capped {
 		return nil
 	}
+	c := LimitCheck{Type: limitType, Resource: resourceName, Delta: delta}
 	if limit == 0 {
-		if ent.Source == "ce" {
-			return fmt.Errorf("%s is not available on the Community Edition — upgrade at https://everstack.ai/pricing", resourceName)
-		}
-		return fmt.Errorf("%s is not available on your current plan — upgrade at https://everstack.ai/pricing", resourceName)
+		return unavailableError(ent, c)
 	}
 	if db == nil {
 		return nil
 	}
-	if delta < 1 {
-		delta = 1
-	}
+	return countAgainstLimit(ctx, db, ent, limit, c, countQuery, args)
+}
 
+// countAgainstLimit runs the count and compares it with the cap.
+func countAgainstLimit(ctx context.Context, db *sqlx.DB, ent Entitlements, limit int64, c LimitCheck, query string, args []interface{}) error {
 	queryCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	var count int64
-	if err := db.GetContext(queryCtx, &count, countQuery, args...); err != nil {
-		return fmt.Errorf("failed to check %s limit: %w", resourceName, err)
+	if err := db.GetContext(queryCtx, &count, query, args...); err != nil {
+		return fmt.Errorf("failed to check %s limit: %w", c.Resource, err)
 	}
-	if count+delta > limit {
-		return fmt.Errorf("%s limit reached: %d/%d — upgrade your plan for higher limits (https://everstack.ai/pricing)", resourceName, count, limit)
+	if count+c.delta() > limit {
+		return capError(ent, c, limit, count)
 	}
 	return nil
 }

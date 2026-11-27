@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/everstacklabs/everstack/internal/lib/logger"
@@ -47,6 +48,43 @@ type SandboxWebhook struct {
 type WebhookRouter struct {
 	manager  *SandboxManager
 	limiters sync.Map // webhook_id → *rate.Limiter
+
+	// tenantActiveFn reports whether a tenant's instance may run compute.
+	// Nil falls back to the manager's gate (and from there to "active").
+	tenantActiveFn atomic.Pointer[func(ctx context.Context, tenantID string) bool]
+}
+
+// instancePausedBody is the 403 body served when a paused instance's webhook
+// or preview is hit.
+const instancePausedBody = `{"error":{"type":"instance_paused","code":"instance_paused","message":"This instance is paused."}}`
+
+// WriteInstancePaused writes the standard 403 response for a request that
+// would run compute on a paused instance.
+func WriteInstancePaused(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusForbidden)
+	_, _ = io.WriteString(w, instancePausedBody)
+}
+
+// SetTenantActiveFn installs the paused-instance gate for webhook triggers.
+// fn returns false when the tenant's instance is paused. Passing nil falls
+// back to the manager's gate. Safe for concurrent use.
+func (wr *WebhookRouter) SetTenantActiveFn(fn func(ctx context.Context, tenantID string) bool) {
+	if fn == nil {
+		wr.tenantActiveFn.Store(nil)
+		return
+	}
+	wr.tenantActiveFn.Store(&fn)
+}
+
+func (wr *WebhookRouter) tenantActive(ctx context.Context, tenantID string) bool {
+	if strings.TrimSpace(tenantID) == "" {
+		return true
+	}
+	if ptr := wr.tenantActiveFn.Load(); ptr != nil {
+		return (*ptr)(ctx, tenantID)
+	}
+	return wr.manager.TenantActive(ctx, tenantID)
 }
 
 // NewWebhookRouter creates a new webhook router.
@@ -101,6 +139,15 @@ func (wr *WebhookRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Checked after signature verification so an unauthenticated caller
+	// cannot probe an instance's pause state.
+	if !wr.tenantActive(ctx, webhook.TenantID) {
+		logger.WithFields("webhook_id", webhook.ID, "tenant_id", webhook.TenantID, "sandbox_id", webhook.SandboxID).
+			Info("webhook_router: refusing trigger; instance is paused")
+		WriteInstancePaused(w)
+		return
+	}
+
 	// Rate limit check
 	limiter := wr.getLimiter(webhook.ID, webhook.RateLimitRPM)
 	if !limiter.Allow() {
@@ -119,6 +166,12 @@ func (wr *WebhookRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if inst == nil {
 			err = fmt.Errorf("sandbox not running for session %s", webhook.SessionID)
 		}
+	}
+
+	if err == nil && !instanceBelongsToTenant(inst, webhook.TenantID) {
+		logger.WithFields("webhook_id", webhook.ID, "tenant_id", webhook.TenantID).
+			Warn("webhook_router: session belongs to another tenant's sandbox; refusing")
+		err = fmt.Errorf("sandbox not running for session %s", webhook.SessionID)
 	}
 
 	if err != nil {

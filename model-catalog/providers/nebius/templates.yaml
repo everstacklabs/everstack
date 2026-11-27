@@ -1,0 +1,14 @@
+default:
+  name: "Default"
+  description: "Standard Nebius Token Factory gateway settings"
+  settings:
+    timeout: 60s
+    retry_attempts: 2
+
+cost_optimized:
+  name: "Cost Optimized"
+  description: "Low-cost open-weight models on Nebius Token Factory"
+  recommended_models:
+    - nvidia/Nemotron-3_5-Lightning
+    - MiniMaxAI/MiniMax-M3.1-Flash
+    - openai/gpt-oss-120b

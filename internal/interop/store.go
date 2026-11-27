@@ -12,6 +12,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	a2a "github.com/everstacklabs/everstack/internal/a2a/client"
+	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -22,11 +25,22 @@ var ErrNoTenant = errors.New("interop: tenant id is required")
 
 // Store is the postgres-backed interop control-plane store.
 type Store struct {
-	db *sqlx.DB
+	db            *sqlx.DB
+	cipher        credentialCipher
+	credentialErr error
 }
 
 // NewStore constructs a Store.
-func NewStore(db *sqlx.DB) *Store { return &Store{db: db} }
+func NewStore(db *sqlx.DB) *Store {
+	cipher, err := loadRemoteCipher()
+	switch {
+	case err != nil:
+		logger.Warnf("interop: EVS_INTEROP_CREDENTIAL_MASTER_KEY or its previous keys are invalid; saving remote-agent tokens is disabled")
+	case cipher == nil:
+		logger.Warnf("interop: EVS_INTEROP_CREDENTIAL_MASTER_KEY is not set; remote agents can be saved without a token only (existing plaintext tokens still work)")
+	}
+	return &Store{db: db, cipher: cipher, credentialErr: err}
+}
 
 // ─── A2A publish ────────────────────────────────────────────────────
 
@@ -129,85 +143,169 @@ func (s *Store) SetToolEnabled(ctx context.Context, tenantID, toolName string, e
 
 // RemoteAgent is a saved external A2A agent.
 type RemoteAgent struct {
-	ID        string    `db:"id" json:"id"`
-	TenantID  string    `db:"tenant_id" json:"-"`
-	Name      string    `db:"name" json:"name"`
-	Endpoint  string    `db:"endpoint" json:"endpoint"`
-	AuthToken string    `db:"-" json:"-"` // never serialized; resolved server-side
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+	ID            string    `db:"id" json:"id"`
+	TenantID      string    `db:"tenant_id" json:"-"`
+	Name          string    `db:"name" json:"name"`
+	Endpoint      string    `db:"endpoint" json:"endpoint"`
+	Protocol      string    `db:"protocol" json:"protocol"`
+	RoutingTenant string    `db:"routing_tenant" json:"routing_tenant,omitempty"`
+	HasCredential bool      `db:"has_credential" json:"has_credential"`
+	AuthToken     string    `db:"-" json:"-"` // never serialized; resolved server-side
+	CreatedAt     time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt     time.Time `db:"updated_at" json:"updated_at"`
 }
 
 type remoteAgentRow struct {
-	ID        string         `db:"id"`
-	TenantID  string         `db:"tenant_id"`
-	Name      string         `db:"name"`
-	Endpoint  string         `db:"endpoint"`
-	AuthToken sql.NullString `db:"auth_token"`
-	CreatedAt time.Time      `db:"created_at"`
-	UpdatedAt time.Time      `db:"updated_at"`
+	ID             string         `db:"id"`
+	TenantID       string         `db:"tenant_id"`
+	Name           string         `db:"name"`
+	Endpoint       string         `db:"endpoint"`
+	Protocol       string         `db:"protocol"`
+	RoutingTenant  string         `db:"routing_tenant"`
+	AuthToken      sql.NullString `db:"auth_token"`
+	AuthCiphertext []byte         `db:"auth_ciphertext"`
+	AuthKeyID      sql.NullString `db:"auth_key_id"`
+	CreatedAt      time.Time      `db:"created_at"`
+	UpdatedAt      time.Time      `db:"updated_at"`
 }
+
+const remoteColumns = `id,tenant_id,name,endpoint,protocol,routing_tenant,auth_token,auth_ciphertext,auth_key_id,created_at,updated_at`
 
 func (r remoteAgentRow) toAgent() RemoteAgent {
-	return RemoteAgent{
-		ID: r.ID, TenantID: r.TenantID, Name: r.Name, Endpoint: r.Endpoint,
-		AuthToken: r.AuthToken.String, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
-	}
+	return RemoteAgent{ID: r.ID, TenantID: r.TenantID, Name: r.Name, Endpoint: r.Endpoint, Protocol: r.Protocol, RoutingTenant: r.RoutingTenant, HasCredential: r.AuthToken.String != "" || len(r.AuthCiphertext) > 0, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt}
 }
 
-// ListRemoteAgents returns the tenant's saved remote A2A agents (without tokens).
-func (s *Store) ListRemoteAgents(ctx context.Context, tenantID string) ([]RemoteAgent, error) {
-	if tenantID == "" {
+// ListRemoteAgents does not load plaintext or encrypted credential material.
+func (s *Store) ListRemoteAgents(ctx context.Context, tenant string) ([]RemoteAgent, error) {
+	if tenant == "" {
 		return nil, ErrNoTenant
 	}
-	var rows []remoteAgentRow
-	if err := s.db.SelectContext(ctx, &rows,
-		`SELECT id, tenant_id, name, endpoint, auth_token, created_at, updated_at
-		 FROM a2a_remote_agents WHERE tenant_id = $1 ORDER BY name ASC`, tenantID); err != nil {
-		return nil, err
-	}
-	out := make([]RemoteAgent, len(rows))
-	for i, r := range rows {
-		out[i] = r.toAgent()
-	}
-	return out, nil
+	list := []RemoteAgent{}
+	err := s.db.SelectContext(ctx, &list, `SELECT id,tenant_id,name,endpoint,protocol,routing_tenant,(COALESCE(auth_token,'')<>'' OR auth_ciphertext IS NOT NULL) AS has_credential,created_at,updated_at FROM a2a_remote_agents WHERE tenant_id=$1 ORDER BY name`, tenant)
+	return list, err
 }
-
-// GetRemoteAgentByName resolves a saved remote by name (includes the token).
-func (s *Store) GetRemoteAgentByName(ctx context.Context, tenantID, name string) (*RemoteAgent, error) {
-	if tenantID == "" || name == "" {
+func (s *Store) GetRemoteAgentByName(ctx context.Context, tenant, name string) (*RemoteAgent, error) {
+	return s.getRemote(ctx, tenant, name, false)
+}
+func (s *Store) GetRemoteAgentByID(ctx context.Context, tenant, id string) (*RemoteAgent, error) {
+	return s.getRemote(ctx, tenant, id, true)
+}
+func (s *Store) getRemote(ctx context.Context, tenant, key string, byID bool) (*RemoteAgent, error) {
+	if tenant == "" || key == "" {
 		return nil, ErrNoTenant
 	}
-	var r remoteAgentRow
-	err := s.db.GetContext(ctx, &r,
-		`SELECT id, tenant_id, name, endpoint, auth_token, created_at, updated_at
-		 FROM a2a_remote_agents WHERE tenant_id = $1 AND name = $2`, tenantID, name)
+	column := "name"
+	if byID {
+		column = "id"
+	}
+	var row remoteAgentRow
+	err := s.db.GetContext(ctx, &row, `SELECT `+remoteColumns+` FROM a2a_remote_agents WHERE tenant_id=$1 AND `+column+`=$2`, tenant, key)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
 		return nil, err
 	}
-	a := r.toAgent()
-	return &a, nil
+	agent := row.toAgent()
+	ref := credentialReference(row.Name, row.Endpoint, row.Protocol, row.RoutingTenant)
+	if len(row.AuthCiphertext) > 0 {
+		if s.cipher == nil || s.credentialErr != nil {
+			return nil, ErrCredentialUnavailable
+		}
+		plain, err := s.cipher.Open(tenant, ref, row.AuthKeyID.String, row.AuthCiphertext)
+		if err != nil {
+			return nil, ErrCredentialUnavailable
+		}
+		agent.AuthToken = string(plain)
+	} else {
+		agent.AuthToken = row.AuthToken.String
+		if agent.AuthToken != "" && s.credentialErr != nil {
+			return nil, ErrCredentialUnavailable
+		}
+		// Migrate legacy plaintext on successful resolution when the operator has
+		// configured the key. CAS prevents overwriting a concurrent rotation/edit.
+		if agent.AuthToken != "" && s.cipher != nil && s.credentialErr == nil {
+			ciphertext, keyID, err := s.cipher.Seal(tenant, ref, []byte(agent.AuthToken))
+			if err != nil {
+				return nil, ErrCredentialUnavailable
+			}
+			_, err = s.db.ExecContext(ctx, `UPDATE a2a_remote_agents SET auth_token=NULL,auth_ciphertext=$4,auth_key_id=$5 WHERE tenant_id=$1 AND id=$2 AND auth_token=$3 AND endpoint=$6 AND protocol=$7 AND routing_tenant=$8`, tenant, row.ID, agent.AuthToken, ciphertext, keyID, row.Endpoint, row.Protocol, row.RoutingTenant)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return &agent, nil
 }
 
-// UpsertRemoteAgent creates or updates a saved remote by (tenant, name).
-func (s *Store) UpsertRemoteAgent(ctx context.Context, tenantID, name, endpoint, authToken string) error {
-	if tenantID == "" || name == "" || endpoint == "" {
-		return errors.New("interop: tenant, name and endpoint are required")
+// SaveRemote preserves credentials when omitted. Empty explicitly clears them.
+// A changed endpoint/protocol/routing identity must not silently inherit a key.
+func (s *Store) SaveRemote(ctx context.Context, tenant, name, endpoint, protocol, routing string, token *string) error {
+	name = strings.TrimSpace(name)
+	endpoint = strings.TrimSpace(endpoint)
+	if tenant == "" || name == "" || len(name) > 128 || strings.ContainsAny(name, "\r\n\x00") {
+		return ErrInvalid
 	}
-	var tok sql.NullString
-	if authToken != "" {
-		tok = sql.NullString{String: authToken, Valid: true}
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
 	}
-	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO a2a_remote_agents (tenant_id, name, endpoint, auth_token, updated_at)
-		 VALUES ($1, $2, $3, $4, NOW())
-		 ON CONFLICT (tenant_id, name)
-		 DO UPDATE SET endpoint = EXCLUDED.endpoint, auth_token = EXCLUDED.auth_token, updated_at = NOW()`,
-		tenantID, name, endpoint, tok)
-	return err
+	defer tx.Rollback()
+	// Serialize upserts, including the absent-row case, within this database.
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, tenant+"/"+name); err != nil {
+		return err
+	}
+	var old remoteAgentRow
+	err = tx.GetContext(ctx, &old, `SELECT `+remoteColumns+` FROM a2a_remote_agents WHERE tenant_id=$1 AND name=$2 FOR UPDATE`, tenant, name)
+	exists := err == nil
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	if protocol == "" {
+		protocol = old.Protocol
+		if protocol == "" {
+			protocol = a2a.Legacy
+		}
+	}
+	if token == nil && exists && (endpoint != old.Endpoint || protocol != old.Protocol || routing != old.RoutingTenant) && (old.AuthToken.String != "" || len(old.AuthCiphertext) > 0) {
+		return ErrCredentialReplacement
+	}
+	ciphertext := old.AuthCiphertext
+	keyID := old.AuthKeyID
+	auth := ""
+	if token != nil {
+		auth = *token
+		ciphertext = nil
+		keyID = sql.NullString{}
+	} else if len(ciphertext) == 0 {
+		auth = old.AuthToken.String
+	}
+	credentialForValidation := auth
+	if len(ciphertext) > 0 {
+		credentialForValidation = "present"
+	}
+	if err = a2a.Validate(a2a.Connection{Endpoint: endpoint, Protocol: protocol, Token: credentialForValidation, Tenant: routing}); err != nil {
+		return err
+	}
+	if auth != "" {
+		if s.cipher == nil || s.credentialErr != nil {
+			return ErrCredentialUnavailable
+		}
+		var id string
+		ciphertext, id, err = s.cipher.Seal(tenant, credentialReference(name, endpoint, protocol, routing), []byte(auth))
+		if err != nil {
+			return ErrCredentialUnavailable
+		}
+		keyID = sql.NullString{String: id, Valid: true}
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO a2a_remote_agents (tenant_id,name,endpoint,protocol,routing_tenant,auth_ciphertext,auth_key_id,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW()) ON CONFLICT (tenant_id,name) DO UPDATE SET endpoint=EXCLUDED.endpoint,protocol=EXCLUDED.protocol,routing_tenant=EXCLUDED.routing_tenant,auth_token=NULL,auth_ciphertext=EXCLUDED.auth_ciphertext,auth_key_id=EXCLUDED.auth_key_id,updated_at=NOW()`, tenant, name, endpoint, protocol, routing, ciphertext, keyID)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+func (s *Store) UpsertRemoteAgent(ctx context.Context, tenant, name, endpoint, token string) error {
+	return s.SaveRemote(ctx, tenant, name, endpoint, "", "", &token)
 }
 
 // DeleteRemoteAgent removes a saved remote by id, scoped to the tenant.

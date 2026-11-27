@@ -4,6 +4,7 @@ package everstack.gateway.v1;
 
 import "google/api/annotations.proto";
 import "everstack/gateway/v1/audio.proto";
+import "everstack/gateway/v1/decisions.proto";
 import "everstack/gateway/v1/chat.proto";
 import "everstack/gateway/v1/embedding.proto";
 import "everstack/gateway/v1/gateway.proto";
@@ -16,6 +17,11 @@ import "protoc-gen-openapiv2/options/annotations.proto";
 option go_package = "github.com/everstacklabs/everstack/pkg/grpc/everstack/gateway/v1;gateway";
 
 service GatewayService {
+  // Structured decisions, using customer-owned keys or self-hosted endpoints.
+  rpc SystemOne(SystemOneRequest) returns (SystemOneResponse) {
+    option (google.api.http) = { post: "/v1/systemone" body: "*" };
+  }
+
   rpc GetGateway(GetGatewayRequest) returns (GetGatewayResponse) {
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       responses: {

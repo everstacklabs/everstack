@@ -473,6 +473,13 @@ func (e *AgentExecutor) Execute(ctx context.Context, node *engine.GraphNode, ec 
 		telemetry.AddSpanEvent(span, "agent.memory.post_store.queued", attribute.String("collection", memCollection))
 		storeCtx := context.WithoutCancel(ctx)
 		go func() {
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					logger.WithFields("panic", fmt.Sprint(recovered)).
+						Error("agent executor: memory post-store panicked")
+				}
+			}()
+
 			embModel := e.MemoryModel
 			coll, err := e.MemoryStore.GetCollection(storeCtx, tenantID, memCollection)
 			if err != nil || coll == nil {

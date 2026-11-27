@@ -188,7 +188,7 @@ export function DatasetFileImport({
                         </div>
 
                         {parseError && (
-                            <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
+                            <div className="flex items-start gap-2 rounded-lg border border-danger-border bg-danger-surface p-3 text-sm text-danger">
                                 <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                                 {parseError}
                             </div>

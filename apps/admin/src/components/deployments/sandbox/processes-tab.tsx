@@ -191,7 +191,7 @@ export function ProcessesTab() {
                                     e.stopPropagation()
                                     handleDeleteSession(id)
                                 }}
-                                className="p-0.5 rounded text-white/30 light:text-black/30 hover:text-red-400 light:hover:text-red-600 hover:bg-red-500/10"
+                                className="p-0.5 rounded text-white/30 light:text-black/30 hover:text-danger hover:bg-danger-surface"
                                 title="Delete session"
                                 aria-label={`Delete session ${id}`}
                             >
@@ -224,7 +224,7 @@ export function ProcessesTab() {
                                                 running
                                             </span>
                                         ) : entry.exitCode !== undefined && String(entry.exitCode) !== '0' ? (
-                                            <span className="text-[10px] font-sans text-red-400 light:text-red-600">exit {entry.exitCode}</span>
+                                            <span className="text-[10px] font-sans text-danger">exit {entry.exitCode}</span>
                                         ) : null}
                                     </div>
                                     {entry.output && (

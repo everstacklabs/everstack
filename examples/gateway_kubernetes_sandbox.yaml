@@ -1,0 +1,174 @@
+# Everstack Gateway Configuration - Kubernetes Sandbox Backend
+#
+# This example shows how to configure the gateway to use Kubernetes as the
+# sandbox backend instead of Docker. Sandboxes run as Pods in a dedicated
+# namespace, enabling cloud-native deployments alongside managed K8s clusters.
+#
+# Prerequisites:
+#   1. A running Kubernetes cluster (EKS, GKE, AKS, k3s, kind, etc.)
+#   2. The target namespace must exist:
+#        kubectl create namespace everstack-sandboxes
+#   3. A ServiceAccount with permissions to create/delete Pods and NetworkPolicies:
+#        kubectl apply -f examples/config/k8s-sandbox-rbac.yaml
+#   4. If using metrics-server for stats:
+#        kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+server:
+  config:
+    port: 8089
+    external_domain: "gateway.everstack.local"
+
+  log:
+    level: info
+    format: json
+
+database:
+  postgres:
+    dsn: "${POSTGRES_DSN}"
+    max_open_conns: 25
+    max_idle_conns: 10
+    conn_max_lifetime: 5m
+
+# --- Provider Configuration ---
+# Configure your LLM providers as usual. The sandbox backend is independent
+# of the LLM routing — agents use providers for inference and sandboxes
+# for code execution.
+
+providers:
+  - name: openai
+    provider: openai
+    api_key: "${OPENAI_API_KEY}"
+    models:
+      - gpt-4o
+      - gpt-4o-mini
+
+  - name: anthropic
+    provider: anthropic
+    api_key: "${ANTHROPIC_API_KEY}"
+    models:
+      - claude-sonnet-4-20250514
+
+# --- Features Configuration ---
+
+features:
+  gateway:
+    enable_streaming: true
+    enable_sse: true
+
+  # Fast-path engine for low-latency cached responses
+  fast_path:
+    enabled: true
+    auth:
+      bloom_filter_size: 10000
+    cache:
+      exact:
+        max_entries: 1000
+
+  # --- Sandbox Backend Configuration ---
+  # Configures which sandbox backend to use and global resource limits.
+  # Per-sandbox settings (image, CPU, memory, network mode, etc.) are
+  # configured at the agent definition level via the Admin UI or API.
+  sandbox:
+    enabled: true
+    backend: "kubernetes" # "kubernetes" (cloud/default), "docker", or "firecracker" (Linux + /dev/kvm required)
+
+    # Docker backend settings (used when backend: "docker")
+    docker:
+      host: "" # Docker socket (empty = auto-detect)
+      auto_pull: true # Pull images if not present
+      auto_build: true # Build from embedded Dockerfile if pull fails
+
+    # Kubernetes backend settings (used when backend: "kubernetes")
+    kubernetes:
+      kubeconfig: "" # Path to kubeconfig (empty = in-cluster)
+      namespace: "everstack-sandboxes"
+      image_pull_policy: "IfNotPresent"
+      service_account: "default"
+      node_selector: {} # Optional node targeting
+
+    # Firecracker backend settings (used when backend: "firecracker")
+    firecracker:
+      binary: "/usr/bin/firecracker"
+      kernel: "/var/lib/everstack/vmlinux.bin"
+      rootfs_dir: "/var/lib/everstack/rootfs"
+      work_dir: "/var/lib/everstack/vms"
+      pool_min_size: 2
+      pool_max_size: 10
+      pool_max_total: 50
+      replenish_interval_ms: 1000
+      replenish_batch: 3
+      warmup_on_start: false
+
+    # Global resource limits (applied regardless of backend)
+    default_image: "everstack/sandbox:base"
+    max_cpu: 4.0
+    max_memory_mb: 4096
+    max_disk_mb: 4096
+    max_timeout_seconds: 3600
+
+# --- Gateway Model Routing ---
+# Standard model routing configuration. Agents reference these models
+# for inference while using sandboxes for tool execution.
+
+gateway:
+  models:
+    - name: "gpt-4o"
+      provider: openai
+      model: gpt-4o
+      enabled: true
+
+    - name: "claude-sonnet"
+      provider: anthropic
+      model: claude-sonnet-4-20250514
+      enabled: true
+# =============================================================================
+# Kubernetes Sandbox Notes
+# =============================================================================
+#
+# Per-sandbox settings (image, CPU, memory, network mode, etc.) are configured
+# at the agent definition level via the Admin UI or API, not in this file.
+#
+# Example agent sandbox config (set via API/UI):
+# {
+#   "sandbox": {
+#     "enabled": true,
+#     "image": "node:24-slim",
+#     "cpu_limit": 1.0,
+#     "memory_mb": 512,
+#     "disk_mb": 1024,
+#     "timeout_seconds": 300,
+#     "network_mode": "deny",
+#     "env_vars": { "NODE_ENV": "sandbox" }
+#   }
+# }
+#
+# Pod Resource Mapping:
+#   cpu_limit: 1.0    → requests: 500m, limits: 1000m
+#   memory_mb: 512    → requests: 256Mi, limits: 512Mi
+#   disk_mb: 1024     → emptyDir sizeLimit: 1024Mi (workspace volume)
+#
+# Network Modes:
+#   "deny"      → NetworkPolicy blocks all egress
+#   "whitelist" → NetworkPolicy allows DNS + specified CIDRs only
+#   "allow"     → No NetworkPolicy (default K8s allow-all)
+#
+# Pod Security:
+#   - ReadOnly root filesystem
+#   - All capabilities dropped
+#   - No privilege escalation
+#   - Writable volumes: /workspace (emptyDir), /tmp, /run
+#
+# Monitoring:
+#   - Stats require metrics-server installed in the cluster
+#   - Logs are captured from exec/shell output (not container stdout)
+#   - Pods are labeled with everstack.sandbox/* for easy kubectl queries:
+#       kubectl get pods -n everstack-sandboxes -l everstack.sandbox/managed-by=everstack
+#
+# Recovery:
+#   - On gateway restart, List() rediscovers running pods via label selector
+#   - Pod annotations store the full InstanceConfig for recreate support
+#
+# Backward Compatibility:
+#   If features.sandbox is not set in YAML, the gateway falls back to
+#   environment variables: EVS_SANDBOX_BACKEND, EVS_SANDBOX_KUBECONFIG,
+#   EVS_SANDBOX_K8S_NAMESPACE.

@@ -80,10 +80,10 @@ function SitesPage() {
             <span
               className={`size-1.5 shrink-0 rounded-full ${
                 site.status === 'active'
-                  ? 'bg-emerald-400'
+                  ? 'bg-success-solid'
                   : site.status === 'disabled'
-                    ? 'bg-red-400'
-                    : 'bg-amber-400'
+                    ? 'bg-danger-solid'
+                    : 'bg-warning-solid'
               }`}
             />
             <span className="font-mono text-xs text-brand-main-100">
@@ -202,11 +202,11 @@ function SitesPage() {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-3 px-6 text-center">
         <div className="relative mb-2">
-          <div className="absolute inset-0 rounded-full bg-red-500/20 blur-xl" />
+          <div className="absolute inset-0 rounded-full bg-danger-surface-strong blur-xl" />
           <div className="relative rounded-xl border border-brand-main-600 bg-brand-main-800/80 p-4">
             <Iconify.Icon
               icon="lucide:triangle-alert"
-              className="size-8 text-red-400 light:text-red-600"
+              className="size-8 text-danger"
             />
           </div>
         </div>

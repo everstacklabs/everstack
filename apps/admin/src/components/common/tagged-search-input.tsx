@@ -369,7 +369,7 @@ export function TaggedSearchInput({
             <div
                 className={cn(
                     'flex min-h-8 min-w-0 flex-wrap items-center gap-1 rounded border bg-brand-main-900/70 px-1.5 py-1 text-sm transition-colors focus-within:border-brand-secondary-500/70 light:bg-white/90',
-                    error ? 'border-rose-500/60' : 'border-brand-main-600',
+                    error ? 'border-danger-border' : 'border-brand-main-600',
                 )}
                 onClick={() => inputRef.current?.focus()}
             >
@@ -381,9 +381,9 @@ export function TaggedSearchInput({
                         className={cn(
                             'inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-medium',
                             pill.tone === 'error' &&
-                                'border-rose-500/30 bg-rose-500/15 text-rose-200 light:text-rose-700',
+                                'border-danger-border bg-danger-surface-strong text-danger',
                             pill.tone === 'ok' &&
-                                'border-emerald-500/30 bg-emerald-500/15 text-emerald-200 light:text-emerald-700',
+                                'border-success-border bg-success-surface-strong text-success',
                             pill.tone === 'meta' &&
                                 'border-brand-main-500 bg-brand-main-700/60 text-white/80 light:text-black/70',
                             pill.tone === 'default' &&
@@ -405,7 +405,7 @@ export function TaggedSearchInput({
                         </button>
                         <button
                             type="button"
-                            aria-label={`Remove ${pill.prefix}${pill.value}`}
+                            aria-label="Remove filter"
                             className="text-current/60 hover:text-current"
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={(e) => {
@@ -600,7 +600,7 @@ export function TaggedSearchInput({
             )}
 
             {error && (
-                <div className="absolute left-0 top-full z-20 mt-1 rounded border border-rose-500/30 bg-rose-950/95 px-2 py-1 text-[11px] text-rose-100 shadow-xl light:bg-rose-50 light:text-rose-700">
+                <div className="absolute left-0 top-full z-20 mt-1 rounded border border-danger-border bg-danger-surface px-2 py-1 text-[11px] text-danger shadow-xl">
                     {error}
                 </div>
             )}

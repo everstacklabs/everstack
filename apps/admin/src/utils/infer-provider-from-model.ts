@@ -15,6 +15,8 @@ const PREFIX_RULES: Array<{ test: (m: string) => boolean; provider: string }> = 
     { test: (m) => m.startsWith('moonshot') || m.startsWith('kimi'), provider: 'moonshot' },
     { test: (m) => m.startsWith('minimax') || m.startsWith('abab'), provider: 'minimax' },
     { test: (m) => m.startsWith('sonar'), provider: 'perplexity' },
+    { test: (m) => m.startsWith('muse-'), provider: 'meta' },
+    { test: (m) => m.startsWith('hy3') || m.startsWith('hy4'), provider: 'tencent' },
 ]
 
 export function inferProviderFromModel(model: string | undefined): string {

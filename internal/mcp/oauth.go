@@ -41,7 +41,7 @@ func DiscoverOAuth(ctx context.Context, mcpServerURL string) (*OAuthDiscovery, e
 		return nil, fmt.Errorf("mcp oauth: invalid server URL: %w", err)
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := newHTTPClient(10 * time.Second)
 
 	// Step 1: Probe the MCP server URL for 401
 	probeReq, err := http.NewRequestWithContext(ctx, http.MethodGet, mcpServerURL, nil)
@@ -247,7 +247,7 @@ func RegisterClient(ctx context.Context, registrationEndpoint string, redirectUR
 		return nil, fmt.Errorf("mcp oauth: marshal registration request: %w", err)
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := newHTTPClient(10 * time.Second)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, registrationEndpoint, strings.NewReader(string(bodyJSON)))
 	if err != nil {
 		return nil, fmt.Errorf("mcp oauth: create registration request: %w", err)
@@ -336,7 +336,7 @@ func RefreshAccessToken(ctx context.Context, tokenEndpoint, refreshToken, client
 }
 
 func doTokenRequest(ctx context.Context, tokenEndpoint string, data url.Values) (*OAuthTokens, error) {
-	client := &http.Client{Timeout: 15 * time.Second}
+	client := newHTTPClient(15 * time.Second)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenEndpoint, strings.NewReader(data.Encode()))
 	if err != nil {

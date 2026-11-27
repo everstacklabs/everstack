@@ -18,6 +18,8 @@ import {
   evaluationSelectTriggerClass,
   evaluationTextareaClass,
 } from './evaluation-form'
+import { PlanLimitNotice } from '@/components/billing/plan-limit-notice'
+import { isPlanLimitError } from '@/lib/plan-limit-error'
 
 const {
   Input,
@@ -30,7 +32,7 @@ const {
 } = ui
 
 const EVAL_RUNS_DOCS_URL =
-  'https://docs.everstack.ai/getting-started/evaluations/runs'
+  'https://docs.everstack.ai/getting-started/evaluations/running-evals/'
 
 type EvalRunSdkExample = {
   id: 'node' | 'python' | 'go'
@@ -178,7 +180,9 @@ export function CreateEvalRunPage() {
         return
       }
       void navigate({ to: '/evaluations/runs' })
-    } catch {
+    } catch (err) {
+      // A plan cap is shown inline with an Upgrade link, not as an error.
+      if (isPlanLimitError(err)) return
       toast.error('Failed to start evaluation run')
     }
   }
@@ -199,11 +203,14 @@ export function CreateEvalRunPage() {
           </div>
 
           <form onSubmit={handleCreate} className="space-y-5 p-5">
-            {createMutation.error && (
-              <div className={evaluationErrorClass}>
-                {(createMutation.error as Error).message}
-              </div>
-            )}
+            {createMutation.error &&
+              (isPlanLimitError(createMutation.error) ? (
+                <PlanLimitNotice error={createMutation.error} />
+              ) : (
+                <div className={evaluationErrorClass}>
+                  {(createMutation.error as Error).message}
+                </div>
+              ))}
 
             <EvaluationField label="Run name">
               <Input

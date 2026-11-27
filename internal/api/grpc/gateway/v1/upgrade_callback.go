@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -38,13 +39,32 @@ var callbackSecretStore = &CallbackSecretStore{
 	secrets: make(map[string]*callbackSecretEntry),
 }
 
-func (s *CallbackSecretStore) Store(secret, planTier, billingPeriod string) time.Time {
+// maxPendingCallbackSecrets bounds the store. A legitimate gateway has at
+// most a handful of upgrade attempts in flight within the 30 minute window.
+const maxPendingCallbackSecrets = 64
+
+var (
+	errCallbackSecretExists = errors.New("callback secret already registered")
+	errCallbackSecretsFull  = errors.New("too many pending upgrade callbacks")
+)
+
+// Store registers a new callback secret. It never overwrites a live entry
+// (the secret is a single-use nonce, so a repeat is either a client bug or an
+// attempt to rewrite someone else's pending upgrade) and refuses once
+// maxPendingCallbackSecrets live entries exist.
+func (s *CallbackSecretStore) Store(secret, planTier, billingPeriod string) (time.Time, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.cleanup()
+	if _, exists := s.secrets[secret]; exists {
+		return time.Time{}, errCallbackSecretExists
+	}
+	if len(s.secrets) >= maxPendingCallbackSecrets {
+		return time.Time{}, errCallbackSecretsFull
+	}
 	expiresAt := time.Now().Add(30 * time.Minute)
 	s.secrets[secret] = &callbackSecretEntry{PlanTier: planTier, BillingPeriod: billingPeriod, ExpiresAt: expiresAt}
-	s.cleanup()
-	return expiresAt
+	return expiresAt, nil
 }
 
 func (s *CallbackSecretStore) Get(secret string) (*callbackSecretEntry, bool) {
@@ -75,9 +95,22 @@ func (s *CallbackSecretStore) cleanup() {
 	}
 }
 
-// StoreUpgradeCallbackSecret stores a callback secret for the upgrade flow
+// minCallbackSecretLen rejects guessable nonces. The admin UI sends a
+// crypto.randomUUID() (36 chars).
+const minCallbackSecretLen = 32
+
+// StoreUpgradeCallbackSecret stores a callback secret for the upgrade flow.
+//
+// The secret is the nonce ActivationCallback accepts before it rebinds this
+// gateway's license, so registering one is a privileged act: the procedure is
+// no longer on the auth bypass list (the admin billing page calls it with the
+// operator's session), and it is refused outright on the shared multi-tenant
+// gateway, whose license is not any single tenant's to change.
 func (s *Server) StoreUpgradeCallbackSecret(ctx context.Context, req *connect.Request[gatewaypb.StoreUpgradeCallbackSecretRequest]) (*connect.Response[gatewaypb.StoreUpgradeCallbackSecretResponse], error) {
 	logger := logger.WithFields("procedure", "StoreUpgradeCallbackSecret")
+	if s.isSharedMode() {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("upgrade callbacks are not available on the shared gateway"))
+	}
 	if req.Msg.GetCallbackSecret() == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("callback_secret is required"))
 	}
@@ -88,7 +121,16 @@ func (s *Server) StoreUpgradeCallbackSecret(ctx context.Context, req *connect.Re
 	if billingPeriod == "" {
 		billingPeriod = "monthly"
 	}
-	expiresAt := callbackSecretStore.Store(req.Msg.GetCallbackSecret(), req.Msg.GetPlanTier(), billingPeriod)
+	if len(req.Msg.GetCallbackSecret()) < minCallbackSecretLen {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("callback_secret is too short"))
+	}
+	expiresAt, err := callbackSecretStore.Store(req.Msg.GetCallbackSecret(), req.Msg.GetPlanTier(), billingPeriod)
+	if errors.Is(err, errCallbackSecretExists) {
+		return nil, connect.NewError(connect.CodeAlreadyExists, err)
+	}
+	if err != nil {
+		return nil, connect.NewError(connect.CodeResourceExhausted, err)
+	}
 	logger.WithFields(map[string]interface{}{
 		"plan_tier": req.Msg.GetPlanTier(), "billing_period": billingPeriod,
 		"expires_at": expiresAt.Format(time.RFC3339),
@@ -336,6 +378,59 @@ type SubscriptionStatusCallbackClaims struct {
 	jwt.RegisteredClaims
 }
 
+// VerifySubscriptionStatusToken verifies a subscription status callback JWT
+// and binds it to this gateway. The signature alone proves the cloud signed
+// SOME callback; without a binding, a callback addressed to one gateway
+// (which that gateway's owner can read) could be replayed to any other
+// within its lifetime (EVS-324 item 12). So:
+//
+//   - organization_id must equal the organization this gateway is licensed
+//     to. A gateway that is not activated has no organization and accepts
+//     no callback.
+//   - when the token carries an audience (current billing and license
+//     signers set it to the target instance id), it must name one of this
+//     gateway's instance ids: the activated id, or the pre-activation local
+//     id, which billing may still hold for a gateway activated through the
+//     retry or manual token path. Tokens without an audience come from
+//     services that predate the binding and are accepted on the
+//     organization check alone.
+func VerifySubscriptionStatusToken(signed string, publicKey ed25519.PublicKey, localOrg string, localInstances ...string) (*SubscriptionStatusCallbackClaims, error) {
+	token, err := jwt.ParseWithClaims(signed, &SubscriptionStatusCallbackClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return publicKey, nil
+	}, jwt.WithExpirationRequired())
+	if err != nil {
+		return nil, errors.New("invalid signature")
+	}
+	claims, ok := token.Claims.(*SubscriptionStatusCallbackClaims)
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid token claims")
+	}
+	localOrg = strings.TrimSpace(localOrg)
+	if localOrg == "" {
+		return nil, errors.New("gateway is not activated")
+	}
+	if strings.TrimSpace(claims.OrganizationID) != localOrg {
+		return nil, errors.New("organization does not match this gateway")
+	}
+	if len(claims.Audience) > 0 {
+		matched := false
+		for _, aud := range claims.Audience {
+			for _, local := range localInstances {
+				if local = strings.TrimSpace(local); local != "" && aud == local {
+					matched = true
+				}
+			}
+		}
+		if !matched {
+			return nil, errors.New("audience does not match this gateway")
+		}
+	}
+	return claims, nil
+}
+
 // SubscriptionStatusCallback handles subscription status updates from billing service
 func (s *Server) SubscriptionStatusCallback(ctx context.Context, req *connect.Request[gatewaypb.SubscriptionStatusCallbackRequest]) (*connect.Response[gatewaypb.SubscriptionStatusCallbackResponse], error) {
 	logger := logger.WithFields("procedure", "SubscriptionStatusCallback")
@@ -354,18 +449,15 @@ func (s *Server) SubscriptionStatusCallback(ctx context.Context, req *connect.Re
 	}
 	publicKey := ed25519.PublicKey(publicKeyBytes)
 
-	token, err := jwt.ParseWithClaims(req.Msg.GetSignedPayload(), &SubscriptionStatusCallbackClaims{}, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
-			return nil, errors.New("unexpected signing method")
-		}
-		return publicKey, nil
-	})
-	if err != nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("invalid signature"))
+	localOrg, localInstance := enterprise.LicensedIdentity(s.ctx)
+	instanceIDs := []string{localInstance}
+	if localID, err := enterprise.InstanceManagerFromContext(s.ctx).GetLocalInstanceId(ctx); err == nil && localID != "" {
+		instanceIDs = append(instanceIDs, localID)
 	}
-	claims, ok := token.Claims.(*SubscriptionStatusCallbackClaims)
-	if !ok || !token.Valid {
-		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("invalid token claims"))
+	claims, err := VerifySubscriptionStatusToken(req.Msg.GetSignedPayload(), publicKey, localOrg, instanceIDs...)
+	if err != nil {
+		logger.WithField("reason", err.Error()).Warn("subscription status callback rejected")
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("invalid subscription status callback"))
 	}
 
 	logger.WithFields(map[string]interface{}{
@@ -374,7 +466,7 @@ func (s *Server) SubscriptionStatusCallback(ctx context.Context, req *connect.Re
 		"plan_tier": claims.PlanTier,
 	}).Info("subscription status callback received")
 
-	instanceID := enterprise.LicenseMonitorFromContext(s.ctx).GetInstanceID()
+	instanceID := localInstance
 
 	var currentPeriodEnd time.Time
 	if claims.CurrentPeriodEnd != "" {

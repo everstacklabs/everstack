@@ -19,7 +19,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func TestValidateAPIKey_BypassesForTenantContext(t *testing.T) {
+func TestValidateAPIKey_TenantConfigAloneDoesNotAuthenticate(t *testing.T) {
 	interceptor := NewAPIKeyInterceptorWithPolicy(false, nil)
 
 	ctx := tenant.WithConfig(context.Background(), &tenant.Config{
@@ -28,8 +28,8 @@ func TestValidateAPIKey_BypassesForTenantContext(t *testing.T) {
 		SchemaName:     "inst_test_schema",
 	})
 
-	if _, err := interceptor.validateAPIKey(ctx, http.Header{}, "/everstack.gateway.v1.GatewayService/ListModels", "corr-test"); err != nil {
-		t.Fatalf("expected tenant-context request to bypass API key validation, got error: %v", err)
+	if _, err := interceptor.validateAPIKey(ctx, http.Header{}, "/everstack.gateway.v1.GatewayService/ListModels", "corr-test"); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("host selection must not authenticate: %v", err)
 	}
 }
 
@@ -94,6 +94,9 @@ func TestValidateAPIKeyAcceptsVerifiedCLIBearerForEnabledService(t *testing.T) {
 	mock.ExpectQuery(`SELECT COALESCE\(om\.role, ''\)[\s\S]*om\.user_id::text[\s\S]*FROM everstack\.organization_members om[\s\S]*JOIN everstack\.tenant_config tc`).
 		WithArgs("user-1", "org-1", "instance-1").
 		WillReturnRows(sqlmock.NewRows([]string{"role", "user_id"}).AddRow("admin", "user-1"))
+	mock.ExpectQuery(`SELECT revoked_at FROM everstack\.user_credential_revocations`).
+		WithArgs("user-1").
+		WillReturnRows(sqlmock.NewRows([]string{"revoked_at"}).AddRow(nil))
 
 	interceptor := NewAPIKeyInterceptorWithSessionDB(false, nil, db)
 	interceptor.SetCLIDeviceTokenManager(manager)
@@ -146,6 +149,9 @@ func TestValidateAPIKeyAcceptsSignedDeviceBearerForOpenAIAgentsService(t *testin
 	mock.ExpectQuery(`SELECT COALESCE\(om\.role, ''\)[\s\S]*om\.user_id::text[\s\S]*FROM everstack\.organization_members om[\s\S]*JOIN everstack\.tenant_config tc`).
 		WithArgs("user-1", "org-1", "instance-1").
 		WillReturnRows(sqlmock.NewRows([]string{"role", "user_id"}).AddRow("admin", "user-1"))
+	mock.ExpectQuery(`SELECT revoked_at FROM everstack\.user_credential_revocations`).
+		WithArgs("user-1").
+		WillReturnRows(sqlmock.NewRows([]string{"revoked_at"}).AddRow(nil))
 
 	interceptor := NewAPIKeyInterceptorWithSessionDB(false, nil, sqlx.NewDb(rawDB, "sqlmock"))
 	interceptor.SetCLIAuthorizationDB(sqlx.NewDb(rawDB, "sqlmock"))
@@ -204,6 +210,9 @@ func TestValidateAPIKeyAcceptsVerifiedCLIBearerForFunctionLookup(t *testing.T) {
 	mock.ExpectQuery(`SELECT COALESCE\(om\.role, ''\)[\s\S]*om\.user_id::text[\s\S]*FROM everstack\.organization_members om[\s\S]*JOIN everstack\.tenant_config tc`).
 		WithArgs("user-1", "org-1", "instance-1").
 		WillReturnRows(sqlmock.NewRows([]string{"role", "user_id"}).AddRow("admin", "user-1"))
+	mock.ExpectQuery(`SELECT revoked_at FROM everstack\.user_credential_revocations`).
+		WithArgs("user-1").
+		WillReturnRows(sqlmock.NewRows([]string{"revoked_at"}).AddRow(nil))
 
 	interceptor := NewAPIKeyInterceptorWithSessionDB(false, nil, sqlx.NewDb(rawDB, "sqlmock"))
 	interceptor.SetCLIDeviceTokenManager(manager)
@@ -279,6 +288,9 @@ func TestValidateAPIKeyUsesSeparateCLIAuthorizationDB(t *testing.T) {
 	authMock.ExpectQuery(`SELECT COALESCE\(om\.role, ''\)[\s\S]*om\.user_id::text[\s\S]*FROM everstack\.organization_members om[\s\S]*JOIN everstack\.tenant_config tc`).
 		WithArgs("user-1", "org-1", "instance-1").
 		WillReturnRows(sqlmock.NewRows([]string{"role", "user_id"}).AddRow("admin", "user-1"))
+	authMock.ExpectQuery(`SELECT revoked_at FROM everstack\.user_credential_revocations`).
+		WithArgs("user-1").
+		WillReturnRows(sqlmock.NewRows([]string{"revoked_at"}).AddRow(nil))
 
 	interceptor := NewAPIKeyInterceptorWithSessionDB(false, nil, sqlx.NewDb(sessionRawDB, "sqlmock"))
 	interceptor.SetCLIAuthorizationDB(sqlx.NewDb(authRawDB, "sqlmock"))
@@ -324,6 +336,9 @@ func TestValidateAPIKeyBindsLegacyCLIBearerToVerifiedRequestInstance(t *testing.
 	mock.ExpectQuery(`SELECT COALESCE\(om\.role, ''\)[\s\S]*om\.user_id::text[\s\S]*FROM everstack\.organization_members om[\s\S]*JOIN everstack\.tenant_config tc`).
 		WithArgs("user-1", "org-1", "instance-1").
 		WillReturnRows(sqlmock.NewRows([]string{"role", "user_id"}).AddRow("admin", "user-1"))
+	mock.ExpectQuery(`SELECT revoked_at FROM everstack\.user_credential_revocations`).
+		WithArgs("user-1").
+		WillReturnRows(sqlmock.NewRows([]string{"revoked_at"}).AddRow(nil))
 
 	interceptor := NewAPIKeyInterceptorWithSessionDB(false, nil, db)
 	interceptor.SetCLIDeviceTokenManager(manager)
@@ -378,6 +393,9 @@ func TestValidateAPIKeyResolvesPlatformUserByVerifiedCLIEmail(t *testing.T) {
 	mock.ExpectQuery(`SELECT COALESCE\(om\.role, ''\)[\s\S]*om\.user_id::text[\s\S]*FROM everstack\.organization_members om[\s\S]*JOIN everstack\.identity_links il[\s\S]*JOIN everstack\.tenant_config tc[\s\S]*il\.email_verified = TRUE`).
 		WithArgs("org-1", "instance-1", "verified@example.com").
 		WillReturnRows(sqlmock.NewRows([]string{"role", "user_id"}).AddRow("owner", "platform-user-1"))
+	mock.ExpectQuery(`SELECT revoked_at FROM everstack\.user_credential_revocations`).
+		WithArgs("platform-user-1").
+		WillReturnRows(sqlmock.NewRows([]string{"revoked_at"}).AddRow(nil))
 
 	interceptor := NewAPIKeyInterceptorWithSessionDB(false, nil, db)
 	interceptor.SetCLIDeviceTokenManager(manager)

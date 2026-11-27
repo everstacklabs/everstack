@@ -62,6 +62,22 @@ func (e *PrometheusExporter) Export() string {
 	output += fmt.Sprintf("fastpath_streaming_latency_microseconds_sum %d\n", m.streamingHist.sum.Load())
 	output += "\n"
 
+	output += "# HELP fastpath_provider_latency_microseconds Upstream provider latency in microseconds\n"
+	output += "# TYPE fastpath_provider_latency_microseconds summary\n"
+	output += fmt.Sprintf("fastpath_provider_latency_microseconds{quantile=\"0.5\"} %.2f\n", snapshot.ProviderP50)
+	output += fmt.Sprintf("fastpath_provider_latency_microseconds{quantile=\"0.99\"} %.2f\n", snapshot.ProviderP99)
+	output += fmt.Sprintf("fastpath_provider_latency_microseconds_count %d\n", m.providerHist.count())
+	output += fmt.Sprintf("fastpath_provider_latency_microseconds_sum %d\n", m.providerHist.sum.Load())
+	output += "\n"
+
+	output += "# HELP fastpath_gateway_overhead_latency_microseconds In-gateway overhead (normalize/resolve/telemetry attrs) in microseconds\n"
+	output += "# TYPE fastpath_gateway_overhead_latency_microseconds summary\n"
+	output += fmt.Sprintf("fastpath_gateway_overhead_latency_microseconds{quantile=\"0.5\"} %.2f\n", snapshot.TelemetryP50)
+	output += fmt.Sprintf("fastpath_gateway_overhead_latency_microseconds{quantile=\"0.99\"} %.2f\n", snapshot.TelemetryP99)
+	output += fmt.Sprintf("fastpath_gateway_overhead_latency_microseconds_count %d\n", m.telemetryHist.count())
+	output += fmt.Sprintf("fastpath_gateway_overhead_latency_microseconds_sum %d\n", m.telemetryHist.sum.Load())
+	output += "\n"
+
 	output += "# HELP fastpath_total_latency_microseconds Total request latency in microseconds\n"
 	output += "# TYPE fastpath_total_latency_microseconds summary\n"
 	output += fmt.Sprintf("fastpath_total_latency_microseconds{quantile=\"0.5\"} %.2f\n", snapshot.TotalP50)
@@ -249,6 +265,18 @@ func (e *PrometheusExporter) ExportJSON() map[string]interface{} {
 				"p99":   snapshot.StreamingP99,
 				"count": m.streamingHist.count(),
 				"mean":  m.streamingHist.mean(),
+			},
+			"provider": map[string]interface{}{
+				"p50":   snapshot.ProviderP50,
+				"p99":   snapshot.ProviderP99,
+				"count": m.providerHist.count(),
+				"mean":  m.providerHist.mean(),
+			},
+			"gateway_overhead": map[string]interface{}{
+				"p50":   snapshot.TelemetryP50,
+				"p99":   snapshot.TelemetryP99,
+				"count": m.telemetryHist.count(),
+				"mean":  m.telemetryHist.mean(),
 			},
 			"total": map[string]interface{}{
 				"p50":   snapshot.TotalP50,

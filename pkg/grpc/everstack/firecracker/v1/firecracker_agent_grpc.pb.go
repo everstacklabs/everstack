@@ -25,26 +25,27 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	FirecrackerAgent_CreateSandbox_FullMethodName  = "/everstack.firecracker.v1.FirecrackerAgent/CreateSandbox"
-	FirecrackerAgent_Exec_FullMethodName           = "/everstack.firecracker.v1.FirecrackerAgent/Exec"
-	FirecrackerAgent_WriteFile_FullMethodName      = "/everstack.firecracker.v1.FirecrackerAgent/WriteFile"
-	FirecrackerAgent_ReadFile_FullMethodName       = "/everstack.firecracker.v1.FirecrackerAgent/ReadFile"
-	FirecrackerAgent_ListFiles_FullMethodName      = "/everstack.firecracker.v1.FirecrackerAgent/ListFiles"
-	FirecrackerAgent_DestroySandbox_FullMethodName = "/everstack.firecracker.v1.FirecrackerAgent/DestroySandbox"
-	FirecrackerAgent_Status_FullMethodName         = "/everstack.firecracker.v1.FirecrackerAgent/Status"
-	FirecrackerAgent_Stats_FullMethodName          = "/everstack.firecracker.v1.FirecrackerAgent/Stats"
-	FirecrackerAgent_ListSandboxes_FullMethodName  = "/everstack.firecracker.v1.FirecrackerAgent/ListSandboxes"
-	FirecrackerAgent_NodeInfo_FullMethodName       = "/everstack.firecracker.v1.FirecrackerAgent/NodeInfo"
-	FirecrackerAgent_GetNodeHealth_FullMethodName  = "/everstack.firecracker.v1.FirecrackerAgent/GetNodeHealth"
-	FirecrackerAgent_Logs_FullMethodName           = "/everstack.firecracker.v1.FirecrackerAgent/Logs"
-	FirecrackerAgent_Shell_FullMethodName          = "/everstack.firecracker.v1.FirecrackerAgent/Shell"
-	FirecrackerAgent_Snapshot_FullMethodName       = "/everstack.firecracker.v1.FirecrackerAgent/Snapshot"
-	FirecrackerAgent_Restore_FullMethodName        = "/everstack.firecracker.v1.FirecrackerAgent/Restore"
-	FirecrackerAgent_ListSessions_FullMethodName   = "/everstack.firecracker.v1.FirecrackerAgent/ListSessions"
-	FirecrackerAgent_KillSession_FullMethodName    = "/everstack.firecracker.v1.FirecrackerAgent/KillSession"
-	FirecrackerAgent_ExposePort_FullMethodName     = "/everstack.firecracker.v1.FirecrackerAgent/ExposePort"
-	FirecrackerAgent_UnexposePort_FullMethodName   = "/everstack.firecracker.v1.FirecrackerAgent/UnexposePort"
-	FirecrackerAgent_InvokeFunction_FullMethodName = "/everstack.firecracker.v1.FirecrackerAgent/InvokeFunction"
+	FirecrackerAgent_CreateSandbox_FullMethodName          = "/everstack.firecracker.v1.FirecrackerAgent/CreateSandbox"
+	FirecrackerAgent_Exec_FullMethodName                   = "/everstack.firecracker.v1.FirecrackerAgent/Exec"
+	FirecrackerAgent_WriteFile_FullMethodName              = "/everstack.firecracker.v1.FirecrackerAgent/WriteFile"
+	FirecrackerAgent_ReadFile_FullMethodName               = "/everstack.firecracker.v1.FirecrackerAgent/ReadFile"
+	FirecrackerAgent_ListFiles_FullMethodName              = "/everstack.firecracker.v1.FirecrackerAgent/ListFiles"
+	FirecrackerAgent_DestroySandbox_FullMethodName         = "/everstack.firecracker.v1.FirecrackerAgent/DestroySandbox"
+	FirecrackerAgent_Status_FullMethodName                 = "/everstack.firecracker.v1.FirecrackerAgent/Status"
+	FirecrackerAgent_Stats_FullMethodName                  = "/everstack.firecracker.v1.FirecrackerAgent/Stats"
+	FirecrackerAgent_ListSandboxes_FullMethodName          = "/everstack.firecracker.v1.FirecrackerAgent/ListSandboxes"
+	FirecrackerAgent_NodeInfo_FullMethodName               = "/everstack.firecracker.v1.FirecrackerAgent/NodeInfo"
+	FirecrackerAgent_GetNodeHealth_FullMethodName          = "/everstack.firecracker.v1.FirecrackerAgent/GetNodeHealth"
+	FirecrackerAgent_Logs_FullMethodName                   = "/everstack.firecracker.v1.FirecrackerAgent/Logs"
+	FirecrackerAgent_Shell_FullMethodName                  = "/everstack.firecracker.v1.FirecrackerAgent/Shell"
+	FirecrackerAgent_Snapshot_FullMethodName               = "/everstack.firecracker.v1.FirecrackerAgent/Snapshot"
+	FirecrackerAgent_Restore_FullMethodName                = "/everstack.firecracker.v1.FirecrackerAgent/Restore"
+	FirecrackerAgent_ListSessions_FullMethodName           = "/everstack.firecracker.v1.FirecrackerAgent/ListSessions"
+	FirecrackerAgent_KillSession_FullMethodName            = "/everstack.firecracker.v1.FirecrackerAgent/KillSession"
+	FirecrackerAgent_ExposePort_FullMethodName             = "/everstack.firecracker.v1.FirecrackerAgent/ExposePort"
+	FirecrackerAgent_UnexposePort_FullMethodName           = "/everstack.firecracker.v1.FirecrackerAgent/UnexposePort"
+	FirecrackerAgent_InvokeFunction_FullMethodName         = "/everstack.firecracker.v1.FirecrackerAgent/InvokeFunction"
+	FirecrackerAgent_ReportRootfsReferences_FullMethodName = "/everstack.firecracker.v1.FirecrackerAgent/ReportRootfsReferences"
 )
 
 // FirecrackerAgentClient is the client API for FirecrackerAgent service.
@@ -119,6 +120,13 @@ type FirecrackerAgentClient interface {
 	// the guest has died. This is the FaaS execution path — distinct from
 	// the sandbox lifecycle RPCs above, which manage user-facing sandboxes.
 	InvokeFunction(ctx context.Context, in *InvokeFunctionRequest, opts ...grpc.CallOption) (*InvokeFunctionResult, error)
+	// ReportRootfsReferences tells the agent which rootfs images the
+	// calling gateway still needs: its configured executor image(s) and the
+	// image of every sandbox row that can still boot or wake. The agent's
+	// rootfs GC never deletes an image while any unexpired report names
+	// it, and deletes no per-tag image at all until a complete report
+	// arrives. Each reporter's latest report replaces its previous one.
+	ReportRootfsReferences(ctx context.Context, in *ReportRootfsReferencesRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type firecrackerAgentClient struct {
@@ -353,6 +361,16 @@ func (c *firecrackerAgentClient) InvokeFunction(ctx context.Context, in *InvokeF
 	return out, nil
 }
 
+func (c *firecrackerAgentClient) ReportRootfsReferences(ctx context.Context, in *ReportRootfsReferencesRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, FirecrackerAgent_ReportRootfsReferences_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FirecrackerAgentServer is the server API for FirecrackerAgent service.
 // All implementations must embed UnimplementedFirecrackerAgentServer
 // for forward compatibility.
@@ -425,6 +443,13 @@ type FirecrackerAgentServer interface {
 	// the guest has died. This is the FaaS execution path — distinct from
 	// the sandbox lifecycle RPCs above, which manage user-facing sandboxes.
 	InvokeFunction(context.Context, *InvokeFunctionRequest) (*InvokeFunctionResult, error)
+	// ReportRootfsReferences tells the agent which rootfs images the
+	// calling gateway still needs: its configured executor image(s) and the
+	// image of every sandbox row that can still boot or wake. The agent's
+	// rootfs GC never deletes an image while any unexpired report names
+	// it, and deletes no per-tag image at all until a complete report
+	// arrives. Each reporter's latest report replaces its previous one.
+	ReportRootfsReferences(context.Context, *ReportRootfsReferencesRequest) (*Empty, error)
 	mustEmbedUnimplementedFirecrackerAgentServer()
 }
 
@@ -494,6 +519,9 @@ func (UnimplementedFirecrackerAgentServer) UnexposePort(context.Context, *Unexpo
 }
 func (UnimplementedFirecrackerAgentServer) InvokeFunction(context.Context, *InvokeFunctionRequest) (*InvokeFunctionResult, error) {
 	return nil, status.Error(codes.Unimplemented, "method InvokeFunction not implemented")
+}
+func (UnimplementedFirecrackerAgentServer) ReportRootfsReferences(context.Context, *ReportRootfsReferencesRequest) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReportRootfsReferences not implemented")
 }
 func (UnimplementedFirecrackerAgentServer) mustEmbedUnimplementedFirecrackerAgentServer() {}
 func (UnimplementedFirecrackerAgentServer) testEmbeddedByValue()                          {}
@@ -840,6 +868,24 @@ func _FirecrackerAgent_InvokeFunction_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FirecrackerAgent_ReportRootfsReferences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportRootfsReferencesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FirecrackerAgentServer).ReportRootfsReferences(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FirecrackerAgent_ReportRootfsReferences_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FirecrackerAgentServer).ReportRootfsReferences(ctx, req.(*ReportRootfsReferencesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FirecrackerAgent_ServiceDesc is the grpc.ServiceDesc for FirecrackerAgent service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -910,6 +956,10 @@ var FirecrackerAgent_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InvokeFunction",
 			Handler:    _FirecrackerAgent_InvokeFunction_Handler,
+		},
+		{
+			MethodName: "ReportRootfsReferences",
+			Handler:    _FirecrackerAgent_ReportRootfsReferences_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

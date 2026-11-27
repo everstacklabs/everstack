@@ -22,8 +22,8 @@ type PlanCardProps = {
 
 const STRATEGY_LABELS: Record<string, { label: string; icon: string; color: string }> = {
     single: { label: 'Single Agent', icon: 'lucide:user', color: 'text-neutral-500' },
-    parallel: { label: 'Parallel', icon: 'lucide:git-branch', color: 'text-blue-500' },
-    sequential: { label: 'Sequential', icon: 'lucide:arrow-down', color: 'text-amber-500' },
+    parallel: { label: 'Parallel', icon: 'lucide:git-branch', color: 'text-info' },
+    sequential: { label: 'Sequential', icon: 'lucide:arrow-down', color: 'text-warning' },
     pipeline: { label: 'Pipeline', icon: 'lucide:workflow', color: 'text-purple-500' },
 }
 

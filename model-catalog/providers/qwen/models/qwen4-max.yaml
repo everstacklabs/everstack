@@ -1,0 +1,55 @@
+# Verified 2026-11-24.
+# Source: https://www.alibabacloud.com/help/en/model-studio/qwen4-max
+# Source: https://www.alibabacloud.com/help/en/model-studio/model-pricing
+# Source: https://www.alibabacloud.com/press-room/alibaba-unveils-qwen4-max
+name: "qwen4-max"
+display_name: "Qwen4 Max"
+family: "qwen"
+status: "stable"
+release_date: "2026-11-16"
+
+cost:
+  input_per_1k: 0.0015
+  output_per_1k: 0.0045
+  cache_read_per_1k: 7.5e-05
+
+limits:
+  max_tokens: 1000000
+  max_completion_tokens: 262144
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image","video"]
+  output: ["text"]
+
+notes: "Qwen flagship (International deployment, Singapore rates; same price in both thinking modes). Thinking on by default (enable_thinking true); reasoning_effort low, high or xhigh, default high; thinking_budget defaults to 131072. Max output 131,072 tokens without thinking and 262,144 with thinking. Cache price is the implicit cache hit rate; explicit cache prices are not published."
+
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 262144
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+added_in_version: "2.11.0"

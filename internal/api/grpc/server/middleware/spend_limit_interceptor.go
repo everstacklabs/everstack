@@ -69,7 +69,9 @@ func (i *SpendLimitInterceptor) checkSpendLimit(procedure string) error {
 		return nil // Non-metered endpoints are not subject to spend limits
 	}
 
-	// Check local cached blocked state (zero latency - pure memory read)
+	// Check local cached blocked state (zero latency - pure memory read).
+	// On a managed (Cloud) gateway IsSpendBlocked always reports false and
+	// logs (rate-limited): prepaid credit gates admission there instead.
 	if blocked, reason := i.monitor.IsSpendBlocked(); blocked {
 		logger.Warnf("spend_limit_interceptor: blocking request %s - %s", procedure, reason)
 		return connect.NewError(connect.CodeResourceExhausted, errMsg("Spend limit exceeded: "+reason))

@@ -21,7 +21,25 @@ func (r *ResponsesResource) Create(ctx context.Context, params *ResponseCreatePa
 	return &resp, nil
 }
 
-// CreateStream creates a streaming response.
+// CreateStream creates a streaming response. Each frame is the gateway's
+// proto-JSON stream message, wrapped as {"result": {...}}:
+//
+//   - a snapshot of the whole response (status "in_progress" and the full
+//     output) when its structure changes: a new output item or content part;
+//   - a delta frame, with no status and no output, carrying only what one
+//     item grew by: result.delta.item_id names the item, and
+//     result.delta.content_delta (message text) or
+//     result.delta.arguments_delta (function call arguments) is the fragment
+//     to append. output_index and content_index locate the item and its
+//     content part; like every zero-valued field they are omitted when 0;
+//   - the final, full response (status "completed", "failed" or
+//     "incomplete").
+//
+// To rebuild the output as it arrives, keep each item's text and arguments:
+// replace them with a snapshot's, append a delta frame's fragment. A
+// snapshot can carry growth of its own (a chunk that both grew the text and
+// added an item), so printing live means printing what a snapshot adds
+// beyond what was already printed, then each delta.
 func (r *ResponsesResource) CreateStream(ctx context.Context, params *ResponseCreateParams) (*Stream[map[string]any], error) {
 	params.Stream = true
 	return newStream[map[string]any](ctx, r.t, "POST", "/v1/responses", params)

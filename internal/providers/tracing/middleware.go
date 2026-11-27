@@ -10,6 +10,7 @@ import (
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 	"github.com/everstacklabs/everstack/internal/modelidentity"
 	"github.com/everstacklabs/everstack/internal/providers/health"
+	"github.com/everstacklabs/everstack/internal/providers/modelparams"
 	"github.com/everstacklabs/everstack/internal/services/catalog"
 	"github.com/everstacklabs/everstack/internal/telemetry"
 	attrs "github.com/everstacklabs/everstack/internal/telemetry/attributes"
@@ -81,6 +82,15 @@ func (m *TracingMiddleware) Unwrap() gw.Provider {
 	return m.provider
 }
 
+// ServedKeyID is the id of the upstream provider API key this provider
+// instance was built on ("" on the legacy single-key path). A provider's key
+// is chosen once, at construction, so this is the key every call through
+// this instance uses; key rotation reads it to mark the key that actually
+// produced an authentication error.
+func (m *TracingMiddleware) ServedKeyID() string {
+	return m.selectedKeyID
+}
+
 // SupportsModel delegates to the wrapped provider
 func (m *TracingMiddleware) SupportsModel(model string) bool {
 	return m.provider.SupportsModel(model)
@@ -88,6 +98,11 @@ func (m *TracingMiddleware) SupportsModel(model string) bool {
 
 // Chat wraps the provider's Chat method with tracing
 func (m *TracingMiddleware) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.ChatCompletionResponse, error) {
+	// Drop controls the catalog says this model rejects before anything
+	// (span attributes included) sees the request, so traces record what
+	// was actually sent upstream.
+	modelparams.DropUnsupported(m.catalogCache, m.provider.Name(), &req)
+
 	// Check if provider tracing is enabled
 	config := telemetry.GetGlobalTracingConfig()
 	if config == nil || !config.TraceProviderCalls {
@@ -260,6 +275,8 @@ func (m *TracingMiddleware) Chat(ctx context.Context, req gw.ChatCompletionReque
 
 // ChatStream wraps the provider's ChatStream method with tracing
 func (m *TracingMiddleware) ChatStream(ctx context.Context, req gw.ChatCompletionRequest, onChunk func(gw.ChatResponseChunk) error) error {
+	modelparams.DropUnsupported(m.catalogCache, m.provider.Name(), &req)
+
 	withKeySource := func(chunk gw.ChatResponseChunk) error {
 		if chunk.Usage != nil && m.selectedKeySource != "" {
 			chunk.Usage.KeySource = m.selectedKeySource
@@ -624,10 +641,7 @@ func (m *TracingMiddleware) setModelMetricsIdentity(span trace.Span, ctx context
 
 	var publisher, canonicalModelID string
 	if m.catalogCache != nil {
-		if definition, ok := m.catalogCache.GetModel(m.provider.Name(), model); ok {
-			publisher = definition.Publisher
-			canonicalModelID = definition.CanonicalModelID
-		} else if definition, ok := m.catalogCache.GetModelByPrefix(m.provider.Name(), model); ok {
+		if definition, ok := m.catalogCache.ResolveModel(m.provider.Name(), model); ok {
 			publisher = definition.Publisher
 			canonicalModelID = definition.CanonicalModelID
 		}

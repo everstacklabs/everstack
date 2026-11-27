@@ -76,7 +76,7 @@ function AddStorageConfigButton() {
                     </SheetHeader>
 
                     {configureMutation.error && (
-                        <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400 light:text-red-600 mx-4">
+                        <div className="rounded-lg border border-danger-border bg-danger-surface p-3 text-sm text-danger mx-4">
                             {(configureMutation.error as Error).message}
                         </div>
                     )}

@@ -66,9 +66,9 @@ const PROVIDER_LABELS: Record<number, string> = {
 
 const PURPOSE_COLORS: Record<number, string> = {
     [ObjectPurpose.DATASET]: 'bg-purple-500/20 text-purple-300 light:text-purple-600',
-    [ObjectPurpose.ARTIFACT]: 'bg-blue-500/20 text-blue-300 light:text-blue-600',
+    [ObjectPurpose.ARTIFACT]: 'bg-info-surface-strong text-info',
     [ObjectPurpose.UPLOAD]: 'bg-gray-500/20 text-gray-300 light:text-gray-700',
-    [ObjectPurpose.EVAL_RESULT]: 'bg-green-500/20 text-green-300 light:text-green-600',
+    [ObjectPurpose.EVAL_RESULT]: 'bg-success-surface-strong text-success',
 }
 
 const PURPOSE_LABELS: Record<number, string> = {
@@ -340,7 +340,7 @@ function ConfigurationsTab() {
                                     setDeleteConfirmBucket(config.bucket)
                                 }}
                                 disabled={deleteMutation.isPending}
-                                className="text-red-400 light:text-red-600 hover:text-red-300 light:hover:text-red-600 hover:bg-red-500/10"
+                                className="text-danger hover:bg-danger-surface"
                             >
                                 <Trash2 className="h-2.5 w-2.5" />
                             </Button>
@@ -387,7 +387,7 @@ function ConfigurationsTab() {
                     </SheetHeader>
 
                     {updateMutation.error && (
-                        <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400 light:text-red-600 mx-4">
+                        <div className="rounded-lg border border-danger-border bg-danger-surface p-3 text-sm text-danger mx-4">
                             {(updateMutation.error as Error).message}
                         </div>
                     )}
@@ -681,7 +681,7 @@ function ObjectsTab() {
                         </button>
                         <button
                             type="button"
-                            className="p-1 rounded hover:bg-red-500/20 hover:text-red-400 light:hover:text-red-600 transition-colors"
+                            className="p-1 rounded hover:bg-danger-surface-strong hover:text-danger transition-colors"
                             onClick={() => {
                                 setDeleteConfirmId(obj.id)
                                 setDeleteConfirmName(obj.filename || 'this object')

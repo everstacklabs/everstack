@@ -130,8 +130,10 @@ func (h *LogsHandler) insertLogs(ctx context.Context, tenantID string, rls []*lo
 	}
 
 	for _, rl := range rls {
+		stripClientKeyAttributes(rl.ProtoReflect())
 		resAttrs := attrsToMap(rl.GetResource().GetAttributes())
 		resAttrs["tenant.id"] = tenantID
+		stampKey(ctx, resAttrs)
 		serviceName := resAttrs["service.name"]
 		resourceSchemaURL := rl.GetSchemaUrl()
 

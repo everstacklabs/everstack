@@ -43,6 +43,26 @@ const (
 	BillingService_DeleteSpendLimit_FullMethodName           = "/everstack.billing.v1.BillingService/DeleteSpendLimit"
 	BillingService_MigrateSubscription_FullMethodName        = "/everstack.billing.v1.BillingService/MigrateSubscription"
 	BillingService_AdjustSeats_FullMethodName                = "/everstack.billing.v1.BillingService/AdjustSeats"
+	BillingService_GetCreditBalance_FullMethodName           = "/everstack.billing.v1.BillingService/GetCreditBalance"
+	BillingService_ListCreditLedger_FullMethodName           = "/everstack.billing.v1.BillingService/ListCreditLedger"
+	BillingService_ListInferenceAttempts_FullMethodName      = "/everstack.billing.v1.BillingService/ListInferenceAttempts"
+	BillingService_GetSpendStatus_FullMethodName             = "/everstack.billing.v1.BillingService/GetSpendStatus"
+	BillingService_PurchaseCredits_FullMethodName            = "/everstack.billing.v1.BillingService/PurchaseCredits"
+	BillingService_GetCreditPurchase_FullMethodName          = "/everstack.billing.v1.BillingService/GetCreditPurchase"
+	BillingService_ListCreditPurchases_FullMethodName        = "/everstack.billing.v1.BillingService/ListCreditPurchases"
+	BillingService_GetCreditPurchaseOptions_FullMethodName   = "/everstack.billing.v1.BillingService/GetCreditPurchaseOptions"
+	BillingService_GetAutoTopUpPolicy_FullMethodName         = "/everstack.billing.v1.BillingService/GetAutoTopUpPolicy"
+	BillingService_SetAutoTopUpPolicy_FullMethodName         = "/everstack.billing.v1.BillingService/SetAutoTopUpPolicy"
+	BillingService_CreateSetupIntent_FullMethodName          = "/everstack.billing.v1.BillingService/CreateSetupIntent"
+	BillingService_ListPaymentMethods_FullMethodName         = "/everstack.billing.v1.BillingService/ListPaymentMethods"
+	BillingService_SetDefaultPaymentMethod_FullMethodName    = "/everstack.billing.v1.BillingService/SetDefaultPaymentMethod"
+	BillingService_RemovePaymentMethod_FullMethodName        = "/everstack.billing.v1.BillingService/RemovePaymentMethod"
+	BillingService_UpdatePaymentMethod_FullMethodName        = "/everstack.billing.v1.BillingService/UpdatePaymentMethod"
+	BillingService_PreviewPlanChange_FullMethodName          = "/everstack.billing.v1.BillingService/PreviewPlanChange"
+	BillingService_ChangePlan_FullMethodName                 = "/everstack.billing.v1.BillingService/ChangePlan"
+	BillingService_RegisterApiKey_FullMethodName             = "/everstack.billing.v1.BillingService/RegisterApiKey"
+	BillingService_UnregisterApiKey_FullMethodName           = "/everstack.billing.v1.BillingService/UnregisterApiKey"
+	BillingService_GetModelTrial_FullMethodName              = "/everstack.billing.v1.BillingService/GetModelTrial"
 )
 
 // BillingServiceClient is the client API for BillingService service.
@@ -57,9 +77,14 @@ type BillingServiceClient interface {
 	CreateCheckoutSession(ctx context.Context, in *CreateCheckoutSessionRequest, opts ...grpc.CallOption) (*CreateCheckoutSessionResponse, error)
 	// CreateBillingPortalSession creates a Stripe billing portal session
 	CreateBillingPortalSession(ctx context.Context, in *CreateBillingPortalSessionRequest, opts ...grpc.CallOption) (*CreateBillingPortalSessionResponse, error)
-	// CancelSubscription cancels a subscription at period end
+	// CancelSubscription schedules cancellation at the period end (no
+	// refund). When the organization runs more instances than Starter allows,
+	// keep_instance_ids is required; the others pause at the period end.
+	// Idempotent. Owner or admin only.
 	CancelSubscription(ctx context.Context, in *CancelSubscriptionRequest, opts ...grpc.CallOption) (*CancelSubscriptionResponse, error)
-	// ResumeSubscription resumes a cancelled subscription
+	// ResumeSubscription withdraws a scheduled cancellation or scheduled
+	// downgrade before it takes effect, and the instance pauses that came
+	// with it. Idempotent. Owner or admin only.
 	ResumeSubscription(ctx context.Context, in *ResumeSubscriptionRequest, opts ...grpc.CallOption) (*ResumeSubscriptionResponse, error)
 	// ListInvoices lists invoices for an organization
 	ListInvoices(ctx context.Context, in *ListInvoicesRequest, opts ...grpc.CallOption) (*ListInvoicesResponse, error)
@@ -93,9 +118,13 @@ type BillingServiceClient interface {
 	CreateInstanceMapping(ctx context.Context, in *CreateInstanceMappingRequest, opts ...grpc.CallOption) (*CreateInstanceMappingResponse, error)
 	// GetSpendLimits retrieves all spend limits for an organization
 	GetSpendLimits(ctx context.Context, in *GetSpendLimitsRequest, opts ...grpc.CallOption) (*GetSpendLimitsResponse, error)
-	// SetSpendLimit creates or updates a spend limit
+	// SetSpendLimit creates or updates a spend limit. Owners and admins only.
+	// Creating, enabling or raising a limit needs a plan with the spend_limits
+	// feature, otherwise FAILED_PRECONDITION with ErrorInfo reason
+	// spend_limits_not_in_plan. Lowering, disabling and deleting are always
+	// allowed. Every change is audited.
 	SetSpendLimit(ctx context.Context, in *SetSpendLimitRequest, opts ...grpc.CallOption) (*SetSpendLimitResponse, error)
-	// DeleteSpendLimit removes a spend limit
+	// DeleteSpendLimit removes a spend limit. Owners and admins only; audited.
 	DeleteSpendLimit(ctx context.Context, in *DeleteSpendLimitRequest, opts ...grpc.CallOption) (*DeleteSpendLimitResponse, error)
 	// MigrateSubscription migrates a multi-item subscription to single-item (admin only)
 	MigrateSubscription(ctx context.Context, in *MigrateSubscriptionRequest, opts ...grpc.CallOption) (*MigrateSubscriptionResponse, error)
@@ -104,6 +133,92 @@ type BillingServiceClient interface {
 	// at 0). Free / Enterprise tiers reject. Stripe handles proration on
 	// the per-seat line item with create_prorations.
 	AdjustSeats(ctx context.Context, in *AdjustSeatsRequest, opts ...grpc.CallOption) (*AdjustSeatsResponse, error)
+	// GetCreditBalance returns the organization's prepaid credit wallet:
+	// ledger balance, credit reserved by in-flight requests, what is spendable
+	// now, and lifetime totals. Read by any organization member. A read that
+	// cannot reach the ledger fails with Unavailable, never a zero balance.
+	GetCreditBalance(ctx context.Context, in *GetCreditBalanceRequest, opts ...grpc.CallOption) (*GetCreditBalanceResponse, error)
+	// ListCreditLedger pages the organization's credit history, newest first,
+	// with optional entry type, resource type and time filters. Read by any
+	// organization member. Internal deduplication keys are never returned.
+	ListCreditLedger(ctx context.Context, in *ListCreditLedgerRequest, opts ...grpc.CallOption) (*ListCreditLedgerResponse, error)
+	// ListInferenceAttempts pages the organization's inference requests,
+	// newest first, each with every provider attempt it made: what was served,
+	// what lost a race or failed before a fallback, and what each attempt was
+	// charged. Read by any organization member. Internal identifiers (request,
+	// key and ledger ids) are never returned.
+	ListInferenceAttempts(ctx context.Context, in *ListInferenceAttemptsRequest, opts ...grpc.CallOption) (*ListInferenceAttemptsResponse, error)
+	// GetSpendStatus returns the organization's estimated inference spend for
+	// the current UTC day and UTC month: Everstack credit charged plus
+	// traffic on the organization's own provider keys at list price, in total
+	// and per gateway API key, with the count of attempts on models that have
+	// no list price (not priced, not counted). Read-only, from hourly rollups
+	// that trail live traffic by about a minute (see as_of). Read by any
+	// organization member.
+	GetSpendStatus(ctx context.Context, in *GetSpendStatusRequest, opts ...grpc.CallOption) (*GetSpendStatusResponse, error)
+	// PurchaseCredits starts a prepaid credit top-up: it records a pending
+	// purchase and returns a Stripe Checkout URL. Owner or admin only.
+	// FailedPrecondition while purchases are switched off.
+	PurchaseCredits(ctx context.Context, in *PurchaseCreditsRequest, opts ...grpc.CallOption) (*PurchaseCreditsResponse, error)
+	// GetCreditPurchase returns one purchase of the organization. The return
+	// page polls it; only state PAID means the credit is available.
+	GetCreditPurchase(ctx context.Context, in *GetCreditPurchaseRequest, opts ...grpc.CallOption) (*GetCreditPurchaseResponse, error)
+	// ListCreditPurchases lists the organization's purchases, newest first.
+	ListCreditPurchases(ctx context.Context, in *ListCreditPurchasesRequest, opts ...grpc.CallOption) (*ListCreditPurchasesResponse, error)
+	// GetCreditPurchaseOptions returns whether self-serve purchase is on and
+	// the top-up presets and limits.
+	GetCreditPurchaseOptions(ctx context.Context, in *GetCreditPurchaseOptionsRequest, opts ...grpc.CallOption) (*GetCreditPurchaseOptionsResponse, error)
+	// GetAutoTopUpPolicy returns the organization's auto top-up settings,
+	// this month's usage of the cap and the last attempt. Any organization
+	// member (docs/design/auto-top-up.md).
+	GetAutoTopUpPolicy(ctx context.Context, in *GetAutoTopUpPolicyRequest, opts ...grpc.CallOption) (*GetAutoTopUpPolicyResponse, error)
+	// SetAutoTopUpPolicy turns auto top-up on or off or changes its terms.
+	// Turning it on or editing records consent to the exact terms shown.
+	// A charge already in progress is not affected. Owner or admin only.
+	SetAutoTopUpPolicy(ctx context.Context, in *SetAutoTopUpPolicyRequest, opts ...grpc.CallOption) (*SetAutoTopUpPolicyResponse, error)
+	// CreateSetupIntent starts saving a card for the organization's Stripe
+	// customer (created if missing) and returns the SetupIntent client secret
+	// for Stripe Elements. Owner or admin only.
+	CreateSetupIntent(ctx context.Context, in *CreateSetupIntentRequest, opts ...grpc.CallOption) (*CreateSetupIntentResponse, error)
+	// ListPaymentMethods lists the organization's active saved payment
+	// methods, default first. Any organization member.
+	ListPaymentMethods(ctx context.Context, in *ListPaymentMethodsRequest, opts ...grpc.CallOption) (*ListPaymentMethodsResponse, error)
+	// SetDefaultPaymentMethod makes one saved payment method the default for
+	// future charges. Owner or admin only.
+	SetDefaultPaymentMethod(ctx context.Context, in *SetDefaultPaymentMethodRequest, opts ...grpc.CallOption) (*SetDefaultPaymentMethodResponse, error)
+	// RemovePaymentMethod detaches a saved payment method in Stripe. Removing
+	// the default promotes the most recently added remaining card. Owner or
+	// admin only.
+	RemovePaymentMethod(ctx context.Context, in *RemovePaymentMethodRequest, opts ...grpc.CallOption) (*RemovePaymentMethodResponse, error)
+	// UpdatePaymentMethod changes a saved card's expiry and billing details
+	// in Stripe, then re-syncs it. Cards only (a Link method is replaced, not
+	// edited). Owner or admin only.
+	UpdatePaymentMethod(ctx context.Context, in *UpdatePaymentMethodRequest, opts ...grpc.CallOption) (*UpdatePaymentMethodResponse, error)
+	// PreviewPlanChange prices and explains a plan or interval change before
+	// it is made: timing, new limits, instances over the new limit, the
+	// prorated charge for an upgrade. Owner or admin only.
+	PreviewPlanChange(ctx context.Context, in *PreviewPlanChangeRequest, opts ...grpc.CallOption) (*PreviewPlanChangeResponse, error)
+	// ChangePlan upgrades now with proration (charging the default card) or
+	// schedules a downgrade for the period end. Owner or admin only. Refused
+	// while the organization is past due.
+	ChangePlan(ctx context.Context, in *ChangePlanRequest, opts ...grpc.CallOption) (*ChangePlanResponse, error)
+	// RegisterApiKey records which organization a gateway API key belongs to,
+	// so SetSpendLimit can accept a limit for a key that has made no request
+	// yet. Internal only: callable by the managed gateway's M2M client right
+	// after it creates the key, never by a customer session. The tenant is
+	// the one the gateway stored on the key; billing resolves it to the
+	// organization. Idempotent.
+	RegisterApiKey(ctx context.Context, in *RegisterApiKeyRequest, opts ...grpc.CallOption) (*RegisterApiKeyResponse, error)
+	// UnregisterApiKey removes the ownership record of a gateway API key the
+	// gateway deleted. Internal only, same caller as RegisterApiKey. Removes
+	// only the row for that key id owned by the organization the tenant
+	// resolves to; a key of another organization is never touched. Idempotent.
+	UnregisterApiKey(ctx context.Context, in *UnregisterApiKeyRequest, opts ...grpc.CallOption) (*UnregisterApiKeyResponse, error)
+	// GetModelTrial returns the organization's free model requests: how many
+	// it has, how many it used, and whether it can use them now
+	// (docs/design/free-trial-onboarding.md 4.2). Read-only; never grants.
+	// Read by any organization member.
+	GetModelTrial(ctx context.Context, in *GetModelTrialRequest, opts ...grpc.CallOption) (*GetModelTrialResponse, error)
 }
 
 type billingServiceClient struct {
@@ -354,6 +469,206 @@ func (c *billingServiceClient) AdjustSeats(ctx context.Context, in *AdjustSeatsR
 	return out, nil
 }
 
+func (c *billingServiceClient) GetCreditBalance(ctx context.Context, in *GetCreditBalanceRequest, opts ...grpc.CallOption) (*GetCreditBalanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCreditBalanceResponse)
+	err := c.cc.Invoke(ctx, BillingService_GetCreditBalance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) ListCreditLedger(ctx context.Context, in *ListCreditLedgerRequest, opts ...grpc.CallOption) (*ListCreditLedgerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCreditLedgerResponse)
+	err := c.cc.Invoke(ctx, BillingService_ListCreditLedger_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) ListInferenceAttempts(ctx context.Context, in *ListInferenceAttemptsRequest, opts ...grpc.CallOption) (*ListInferenceAttemptsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListInferenceAttemptsResponse)
+	err := c.cc.Invoke(ctx, BillingService_ListInferenceAttempts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) GetSpendStatus(ctx context.Context, in *GetSpendStatusRequest, opts ...grpc.CallOption) (*GetSpendStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSpendStatusResponse)
+	err := c.cc.Invoke(ctx, BillingService_GetSpendStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) PurchaseCredits(ctx context.Context, in *PurchaseCreditsRequest, opts ...grpc.CallOption) (*PurchaseCreditsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PurchaseCreditsResponse)
+	err := c.cc.Invoke(ctx, BillingService_PurchaseCredits_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) GetCreditPurchase(ctx context.Context, in *GetCreditPurchaseRequest, opts ...grpc.CallOption) (*GetCreditPurchaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCreditPurchaseResponse)
+	err := c.cc.Invoke(ctx, BillingService_GetCreditPurchase_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) ListCreditPurchases(ctx context.Context, in *ListCreditPurchasesRequest, opts ...grpc.CallOption) (*ListCreditPurchasesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCreditPurchasesResponse)
+	err := c.cc.Invoke(ctx, BillingService_ListCreditPurchases_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) GetCreditPurchaseOptions(ctx context.Context, in *GetCreditPurchaseOptionsRequest, opts ...grpc.CallOption) (*GetCreditPurchaseOptionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCreditPurchaseOptionsResponse)
+	err := c.cc.Invoke(ctx, BillingService_GetCreditPurchaseOptions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) GetAutoTopUpPolicy(ctx context.Context, in *GetAutoTopUpPolicyRequest, opts ...grpc.CallOption) (*GetAutoTopUpPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAutoTopUpPolicyResponse)
+	err := c.cc.Invoke(ctx, BillingService_GetAutoTopUpPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) SetAutoTopUpPolicy(ctx context.Context, in *SetAutoTopUpPolicyRequest, opts ...grpc.CallOption) (*SetAutoTopUpPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetAutoTopUpPolicyResponse)
+	err := c.cc.Invoke(ctx, BillingService_SetAutoTopUpPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) CreateSetupIntent(ctx context.Context, in *CreateSetupIntentRequest, opts ...grpc.CallOption) (*CreateSetupIntentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateSetupIntentResponse)
+	err := c.cc.Invoke(ctx, BillingService_CreateSetupIntent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) ListPaymentMethods(ctx context.Context, in *ListPaymentMethodsRequest, opts ...grpc.CallOption) (*ListPaymentMethodsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPaymentMethodsResponse)
+	err := c.cc.Invoke(ctx, BillingService_ListPaymentMethods_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) SetDefaultPaymentMethod(ctx context.Context, in *SetDefaultPaymentMethodRequest, opts ...grpc.CallOption) (*SetDefaultPaymentMethodResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetDefaultPaymentMethodResponse)
+	err := c.cc.Invoke(ctx, BillingService_SetDefaultPaymentMethod_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) RemovePaymentMethod(ctx context.Context, in *RemovePaymentMethodRequest, opts ...grpc.CallOption) (*RemovePaymentMethodResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RemovePaymentMethodResponse)
+	err := c.cc.Invoke(ctx, BillingService_RemovePaymentMethod_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) UpdatePaymentMethod(ctx context.Context, in *UpdatePaymentMethodRequest, opts ...grpc.CallOption) (*UpdatePaymentMethodResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdatePaymentMethodResponse)
+	err := c.cc.Invoke(ctx, BillingService_UpdatePaymentMethod_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) PreviewPlanChange(ctx context.Context, in *PreviewPlanChangeRequest, opts ...grpc.CallOption) (*PreviewPlanChangeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PreviewPlanChangeResponse)
+	err := c.cc.Invoke(ctx, BillingService_PreviewPlanChange_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) ChangePlan(ctx context.Context, in *ChangePlanRequest, opts ...grpc.CallOption) (*ChangePlanResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ChangePlanResponse)
+	err := c.cc.Invoke(ctx, BillingService_ChangePlan_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) RegisterApiKey(ctx context.Context, in *RegisterApiKeyRequest, opts ...grpc.CallOption) (*RegisterApiKeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegisterApiKeyResponse)
+	err := c.cc.Invoke(ctx, BillingService_RegisterApiKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) UnregisterApiKey(ctx context.Context, in *UnregisterApiKeyRequest, opts ...grpc.CallOption) (*UnregisterApiKeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UnregisterApiKeyResponse)
+	err := c.cc.Invoke(ctx, BillingService_UnregisterApiKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) GetModelTrial(ctx context.Context, in *GetModelTrialRequest, opts ...grpc.CallOption) (*GetModelTrialResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetModelTrialResponse)
+	err := c.cc.Invoke(ctx, BillingService_GetModelTrial_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BillingServiceServer is the server API for BillingService service.
 // All implementations must embed UnimplementedBillingServiceServer
 // for forward compatibility.
@@ -366,9 +681,14 @@ type BillingServiceServer interface {
 	CreateCheckoutSession(context.Context, *CreateCheckoutSessionRequest) (*CreateCheckoutSessionResponse, error)
 	// CreateBillingPortalSession creates a Stripe billing portal session
 	CreateBillingPortalSession(context.Context, *CreateBillingPortalSessionRequest) (*CreateBillingPortalSessionResponse, error)
-	// CancelSubscription cancels a subscription at period end
+	// CancelSubscription schedules cancellation at the period end (no
+	// refund). When the organization runs more instances than Starter allows,
+	// keep_instance_ids is required; the others pause at the period end.
+	// Idempotent. Owner or admin only.
 	CancelSubscription(context.Context, *CancelSubscriptionRequest) (*CancelSubscriptionResponse, error)
-	// ResumeSubscription resumes a cancelled subscription
+	// ResumeSubscription withdraws a scheduled cancellation or scheduled
+	// downgrade before it takes effect, and the instance pauses that came
+	// with it. Idempotent. Owner or admin only.
 	ResumeSubscription(context.Context, *ResumeSubscriptionRequest) (*ResumeSubscriptionResponse, error)
 	// ListInvoices lists invoices for an organization
 	ListInvoices(context.Context, *ListInvoicesRequest) (*ListInvoicesResponse, error)
@@ -402,9 +722,13 @@ type BillingServiceServer interface {
 	CreateInstanceMapping(context.Context, *CreateInstanceMappingRequest) (*CreateInstanceMappingResponse, error)
 	// GetSpendLimits retrieves all spend limits for an organization
 	GetSpendLimits(context.Context, *GetSpendLimitsRequest) (*GetSpendLimitsResponse, error)
-	// SetSpendLimit creates or updates a spend limit
+	// SetSpendLimit creates or updates a spend limit. Owners and admins only.
+	// Creating, enabling or raising a limit needs a plan with the spend_limits
+	// feature, otherwise FAILED_PRECONDITION with ErrorInfo reason
+	// spend_limits_not_in_plan. Lowering, disabling and deleting are always
+	// allowed. Every change is audited.
 	SetSpendLimit(context.Context, *SetSpendLimitRequest) (*SetSpendLimitResponse, error)
-	// DeleteSpendLimit removes a spend limit
+	// DeleteSpendLimit removes a spend limit. Owners and admins only; audited.
 	DeleteSpendLimit(context.Context, *DeleteSpendLimitRequest) (*DeleteSpendLimitResponse, error)
 	// MigrateSubscription migrates a multi-item subscription to single-item (admin only)
 	MigrateSubscription(context.Context, *MigrateSubscriptionRequest) (*MigrateSubscriptionResponse, error)
@@ -413,6 +737,92 @@ type BillingServiceServer interface {
 	// at 0). Free / Enterprise tiers reject. Stripe handles proration on
 	// the per-seat line item with create_prorations.
 	AdjustSeats(context.Context, *AdjustSeatsRequest) (*AdjustSeatsResponse, error)
+	// GetCreditBalance returns the organization's prepaid credit wallet:
+	// ledger balance, credit reserved by in-flight requests, what is spendable
+	// now, and lifetime totals. Read by any organization member. A read that
+	// cannot reach the ledger fails with Unavailable, never a zero balance.
+	GetCreditBalance(context.Context, *GetCreditBalanceRequest) (*GetCreditBalanceResponse, error)
+	// ListCreditLedger pages the organization's credit history, newest first,
+	// with optional entry type, resource type and time filters. Read by any
+	// organization member. Internal deduplication keys are never returned.
+	ListCreditLedger(context.Context, *ListCreditLedgerRequest) (*ListCreditLedgerResponse, error)
+	// ListInferenceAttempts pages the organization's inference requests,
+	// newest first, each with every provider attempt it made: what was served,
+	// what lost a race or failed before a fallback, and what each attempt was
+	// charged. Read by any organization member. Internal identifiers (request,
+	// key and ledger ids) are never returned.
+	ListInferenceAttempts(context.Context, *ListInferenceAttemptsRequest) (*ListInferenceAttemptsResponse, error)
+	// GetSpendStatus returns the organization's estimated inference spend for
+	// the current UTC day and UTC month: Everstack credit charged plus
+	// traffic on the organization's own provider keys at list price, in total
+	// and per gateway API key, with the count of attempts on models that have
+	// no list price (not priced, not counted). Read-only, from hourly rollups
+	// that trail live traffic by about a minute (see as_of). Read by any
+	// organization member.
+	GetSpendStatus(context.Context, *GetSpendStatusRequest) (*GetSpendStatusResponse, error)
+	// PurchaseCredits starts a prepaid credit top-up: it records a pending
+	// purchase and returns a Stripe Checkout URL. Owner or admin only.
+	// FailedPrecondition while purchases are switched off.
+	PurchaseCredits(context.Context, *PurchaseCreditsRequest) (*PurchaseCreditsResponse, error)
+	// GetCreditPurchase returns one purchase of the organization. The return
+	// page polls it; only state PAID means the credit is available.
+	GetCreditPurchase(context.Context, *GetCreditPurchaseRequest) (*GetCreditPurchaseResponse, error)
+	// ListCreditPurchases lists the organization's purchases, newest first.
+	ListCreditPurchases(context.Context, *ListCreditPurchasesRequest) (*ListCreditPurchasesResponse, error)
+	// GetCreditPurchaseOptions returns whether self-serve purchase is on and
+	// the top-up presets and limits.
+	GetCreditPurchaseOptions(context.Context, *GetCreditPurchaseOptionsRequest) (*GetCreditPurchaseOptionsResponse, error)
+	// GetAutoTopUpPolicy returns the organization's auto top-up settings,
+	// this month's usage of the cap and the last attempt. Any organization
+	// member (docs/design/auto-top-up.md).
+	GetAutoTopUpPolicy(context.Context, *GetAutoTopUpPolicyRequest) (*GetAutoTopUpPolicyResponse, error)
+	// SetAutoTopUpPolicy turns auto top-up on or off or changes its terms.
+	// Turning it on or editing records consent to the exact terms shown.
+	// A charge already in progress is not affected. Owner or admin only.
+	SetAutoTopUpPolicy(context.Context, *SetAutoTopUpPolicyRequest) (*SetAutoTopUpPolicyResponse, error)
+	// CreateSetupIntent starts saving a card for the organization's Stripe
+	// customer (created if missing) and returns the SetupIntent client secret
+	// for Stripe Elements. Owner or admin only.
+	CreateSetupIntent(context.Context, *CreateSetupIntentRequest) (*CreateSetupIntentResponse, error)
+	// ListPaymentMethods lists the organization's active saved payment
+	// methods, default first. Any organization member.
+	ListPaymentMethods(context.Context, *ListPaymentMethodsRequest) (*ListPaymentMethodsResponse, error)
+	// SetDefaultPaymentMethod makes one saved payment method the default for
+	// future charges. Owner or admin only.
+	SetDefaultPaymentMethod(context.Context, *SetDefaultPaymentMethodRequest) (*SetDefaultPaymentMethodResponse, error)
+	// RemovePaymentMethod detaches a saved payment method in Stripe. Removing
+	// the default promotes the most recently added remaining card. Owner or
+	// admin only.
+	RemovePaymentMethod(context.Context, *RemovePaymentMethodRequest) (*RemovePaymentMethodResponse, error)
+	// UpdatePaymentMethod changes a saved card's expiry and billing details
+	// in Stripe, then re-syncs it. Cards only (a Link method is replaced, not
+	// edited). Owner or admin only.
+	UpdatePaymentMethod(context.Context, *UpdatePaymentMethodRequest) (*UpdatePaymentMethodResponse, error)
+	// PreviewPlanChange prices and explains a plan or interval change before
+	// it is made: timing, new limits, instances over the new limit, the
+	// prorated charge for an upgrade. Owner or admin only.
+	PreviewPlanChange(context.Context, *PreviewPlanChangeRequest) (*PreviewPlanChangeResponse, error)
+	// ChangePlan upgrades now with proration (charging the default card) or
+	// schedules a downgrade for the period end. Owner or admin only. Refused
+	// while the organization is past due.
+	ChangePlan(context.Context, *ChangePlanRequest) (*ChangePlanResponse, error)
+	// RegisterApiKey records which organization a gateway API key belongs to,
+	// so SetSpendLimit can accept a limit for a key that has made no request
+	// yet. Internal only: callable by the managed gateway's M2M client right
+	// after it creates the key, never by a customer session. The tenant is
+	// the one the gateway stored on the key; billing resolves it to the
+	// organization. Idempotent.
+	RegisterApiKey(context.Context, *RegisterApiKeyRequest) (*RegisterApiKeyResponse, error)
+	// UnregisterApiKey removes the ownership record of a gateway API key the
+	// gateway deleted. Internal only, same caller as RegisterApiKey. Removes
+	// only the row for that key id owned by the organization the tenant
+	// resolves to; a key of another organization is never touched. Idempotent.
+	UnregisterApiKey(context.Context, *UnregisterApiKeyRequest) (*UnregisterApiKeyResponse, error)
+	// GetModelTrial returns the organization's free model requests: how many
+	// it has, how many it used, and whether it can use them now
+	// (docs/design/free-trial-onboarding.md 4.2). Read-only; never grants.
+	// Read by any organization member.
+	GetModelTrial(context.Context, *GetModelTrialRequest) (*GetModelTrialResponse, error)
 	mustEmbedUnimplementedBillingServiceServer()
 }
 
@@ -494,6 +904,66 @@ func (UnimplementedBillingServiceServer) MigrateSubscription(context.Context, *M
 }
 func (UnimplementedBillingServiceServer) AdjustSeats(context.Context, *AdjustSeatsRequest) (*AdjustSeatsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AdjustSeats not implemented")
+}
+func (UnimplementedBillingServiceServer) GetCreditBalance(context.Context, *GetCreditBalanceRequest) (*GetCreditBalanceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCreditBalance not implemented")
+}
+func (UnimplementedBillingServiceServer) ListCreditLedger(context.Context, *ListCreditLedgerRequest) (*ListCreditLedgerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCreditLedger not implemented")
+}
+func (UnimplementedBillingServiceServer) ListInferenceAttempts(context.Context, *ListInferenceAttemptsRequest) (*ListInferenceAttemptsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListInferenceAttempts not implemented")
+}
+func (UnimplementedBillingServiceServer) GetSpendStatus(context.Context, *GetSpendStatusRequest) (*GetSpendStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSpendStatus not implemented")
+}
+func (UnimplementedBillingServiceServer) PurchaseCredits(context.Context, *PurchaseCreditsRequest) (*PurchaseCreditsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PurchaseCredits not implemented")
+}
+func (UnimplementedBillingServiceServer) GetCreditPurchase(context.Context, *GetCreditPurchaseRequest) (*GetCreditPurchaseResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCreditPurchase not implemented")
+}
+func (UnimplementedBillingServiceServer) ListCreditPurchases(context.Context, *ListCreditPurchasesRequest) (*ListCreditPurchasesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCreditPurchases not implemented")
+}
+func (UnimplementedBillingServiceServer) GetCreditPurchaseOptions(context.Context, *GetCreditPurchaseOptionsRequest) (*GetCreditPurchaseOptionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCreditPurchaseOptions not implemented")
+}
+func (UnimplementedBillingServiceServer) GetAutoTopUpPolicy(context.Context, *GetAutoTopUpPolicyRequest) (*GetAutoTopUpPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAutoTopUpPolicy not implemented")
+}
+func (UnimplementedBillingServiceServer) SetAutoTopUpPolicy(context.Context, *SetAutoTopUpPolicyRequest) (*SetAutoTopUpPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetAutoTopUpPolicy not implemented")
+}
+func (UnimplementedBillingServiceServer) CreateSetupIntent(context.Context, *CreateSetupIntentRequest) (*CreateSetupIntentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateSetupIntent not implemented")
+}
+func (UnimplementedBillingServiceServer) ListPaymentMethods(context.Context, *ListPaymentMethodsRequest) (*ListPaymentMethodsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListPaymentMethods not implemented")
+}
+func (UnimplementedBillingServiceServer) SetDefaultPaymentMethod(context.Context, *SetDefaultPaymentMethodRequest) (*SetDefaultPaymentMethodResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetDefaultPaymentMethod not implemented")
+}
+func (UnimplementedBillingServiceServer) RemovePaymentMethod(context.Context, *RemovePaymentMethodRequest) (*RemovePaymentMethodResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemovePaymentMethod not implemented")
+}
+func (UnimplementedBillingServiceServer) UpdatePaymentMethod(context.Context, *UpdatePaymentMethodRequest) (*UpdatePaymentMethodResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdatePaymentMethod not implemented")
+}
+func (UnimplementedBillingServiceServer) PreviewPlanChange(context.Context, *PreviewPlanChangeRequest) (*PreviewPlanChangeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PreviewPlanChange not implemented")
+}
+func (UnimplementedBillingServiceServer) ChangePlan(context.Context, *ChangePlanRequest) (*ChangePlanResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ChangePlan not implemented")
+}
+func (UnimplementedBillingServiceServer) RegisterApiKey(context.Context, *RegisterApiKeyRequest) (*RegisterApiKeyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RegisterApiKey not implemented")
+}
+func (UnimplementedBillingServiceServer) UnregisterApiKey(context.Context, *UnregisterApiKeyRequest) (*UnregisterApiKeyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UnregisterApiKey not implemented")
+}
+func (UnimplementedBillingServiceServer) GetModelTrial(context.Context, *GetModelTrialRequest) (*GetModelTrialResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetModelTrial not implemented")
 }
 func (UnimplementedBillingServiceServer) mustEmbedUnimplementedBillingServiceServer() {}
 func (UnimplementedBillingServiceServer) testEmbeddedByValue()                        {}
@@ -948,6 +1418,366 @@ func _BillingService_AdjustSeats_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BillingService_GetCreditBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCreditBalanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).GetCreditBalance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_GetCreditBalance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).GetCreditBalance(ctx, req.(*GetCreditBalanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_ListCreditLedger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCreditLedgerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).ListCreditLedger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_ListCreditLedger_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).ListCreditLedger(ctx, req.(*ListCreditLedgerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_ListInferenceAttempts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListInferenceAttemptsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).ListInferenceAttempts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_ListInferenceAttempts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).ListInferenceAttempts(ctx, req.(*ListInferenceAttemptsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_GetSpendStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSpendStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).GetSpendStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_GetSpendStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).GetSpendStatus(ctx, req.(*GetSpendStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_PurchaseCredits_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PurchaseCreditsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).PurchaseCredits(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_PurchaseCredits_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).PurchaseCredits(ctx, req.(*PurchaseCreditsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_GetCreditPurchase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCreditPurchaseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).GetCreditPurchase(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_GetCreditPurchase_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).GetCreditPurchase(ctx, req.(*GetCreditPurchaseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_ListCreditPurchases_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCreditPurchasesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).ListCreditPurchases(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_ListCreditPurchases_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).ListCreditPurchases(ctx, req.(*ListCreditPurchasesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_GetCreditPurchaseOptions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCreditPurchaseOptionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).GetCreditPurchaseOptions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_GetCreditPurchaseOptions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).GetCreditPurchaseOptions(ctx, req.(*GetCreditPurchaseOptionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_GetAutoTopUpPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAutoTopUpPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).GetAutoTopUpPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_GetAutoTopUpPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).GetAutoTopUpPolicy(ctx, req.(*GetAutoTopUpPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_SetAutoTopUpPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetAutoTopUpPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).SetAutoTopUpPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_SetAutoTopUpPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).SetAutoTopUpPolicy(ctx, req.(*SetAutoTopUpPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_CreateSetupIntent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSetupIntentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).CreateSetupIntent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_CreateSetupIntent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).CreateSetupIntent(ctx, req.(*CreateSetupIntentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_ListPaymentMethods_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPaymentMethodsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).ListPaymentMethods(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_ListPaymentMethods_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).ListPaymentMethods(ctx, req.(*ListPaymentMethodsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_SetDefaultPaymentMethod_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetDefaultPaymentMethodRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).SetDefaultPaymentMethod(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_SetDefaultPaymentMethod_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).SetDefaultPaymentMethod(ctx, req.(*SetDefaultPaymentMethodRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_RemovePaymentMethod_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemovePaymentMethodRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).RemovePaymentMethod(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_RemovePaymentMethod_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).RemovePaymentMethod(ctx, req.(*RemovePaymentMethodRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_UpdatePaymentMethod_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdatePaymentMethodRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).UpdatePaymentMethod(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_UpdatePaymentMethod_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).UpdatePaymentMethod(ctx, req.(*UpdatePaymentMethodRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_PreviewPlanChange_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PreviewPlanChangeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).PreviewPlanChange(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_PreviewPlanChange_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).PreviewPlanChange(ctx, req.(*PreviewPlanChangeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_ChangePlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChangePlanRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).ChangePlan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_ChangePlan_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).ChangePlan(ctx, req.(*ChangePlanRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_RegisterApiKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterApiKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).RegisterApiKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_RegisterApiKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).RegisterApiKey(ctx, req.(*RegisterApiKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_UnregisterApiKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnregisterApiKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).UnregisterApiKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_UnregisterApiKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).UnregisterApiKey(ctx, req.(*UnregisterApiKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_GetModelTrial_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetModelTrialRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).GetModelTrial(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_GetModelTrial_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).GetModelTrial(ctx, req.(*GetModelTrialRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BillingService_ServiceDesc is the grpc.ServiceDesc for BillingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1050,6 +1880,86 @@ var BillingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AdjustSeats",
 			Handler:    _BillingService_AdjustSeats_Handler,
+		},
+		{
+			MethodName: "GetCreditBalance",
+			Handler:    _BillingService_GetCreditBalance_Handler,
+		},
+		{
+			MethodName: "ListCreditLedger",
+			Handler:    _BillingService_ListCreditLedger_Handler,
+		},
+		{
+			MethodName: "ListInferenceAttempts",
+			Handler:    _BillingService_ListInferenceAttempts_Handler,
+		},
+		{
+			MethodName: "GetSpendStatus",
+			Handler:    _BillingService_GetSpendStatus_Handler,
+		},
+		{
+			MethodName: "PurchaseCredits",
+			Handler:    _BillingService_PurchaseCredits_Handler,
+		},
+		{
+			MethodName: "GetCreditPurchase",
+			Handler:    _BillingService_GetCreditPurchase_Handler,
+		},
+		{
+			MethodName: "ListCreditPurchases",
+			Handler:    _BillingService_ListCreditPurchases_Handler,
+		},
+		{
+			MethodName: "GetCreditPurchaseOptions",
+			Handler:    _BillingService_GetCreditPurchaseOptions_Handler,
+		},
+		{
+			MethodName: "GetAutoTopUpPolicy",
+			Handler:    _BillingService_GetAutoTopUpPolicy_Handler,
+		},
+		{
+			MethodName: "SetAutoTopUpPolicy",
+			Handler:    _BillingService_SetAutoTopUpPolicy_Handler,
+		},
+		{
+			MethodName: "CreateSetupIntent",
+			Handler:    _BillingService_CreateSetupIntent_Handler,
+		},
+		{
+			MethodName: "ListPaymentMethods",
+			Handler:    _BillingService_ListPaymentMethods_Handler,
+		},
+		{
+			MethodName: "SetDefaultPaymentMethod",
+			Handler:    _BillingService_SetDefaultPaymentMethod_Handler,
+		},
+		{
+			MethodName: "RemovePaymentMethod",
+			Handler:    _BillingService_RemovePaymentMethod_Handler,
+		},
+		{
+			MethodName: "UpdatePaymentMethod",
+			Handler:    _BillingService_UpdatePaymentMethod_Handler,
+		},
+		{
+			MethodName: "PreviewPlanChange",
+			Handler:    _BillingService_PreviewPlanChange_Handler,
+		},
+		{
+			MethodName: "ChangePlan",
+			Handler:    _BillingService_ChangePlan_Handler,
+		},
+		{
+			MethodName: "RegisterApiKey",
+			Handler:    _BillingService_RegisterApiKey_Handler,
+		},
+		{
+			MethodName: "UnregisterApiKey",
+			Handler:    _BillingService_UnregisterApiKey_Handler,
+		},
+		{
+			MethodName: "GetModelTrial",
+			Handler:    _BillingService_GetModelTrial_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -1470,6 +1470,9 @@ func (m *Monitor) checkSpendLimits() error {
 // CheckSpendLimitBeforeRequest checks if a request with the given estimated cost should be allowed
 // This is called before processing a request to pre-check spend limits
 func (m *Monitor) CheckSpendLimitBeforeRequest(estimatedCost float64) (allowed bool, message string) {
+	if isManagedGateway() {
+		return true, ""
+	}
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -1654,7 +1657,19 @@ func (m *Monitor) IsLocked() (bool, string) {
 // IsSpendBlocked returns whether requests are blocked due to spend limit exceeded.
 // This is a zero-latency check using local cached state - no network calls.
 // It checks both the explicit spendBlocked flag AND the local spend vs limit.
+//
+// On a managed (Cloud) gateway it always reports false (see SetManagedGateway):
+// every enforcement point asks here, so they all allow and log together.
 func (m *Monitor) IsSpendBlocked() (bool, string) {
+	blocked, reason := m.rawSpendBlocked()
+	if blocked && isManagedGateway() {
+		logIgnoredSpendBlock(reason)
+		return false, ""
+	}
+	return blocked, reason
+}
+
+func (m *Monitor) rawSpendBlocked() (bool, string) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 

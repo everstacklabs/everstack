@@ -74,7 +74,7 @@ export function UpgradePlanDialog({ open, onOpenChange, plans, currentPlanId, on
                         </span>
                         <span
                             className={cn(
-                                'absolute left-1/2 top-full mt-2 -translate-x-1/2 rounded-full bg-emerald-500/10 px-2.5 py-0.5 font-mono text-[11px] font-medium text-emerald-400 light:text-emerald-600 transition-opacity duration-300',
+                                'absolute left-1/2 top-full mt-2 -translate-x-1/2 rounded-full bg-success-surface px-2.5 py-0.5 font-mono text-[11px] font-medium text-success transition-opacity duration-300',
                                 yearly ? 'opacity-100' : 'opacity-0',
                             )}
                         >

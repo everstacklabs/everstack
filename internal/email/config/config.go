@@ -1,10 +1,22 @@
 package config
 
 import (
+	"net/url"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/everstacklabs/everstack/internal/email/types"
+	"github.com/everstacklabs/everstack/internal/lib/logger"
+)
+
+// The built-in email logo: the dark wordmark (for light backgrounds) and its
+// light variant (for dark mode). Both are transparent PNGs served by the
+// landing site (apps/landing/public), padded for email: logoBlock in
+// internal/email/templates sizes the img to their exact 568x120 ratio.
+const (
+	DefaultLogoURL     = "https://everstack.ai/everstack-wordmark-dark-email.png"
+	DefaultLogoDarkURL = "https://everstack.ai/everstack-wordmark-light-email.png"
 )
 
 // Config holds all configuration for the email service
@@ -15,6 +27,15 @@ type Config struct {
 	CloudURL string        `mapstructure:"cloud_url" yaml:"cloud_url" env:"CLOUD_URL"`
 	DocsURL  string        `mapstructure:"docs_url" yaml:"docs_url" env:"DOCS_URL"`
 	LogoURL  string        `mapstructure:"logo_url" yaml:"logo_url" env:"LOGO_URL"`
+	// LogoDarkURL is a light version of LogoURL, shown by mail clients in
+	// dark mode. Empty with the default LogoURL uses DefaultLogoDarkURL.
+	LogoDarkURL string `mapstructure:"logo_dark_url" yaml:"logo_dark_url" env:"LOGO_DARK_URL"`
+	// Booking is optional so a welcome or founder note still works without a
+	// calendar. Both unsubscribe keys remain usable for links already sent.
+	BookingURL                string `mapstructure:"booking_url" yaml:"booking_url" env:"BOOKING_URL"`
+	UnsubscribeSecret         string `mapstructure:"unsubscribe_secret" yaml:"unsubscribe_secret" env:"UNSUBSCRIBE_SECRET"`
+	UnsubscribeSecretPrevious string `mapstructure:"unsubscribe_secret_previous" yaml:"unsubscribe_secret_previous" env:"UNSUBSCRIBE_SECRET_PREVIOUS"`
+	UnsubscribeURL            string `mapstructure:"unsubscribe_url" yaml:"unsubscribe_url" env:"UNSUBSCRIBE_URL"`
 	// DevRedirectTo, when non-empty, overrides the To address of every outbound
 	// email. The original recipient is preserved in the subject line. Intended
 	// for dev/staging where you want to exercise the live Resend path without
@@ -62,7 +83,7 @@ type SendersConfig struct {
 	Accounts Sender `mapstructure:"accounts" yaml:"accounts"` // auth, account lifecycle, MFA, magic links
 	Invites  Sender `mapstructure:"invites" yaml:"invites"`   // workspace/org invitations (From name overridden per-send)
 	Billing  Sender `mapstructure:"billing" yaml:"billing"`   // receipts, invoices, payment failures
-	Licenses Sender `mapstructure:"licenses" yaml:"licenses"` // activation tokens, license events
+	Licenses Sender `mapstructure:"licenses" yaml:"licenses"` // license events (no email uses it today)
 	Security Sender `mapstructure:"security" yaml:"security"` // new login, API key created, etc.
 	Arnab    Sender `mapstructure:"arnab" yaml:"arnab"`       // personal onboarding/welcome
 }
@@ -73,13 +94,21 @@ func (c *Config) SenderFor(t types.EmailType) Sender {
 	switch t {
 	case types.EmailTypeInvitation:
 		return c.Senders.Invites
-	case types.EmailTypeWelcome:
+	case types.EmailTypeWelcome, types.EmailTypeFounderNote:
 		return c.Senders.Arnab
 	case types.EmailTypePaymentSuccess, types.EmailTypePaymentFailed,
-		types.EmailTypeUsageWarning, types.EmailTypeUsageExceeded:
+		types.EmailTypeUsageWarning, types.EmailTypeUsageExceeded,
+		types.EmailTypeSubscriptionStarted, types.EmailTypeSubscriptionChanged,
+		types.EmailTypeCreditPurchased,
+		types.EmailTypeCreditReversed,
+		types.EmailTypeAutoTopUpCharged, types.EmailTypeAutoTopUpFailed,
+		types.EmailTypeSpendLimit,
+		types.EmailTypeCardAdded, types.EmailTypeCardRemoved,
+		types.EmailTypeCardDefaultChanged, types.EmailTypeCardExpiring,
+		types.EmailTypeBillingContactChanged,
+		types.EmailTypeCreditLowBalance, types.EmailTypeInstanceOverLimit,
+		types.EmailTypeInstanceOverLimitReminder, types.EmailTypeInstancesPaused:
 		return c.Senders.Billing
-	case types.EmailTypeActivationToken:
-		return c.Senders.Licenses
 	case types.EmailTypeMagicLink, types.EmailTypePasswordReset, types.EmailTypeEmailVerification:
 		// All identity-bearing transactional auth mails ship from the Accounts
 		// identity so users see a consistent sender across login, reset, and
@@ -111,7 +140,7 @@ func DefaultConfig() *Config {
 		},
 		CloudURL: "https://app.everstack.ai",
 		DocsURL:  "https://docs.everstack.ai",
-		LogoURL:  "https://everstack.ai/everstack-wordmark-dark.png",
+		LogoURL:  DefaultLogoURL,
 	}
 }
 
@@ -166,4 +195,28 @@ func parseFrom(value string) (name, address string) {
 		return strings.TrimSpace(value[:open]), strings.TrimSpace(value[open+1 : close])
 	}
 	return "", value
+}
+
+// ApplyOutreachEnv is shared by the sender and the public unsubscribe route:
+// verifying links must work even when outbound email is not configured.
+func (c *Config) ApplyOutreachEnv() {
+	c.BookingURL = os.Getenv("EVS_SERVICES_EMAIL_BOOKING_URL")
+	c.UnsubscribeSecret = os.Getenv("EVS_SERVICES_EMAIL_UNSUBSCRIBE_SECRET")
+	c.UnsubscribeSecretPrevious = os.Getenv("EVS_SERVICES_EMAIL_UNSUBSCRIBE_SECRET_PREVIOUS")
+	c.UnsubscribeURL = os.Getenv("EVS_SERVICES_EMAIL_UNSUBSCRIBE_URL")
+	c.BookingURL = c.BookingLink()
+}
+
+// BookingLink ignores an unsafe booking destination rather than rendering a
+// broken or insecure call to action. Never include configuration values in logs.
+func (c *Config) BookingLink() string {
+	if c.BookingURL == "" {
+		return ""
+	}
+	u, err := url.Parse(c.BookingURL)
+	if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil {
+		logger.Warn("email: ignoring invalid EVS_SERVICES_EMAIL_BOOKING_URL; an absolute https URL is required")
+		return ""
+	}
+	return c.BookingURL
 }

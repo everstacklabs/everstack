@@ -36,6 +36,8 @@ type ONNXCache struct {
 
 // ONNXCacheEntry holds a cached response with its embedding.
 type ONNXCacheEntry struct {
+	// Partition is the tenant + request-context partition (SemanticPartition).
+	Partition string
 	Query     string
 	Embedding []float32
 	Response  *CachedResponse
@@ -119,14 +121,18 @@ func (c *ONNXCache) Embed(text string) ([]float32, error) {
 
 // Get finds a similar cached response using cosine similarity.
 // Legacy method without context - prefer GetWithContext for new code.
-func (c *ONNXCache) Get(query string) (*CachedResponse, bool) {
-	return c.GetWithContext(context.Background(), query)
+func (c *ONNXCache) Get(partition, query string) (*CachedResponse, bool) {
+	return c.GetWithContext(context.Background(), partition, query)
 }
 
 // GetWithContext finds a similar cached response using cosine similarity with context support.
 // Note: Tracing is handled at the fastpath engine layer to avoid import cycles.
-func (c *ONNXCache) GetWithContext(ctx context.Context, query string) (*CachedResponse, bool) {
+func (c *ONNXCache) GetWithContext(ctx context.Context, partition, query string) (*CachedResponse, bool) {
 	_ = ctx // Context reserved for future use
+	if partition == "" {
+		c.misses.Add(1)
+		return nil, false
+	}
 
 	// Compute query embedding
 	queryEmbed, err := c.Embed(query)
@@ -145,6 +151,11 @@ func (c *ONNXCache) GetWithContext(ctx context.Context, query string) (*CachedRe
 
 	for i := range c.entries {
 		entry := &c.entries[i]
+
+		// Only compare within the caller's tenant + context partition.
+		if entry.Partition != partition {
+			continue
+		}
 
 		// Check TTL
 		if now.Sub(entry.CreatedAt) > c.cfg.TTL {
@@ -188,14 +199,17 @@ func (c *ONNXCache) GetWithContext(ctx context.Context, query string) (*CachedRe
 
 // Put stores a response with its embedding.
 // Legacy method without context - prefer PutWithContext for new code.
-func (c *ONNXCache) Put(query string, response *CachedResponse) {
-	c.PutWithContext(context.Background(), query, response)
+func (c *ONNXCache) Put(partition, query string, response *CachedResponse) {
+	c.PutWithContext(context.Background(), partition, query, response)
 }
 
 // PutWithContext stores a response with its embedding with context support.
 // Note: Tracing is handled at the fastpath engine layer to avoid import cycles.
-func (c *ONNXCache) PutWithContext(ctx context.Context, query string, response *CachedResponse) {
+func (c *ONNXCache) PutWithContext(ctx context.Context, partition, query string, response *CachedResponse) {
 	_ = ctx // Context reserved for future use
+	if partition == "" {
+		return
+	}
 
 	embedding, err := c.Embed(query)
 	if err != nil {
@@ -207,6 +221,7 @@ func (c *ONNXCache) PutWithContext(ctx context.Context, query string, response *
 	defer c.mu.Unlock()
 
 	entry := ONNXCacheEntry{
+		Partition: partition,
 		Query:     query,
 		Embedding: embedding,
 		Response:  response,

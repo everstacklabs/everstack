@@ -225,13 +225,15 @@ func (h *MetricsBreakdownHandler) queryOtelWindow(ctx context.Context, q *Metric
 		return MetricsBreakdownResult{}, err
 	}
 
+	// Span attribute first; see tenantBridgeFilter.
+	tenantClause, tenantArgs := tenantBridgeFilter(tenantID)
 	conditions := []string{
 		"Timestamp >= ?",
 		"Timestamp <= ?",
-		"ResourceAttributes['tenant.id'] = ?",
+		tenantClause,
 		"ParentSpanId = ''",
 	}
-	args := []interface{}{startTime, endTime, tenantID}
+	args := append([]interface{}{startTime, endTime}, tenantArgs...)
 
 	if len(q.Environments) > 0 {
 		placeholders := buildPlaceholders(len(q.Environments))

@@ -86,6 +86,31 @@ func managedBillingUsageURL(defaults *EmbeddedDefaults) string {
 	return strings.TrimSpace(os.Getenv("EVS_BILLING_USAGE_URL"))
 }
 
+// managedInferenceUsageURL is billing's usage snapshot endpoint, where the
+// inference usage reporter files request and token totals. The configured
+// billing usage URL is the sandbox heartbeat endpoint
+// (.../usage/sandbox-snapshot), whose handler decodes no token fields and
+// answers 200, so totals posted there are silently dropped. The snapshot
+// endpoint is its sibling. EVS_INFERENCE_USAGE_URL overrides; an endpoint of
+// any other shape yields "" (the reporter then says it is not configured)
+// rather than a guess.
+func managedInferenceUsageURL(defaults *EmbeddedDefaults) string {
+	if explicit := strings.TrimSpace(os.Getenv("EVS_INFERENCE_USAGE_URL")); explicit != "" {
+		return explicit
+	}
+	base := managedBillingUsageURL(defaults)
+	const sandboxSuffix = "/api/billing/usage/sandbox-snapshot"
+	const snapshotSuffix = "/api/billing/usage/snapshot"
+	switch {
+	case strings.HasSuffix(base, sandboxSuffix):
+		return strings.TrimSuffix(base, sandboxSuffix) + snapshotSuffix
+	case strings.HasSuffix(base, snapshotSuffix):
+		return base
+	default:
+		return ""
+	}
+}
+
 // AuthProvider is an optional interface for injecting an external auth server.
 // The cloud control plane implements this to provide WorkOS-based authentication.
 type AuthProvider interface {
@@ -191,9 +216,13 @@ func MustNewConfig(v *viper.Viper, embeddedDefaults *EmbeddedDefaults) *validato
 		// Other components will be loaded as you implement them
 	}
 
-	// Run startup validation — logs warnings for common misconfigurations and
-	// auto-fixes recoverable issues (e.g. generating a session secret).
-	validator.ValidateAndFix(config)
+	// Run startup validation — logs warnings for common misconfigurations,
+	// auto-fixes recoverable issues (e.g. generating a session secret), and
+	// refuses to start on values it cannot safely guess at (an unknown
+	// auth.mode must not quietly become "no authentication").
+	if err := validator.ValidateAndFix(config); err != nil {
+		logger.WithFields("error", err).Fatal("invalid configuration")
+	}
 
 	// Configure logger and ID generator
 	if config.Server != nil && config.Server.Log != nil {

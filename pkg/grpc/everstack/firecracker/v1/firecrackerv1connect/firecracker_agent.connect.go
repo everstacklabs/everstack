@@ -94,6 +94,9 @@ const (
 	// FirecrackerAgentInvokeFunctionProcedure is the fully-qualified name of the FirecrackerAgent's
 	// InvokeFunction RPC.
 	FirecrackerAgentInvokeFunctionProcedure = "/everstack.firecracker.v1.FirecrackerAgent/InvokeFunction"
+	// FirecrackerAgentReportRootfsReferencesProcedure is the fully-qualified name of the
+	// FirecrackerAgent's ReportRootfsReferences RPC.
+	FirecrackerAgentReportRootfsReferencesProcedure = "/everstack.firecracker.v1.FirecrackerAgent/ReportRootfsReferences"
 )
 
 // FirecrackerAgentClient is a client for the everstack.firecracker.v1.FirecrackerAgent service.
@@ -163,6 +166,13 @@ type FirecrackerAgentClient interface {
 	// the guest has died. This is the FaaS execution path — distinct from
 	// the sandbox lifecycle RPCs above, which manage user-facing sandboxes.
 	InvokeFunction(context.Context, *connect.Request[v1.InvokeFunctionRequest]) (*connect.Response[v1.InvokeFunctionResult], error)
+	// ReportRootfsReferences tells the agent which rootfs images the
+	// calling gateway still needs: its configured executor image(s) and the
+	// image of every sandbox row that can still boot or wake. The agent's
+	// rootfs GC never deletes an image while any unexpired report names
+	// it, and deletes no per-tag image at all until a complete report
+	// arrives. Each reporter's latest report replaces its previous one.
+	ReportRootfsReferences(context.Context, *connect.Request[v1.ReportRootfsReferencesRequest]) (*connect.Response[v1.Empty], error)
 }
 
 // NewFirecrackerAgentClient constructs a client for the everstack.firecracker.v1.FirecrackerAgent
@@ -296,31 +306,38 @@ func NewFirecrackerAgentClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(firecrackerAgentMethods.ByName("InvokeFunction")),
 			connect.WithClientOptions(opts...),
 		),
+		reportRootfsReferences: connect.NewClient[v1.ReportRootfsReferencesRequest, v1.Empty](
+			httpClient,
+			baseURL+FirecrackerAgentReportRootfsReferencesProcedure,
+			connect.WithSchema(firecrackerAgentMethods.ByName("ReportRootfsReferences")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // firecrackerAgentClient implements FirecrackerAgentClient.
 type firecrackerAgentClient struct {
-	createSandbox  *connect.Client[v1.CreateSandboxRequest, v1.SandboxInstance]
-	exec           *connect.Client[v1.ExecRequest, v1.ExecResult]
-	writeFile      *connect.Client[v1.WriteFileRequest, v1.Empty]
-	readFile       *connect.Client[v1.ReadFileRequest, v1.ReadFileResponse]
-	listFiles      *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
-	destroySandbox *connect.Client[v1.DestroySandboxRequest, v1.Empty]
-	status         *connect.Client[v1.StatusRequest, v1.SandboxInstance]
-	stats          *connect.Client[v1.StatsRequest, v1.SandboxStats]
-	listSandboxes  *connect.Client[v1.Empty, v1.ListSandboxesResponse]
-	nodeInfo       *connect.Client[v1.Empty, v1.NodeInfoResponse]
-	getNodeHealth  *connect.Client[v1.Empty, v1.NodeHealth]
-	logs           *connect.Client[v1.LogsRequest, v1.LogChunk]
-	shell          *connect.Client[v1.ShellClientMessage, v1.ShellServerMessage]
-	snapshot       *connect.Client[v1.SnapshotRequest, v1.SnapshotChunk]
-	restore        *connect.Client[v1.RestoreChunk, v1.RestoreResponse]
-	listSessions   *connect.Client[v1.ListSessionsRequest, v1.ListSessionsResponse]
-	killSession    *connect.Client[v1.KillSessionRequest, v1.Empty]
-	exposePort     *connect.Client[v1.ExposePortRequest, v1.ExposePortResponse]
-	unexposePort   *connect.Client[v1.UnexposePortRequest, v1.Empty]
-	invokeFunction *connect.Client[v1.InvokeFunctionRequest, v1.InvokeFunctionResult]
+	createSandbox          *connect.Client[v1.CreateSandboxRequest, v1.SandboxInstance]
+	exec                   *connect.Client[v1.ExecRequest, v1.ExecResult]
+	writeFile              *connect.Client[v1.WriteFileRequest, v1.Empty]
+	readFile               *connect.Client[v1.ReadFileRequest, v1.ReadFileResponse]
+	listFiles              *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
+	destroySandbox         *connect.Client[v1.DestroySandboxRequest, v1.Empty]
+	status                 *connect.Client[v1.StatusRequest, v1.SandboxInstance]
+	stats                  *connect.Client[v1.StatsRequest, v1.SandboxStats]
+	listSandboxes          *connect.Client[v1.Empty, v1.ListSandboxesResponse]
+	nodeInfo               *connect.Client[v1.Empty, v1.NodeInfoResponse]
+	getNodeHealth          *connect.Client[v1.Empty, v1.NodeHealth]
+	logs                   *connect.Client[v1.LogsRequest, v1.LogChunk]
+	shell                  *connect.Client[v1.ShellClientMessage, v1.ShellServerMessage]
+	snapshot               *connect.Client[v1.SnapshotRequest, v1.SnapshotChunk]
+	restore                *connect.Client[v1.RestoreChunk, v1.RestoreResponse]
+	listSessions           *connect.Client[v1.ListSessionsRequest, v1.ListSessionsResponse]
+	killSession            *connect.Client[v1.KillSessionRequest, v1.Empty]
+	exposePort             *connect.Client[v1.ExposePortRequest, v1.ExposePortResponse]
+	unexposePort           *connect.Client[v1.UnexposePortRequest, v1.Empty]
+	invokeFunction         *connect.Client[v1.InvokeFunctionRequest, v1.InvokeFunctionResult]
+	reportRootfsReferences *connect.Client[v1.ReportRootfsReferencesRequest, v1.Empty]
 }
 
 // CreateSandbox calls everstack.firecracker.v1.FirecrackerAgent.CreateSandbox.
@@ -423,6 +440,11 @@ func (c *firecrackerAgentClient) InvokeFunction(ctx context.Context, req *connec
 	return c.invokeFunction.CallUnary(ctx, req)
 }
 
+// ReportRootfsReferences calls everstack.firecracker.v1.FirecrackerAgent.ReportRootfsReferences.
+func (c *firecrackerAgentClient) ReportRootfsReferences(ctx context.Context, req *connect.Request[v1.ReportRootfsReferencesRequest]) (*connect.Response[v1.Empty], error) {
+	return c.reportRootfsReferences.CallUnary(ctx, req)
+}
+
 // FirecrackerAgentHandler is an implementation of the everstack.firecracker.v1.FirecrackerAgent
 // service.
 type FirecrackerAgentHandler interface {
@@ -491,6 +513,13 @@ type FirecrackerAgentHandler interface {
 	// the guest has died. This is the FaaS execution path — distinct from
 	// the sandbox lifecycle RPCs above, which manage user-facing sandboxes.
 	InvokeFunction(context.Context, *connect.Request[v1.InvokeFunctionRequest]) (*connect.Response[v1.InvokeFunctionResult], error)
+	// ReportRootfsReferences tells the agent which rootfs images the
+	// calling gateway still needs: its configured executor image(s) and the
+	// image of every sandbox row that can still boot or wake. The agent's
+	// rootfs GC never deletes an image while any unexpired report names
+	// it, and deletes no per-tag image at all until a complete report
+	// arrives. Each reporter's latest report replaces its previous one.
+	ReportRootfsReferences(context.Context, *connect.Request[v1.ReportRootfsReferencesRequest]) (*connect.Response[v1.Empty], error)
 }
 
 // NewFirecrackerAgentHandler builds an HTTP handler from the service implementation. It returns the
@@ -620,6 +649,12 @@ func NewFirecrackerAgentHandler(svc FirecrackerAgentHandler, opts ...connect.Han
 		connect.WithSchema(firecrackerAgentMethods.ByName("InvokeFunction")),
 		connect.WithHandlerOptions(opts...),
 	)
+	firecrackerAgentReportRootfsReferencesHandler := connect.NewUnaryHandler(
+		FirecrackerAgentReportRootfsReferencesProcedure,
+		svc.ReportRootfsReferences,
+		connect.WithSchema(firecrackerAgentMethods.ByName("ReportRootfsReferences")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/everstack.firecracker.v1.FirecrackerAgent/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case FirecrackerAgentCreateSandboxProcedure:
@@ -662,6 +697,8 @@ func NewFirecrackerAgentHandler(svc FirecrackerAgentHandler, opts ...connect.Han
 			firecrackerAgentUnexposePortHandler.ServeHTTP(w, r)
 		case FirecrackerAgentInvokeFunctionProcedure:
 			firecrackerAgentInvokeFunctionHandler.ServeHTTP(w, r)
+		case FirecrackerAgentReportRootfsReferencesProcedure:
+			firecrackerAgentReportRootfsReferencesHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -749,4 +786,8 @@ func (UnimplementedFirecrackerAgentHandler) UnexposePort(context.Context, *conne
 
 func (UnimplementedFirecrackerAgentHandler) InvokeFunction(context.Context, *connect.Request[v1.InvokeFunctionRequest]) (*connect.Response[v1.InvokeFunctionResult], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.firecracker.v1.FirecrackerAgent.InvokeFunction is not implemented"))
+}
+
+func (UnimplementedFirecrackerAgentHandler) ReportRootfsReferences(context.Context, *connect.Request[v1.ReportRootfsReferencesRequest]) (*connect.Response[v1.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.firecracker.v1.FirecrackerAgent.ReportRootfsReferences is not implemented"))
 }

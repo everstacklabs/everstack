@@ -50,7 +50,7 @@ function SpanGraphNode({ data }: NodeProps) {
       className={[
         'rounded border px-2.5 py-1.5 w-[190px] text-left transition-shadow',
         colors.bg,
-        d.isError ? 'border-rose-500/50' : d.looping ? 'border-amber-500/60' : colors.border,
+        d.isError ? 'border-danger-border' : d.looping ? 'border-warning-border' : colors.border,
         d.selected ? 'ring-2 ring-brand-secondary-500' : '',
       ].join(' ')}
     >
@@ -58,7 +58,7 @@ function SpanGraphNode({ data }: NodeProps) {
       <div className="flex items-center gap-1.5">
         <Iconify.Icon icon={iconName} className={`h-3 w-3 shrink-0 ${colors.text}`} />
         <span className={`text-[11px] font-medium truncate ${colors.text}`}>{d.title}</span>
-        {d.looping && <AlertTriangle className="h-3 w-3 text-amber-400 shrink-0 ml-auto" />}
+        {d.looping && <AlertTriangle className="h-3 w-3 text-warning shrink-0 ml-auto" />}
       </div>
       <div className="mt-0.5 flex items-center justify-between text-[9px] text-brand-main-50 light:text-black">
         <span className="truncate">{d.subtitle || ''}</span>
@@ -199,7 +199,7 @@ function TrajectorySignals({ spans }: { spans: Span[] }) {
     <div className="absolute top-2 right-2 z-10 flex items-center gap-3 rounded border border-brand-main-600 bg-brand-main-900/85 px-2.5 py-1 backdrop-blur-sm">
       {stats.map((s) => (
         <div key={s.label} className="flex items-baseline gap-1">
-          <span className={`text-[12px] ${s.warn ? 'text-amber-300' : 'text-brand-main-50 light:text-brand-main-50'}`}>
+          <span className={`text-[12px] ${s.warn ? 'text-warning' : 'text-brand-main-50 light:text-brand-main-50'}`}>
             {s.value}
           </span>
           <span className="text-[10px] uppercase tracking-wide text-brand-main-50 light:text-black">{s.label}</span>
@@ -234,7 +234,7 @@ export function AgentGraph({
   return (
     <div className="relative h-full w-full">
       {loopCount > 0 && (
-        <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 rounded border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-300">
+        <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 rounded border border-warning-border bg-warning-surface px-2.5 py-1 text-[11px] text-warning">
           <AlertTriangle className="h-3.5 w-3.5" />
           {loopCount} repeated tool call{loopCount === 1 ? '' : 's'}, possible loop
         </div>

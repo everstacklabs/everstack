@@ -64,10 +64,11 @@ func computeSandboxCost(
 	}
 
 	hours := float64(durationSeconds) / 3600.0
+	cpu, memoryMB, diskMB := cfg.BillableResources()
 	cost := sandboxUsageCostBreakdown{
-		CPUUSD:      cfg.CPULimit * hours * cpuRate,
-		MemoryUSD:   (float64(cfg.MemoryMB) / 1024.0) * hours * memRate,
-		DiskUSD:     tieredDiskCostUSD(cfg.DiskMB, hours, diskRate, pricing.IncludedDiskGiB, pricing.DiskTier2ThresholdGiB, pricing.DiskTier2Multiplier),
+		CPUUSD:      cpu * hours * cpuRate,
+		MemoryUSD:   (float64(memoryMB) / 1024.0) * hours * memRate,
+		DiskUSD:     tieredDiskCostUSD(diskMB, hours, diskRate, pricing.IncludedDiskGiB, pricing.DiskTier2ThresholdGiB, pricing.DiskTier2Multiplier),
 		PlatformUSD: hours * platformRate,
 	}
 	if tierMultiplier > 0 && tierMultiplier != 1.0 {
@@ -158,7 +159,25 @@ func (m *SandboxManager) EffectiveDiskRateUSD(ctx context.Context, tenantID stri
 // Returns 0 when tenantID is empty (defensive — no fallback to "the
 // first tenant in DB"; see tenant_isolation_bugs memory).
 func (m *SandboxManager) LiveAccruedCost(ctx context.Context, tenantID string) (costUSD float64, computeSeconds int64) {
-	return m.liveAccruedCostAt(ctx, tenantID, time.Now())
+	cost, seconds := m.liveAccruedCostAt(ctx, tenantID, time.Now())
+	return cost.TotalUSD, seconds
+}
+
+// LiveAccruedCostParts is LiveAccruedCost with its CPU and memory parts,
+// from one read: the same breakdown every closed usage row stores in
+// pricing.cost_breakdown. Billing counts the parts against the plan's
+// vCPU-hour and GiB-hour allowances.
+func (m *SandboxManager) LiveAccruedCostParts(ctx context.Context, tenantID string) (totalUSD, cpuUSD, memoryUSD float64, computeSeconds int64) {
+	cost, seconds := m.liveAccruedCostAt(ctx, tenantID, time.Now())
+	return cost.TotalUSD, cost.CPUUSD, cost.MemoryUSD, seconds
+}
+
+func (c *sandboxUsageCostBreakdown) add(o sandboxUsageCostBreakdown) {
+	c.CPUUSD += o.CPUUSD
+	c.MemoryUSD += o.MemoryUSD
+	c.DiskUSD += o.DiskUSD
+	c.PlatformUSD += o.PlatformUSD
+	c.TotalUSD += o.TotalUSD
 }
 
 // LiveAccruedCostAll returns all currently open compute windows on this
@@ -236,9 +255,9 @@ func (m *SandboxManager) LiveAccruedCostAll(ctx context.Context) (costUSD float6
 // liveAccruedCostAt is the deterministic implementation behind
 // LiveAccruedCost. Only an explicitly open billing window is metered; the
 // sandbox's immutable CreatedAt is never a billing fallback.
-func (m *SandboxManager) liveAccruedCostAt(ctx context.Context, tenantID string, now time.Time) (costUSD float64, computeSeconds int64) {
+func (m *SandboxManager) liveAccruedCostAt(ctx context.Context, tenantID string, now time.Time) (total sandboxUsageCostBreakdown, computeSeconds int64) {
 	if tenantID == "" || m == nil {
-		return 0, 0
+		return total, 0
 	}
 
 	pricing := m.resolvePricingFromRuntimeConfig(ctx, m.globalConfig.Pricing)
@@ -274,10 +293,10 @@ func (m *SandboxManager) liveAccruedCostAt(ctx context.Context, tenantID string,
 					periodEnd = window.BillingEndedAt.Time
 				}
 				cost, dur := computeSandboxCost(cfg, window.BillingStartedAt, periodEnd, pricing, tierMultiplier)
-				costUSD += cost.TotalUSD
+				total.add(cost)
 				computeSeconds += dur
 			}
-			return costUSD, computeSeconds
+			return total, computeSeconds
 		} else {
 			logger.WithFields("tenant_id", tenantID, "error", err.Error()).
 				Warn("sandbox_manager: open billing-window query failed; using routing cache")
@@ -296,10 +315,10 @@ func (m *SandboxManager) liveAccruedCostAt(ctx context.Context, tenantID string,
 			periodEnd = inst.BillingEndedAt
 		}
 		cost, dur := computeSandboxCost(inst.Config, inst.BillingStartedAt, periodEnd, pricing, tierMultiplier)
-		costUSD += cost.TotalUSD
+		total.add(cost)
 		computeSeconds += dur
 	}
-	return costUSD, computeSeconds
+	return total, computeSeconds
 }
 
 // hasAllocatedCompute is the process-local fallback for deciding whether an
@@ -496,6 +515,7 @@ func (m *SandboxManager) recordUsageSnapshot(
 		"cpu_limit":        cfg.CPULimit,
 		"memory_mb":        cfg.MemoryMB,
 		"disk_mb":          cfg.DiskMB,
+		"metered":          cfg.Metered,
 		"network_rx_bytes": networkRxBytes,
 		"network_tx_bytes": networkTxBytes,
 		"pricing":          pricingSnapshot,

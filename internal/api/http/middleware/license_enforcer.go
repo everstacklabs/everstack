@@ -100,12 +100,15 @@ type LicenseEnforcer struct {
 	m2mProvider        m2m.TokenProvider        // New M2M provider for authentication
 
 	// JWT-based enforcement
-	verifier            *licpkg.Verifier // Ed25519 JWT verifier (nil = fallback to old behavior)
-	pinned              bool             // verifier came from EVS_LICENSE_PUBLIC_KEY and cannot be replaced
-	cachedJWT           string           // Raw JWT string for persistence
-	cachedClaims        *licpkg.Claims   // Parsed claims from cachedJWT
-	refreshing          atomic.Bool      // CAS guard for single-flight lazy refresh
-	nearExpiryThreshold time.Duration    // Default 24h — triggers lazy refresh
+	verifier     *licpkg.Verifier // Ed25519 JWT verifier (nil = fallback to old behavior)
+	pinned       bool             // verifier came from EVS_LICENSE_PUBLIC_KEY and cannot be replaced
+	cachedJWT    string           // Raw JWT string for persistence
+	cachedClaims *licpkg.Claims   // Parsed claims from cachedJWT
+	refreshing   atomic.Bool      // CAS guard for single-flight lazy refresh
+	// lastStoredLicenseCheck is when the request path last looked in the
+	// database for a license (unix nanoseconds, 0 = never).
+	lastStoredLicenseCheck atomic.Int64
+	nearExpiryThreshold    time.Duration // Default 24h — triggers lazy refresh
 
 	// Offline license file (air-gapped installs). Verified exclusively
 	// against the compiled-in vendor keyring — never against a key shipped
@@ -165,38 +168,27 @@ func (l *LicenseEnforcer) getVerifier() *licpkg.Verifier {
 	return l.verifier
 }
 
-// ensureVerifierFromKey lazily initializes the verifier from a DB-supplied
-// public key only when no configured key is pinned.
+// ensureVerifierFromKey returns the pinned verifier, pinning it on first use.
+// publicKey (read from the gateway database or a callback) is never trusted:
+// whoever can write it could otherwise sign their own license.
 func (l *LicenseEnforcer) ensureVerifierFromKey(publicKey string) *licpkg.Verifier {
 	l.mu.RLock()
 	v, pinned := l.verifier, l.pinned
 	l.mu.RUnlock()
-
 	if pinned {
 		if publicKey != "" {
-			logger.Debug("license_enforcer: ignoring DB-stored license public key; verifier is pinned")
+			logger.Debug("license_enforcer: ignoring supplied license public key; verifier is pinned")
 		}
 		return v
 	}
-	if v != nil || publicKey == "" {
-		return v
-	}
-
-	nv, err := licpkg.NewVerifier(publicKey)
-	if err != nil {
-		logger.WithError(err).Warn("license_enforcer: failed to create verifier from stored public key")
+	pv := loadPinnedVerifier()
+	if pv == nil {
 		return nil
 	}
-
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if l.pinned {
-		return l.verifier
-	}
-	if l.verifier == nil {
-		l.verifier = nv
-		logger.Warn("license_enforcer: initialized JWT verifier from DB-stored public key (no EVS_LICENSE_PUBLIC_KEY pinned; license is not tamper-resistant)")
-	}
+	l.verifier = pv
+	l.pinned = true
 	return l.verifier
 }
 
@@ -210,23 +202,33 @@ var (
 	pinnedVerifier     *licpkg.Verifier
 )
 
-// loadPinnedVerifier returns the verifier built from EVS_LICENSE_PUBLIC_KEY,
-// or nil when the configured trust anchor is absent or invalid.
+// loadPinnedVerifier returns the verifier for the license trust anchor:
+// EVS_LICENSE_PUBLIC_KEY when set, else the embedded vendor key. It is never
+// nil for a valid build, so a DB-supplied key is never trusted. An invalid
+// override falls back to the vendor key rather than to the database.
 func loadPinnedVerifier() *licpkg.Verifier {
 	pinnedVerifierOnce.Do(func() {
-		key := strings.TrimSpace(os.Getenv("EVS_LICENSE_PUBLIC_KEY"))
-		if key == "" {
-			return
-		}
-		v, err := licpkg.NewVerifier(key)
-		if err != nil {
-			logger.WithError(err).Error("license_enforcer: EVS_LICENSE_PUBLIC_KEY is set but invalid; refusing to pin")
-			return
-		}
-		pinnedVerifier = v
-		logger.Info("license_enforcer: pinned license public key from EVS_LICENSE_PUBLIC_KEY")
+		pinnedVerifier = buildPinnedVerifier(os.Getenv("EVS_LICENSE_PUBLIC_KEY"))
 	})
 	return pinnedVerifier
+}
+
+func buildPinnedVerifier(override string) *licpkg.Verifier {
+	if key := strings.TrimSpace(override); key != "" {
+		v, err := licpkg.NewVerifier(key)
+		if err == nil {
+			logger.Info("license_enforcer: pinned license public key from EVS_LICENSE_PUBLIC_KEY")
+			return v
+		}
+		logger.WithError(err).Error("license_enforcer: EVS_LICENSE_PUBLIC_KEY is invalid; using the built-in vendor key")
+	}
+	v, err := licpkg.NewVerifier(vendorLicensePublicKey)
+	if err != nil {
+		// Unreachable for a valid build; TestVendorLicensePublicKeyParses pins it.
+		logger.WithError(err).Error("license_enforcer: built-in vendor license key is invalid")
+		return nil
+	}
+	return v
 }
 
 // SetDB sets the database connection for JWT persistence.
@@ -373,7 +375,12 @@ func (l *LicenseEnforcer) WithLicenseEnforcement(next http.Handler) http.Handler
 		// loading the persisted JWT. Deliberately NO synchronous remote
 		// refresh on the request path: a permanently-unlicensed CE instance
 		// must not pay a per-request refresh tax (editions-and-billing.md D9).
-		if st == nil && l.getVerifier() != nil {
+		//
+		// The same goes for this database read. An instance with no license
+		// stays in this branch for good, so unthrottled it was one Postgres
+		// query per request. Activation refreshes the cache itself
+		// (RefreshNow), so this is only a safety net and can wait its turn.
+		if st == nil && l.getVerifier() != nil && l.storedLicenseCheckDue(time.Now()) {
 			l.loadJWTFromDB()
 			st = l.getCached()
 		}
@@ -611,6 +618,24 @@ func (l *LicenseEnforcer) lazyRefresh() {
 	l.mu.Unlock()
 }
 
+// storedLicenseCheckInterval is how often an unlicensed instance looks in its
+// database for a license on the request path.
+const storedLicenseCheckInterval = 10 * time.Second
+
+// storedLicenseCheckDue reports whether the request path should look for a
+// persisted license now, and claims the attempt if so: of the requests that
+// arrive within one interval, exactly one does the read.
+func (l *LicenseEnforcer) storedLicenseCheckDue(now time.Time) bool {
+	last := l.lastStoredLicenseCheck.Load()
+	// A negative gap means the wall clock was set back since the last check.
+	// Treat that as due: waiting for the clock to catch up would pause the
+	// check for as long as the step was.
+	if gap := now.UnixNano() - last; last != 0 && gap >= 0 && gap < int64(storedLicenseCheckInterval) {
+		return false
+	}
+	return l.lastStoredLicenseCheck.CompareAndSwap(last, now.UnixNano())
+}
+
 // loadJWTFromDB reads signed_payload from system.instances, initializes the verifier
 // from the stored public key if needed, and verifies the JWT.
 func (l *LicenseEnforcer) loadJWTFromDB() {
@@ -771,6 +796,37 @@ func (l *LicenseEnforcer) refresh(ctx context.Context) error {
 	return nil
 }
 
+// isInstanceRevoked reports whether a refresh failed because the license
+// service revoked this instance (its license was released or moved to another
+// machine). Both the code and the message must match: authorization or M2M
+// failures also surface as PermissionDenied, and a misconfigured service must
+// never strip a paying customer's license.
+func isInstanceRevoked(err error) bool {
+	return connect.CodeOf(err) == connect.CodePermissionDenied &&
+		strings.Contains(strings.ToLower(err.Error()), "instance has been revoked")
+}
+
+// revokedLicenseState is what a revoked instance runs on: Community Edition,
+// exactly like a cancelled license. It is deliberately not the "revoked"
+// status, which blocks writes; cancelling or moving a license must never be
+// punished harder than never having paid.
+func revokedLicenseState(instanceID string) *LicenseState {
+	return &LicenseState{Active: false, Status: "inactive", Tier: "free", InstanceId: instanceID}
+}
+
+// forgetLicense drops the verified license JWT from memory and from the
+// database, so neither the cached claims nor a restart restore the revoked
+// entitlements.
+func (l *LicenseEnforcer) forgetLicense() {
+	l.mu.Lock()
+	l.cachedJWT = ""
+	l.cachedClaims = nil
+	l.mu.Unlock()
+	// Retry on every revocation, even after memory is cleared: a previous
+	// database write may have failed, leaving a token a restart could reload.
+	l.storeJWTToDB("")
+}
+
 // fetchFromService calls the License Service /refresh endpoint and returns the license state
 // and the JWT string (if present in the response). Returns (nil, "") on failure.
 func (l *LicenseEnforcer) fetchFromService(ctx context.Context) (*LicenseState, string) {
@@ -826,6 +882,12 @@ func (l *LicenseEnforcer) fetchFromService(ctx context.Context) (*LicenseState, 
 
 	refreshResp, err := licenseClient.RefreshInstance(ctx, refreshReq)
 	if err != nil {
+		if isInstanceRevoked(err) {
+			logger.WithFields("instance_id", creds.InstanceID).
+				Warn("license_enforcer.fetch: license service revoked this instance; running as Community Edition")
+			l.forgetLicense()
+			return revokedLicenseState(creds.InstanceID), ""
+		}
 		logger.WithError(err).Warn("license_enforcer.fetch: failed to refresh license from service")
 		return nil, ""
 	}

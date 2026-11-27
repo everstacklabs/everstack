@@ -106,11 +106,15 @@ func TestLiveAccruedCostUsesCurrentBillingWindow(t *testing.T) {
 		},
 	}
 
-	cost, seconds := m.liveAccruedCostAt(context.Background(), "tenant-a", now)
+	breakdown, seconds := m.liveAccruedCostAt(context.Background(), "tenant-a", now)
+	cost := breakdown.TotalUSD
 	if seconds != 5*60 {
 		t.Fatalf("compute seconds = %d, want 300 (sleep gap and closed states excluded)", seconds)
 	}
 	wantCost := 5.0 / 60.0
+	if math.Abs(breakdown.CPUUSD-wantCost) > 1e-9 || breakdown.MemoryUSD != 0 {
+		t.Fatalf("breakdown = %+v, want the whole cost on CPU", breakdown)
+	}
 	if math.Abs(cost-wantCost) > 1e-9 {
 		t.Fatalf("cost = %.9f, want %.9f", cost, wantCost)
 	}
@@ -141,7 +145,8 @@ func TestLiveAccruedCostPinsPendingCloseAtObservedEnd(t *testing.T) {
 		},
 	}
 
-	cost, seconds := m.liveAccruedCostAt(context.Background(), "tenant-a", now)
+	breakdown, seconds := m.liveAccruedCostAt(context.Background(), "tenant-a", now)
+	cost := breakdown.TotalUSD
 	if seconds != 5*60 {
 		t.Fatalf("compute seconds = %d, want 300 after pinned close", seconds)
 	}

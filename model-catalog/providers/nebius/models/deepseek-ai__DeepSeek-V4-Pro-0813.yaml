@@ -1,0 +1,40 @@
+# Catalogued 2026-11-24. Prices not checked against a Nebius page (sign-in required); in/out prices cross-checked for 9 models against OpenRouter's Nebius endpoints.
+# Source: https://models.dev (Nebius list prices; https://tokenfactory.nebius.com/organization/prices requires sign-in)
+name: "deepseek-ai/DeepSeek-V4-Pro-0813"
+display_name: "DeepSeek V4 Pro 0813 (Nebius)"
+family: "deepseek-pro"
+status: "stable"
+release_date: "2026-08-13"
+
+cost:
+  input_per_1k: 0.00132
+  output_per_1k: 0.00396
+  cache_read_per_1k: 0.00004
+
+limits:
+  max_tokens: 979000
+  max_completion_tokens: 979000
+
+capabilities:
+  - chat
+  - function_calling
+  - reasoning
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+notes: "DeepSeek V4 Pro snapshot with million-token context and support for thinking and non-thinking modes"
+
+structured_output: true
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 979000
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+added_in_version: "2.11.0"

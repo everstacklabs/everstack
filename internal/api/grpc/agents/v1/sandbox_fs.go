@@ -79,10 +79,13 @@ func (s *Server) fsRequestContext(w http.ResponseWriter, r *http.Request) (strin
 		writeJSONError(w, http.StatusBadRequest, "sandbox_id is required")
 		return "", false
 	}
-	if !s.requireSandboxOwnershipHTTP(w, r, sandboxID) {
+	inst, ok := s.ownedSandboxHTTP(w, r, sandboxID)
+	if !ok {
 		return "", false
 	}
-	return sandboxID, true
+	// The checked sandbox's own id, not the caller's string (which may be a
+	// name that another tenant's sandbox id matches).
+	return inst.ID, true
 }
 
 // fsExec runs an argv command in the guest and maps a non-zero exit to

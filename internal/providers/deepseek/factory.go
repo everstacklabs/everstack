@@ -7,6 +7,7 @@ import (
 
 	"github.com/everstacklabs/everstack/internal/domain/provider_api_keys"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
+	"github.com/everstacklabs/everstack/internal/providers/billing"
 	"github.com/everstacklabs/everstack/internal/providers/factory"
 	"github.com/everstacklabs/everstack/internal/providers/logging"
 	"github.com/everstacklabs/everstack/internal/providers/ratelimit"
@@ -65,7 +66,7 @@ func init() {
 			SupportedModels: normalizeModels(in.Models),
 		})
 
-		tracedProvider := tracing.NewMiddlewareWithKey(baseProvider, in.CatalogCache, selectedKeyID, selectedKeyName, selectedKeySource)
+		tracedProvider := tracing.NewMiddlewareWithKey(billing.Wrap(baseProvider, in.BillingConfig(selectedKeyID)), in.CatalogCache, selectedKeyID, selectedKeyName, selectedKeySource)
 
 		return logging.NewMiddleware(
 			tracedProvider,

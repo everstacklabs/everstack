@@ -103,18 +103,18 @@ type Repository struct {
 func NewRepository(db *sqlx.DB) *Repository { return &Repository{db: db} }
 
 // History returns the last N snapshots for a sandbox in ascending time order.
-func (r *Repository) History(ctx context.Context, sandboxID string, limit int) ([]Snapshot, error) {
+func (r *Repository) History(ctx context.Context, tenantID, sandboxID string, limit int) ([]Snapshot, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 120 // default: last hour at 30s intervals
 	}
 	const q = `
 		SELECT * FROM (
 			SELECT * FROM sandbox_metrics_history
-			WHERE sandbox_id = $1
-			ORDER BY collected_at DESC LIMIT $2
+			WHERE tenant_id = $1 AND sandbox_id = $2
+			ORDER BY collected_at DESC LIMIT $3
 		) t ORDER BY collected_at ASC`
 	var snaps []Snapshot
-	if err := r.db.SelectContext(ctx, &snaps, q, sandboxID, limit); err != nil {
+	if err := r.db.SelectContext(ctx, &snaps, q, tenantID, sandboxID, limit); err != nil {
 		return nil, err
 	}
 	if snaps == nil {
@@ -124,15 +124,15 @@ func (r *Repository) History(ctx context.Context, sandboxID string, limit int) (
 }
 
 // LatestBatch returns the most recent snapshot for each of the given sandbox IDs.
-func (r *Repository) LatestBatch(ctx context.Context, sandboxIDs []string) ([]Snapshot, error) {
+func (r *Repository) LatestBatch(ctx context.Context, tenantID string, sandboxIDs []string) ([]Snapshot, error) {
 	if len(sandboxIDs) == 0 {
 		return []Snapshot{}, nil
 	}
 	// Use a lateral join to get the latest row per sandbox efficiently.
 	query, args, err := sqlx.In(
 		`SELECT DISTINCT ON (sandbox_id) * FROM sandbox_metrics_history
-		 WHERE sandbox_id IN (?) ORDER BY sandbox_id, collected_at DESC`,
-		sandboxIDs,
+		 WHERE tenant_id = ? AND sandbox_id IN (?) ORDER BY sandbox_id, collected_at DESC`,
+		tenantID, sandboxIDs,
 	)
 	if err != nil {
 		return nil, err

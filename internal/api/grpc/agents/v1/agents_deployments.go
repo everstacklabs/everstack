@@ -9,10 +9,7 @@ import (
 	"connectrpc.com/connect"
 
 	deployment "github.com/everstacklabs/everstack/internal/agents/deployment"
-	"github.com/everstacklabs/everstack/internal/cqrs"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
-	"github.com/everstacklabs/everstack/internal/query"
-	agentsquery "github.com/everstacklabs/everstack/internal/query/handlers/agents"
 	agentspb "github.com/everstacklabs/everstack/pkg/grpc/everstack/agents/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -34,37 +31,19 @@ func (s *Server) DeployAgent(ctx context.Context, req *connect.Request[agentspb.
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("agent_id is required"))
 	}
 
-	// Load agent definition to snapshot its config
-	sys, err := cqrs.GetSystemFromContext(ctx)
-	if err != nil && s.ctx != nil {
-		sys, err = cqrs.GetSystemFromContext(s.ctx)
-	}
+	agent, err := s.requireOwnedAgent(ctx, agentID, tenantID)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("CQRS system not available"))
-	}
-
-	q := agentsquery.NewGetAgentByIDQuery(agentID, tenantID)
-	res, err := sys.QueryBus.Execute(ctx, q)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("agent not found: %w", err))
-	}
-	var data interface{} = res
-	if resp, ok := res.(*query.Response); ok {
-		data = resp.Data
-	}
-	agent, ok := data.(*agentsquery.AgentDefinitionReadModel)
-	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("unexpected agent data type"))
+		return nil, err
 	}
 
 	// Build config snapshot
 	snapshot := map[string]interface{}{
-		"model":                  agent.Model,
-		"system_prompt":          agent.SystemPrompt.String,
-		"tools":                  []string(agent.Tools),
-		"max_turns":              agent.MaxTurns,
+		"model":                   agent.Model,
+		"system_prompt":           agent.SystemPrompt.String,
+		"tools":                   []string(agent.Tools),
+		"max_turns":               agent.MaxTurns,
 		"max_tool_calls_per_turn": agent.MaxToolCallsPerTurn,
-		"mode":                   agent.Mode,
+		"mode":                    agent.Mode,
 	}
 	if len(agent.Config) > 0 {
 		var cfg map[string]interface{}
@@ -142,6 +121,11 @@ func (s *Server) ListDeployments(ctx context.Context, req *connect.Request[agent
 	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
 	if err != nil {
 		return nil, err
+	}
+	if req.Msg.GetAgentId() != "" {
+		if _, err := s.requireOwnedAgent(ctx, req.Msg.GetAgentId(), tenantID); err != nil {
+			return nil, err
+		}
 	}
 
 	deployments, total, err := s.deploymentStore.ListDeployments(ctx, req.Msg.GetAgentId(), tenantID, int(req.Msg.GetLimit()), int(req.Msg.GetOffset()))
@@ -240,6 +224,9 @@ func (s *Server) CreateDeploymentKey(ctx context.Context, req *connect.Request[a
 	if err != nil {
 		return nil, err
 	}
+	if err := s.requireOwnedDeployment(ctx, req.Msg.GetDeploymentId(), tenantID); err != nil {
+		return nil, err
+	}
 
 	// Generate the key
 	rawKey, keyHash, keyPrefix, ok := deployment.GenerateDeploymentKey(ctx)
@@ -275,7 +262,15 @@ func (s *Server) ListDeploymentKeys(ctx context.Context, req *connect.Request[ag
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("deployments not configured"))
 	}
 
-	keys, err := s.deploymentStore.ListKeys(ctx, req.Msg.GetDeploymentId())
+	tenantID, err := s.resolveTenantID(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	if err := s.requireOwnedDeployment(ctx, req.Msg.GetDeploymentId(), tenantID); err != nil {
+		return nil, err
+	}
+
+	keys, err := s.deploymentStore.ListKeys(ctx, req.Msg.GetDeploymentId(), tenantID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -295,7 +290,14 @@ func (s *Server) RevokeDeploymentKey(ctx context.Context, req *connect.Request[a
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("deployments not configured"))
 	}
 
-	if err := s.deploymentStore.RevokeKey(ctx, req.Msg.GetKeyId()); err != nil {
+	tenantID, err := s.resolveTenantID(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	if err := s.deploymentStore.RevokeKey(ctx, req.Msg.GetKeyId(), tenantID); err != nil {
+		if errors.Is(err, deployment.ErrKeyNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment key not found"))
+		}
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
@@ -309,7 +311,15 @@ func (s *Server) ListDeploymentInvocations(ctx context.Context, req *connect.Req
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("deployments not configured"))
 	}
 
-	invocations, total, err := s.deploymentStore.ListInvocations(ctx, req.Msg.GetDeploymentId(), int(req.Msg.GetLimit()), int(req.Msg.GetOffset()))
+	tenantID, err := s.resolveTenantID(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	if err := s.requireOwnedDeployment(ctx, req.Msg.GetDeploymentId(), tenantID); err != nil {
+		return nil, err
+	}
+
+	invocations, total, err := s.deploymentStore.ListInvocations(ctx, req.Msg.GetDeploymentId(), tenantID, int(req.Msg.GetLimit()), int(req.Msg.GetOffset()))
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -325,24 +335,37 @@ func (s *Server) ListDeploymentInvocations(ctx context.Context, req *connect.Req
 	}), nil
 }
 
+// requireOwnedDeployment answers NotFound unless the deployment belongs to
+// the caller's tenant, so another tenant's deployment ids are neither usable
+// nor confirmed to exist.
+func (s *Server) requireOwnedDeployment(ctx context.Context, deploymentID, tenantID string) error {
+	if deploymentID == "" {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("deployment_id is required"))
+	}
+	if _, err := s.deploymentStore.GetDeployment(ctx, deploymentID, tenantID); err != nil {
+		return connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
+	}
+	return nil
+}
+
 // ─── Proto Converters ─────────────────────────────────────────────────
 
 func deploymentToProto(d *deployment.Deployment) *agentspb.AgentDeployment {
 	pb := &agentspb.AgentDeployment{
-		Id:                    d.ID,
-		TenantId:              d.TenantID,
-		AgentId:               d.AgentID,
-		Name:                  d.Name,
-		Version:               int32(d.Version),
-		Status:                string(d.Status),
-		Description:           d.Description,
-		Changelog:             d.Changelog,
-		MaxConcurrentSessions: int32(d.MaxConcurrentSessions),
-		SessionTimeoutSeconds: int32(d.SessionTimeoutSeconds),
-		DeployedBy:               d.DeployedBy,
-		DisableSessionTracking:   !d.TrackSessions,
-		CreatedAt:                timestamppb.New(d.CreatedAt),
-		UpdatedAt:                timestamppb.New(d.UpdatedAt),
+		Id:                     d.ID,
+		TenantId:               d.TenantID,
+		AgentId:                d.AgentID,
+		Name:                   d.Name,
+		Version:                int32(d.Version),
+		Status:                 string(d.Status),
+		Description:            d.Description,
+		Changelog:              d.Changelog,
+		MaxConcurrentSessions:  int32(d.MaxConcurrentSessions),
+		SessionTimeoutSeconds:  int32(d.SessionTimeoutSeconds),
+		DeployedBy:             d.DeployedBy,
+		DisableSessionTracking: !d.TrackSessions,
+		CreatedAt:              timestamppb.New(d.CreatedAt),
+		UpdatedAt:              timestamppb.New(d.UpdatedAt),
 	}
 	if d.RateLimitRPM != nil {
 		pb.RateLimitRpm = int32(*d.RateLimitRPM)

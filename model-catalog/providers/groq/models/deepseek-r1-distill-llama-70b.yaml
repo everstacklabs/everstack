@@ -1,7 +1,7 @@
 name: "deepseek-r1-distill-llama-70b"
 display_name: "DeepSeek R1 Distill Llama 70B"
 family: "deepseek"
-status: "stable"
+status: "deprecated"
 
 cost:
   input_per_1k: 0.00075
@@ -60,3 +60,4 @@ parameters:
   - key: "seed"
     display_name: "Seed"
     type: "integer"
+notes: "Shut down by Groq on 2025-10-02. Replacement: llama-3.3-70b-versatile or openai/gpt-oss-120b."

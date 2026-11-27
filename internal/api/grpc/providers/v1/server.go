@@ -19,6 +19,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/database"
 	"github.com/everstacklabs/everstack/internal/domain/provider_api_keys"
 	"github.com/everstacklabs/everstack/internal/domain/provider_config"
+	"github.com/everstacklabs/everstack/internal/enterprise"
 	"github.com/everstacklabs/everstack/internal/events"
 	providerEvents "github.com/everstacklabs/everstack/internal/events/provider"
 	providerSubscriber "github.com/everstacklabs/everstack/internal/events/subscribers/provider"
@@ -29,6 +30,7 @@ import (
 	provider_config_svc "github.com/everstacklabs/everstack/internal/services/provider_config"
 	providerspb "github.com/everstacklabs/everstack/pkg/grpc/everstack/providers/v1"
 	"github.com/everstacklabs/everstack/pkg/grpc/everstack/providers/v1/providersconnect"
+	"github.com/everstacklabs/everstack/pkg/tenant"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jmoiron/sqlx"
 	"google.golang.org/grpc"
@@ -178,19 +180,50 @@ func (s *Server) RegisterGateway(ctx context.Context, mux *runtime.ServeMux, end
 }
 
 // API Key Management Methods
+//
+// Every key RPC is scoped to the caller's tenant. The handler and the
+// repository carry the ownership predicate, so a configuration or key owned
+// by another tenant or by the platform (organization_id NULL) answers
+// NotFound, exactly like an id that does not exist.
+
+// callerTenant returns the tenant the request is scoped to, or
+// PermissionDenied when the context carries none.
+func callerTenant(ctx context.Context) (string, error) {
+	tenantID := contextkeys.GetTenantID(ctx)
+	if tenantID == "" {
+		return "", connect.NewError(connect.CodePermissionDenied, errors.New("tenant context missing"))
+	}
+	return tenantID, nil
+}
+
+// keyRPCError maps a provider key handler error to a Connect error.
+func keyRPCError(err error) error {
+	if errors.Is(err, providerHandler.ErrNotFound) {
+		return connect.NewError(connect.CodeNotFound, err)
+	}
+	if strings.Contains(err.Error(), "already exists") {
+		return connect.NewError(connect.CodeAlreadyExists, err)
+	}
+	return connect.NewError(connect.CodeInternal, err)
+}
 
 // AddProviderAPIKey adds a new API key to a provider configuration
 func (s *Server) AddProviderAPIKey(ctx context.Context, req *connect.Request[providerspb.AddProviderAPIKeyRequest]) (*connect.Response[providerspb.AddProviderAPIKeyResponse], error) {
+	tenantID, err := callerTenant(ctx)
+	if err != nil {
+		return nil, err
+	}
 	msg := req.Msg
 
 	// Create command
 	cmd := providerCmd.AddProviderAPIKeyCommand{
+		TenantID:         tenantID,
 		ProviderConfigID: msg.ProviderConfigId,
 		KeyName:          msg.KeyName,
 		APIKey:           NormalizeAPIKey(msg.ApiKey),
 		Weight:           int(msg.Weight),
-		UserID:           "", // TODO: Extract from context
-		TraceID:          "", // TODO: Extract from context
+		UserID:           contextkeys.GetUserID(ctx),
+		TraceID:          "",
 		Timestamp:        time.Now(),
 	}
 
@@ -198,10 +231,7 @@ func (s *Server) AddProviderAPIKey(ctx context.Context, req *connect.Request[pro
 	newKey, err := s.providerHandler.HandleAddProviderAPIKey(ctx, cmd)
 	if err != nil {
 		logger.Errorf("providers_api: failed to add API key: %v", err)
-		if strings.Contains(err.Error(), "already exists") {
-			return nil, connect.NewError(connect.CodeAlreadyExists, err)
-		}
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, keyRPCError(err)
 	}
 
 	logger.Infof("providers_api: successfully added API key %s for provider %s", newKey.ID, msg.ProviderConfigId)
@@ -223,24 +253,26 @@ func (s *Server) AddProviderAPIKey(ctx context.Context, req *connect.Request[pro
 
 // UpdateAPIKeyWeight updates the weight of an API key for load balancing
 func (s *Server) UpdateAPIKeyWeight(ctx context.Context, req *connect.Request[providerspb.UpdateAPIKeyWeightRequest]) (*connect.Response[providerspb.UpdateAPIKeyWeightResponse], error) {
+	tenantID, err := callerTenant(ctx)
+	if err != nil {
+		return nil, err
+	}
 	msg := req.Msg
 
 	// Create command
 	cmd := providerCmd.UpdateAPIKeyWeightCommand{
+		TenantID:  tenantID,
 		KeyID:     msg.KeyId,
 		Weight:    int(msg.Weight),
-		UserID:    "", // TODO: Extract from context
-		TraceID:   "", // TODO: Extract from context
+		UserID:    contextkeys.GetUserID(ctx),
+		TraceID:   "",
 		Timestamp: time.Now(),
 	}
 
 	// Execute command via handler
 	updatedKey, err := s.providerHandler.HandleUpdateAPIKeyWeight(ctx, cmd)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return nil, connect.NewError(connect.CodeNotFound, err)
-		}
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, keyRPCError(err)
 	}
 
 	// Return updated key
@@ -260,24 +292,26 @@ func (s *Server) UpdateAPIKeyWeight(ctx context.Context, req *connect.Request[pr
 
 // ToggleAPIKey activates or deactivates an API key
 func (s *Server) ToggleAPIKey(ctx context.Context, req *connect.Request[providerspb.ToggleAPIKeyRequest]) (*connect.Response[providerspb.ToggleAPIKeyResponse], error) {
+	tenantID, err := callerTenant(ctx)
+	if err != nil {
+		return nil, err
+	}
 	msg := req.Msg
 
 	// Create command
 	cmd := providerCmd.ToggleAPIKeyCommand{
+		TenantID:  tenantID,
 		KeyID:     msg.KeyId,
 		IsActive:  msg.IsActive,
-		UserID:    "", // TODO: Extract from context
-		TraceID:   "", // TODO: Extract from context
+		UserID:    contextkeys.GetUserID(ctx),
+		TraceID:   "",
 		Timestamp: time.Now(),
 	}
 
 	// Execute command via handler
 	toggledKey, err := s.providerHandler.HandleToggleAPIKey(ctx, cmd)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return nil, connect.NewError(connect.CodeNotFound, err)
-		}
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, keyRPCError(err)
 	}
 
 	// Return updated key
@@ -297,23 +331,24 @@ func (s *Server) ToggleAPIKey(ctx context.Context, req *connect.Request[provider
 
 // DeleteProviderAPIKey deletes an API key
 func (s *Server) DeleteProviderAPIKey(ctx context.Context, req *connect.Request[providerspb.DeleteProviderAPIKeyRequest]) (*connect.Response[providerspb.DeleteProviderAPIKeyResponse], error) {
+	tenantID, err := callerTenant(ctx)
+	if err != nil {
+		return nil, err
+	}
 	msg := req.Msg
 
 	// Create command
 	cmd := providerCmd.DeleteProviderAPIKeyCommand{
+		TenantID:  tenantID,
 		KeyID:     msg.KeyId,
-		UserID:    "", // TODO: Extract from context
-		TraceID:   "", // TODO: Extract from context
+		UserID:    contextkeys.GetUserID(ctx),
+		TraceID:   "",
 		Timestamp: time.Now(),
 	}
 
 	// Execute command via handler
-	err := s.providerHandler.HandleDeleteProviderAPIKey(ctx, cmd)
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return nil, connect.NewError(connect.CodeNotFound, err)
-		}
-		return nil, connect.NewError(connect.CodeInternal, err)
+	if err := s.providerHandler.HandleDeleteProviderAPIKey(ctx, cmd); err != nil {
+		return nil, keyRPCError(err)
 	}
 
 	return connect.NewResponse(&providerspb.DeleteProviderAPIKeyResponse{
@@ -323,6 +358,10 @@ func (s *Server) DeleteProviderAPIKey(ctx context.Context, req *connect.Request[
 
 // ListProviderAPIKeys lists all API keys for a provider configuration
 func (s *Server) ListProviderAPIKeys(ctx context.Context, req *connect.Request[providerspb.ListProviderAPIKeysRequest]) (*connect.Response[providerspb.ListProviderAPIKeysResponse], error) {
+	tenantID, err := callerTenant(ctx)
+	if err != nil {
+		return nil, err
+	}
 	msg := req.Msg
 
 	// Validate request
@@ -330,13 +369,12 @@ func (s *Server) ListProviderAPIKeys(ctx context.Context, req *connect.Request[p
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("provider_config_id is required"))
 	}
 
-	// Create repository
-	repo := provider_api_keys.NewPostgresRepository(s.db)
-
-	// List keys
-	keys, err := repo.ListByProviderConfig(ctx, msg.ProviderConfigId)
+	keys, err := s.providerHandler.HandleListProviderAPIKeys(ctx, providerCmd.ListProviderAPIKeysQuery{
+		TenantID:         tenantID,
+		ProviderConfigID: msg.ProviderConfigId,
+	})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list API keys: %w", err))
+		return nil, keyRPCError(err)
 	}
 
 	// Convert to protobuf
@@ -395,8 +433,23 @@ func (s *Server) GetSyncStatus(ctx context.Context, req *connect.Request[provide
 	}), nil
 }
 
+// errManagedConfigFile is returned for the on-disk provider file RPCs on a
+// managed gateway. The file is process-wide and holds stored credentials;
+// on cloud it is shared by every tenant on the pod, so no tenant principal
+// may read or replace it. Per-tenant provider config goes through the
+// tenant-scoped provider RPCs instead (EVS-309 review).
+var errManagedConfigFile = connect.NewError(connect.CodePermissionDenied,
+	fmt.Errorf("the provider config file is not accessible on a managed gateway"))
+
+func managedConfigFileDenied(ctx context.Context) bool {
+	return enterprise.ManagedGateway() || tenant.ConfigFromContext(ctx) != nil
+}
+
 // GetConfigYAML gets the current YAML config content
 func (s *Server) GetConfigYAML(ctx context.Context, req *connect.Request[providerspb.GetConfigYAMLRequest]) (*connect.Response[providerspb.GetConfigYAMLResponse], error) {
+	if managedConfigFileDenied(ctx) {
+		return nil, errManagedConfigFile
+	}
 	// Read YAML file content
 	yamlContent, err := os.ReadFile(s.configPath)
 	if err != nil {
@@ -410,6 +463,9 @@ func (s *Server) GetConfigYAML(ctx context.Context, req *connect.Request[provide
 
 // SaveConfigYAML saves YAML config and syncs to database
 func (s *Server) SaveConfigYAML(ctx context.Context, req *connect.Request[providerspb.SaveConfigYAMLRequest]) (*connect.Response[providerspb.SaveConfigYAMLResponse], error) {
+	if managedConfigFileDenied(ctx) {
+		return nil, errManagedConfigFile
+	}
 	// Write YAML content to file
 	if err := os.WriteFile(s.configPath, []byte(req.Msg.YamlContent), 0644); err != nil {
 		return nil, mferrors.MFToConnectError(fmt.Errorf("failed to write YAML file: %w", err))
@@ -446,8 +502,13 @@ func (s *Server) SaveConfigYAML(ctx context.Context, req *connect.Request[provid
 	}), nil
 }
 
-// ReloadConfig syncs YAML to DB and triggers gateway reload
+// ReloadConfig syncs YAML to DB and triggers gateway reload. It upserts the
+// shared file into platform-owned rows and reloads every tenant's providers,
+// so it is an operator tool guarded like Get/SaveConfigYAML.
 func (s *Server) ReloadConfig(ctx context.Context, req *connect.Request[providerspb.ReloadConfigRequest]) (*connect.Response[providerspb.ReloadConfigResponse], error) {
+	if managedConfigFileDenied(ctx) {
+		return nil, errManagedConfigFile
+	}
 	// Lock mutex to prevent concurrent reloads
 	s.reloadMu.Lock()
 	defer s.reloadMu.Unlock()

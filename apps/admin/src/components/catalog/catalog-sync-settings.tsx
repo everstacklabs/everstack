@@ -72,7 +72,7 @@ export function CatalogSyncSettings() {
                                 </div>
                                 <Badge
                                     variant={status?.syncEnabled ? "default" : "outline"}
-                                    className={status?.syncEnabled ? "bg-green-600" : ""}
+                                    className={status?.syncEnabled ? "bg-success-solid" : ""}
                                 >
                                     {status?.syncEnabled ? "Enabled" : "Disabled"}
                                 </Badge>

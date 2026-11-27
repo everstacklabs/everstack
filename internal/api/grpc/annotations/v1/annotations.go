@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/everstacklabs/everstack/internal/api/grpc/planlimit"
 	annotationscmd "github.com/everstacklabs/everstack/internal/commands/handlers/annotations"
 	"github.com/everstacklabs/everstack/internal/cqrs"
 	"github.com/everstacklabs/everstack/internal/enterprise"
@@ -61,12 +62,17 @@ func (s *Server) CreateQueue(ctx context.Context, req *connect.Request[annotatio
 	tenantID := getTenantID(ctx, req.Msg.GetTenantId())
 	userID := contextkeys.GetUserID(ctx)
 
-	if err := enterprise.CheckResourceLimit(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
-		enterprise.UsageTypeAnnotationQueues,
-		`SELECT COUNT(*) FROM annotation_queues WHERE tenant_id = $1 AND deleted_at IS NULL`,
-		[]interface{}{tenantID}, 1, "annotation queue"); err != nil {
-		return nil, connect.NewError(connect.CodeResourceExhausted, err)
+	// annotation_queues has no deleted_at column (queues are hard deleted);
+	// counting on it failed every create once the cap applied.
+	// Serialized per organization: two creators racing for the last slot
+	// take the same advisory lock, and the slot is held until the read
+	// model shows this create.
+	limitSlot, limitErr := enterprise.ReserveLimitSlot(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
+		enterprise.AnnotationQueuesLimit(tenantID))
+	if limitErr != nil {
+		return nil, planlimit.ConnectError(limitErr, "annotation queue")
 	}
+	defer limitSlot.Release()
 
 	cmd := annotationscmd.NewCreateQueueCommand(
 		tenantID,
@@ -84,6 +90,7 @@ func (s *Server) CreateQueue(ctx context.Context, req *connect.Request[annotatio
 	if err := sys.CommandBus.Dispatch(ctx, cmd); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	limitSlot.Confirm(ctx)
 
 	resp := &annotationspb.CreateQueueResponse{
 		Queue: &annotationspb.AnnotationQueue{

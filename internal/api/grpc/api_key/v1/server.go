@@ -22,6 +22,23 @@ var _ interface {
 
 type Server struct {
 	ctx context.Context // Context containing CQRS system
+	// registrar reports each created key to billing so a spend limit can be
+	// set on it before it has made a request. Set only on a managed gateway
+	// (SetKeyRegistrar); nil on self-hosted, where nothing is registered.
+	registrar KeyRegistrar
+}
+
+// KeyRegistrar tells billing which tenant a newly created gateway API key
+// belongs to (billing RegisterApiKey over the gateway's M2M client), and
+// that a deleted key is gone (billing UnregisterApiKey, same client).
+type KeyRegistrar interface {
+	RegisterAPIKey(ctx context.Context, tenantID, apiKeyID string) error
+	UnregisterAPIKey(ctx context.Context, tenantID, apiKeyID string) error
+}
+
+// SetKeyRegistrar wires key registration with billing. Call before serving.
+func (s *Server) SetKeyRegistrar(r KeyRegistrar) {
+	s.registrar = r
 }
 
 type GrpcServer struct {

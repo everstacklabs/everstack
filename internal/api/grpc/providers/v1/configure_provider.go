@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	providerHandler "github.com/everstacklabs/everstack/internal/commands/handlers/provider"
 	providerCmd "github.com/everstacklabs/everstack/internal/commands/provider"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	providerspb "github.com/everstacklabs/everstack/pkg/grpc/everstack/providers/v1"
@@ -44,6 +45,13 @@ func (s *Server) ConfigureProvider(ctx context.Context, req *connect.Request[pro
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
+	var defaultBaseURL string
+	if s.catalog != nil {
+		if entry, ok := s.catalog.GetProvider(req.Msg.ProviderName); ok && entry != nil {
+			defaultBaseURL = entry.BaseURL
+		}
+	}
+
 	cmd := providerCmd.ConfigureProviderCommand{
 		TenantID:       tenantID,
 		ProviderName:   req.Msg.ProviderName,
@@ -53,12 +61,20 @@ func (s *Server) ConfigureProvider(ctx context.Context, req *connect.Request[pro
 		EnabledModels:  req.Msg.EnabledModels,
 		CustomBaseURL:  customBaseURL,
 		CustomSettings: req.Msg.CustomSettings,
+		DefaultBaseURL: defaultBaseURL,
 		UserID:         contextkeys.GetUserID(ctx),
 		TraceID:        "",
 		Timestamp:      time.Now(),
 	}
 
 	if _, err := s.providerHandler.HandleConfigureProvider(ctx, cmd); err != nil {
+		// A stored credential must never follow a base URL change it was
+		// not re-entered for: the next request would send it to the new host.
+		if errors.Is(err, providerHandler.ErrBaseURLChangeRequiresKey) ||
+			errors.Is(err, providerHandler.ErrBaseURLChangeWithStoredKeys) ||
+			errors.Is(err, providerHandler.ErrProviderNameCollision) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 

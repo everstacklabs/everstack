@@ -3,6 +3,7 @@ package billingcredit
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -17,10 +18,10 @@ func TestStarterCreditMicrosUsesCanonicalPlans(t *testing.T) {
 	}
 }
 
-// TestSignupGrantContractStable guards the shared grant identity: the sandbox
-// gate (Resolve) and the usage-debit backstop both grant the one-time $5 with
-// this exact key + resource type, so a free org that hits both paths is granted
-// once, not twice. A drift here would double-grant.
+// TestSignupGrantContractStable guards the shared grant identity: the compute
+// gate (Resolve), the usage-debit loop, and the startup sweep all grant the
+// one-time $5 with this exact key + resource type, so an org that hits every
+// path is granted once, not twice. A drift here would double-grant.
 func TestSignupGrantContractStable(t *testing.T) {
 	if got, want := SignupGrantIdempotencyKey(testOrganizationID), "signup-grant:"+testOrganizationID; got != want {
 		t.Fatalf("SignupGrantIdempotencyKey = %q, want %q", got, want)
@@ -30,60 +31,29 @@ func TestSignupGrantContractStable(t *testing.T) {
 	}
 }
 
-func TestResolveAllowsActiveBilling(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("create sqlmock: %v", err)
-	}
-	defer db.Close()
-
-	mock.ExpectQuery(`SELECT status, stripe_customer_id, stripe_subscription_id`).
-		WithArgs(testOrganizationID).
-		WillReturnRows(sqlmock.NewRows([]string{
-			"status", "stripe_customer_id", "stripe_subscription_id",
-		}).AddRow("active", "cus_123", "sub_123"))
-
-	access, err := Resolve(context.Background(), sqlx.NewDb(db, "sqlmock"), testOrganizationID, "free")
-	if err != nil {
-		t.Fatalf("Resolve() error = %v", err)
-	}
-	if !access.Allowed || !access.BillingConfigured || !access.BillingActive {
-		t.Fatalf("Resolve() = %#v", access)
-	}
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Fatal(err)
-	}
+// mockWalletSequence mocks the wallet path of Resolve after the informational
+// subscription read: the advisory-locked idempotent grant, then the balance
+// recompute and the holds read. There is deliberately NO debit statement in
+// this sequence: sqlmock is strictly ordered, so a debit sneaking back into
+// Resolve fails these tests. Debits belong to the billing service's usage-debit
+// loop alone.
+func mockWalletSequence(mock sqlmock.Sqlmock, grant, balance, held int64) {
+	mockWalletTx(mock, grant, balance, held)
+	expectExempt(mock, false)
 }
 
-// mockFreeWalletSequence mocks the free-tier wallet path of Resolve: no
-// subscription, then the advisory-locked grant + sandbox-debit + balance
-// recompute + holds read. sandboxCost is the cumulative sandbox cost; billed is
-// the prior watermark (-1 = no watermark row, seeded from seedBaseline);
-// grant/balance/held are the recomputed figures.
-func mockFreeWalletSequence(mock sqlmock.Sqlmock, sandboxCost, billed, seedBaseline, grant, balance, held int64) {
-	mock.ExpectQuery(`SELECT status, stripe_customer_id, stripe_subscription_id`).
-		WithArgs(testOrganizationID).WillReturnError(sql.ErrNoRows)
+// mockWalletTx is the wallet transaction alone, without the exemption read.
+func mockWalletTx(mock sqlmock.Sqlmock, grant, balance, held int64) {
 	mock.ExpectBegin()
 	mock.ExpectExec(`pg_advisory_xact_lock`).WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectExec(`INSERT INTO billing[.]credit_ledger`).WillReturnResult(sqlmock.NewResult(0, 1)) // grant
-	mock.ExpectQuery(`FROM billing[.]usage_meter_watermarks`).
-		WillReturnRows(sqlmock.NewRows([]string{"c"}).AddRow(sandboxCost))
-	if billed < 0 {
-		// no watermark row -> seed from the enrollment baseline, then persist it
-		mock.ExpectQuery(`FROM billing[.]usage_debit_watermark`).WillReturnError(sql.ErrNoRows)
-		mock.ExpectQuery(`baseline_cost_micros`).
-			WillReturnRows(sqlmock.NewRows([]string{"b"}).AddRow(seedBaseline))
-		mock.ExpectExec(`INSERT INTO billing[.]usage_debit_watermark`).WillReturnResult(sqlmock.NewResult(0, 1))
-		billed = seedBaseline
-	} else {
-		mock.ExpectQuery(`FROM billing[.]usage_debit_watermark`).
-			WillReturnRows(sqlmock.NewRows([]string{"b"}).AddRow(billed))
-	}
-	if sandboxCost-billed > 0 {
-		mock.ExpectExec(`INSERT INTO billing[.]credit_ledger`).WillReturnResult(sqlmock.NewResult(0, 1))         // debit
-		mock.ExpectExec(`INSERT INTO billing[.]usage_debit_watermark`).WillReturnResult(sqlmock.NewResult(0, 1)) // watermark advance
-	}
-	mock.ExpectQuery(`FILTER \(WHERE entry_type = 'grant'\)`).
+	mock.ExpectQuery(`'expiry'`).
+		WillReturnRows(sqlmock.NewRows([]string{"amount_micros"})) // nothing due
+	mock.ExpectExec(`SAVEPOINT signup_claims`).WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectQuery(`WITH owner AS`).
+		WithArgs(testOrganizationID, SignupGrantResourceType).
+		WillReturnRows(sqlmock.NewRows([]string{"user_id", "email_key"})) // already granted: no candidate
+	mock.ExpectExec(`RELEASE SAVEPOINT signup_claims`).WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectQuery(`FILTER \(WHERE entry_type = 'grant' AND resource_type = [$]2\)`).
 		WillReturnRows(sqlmock.NewRows([]string{"g"}).AddRow(grant))
 	mock.ExpectQuery(`SUM\(amount_micros\), 0\)::BIGINT\s+FROM billing[.]credit_ledger`).
 		WillReturnRows(sqlmock.NewRows([]string{"b"}).AddRow(balance))
@@ -93,17 +63,100 @@ func mockFreeWalletSequence(mock sqlmock.Sqlmock, sandboxCost, billed, seedBasel
 	mock.ExpectCommit()
 }
 
-func TestResolveGrantsFungibleSignupCredit(t *testing.T) {
+// expectExempt mocks the internal-organization read that follows the wallet.
+func expectExempt(mock sqlmock.Sqlmock, exempt bool) {
+	mock.ExpectQuery(`FROM everstack[.]organizations`).
+		WithArgs(testOrganizationID).
+		WillReturnRows(sqlmock.NewRows([]string{"exempt"}).AddRow(exempt))
+}
+
+func expectNoSubscription(mock sqlmock.Sqlmock) {
+	mock.ExpectQuery(`SELECT status, stripe_customer_id, stripe_subscription_id`).
+		WithArgs(testOrganizationID).WillReturnError(sql.ErrNoRows)
+}
+
+func expectSubscription(mock sqlmock.Sqlmock, status string) {
+	mock.ExpectQuery(`SELECT status, stripe_customer_id, stripe_subscription_id`).
+		WithArgs(testOrganizationID).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"status", "stripe_customer_id", "stripe_subscription_id",
+		}).AddRow(status, "cus_123", "sub_123"))
+}
+
+func newMock(t *testing.T) (*sqlx.DB, sqlmock.Sqlmock) {
+	t.Helper()
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("create sqlmock: %v", err)
 	}
-	defer db.Close()
+	t.Cleanup(func() { _ = db.Close() })
+	return sqlx.NewDb(db, "sqlmock"), mock
+}
 
-	// No sandbox cost yet: grant $5, balance $5, nothing held -> allowed.
-	mockFreeWalletSequence(mock, 0, -1, 0, 5_000_000, 5_000_000, 0)
+// TestResolveSubscribedOrgIsWalletGated is the S0 contract: an active
+// subscription no longer bypasses the wallet. The org is granted its signup
+// credit like everyone else and is allowed only while the balance is positive.
+func TestResolveSubscribedOrgIsWalletGated(t *testing.T) {
+	db, mock := newMock(t)
+	expectSubscription(mock, "active")
+	mockWalletSequence(mock, 5_000_000, 5_000_000, 0)
 
-	access, err := Resolve(context.Background(), sqlx.NewDb(db, "sqlmock"), testOrganizationID, "free")
+	access, err := Resolve(context.Background(), db, testOrganizationID, "free")
+	if err != nil {
+		t.Fatalf("Resolve() error = %v", err)
+	}
+	if !access.Allowed || !access.BillingConfigured || !access.BillingActive || access.Credit.RemainingMicros != 5_000_000 {
+		t.Fatalf("Resolve() = %#v", access)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestResolveSubscribedOrgBlockedOnEmptyWallet: no free compute for subscribed
+// orgs. Once the wallet is spent, an active Stripe subscription does not admit.
+func TestResolveSubscribedOrgBlockedOnEmptyWallet(t *testing.T) {
+	db, mock := newMock(t)
+	expectSubscription(mock, "active")
+	mockWalletSequence(mock, 5_000_000, 0, 0)
+
+	access, err := Resolve(context.Background(), db, testOrganizationID, "free")
+	if err != nil {
+		t.Fatalf("Resolve() error = %v", err)
+	}
+	if access.Allowed || !access.BillingActive || access.Credit.RemainingMicros != 0 || access.Credit.UsedMicros != 5_000_000 {
+		t.Fatalf("Resolve() = %#v", access)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestResolveCanceledSubscriptionStillSpendsWallet: a lapsed subscription is
+// irrelevant to admission. The wallet decides.
+func TestResolveCanceledSubscriptionStillSpendsWallet(t *testing.T) {
+	db, mock := newMock(t)
+	expectSubscription(mock, "canceled")
+	mockWalletSequence(mock, 5_000_000, 4_000_000, 0)
+
+	access, err := Resolve(context.Background(), db, testOrganizationID, "basic")
+	if err != nil {
+		t.Fatalf("Resolve() error = %v", err)
+	}
+	if !access.Allowed || !access.BillingConfigured || access.BillingActive || access.Credit.RemainingMicros != 4_000_000 {
+		t.Fatalf("Resolve() = %#v", access)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestResolveGrantsFungibleSignupCredit(t *testing.T) {
+	db, mock := newMock(t)
+	expectNoSubscription(mock)
+	mockWalletSequence(mock, 5_000_000, 5_000_000, 0)
+
+	access, err := Resolve(context.Background(), db, testOrganizationID, "free")
 	if err != nil {
 		t.Fatalf("Resolve() error = %v", err)
 	}
@@ -116,16 +169,12 @@ func TestResolveGrantsFungibleSignupCredit(t *testing.T) {
 }
 
 func TestResolveBlocksExhaustedWallet(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("create sqlmock: %v", err)
-	}
-	defer db.Close()
+	db, mock := newMock(t)
+	expectNoSubscription(mock)
+	// $5 of usage debited by the billing loop consumed the whole $5 grant.
+	mockWalletSequence(mock, 5_000_000, 0, 0)
 
-	// $5 of sandbox cost consumes the whole $5 grant: balance $0 -> blocked.
-	mockFreeWalletSequence(mock, 5_000_000, 0, 0, 5_000_000, 0, 0)
-
-	access, err := Resolve(context.Background(), sqlx.NewDb(db, "sqlmock"), testOrganizationID, "free")
+	access, err := Resolve(context.Background(), db, testOrganizationID, "free")
 	if err != nil {
 		t.Fatalf("Resolve() error = %v", err)
 	}
@@ -137,25 +186,81 @@ func TestResolveBlocksExhaustedWallet(t *testing.T) {
 	}
 }
 
-// TestResolvePreservesEnrollmentBaseline guards the migration path: an org with
-// $3 of sandbox cost accrued before the credit existed (enrollment baseline $2,
-// current cumulative $5) must be charged only the $3 past its baseline, leaving
-// $2 spendable — never the full $5 (which would wrongly block it).
-func TestResolvePreservesEnrollmentBaseline(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("create sqlmock: %v", err)
-	}
-	defer db.Close()
+func TestResolveSubtractsHeldCredit(t *testing.T) {
+	db, mock := newMock(t)
+	expectNoSubscription(mock)
+	mockWalletSequence(mock, 5_000_000, 1_000_000, 1_000_000)
 
-	// cumulative $5, no watermark row, enrollment baseline $2 -> debit $3 -> balance $2.
-	mockFreeWalletSequence(mock, 5_000_000, -1, 2_000_000, 5_000_000, 2_000_000, 0)
-
-	access, err := Resolve(context.Background(), sqlx.NewDb(db, "sqlmock"), testOrganizationID, "free")
+	access, err := Resolve(context.Background(), db, testOrganizationID, "free")
 	if err != nil {
 		t.Fatalf("Resolve() error = %v", err)
 	}
-	if !access.Allowed || access.Credit.RemainingMicros != 2_000_000 {
+	if access.Allowed || access.Credit.RemainingMicros != 0 {
+		t.Fatalf("Resolve() = %#v", access)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestResolveEnterpriseBypassesWallet(t *testing.T) {
+	db, mock := newMock(t)
+	access, err := Resolve(context.Background(), db, testOrganizationID, "enterprise")
+	if err != nil {
+		t.Fatalf("Resolve() error = %v", err)
+	}
+	if !access.Allowed {
+		t.Fatalf("Resolve() = %#v", access)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A failed internal-organization read falls back to the wallet decision: it
+// neither admits a $0 organization nor refuses a funded one.
+func TestResolveExemptLookupFailureFallsBackToWallet(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		balance int64
+		allowed bool
+	}{
+		{"empty wallet stays refused", 0, false},
+		{"funded wallet stays admitted", 2_000_000, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			db, mock := newMock(t)
+			expectNoSubscription(mock)
+			mockWalletTx(mock, 0, tc.balance, 0)
+			mock.ExpectQuery(`FROM everstack[.]organizations`).WillReturnError(errors.New("connection reset"))
+
+			access, err := Resolve(context.Background(), db, testOrganizationID, "free")
+			if err != nil {
+				t.Fatalf("Resolve() error = %v", err)
+			}
+			if access.Allowed != tc.allowed || access.Exempt {
+				t.Fatalf("Resolve() = %#v, want allowed=%t and not exempt", access, tc.allowed)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+// An internal organization is admitted on an empty wallet through the same
+// sequence: the wallet is still read (and its signup grant still ensured).
+func TestResolveExemptOrgAdmittedOnEmptyWallet(t *testing.T) {
+	db, mock := newMock(t)
+	expectNoSubscription(mock)
+	mockWalletTx(mock, 0, 0, 0)
+	expectExempt(mock, true)
+
+	access, err := Resolve(context.Background(), db, testOrganizationID, "free")
+	if err != nil {
+		t.Fatalf("Resolve() error = %v", err)
+	}
+	if !access.Allowed || !access.Exempt || access.Credit.RemainingMicros != 0 {
 		t.Fatalf("Resolve() = %#v", access)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {

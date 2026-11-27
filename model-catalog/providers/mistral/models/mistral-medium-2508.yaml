@@ -1,7 +1,7 @@
 name: "mistral-medium-2508"
 display_name: "Mistral Medium 3.1"
 family: "mistral-medium"
-status: "stable"
+status: "deprecated"
 release_date: "2025-08-12"
 
 cost:
@@ -22,7 +22,7 @@ modalities:
   output: ["text"]
 
 knowledge_cutoff: "2025-05"
-notes: "Mistral model for multilingual chat, reasoning, and tool-assisted workflows"
+notes: "Deprecated by Mistral; retirement date 2026-08-31 has passed. Mistral lists Mistral Medium 3.5 as the replacement, itself deprecated; use mistral-large-4."
 parameters:
   - key: "max_output_tokens"
     display_name: "Max output tokens"

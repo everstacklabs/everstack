@@ -50,7 +50,7 @@ export function LogsTab() {
                 {isStreaming ? (
                     <button
                         onClick={stopStreaming}
-                        className="flex items-center gap-1 text-xs bg-red-500/20 text-red-400 light:text-red-600 border border-red-500/30 rounded px-2 py-1 hover:bg-red-500/30"
+                        className="flex items-center gap-1 text-xs bg-danger-surface-strong text-danger border border-danger-border rounded px-2 py-1 hover:bg-danger-solid/25"
                     >
                         <Iconify.Icon icon="heroicons:stop-solid" className="size-3" />
                         Stop
@@ -59,7 +59,7 @@ export function LogsTab() {
                     <button
                         onClick={startStreaming}
                         disabled={!activeSessionId}
-                        className="flex items-center gap-1 text-xs bg-green-500/20 text-green-400 light:text-green-600 border border-green-500/30 rounded px-2 py-1 hover:bg-green-500/30 disabled:opacity-50"
+                        className="flex items-center gap-1 text-xs bg-success-surface-strong text-success border border-success-border rounded px-2 py-1 hover:bg-success-solid/25 disabled:opacity-50"
                     >
                         <Iconify.Icon icon="heroicons:play-solid" className="size-3" />
                         Stream

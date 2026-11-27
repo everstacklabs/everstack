@@ -438,6 +438,30 @@ type SamplingScheduler struct {
 	leaderKey    string
 	stopOnce     sync.Once
 	stop         chan struct{}
+	tenantGate   tenantGate
+}
+
+// SetTenantActiveFn installs the check that skips paused tenants. A paused
+// tenant's due rule is not executed; its last_run_at is bumped so it drops to
+// the back of the LIMIT-bounded due queue instead of starving other tenants.
+// last_processed_trace_at is left alone, so traces are picked up on resume.
+// nil treats every tenant as active. Safe for concurrent use.
+func (s *SamplingScheduler) SetTenantActiveFn(fn func(ctx context.Context, tenantID string) bool) {
+	s.tenantGate.set(fn)
+}
+
+// skipPausedSamplingRule bumps last_run_at for a rule whose tenant is paused.
+func (s *SamplingScheduler) skipPausedSamplingRule(ctx context.Context, tenantID, ruleID string) {
+	logger.WithFields("tenant_id", tenantID, "rule_id", ruleID).
+		Info("sampling scheduler: tenant paused, skipping rule")
+	if _, err := s.runner.db.ExecContext(ctx, `
+		UPDATE sampling_eval_rules
+		SET last_run_at = NOW()
+		WHERE id = $1 AND tenant_id = $2
+	`, ruleID, tenantID); err != nil {
+		logger.WithFields("tenant_id", tenantID, "rule_id", ruleID).WithError(err).
+			Warn("sampling scheduler: bump paused rule")
+	}
 }
 
 // StartSamplingScheduler boots the polling loop in a goroutine.
@@ -529,6 +553,10 @@ func (s *SamplingScheduler) tick(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		default:
+		}
+		if !s.tenantGate.active(ctx, r.TenantID) {
+			s.skipPausedSamplingRule(ctx, r.TenantID, r.ID)
+			continue
 		}
 		summary, err := s.runner.ExecuteSamplingRule(ctx, r.TenantID, r.ID)
 		if err != nil {

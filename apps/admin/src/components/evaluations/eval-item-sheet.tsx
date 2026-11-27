@@ -10,13 +10,13 @@ import {
 const { Sheet, SheetHeader, SheetBody, SheetContent, SheetTitle, Badge } = ui
 
 const statusMap: Record<string, { className: string; label: string }> = {
-  pending: { className: 'bg-yellow-500/20 text-yellow-400', label: 'Pending' },
-  running: { className: 'bg-blue-500/20 text-blue-400', label: 'Running' },
+  pending: { className: 'bg-warning-surface-strong text-warning', label: 'Pending' },
+  running: { className: 'bg-info-surface-strong text-info', label: 'Running' },
   completed: {
-    className: 'bg-emerald-500/20 text-emerald-400',
+    className: 'bg-success-surface-strong text-success',
     label: 'Completed',
   },
-  failed: { className: 'bg-red-500/20 text-red-400', label: 'Failed' },
+  failed: { className: 'bg-danger-surface-strong text-danger', label: 'Failed' },
 }
 
 function isNonEmpty(val: unknown): val is Record<string, unknown> {
@@ -140,8 +140,8 @@ export function EvalItemSheet({
             {/* Error */}
             {item.error && (
               <div className="space-y-2 border-b border-dotted border-white/10 pb-4 light:border-black/10">
-                <h3 className="text-sm font-semibold text-red-400">Error</h3>
-                <pre className="text-xs text-red-300 bg-red-500/10 p-3 rounded border border-red-500/20 whitespace-pre-wrap max-h-[150px] overflow-y-auto scrollbar-macos">
+                <h3 className="text-sm font-semibold text-danger">Error</h3>
+                <pre className="text-xs text-danger bg-danger-surface p-3 rounded border border-danger-border whitespace-pre-wrap max-h-[150px] overflow-y-auto scrollbar-macos">
                   {item.error}
                 </pre>
               </div>
@@ -178,9 +178,9 @@ export function EvalItemSheet({
                             className={cn(
                               'text-lg font-bold mt-1',
                               value === true
-                                ? 'text-emerald-400'
+                                ? 'text-success'
                                 : value === false
-                                  ? 'text-red-400'
+                                  ? 'text-danger'
                                   : 'text-white light:text-brand-main-50',
                             )}
                           >
@@ -198,7 +198,7 @@ export function EvalItemSheet({
                             </p>
                           )}
                           {error && (
-                            <p className="text-[11px] text-red-400/70 mt-1.5 leading-relaxed">
+                            <p className="text-[11px] text-danger/70 mt-1.5 leading-relaxed">
                               {error}
                             </p>
                           )}

@@ -1,0 +1,13 @@
+{
+  auto_https off
+}
+https://127.0.0.1.sslip.io {
+  tls /etc/certs/cert.pem /etc/certs/key.pem
+  encode gzip
+  reverse_proxy localhost:8089 {
+    transport http {
+      versions 2
+      tls_insecure_skip_verify
+    }
+  }
+}

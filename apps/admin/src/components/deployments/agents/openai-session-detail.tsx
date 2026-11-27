@@ -240,7 +240,7 @@ export function OpenAISessionDetail({
           {current.last_error && (
             <p
               role="alert"
-              className="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400"
+              className="rounded-md border border-danger-border bg-danger-surface p-3 text-sm text-danger"
             >
               {current.last_error}
             </p>
@@ -259,7 +259,7 @@ export function OpenAISessionDetail({
           {capabilities.error && (
             <div
               role="alert"
-              className="flex items-center justify-between gap-3 rounded-md border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200 light:text-amber-800"
+              className="flex items-center justify-between gap-3 rounded-md border border-warning-border bg-warning-surface p-3 text-xs text-warning"
             >
               <span>
                 Session controls are unavailable because runtime capabilities
@@ -284,7 +284,7 @@ export function OpenAISessionDetail({
               const role = openAIEventRole(event)
               const content = (
                 <div
-                  className={failed ? 'text-red-400 light:text-red-700' : ''}
+                  className={failed ? 'text-danger' : ''}
                 >
                   {text &&
                     (role === 'user' ? (
@@ -317,7 +317,7 @@ export function OpenAISessionDetail({
           {control.error && (
             <div
               role="alert"
-              className="flex items-center gap-3 text-sm text-red-400"
+              className="flex items-center gap-3 text-sm text-danger"
             >
               <span>{errorText(control.error)}</span>
               {intent && (
@@ -410,7 +410,7 @@ export function OpenAISessionDetail({
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-500/90 text-white hover:bg-red-500"
+              className="bg-danger-solid/90 text-white hover:bg-danger-solid"
               disabled={control.isPending || !controlsAvailable}
               onClick={(event) => {
                 event.preventDefault()
@@ -457,7 +457,7 @@ function Failure({
   return (
     <div
       role="alert"
-      className="flex h-full items-center justify-center gap-3 p-6 text-sm text-red-400"
+      className="flex h-full items-center justify-center gap-3 p-6 text-sm text-danger"
     >
       <span>{errorText(error)}</span>
       <Button size="sm" variant="ghost" onClick={() => onRetry()}>

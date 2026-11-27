@@ -50,16 +50,16 @@ export const Route = createFileRoute('/evaluations/runs_/$runId')({
 function StatusIcon({ status }: { status?: string }) {
   const s = status?.toLowerCase()
   if (s === 'completed')
-    return <Check className="h-4 w-4 text-emerald-400 light:text-emerald-600" />
+    return <Check className="h-4 w-4 text-success" />
   if (s === 'running')
     return (
-      <Activity className="h-4 w-4 text-blue-400 light:text-blue-600 animate-pulse" />
+      <Activity className="h-4 w-4 text-info animate-pulse" />
     )
   if (s === 'failed')
-    return <X className="h-4 w-4 text-red-400 light:text-red-600" />
+    return <X className="h-4 w-4 text-danger" />
   if (s === 'cancelled')
     return <X className="h-4 w-4 text-white/40 light:text-black/40" />
-  return <Clock className="h-4 w-4 text-yellow-400 light:text-yellow-700" />
+  return <Clock className="h-4 w-4 text-warning" />
 }
 
 function MetricCard({
@@ -265,7 +265,7 @@ function EvalRunDetailPageContent() {
         width: 200,
         minWidth: 120,
         render: (item: any) => (
-          <span className="truncate text-xs text-red-400 light:text-red-600">
+          <span className="truncate text-xs text-danger">
             {item.error || '-'}
           </span>
         ),
@@ -404,7 +404,7 @@ function EvalRunDetailPageContent() {
         {/* Actions */}
         <div className="flex items-center justify-end gap-2">
           {isBaseline && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-amber-500/20 text-amber-400 light:text-amber-700 border border-amber-500/30">
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-warning-surface-strong text-warning border border-warning-border">
               <Flag className="h-3 w-3" /> Baseline
             </span>
           )}
@@ -539,9 +539,9 @@ function EvalRunDetailPageContent() {
 
         {/* Regression Result */}
         {hasRegression && regressedScores.length > 0 && (
-          <Card className="border-red-500/30 bg-red-950/20 light:bg-red-50">
+          <Card className="border-danger-border bg-danger-surface">
             <CardHeader className="!pb-2">
-              <CardTitle className="text-red-400 light:text-red-600 text-sm font-medium flex items-center gap-2">
+              <CardTitle className="text-danger text-sm font-medium flex items-center gap-2">
                 <TrendingDown className="h-4 w-4" /> Regression Detected
               </CardTitle>
             </CardHeader>
@@ -555,7 +555,7 @@ function EvalRunDetailPageContent() {
                 {regressedScores.map((score: any) => (
                   <div
                     key={score.scoreName}
-                    className="bg-red-900/20 light:bg-red-100 rounded-md p-3 border border-red-500/20"
+                    className="bg-danger-surface rounded-md p-3 border border-danger-border"
                   >
                     <div className="text-white/40 light:text-black/40 text-xs uppercase tracking-wide">
                       {score.scoreName}
@@ -564,12 +564,12 @@ function EvalRunDetailPageContent() {
                       <span className="text-white/50 light:text-black/50 text-sm">
                         {score.baselineAvg?.toFixed(2)}
                       </span>
-                      <ArrowDown className="h-3 w-3 text-red-400 light:text-red-600" />
-                      <span className="text-red-400 light:text-red-600 text-sm font-bold">
+                      <ArrowDown className="h-3 w-3 text-danger" />
+                      <span className="text-danger text-sm font-bold">
                         {score.currentAvg?.toFixed(2)}
                       </span>
                     </div>
-                    <div className="text-[10px] text-red-400/60 light:text-red-600/60 mt-1">
+                    <div className="text-[10px] text-danger/60 mt-1">
                       {(score.deltaPercent * -100)?.toFixed(1)}% drop
                     </div>
                   </div>

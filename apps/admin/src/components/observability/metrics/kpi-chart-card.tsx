@@ -136,8 +136,8 @@ export function KpiChartCard({
               className={cn(
                 'rounded border px-1.5 py-0 text-[10px] font-mono',
                 isUp &&
-                  'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 light:text-emerald-600',
-                isDown && 'border-rose-500/30 bg-rose-500/10 text-rose-400 light:text-rose-600',
+                  'border-success-border bg-success-surface text-success',
+                isDown && 'border-danger-border bg-danger-surface text-danger',
                 !isUp && !isDown && 'border-white/10 bg-white/5 text-white/45 light:border-black/10 light:bg-black/5 light:text-black/45',
               )}
             >

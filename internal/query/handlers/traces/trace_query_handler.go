@@ -299,9 +299,12 @@ func (h *ListTracesHandler) Handle(ctx context.Context, q query.Query) (interfac
 		}
 	}
 
-	if listQuery.StatusCode != "" {
-		whereConditions = append(whereConditions, "StatusCode = ?")
-		args = append(args, listQuery.StatusCode)
+	statusCondition, err := listTracesStatusCondition(listQuery.StatusCode)
+	if err != nil {
+		return nil, err
+	}
+	if statusCondition != "" {
+		whereConditions = append(whereConditions, statusCondition)
 	}
 
 	if len(listQuery.Clauses) > 0 {
@@ -561,6 +564,27 @@ func (h *ListTracesHandler) Handle(ctx context.Context, q query.Query) (interfac
 // GetTraceHandler retrieves a single aggregated Trace by ID
 type GetTraceHandler struct {
 	conn clickhouse.Conn
+}
+
+// listTracesStatusCondition renders the WHERE fragment for the legacy
+// ListTracesQuery.StatusCode filter, or "" when no filter was requested.
+//
+// The filter used to bind the caller's value straight into `StatusCode = ?`.
+// Callers send the uppercase short names -- "OK" / "ERROR" / "UNSET" is exactly
+// the set ListTracesQuery.Validate has always accepted -- but otel_traces
+// stores "Ok" / "Error" / "Unset" from the OpenTelemetry collector exporter and
+// the protobuf enum names from the Everstack OTLP HTTP handler. ClickHouse "="
+// is case-sensitive, so every value a caller was permitted to send matched zero
+// rows: the filter silently returned an empty trace list rather than an error.
+//
+// The caller-facing vocabulary is untouched; only the predicate it compiles to
+// changes. An unrecognised value is an error rather than a silently empty
+// result, which is what the Validate hook on the query bus already promised.
+func listTracesStatusCondition(statusCode string) (string, error) {
+	if statusCode == "" {
+		return "", nil
+	}
+	return otelstatus.Equals(otelstatus.Column, statusCode)
 }
 
 func NewGetTraceHandler(conn clickhouse.Conn) *GetTraceHandler {

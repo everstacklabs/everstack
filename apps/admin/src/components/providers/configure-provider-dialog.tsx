@@ -305,7 +305,7 @@ export function ConfigureProviderDialog({ open, onOpenChange, providerName }: Co
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => setShowAddKeyForm(!showAddKeyForm)}
-                                        className="text-blue-400 light:text-blue-600 hover:text-blue-300 light:hover:text-blue-600 hover:bg-blue-500/10"
+                                        className="text-info hover:bg-info-surface"
                                     >
                                         <Iconify.Icon icon={showAddKeyForm ? "heroicons:x-mark" : "heroicons:plus"} className="size-4 mr-1" />
                                         {showAddKeyForm ? 'Cancel' : 'Add Key'}
@@ -395,7 +395,7 @@ export function ConfigureProviderDialog({ open, onOpenChange, providerName }: Co
                             {/* Base URL */}
                             <div className="space-y-2">
                                 <Label htmlFor="baseUrl" className="text-white light:text-brand-main-50">
-                                    Base URL <span className="text-red-400 light:text-red-600">*</span>
+                                    Base URL <span className="text-danger">*</span>
                                 </Label>
                                 <Input
                                     id="baseUrl"
@@ -414,7 +414,7 @@ export function ConfigureProviderDialog({ open, onOpenChange, providerName }: Co
                             {/* Max Tokens */}
                             <div className="space-y-2">
                                 <Label htmlFor="maxTokens" className="text-white light:text-brand-main-50">
-                                    Max Tokens <span className="text-red-400 light:text-red-600">*</span>
+                                    Max Tokens <span className="text-danger">*</span>
                                 </Label>
                                 <Input
                                     id="maxTokens"
@@ -435,13 +435,13 @@ export function ConfigureProviderDialog({ open, onOpenChange, providerName }: Co
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between">
                                     <Label className="text-white light:text-brand-main-50">
-                                        Enabled Models <span className="text-red-400 light:text-red-600">*</span>
+                                        Enabled Models <span className="text-danger">*</span>
                                     </Label>
                                     <div className="flex gap-2 items-center">
                                         <button
                                             type="button"
                                             onClick={selectAllModels}
-                                            className="text-xs text-blue-400 light:text-blue-600 hover:text-blue-300 light:hover:text-blue-600 transition-colors"
+                                            className="text-xs text-info transition-colors"
                                         >
                                             Select All
                                         </button>
@@ -449,7 +449,7 @@ export function ConfigureProviderDialog({ open, onOpenChange, providerName }: Co
                                         <button
                                             type="button"
                                             onClick={deselectAllModels}
-                                            className="text-xs text-blue-400 light:text-blue-600 hover:text-blue-300 light:hover:text-blue-600 transition-colors"
+                                            className="text-xs text-info transition-colors"
                                         >
                                             Deselect All
                                         </button>
@@ -459,7 +459,7 @@ export function ConfigureProviderDialog({ open, onOpenChange, providerName }: Co
                                                 <button
                                                     type="button"
                                                     onClick={() => setDiscoveryDialogOpen(true)}
-                                                    className="text-xs text-green-400 light:text-green-600 hover:text-green-300 light:hover:text-green-600 transition-colors flex items-center gap-1"
+                                                    className="text-xs text-success transition-colors flex items-center gap-1"
                                                 >
                                                     <Iconify.Icon icon="heroicons:plus-circle" className="size-3" />
                                                     Discover Models
@@ -487,7 +487,7 @@ export function ConfigureProviderDialog({ open, onOpenChange, providerName }: Co
                                             >
                                                 <div className="flex items-center justify-center mt-0.5">
                                                     {selectedModels.has(model.name) ? (
-                                                        <Iconify.Icon icon="heroicons:check-circle-solid" className="size-5 text-blue-400 light:text-blue-600" />
+                                                        <Iconify.Icon icon="heroicons:check-circle-solid" className="size-5 text-info" />
                                                     ) : (
                                                         <div className="size-5 rounded-full border-2 border-brand-main-400" />
                                                     )}
@@ -531,13 +531,13 @@ export function ConfigureProviderDialog({ open, onOpenChange, providerName }: Co
                                                 className={cn(
                                                     'w-full flex items-start gap-3 p-3 rounded-sm transition-all text-left',
                                                     selectedModels.has(model.modelName)
-                                                        ? 'bg-green-600/20 border border-green-500/50 ring-1 ring-green-500/30'
+                                                        ? 'bg-success-surface-strong border border-success-border ring-1 ring-success-border'
                                                         : 'bg-brand-main-700 border border-brand-main-600 hover:bg-brand-main-600'
                                                 )}
                                             >
                                                 <div className="flex items-center justify-center mt-0.5">
                                                     {selectedModels.has(model.modelName) ? (
-                                                        <Iconify.Icon icon="heroicons:check-circle-solid" className="size-5 text-green-400 light:text-green-600" />
+                                                        <Iconify.Icon icon="heroicons:check-circle-solid" className="size-5 text-success" />
                                                     ) : (
                                                         <div className="size-5 rounded-full border-2 border-brand-main-400" />
                                                     )}
@@ -556,7 +556,7 @@ export function ConfigureProviderDialog({ open, onOpenChange, providerName }: Co
                                                         >
                                                             <Iconify.Icon icon="heroicons:clipboard-document" className="size-3.5 text-white/70 light:text-black/70 hover:text-white light:hover:text-brand-main-50" />
                                                         </button>
-                                                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 light:text-green-600">Custom</span>
+                                                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-success-surface-strong text-success">Custom</span>
                                                     </div>
                                                     <p className="text-xs text-white/50 light:text-black/50 truncate mt-0.5">
                                                         {model.modelName}

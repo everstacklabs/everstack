@@ -61,9 +61,9 @@ const ITEM_STATUS_ENUM_TO_KEY: Record<number, string> = {
 
 function itemStatusBadge(status: string | number) {
     const map: Record<string, { className: string; label: string }> = {
-        pending: { className: 'bg-amber-500/15 text-amber-300 light:text-amber-700', label: 'Pending' },
-        in_progress: { className: 'bg-blue-500/15 text-blue-300 light:text-blue-600', label: 'In Progress' },
-        completed: { className: 'bg-emerald-500/15 text-emerald-300 light:text-emerald-600', label: 'Completed' },
+        pending: { className: 'bg-warning-surface-strong text-warning', label: 'Pending' },
+        in_progress: { className: 'bg-info-surface-strong text-info', label: 'In Progress' },
+        completed: { className: 'bg-success-surface-strong text-success', label: 'Completed' },
         skipped: { className: 'bg-white/10 light:bg-black/10 text-white/45 light:text-black/45', label: 'Skipped' },
     }
     const key = typeof status === 'number' ? ITEM_STATUS_ENUM_TO_KEY[status] ?? 'pending' : status?.toLowerCase()

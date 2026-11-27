@@ -182,13 +182,16 @@ func (h *MetricsDashboardHandler) queryWindow(ctx context.Context, dashQuery *Me
 	// trace_metrics_hourly only has sum_duration_ns, so quantiles must come
 	// from raw spans. This is the read-path; if it gets hot, add quantileState
 	// columns to the materialized view and switch over.
+	// Tenant by span attribute first: the Resource attribute is blank on
+	// most cloud spans, which read p95 and TTFT as 0 for cloud tenants.
+	tenantClause, tenantArgs := tenantBridgeFilter(tenantID)
 	percentileConditions := []string{
 		"Timestamp >= ?",
 		"Timestamp <= ?",
-		"ResourceAttributes['tenant.id'] = ?",
+		tenantClause,
 		"Duration > 0",
 	}
-	percentileArgs := []interface{}{startTime, endTime, tenantID}
+	percentileArgs := append([]interface{}{startTime, endTime}, tenantArgs...)
 	if len(dashQuery.Models) > 0 {
 		placeholders := buildPlaceholders(len(dashQuery.Models))
 		percentileConditions = append(percentileConditions, fmt.Sprintf("%s IN (%s)", modelSQL(), placeholders))

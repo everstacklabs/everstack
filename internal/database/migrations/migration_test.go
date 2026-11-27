@@ -139,3 +139,91 @@ func TestModelMetricsTokenAliasesStayManagedAndBackfillOnlyTokenDeltas(t *testin
 		t.Fatalf("token alias migration split into %d statements, want 3", len(statements))
 	}
 }
+
+// TestNoMaterializedViewComparesTheEnumStatusSpellingAlone guards the whole
+// class of bug fixed by model_metrics_error_status_20260826075905 and
+// metrics_error_status_20260901223737: otel_traces stores the span status
+// under the collector's short spelling ("Ok" / "Error" / "Unset") as well as
+// the enum name written by internal/api/http/otlp/handler.go, and ClickHouse
+// "=" is case-sensitive. A materialized view that compares against the enum
+// name alone counts zero errors forever.
+//
+// The check is scoped to the CURRENT definition of each view. A migration is
+// free to contain the old spelling in a comment or in a down.sql that restores
+// a superseded definition; what must never happen is a live CREATE
+// MATERIALIZED VIEW whose only error test is the enum literal.
+func TestNoMaterializedViewComparesTheEnumStatusSpellingAlone(t *testing.T) {
+	t.Parallel()
+
+	// view name -> migration whose up.sql holds the definition in force.
+	currentDefinitions := map[string]string{
+		"mv_model_metrics_hourly": "sql/clickhouse/model_metrics_error_status_20260826075905/up.sql",
+		"mv_trace_metrics":        "sql/clickhouse/metrics_error_status_20260901223737/up.sql",
+		"mv_provider_key_metrics": "sql/clickhouse/metrics_error_status_20260901223737/up.sql",
+	}
+
+	for view, path := range currentDefinitions {
+		sqlBytes, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read current definition of %s: %v", view, err)
+		}
+		sql := stripSQLComments(string(sqlBytes))
+
+		if !strings.Contains(sql, "CREATE MATERIALIZED VIEW") ||
+			!strings.Contains(sql, view) {
+			t.Fatalf("%s does not redefine %s", path, view)
+		}
+		if !strings.Contains(sql, "lower(StatusCode) IN ('error', 'status_code_error')") {
+			t.Fatalf(
+				"%s must compare the span status case-insensitively against both "+
+					"spellings (see internal/telemetry/otelstatus)", view,
+			)
+		}
+		if strings.Contains(sql, "StatusCode = 'STATUS_CODE_ERROR'") {
+			t.Fatalf(
+				"%s still compares against the enum spelling alone, which no "+
+					"collector-written span carries", view,
+			)
+		}
+	}
+}
+
+// TestMetricsErrorStatusBackfillsOnlyErrorDeltas pins the shape of the
+// correcting backfill: it must stay inside the raw retention window, add
+// nothing but errors, and be safe to run twice.
+func TestMetricsErrorStatusBackfillsOnlyErrorDeltas(t *testing.T) {
+	t.Parallel()
+
+	sqlBytes, err := os.ReadFile(
+		"sql/clickhouse/metrics_error_status_20260901223737/up.sql",
+	)
+	if err != nil {
+		t.Fatalf("read metrics error status migration: %v", err)
+	}
+	sql := string(sqlBytes)
+
+	for _, required := range []string{
+		// Rollup rows whose source spans have aged out cannot be corrected,
+		// so the delta is scoped to the spans that still exist.
+		"Timestamp >= now() - INTERVAL 30 DAY",
+		"INSERT INTO trace_metrics_hourly",
+		"INSERT INTO provider_key_metrics_hourly",
+		// Only the missing errors are inserted; every other measure is zero.
+		"toUInt64(0) AS request_count",
+		"raw.error_count - coalesce(existing.error_count, 0)",
+		// Re-running the migration must insert nothing.
+		"WHERE raw.error_count > coalesce(existing.error_count, 0)",
+	} {
+		if !strings.Contains(sql, required) {
+			t.Fatalf("metrics error status migration lost required clause %q", required)
+		}
+	}
+
+	// 2 DROP VIEW + 2 CREATE MATERIALIZED VIEW + 2 INSERT.
+	if statements := splitStatements(stripSQLComments(sql)); len(statements) != 6 {
+		t.Fatalf(
+			"metrics error status migration split into %d statements, want 6",
+			len(statements),
+		)
+	}
+}

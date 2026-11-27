@@ -82,7 +82,7 @@ export function DeploymentKeysSection({ deploymentId }: DeploymentKeysSectionPro
                             <div className="flex items-center gap-3">
                                 <span className="font-mono text-xs text-brand-main-100">{key.keyPrefix}...</span>
                                 {key.name && <span className="text-xs text-brand-main-200">{key.name}</span>}
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${key.isActive ? 'bg-green-500/20 text-green-300 light:text-green-600' : 'bg-red-500/20 text-red-300 light:text-red-600'}`}>
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${key.isActive ? 'bg-success-surface-strong text-success' : 'bg-danger-surface-strong text-danger'}`}>
                                     {key.isActive ? 'Active' : 'Revoked'}
                                 </span>
                                 {key.lastUsedAt && (
@@ -97,7 +97,7 @@ export function DeploymentKeysSection({ deploymentId }: DeploymentKeysSectionPro
                                     variant="ghost"
                                     onClick={() => revokeKeyMutation.mutate(key.id)}
                                     disabled={revokeKeyMutation.isPending}
-                                    className="h-6 text-[10px] text-red-400 light:text-red-600 hover:text-red-300 light:hover:text-red-700 hover:bg-red-500/10"
+                                    className="h-6 text-[10px] text-danger hover:bg-danger-surface"
                                 >
                                     Revoke
                                 </Button>
@@ -117,11 +117,11 @@ export function DeploymentKeysSection({ deploymentId }: DeploymentKeysSectionPro
                     <SheetBody className="py-4">
                         {rawKey ? (
                             <div className="space-y-3">
-                                <p className="text-sm text-amber-400 light:text-amber-700">
+                                <p className="text-sm text-warning">
                                     Copy this key now. You won't be able to see it again.
                                 </p>
                                 <div className="flex items-center gap-2">
-                                    <code className="flex-1 rounded bg-brand-main-800 px-3 py-2 text-xs text-green-300 light:text-green-700 font-mono break-all border border-brand-main-700/40">
+                                    <code className="flex-1 rounded bg-brand-main-800 px-3 py-2 text-xs text-success font-mono break-all border border-brand-main-700/40">
                                         {rawKey}
                                     </code>
                                     <Button size="sm" variant="outline" onClick={handleCopyKey} className="shrink-0">

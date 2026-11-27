@@ -1,0 +1,79 @@
+chat:
+  - deepseek-ai/DeepSeek-V4-Flash-0731-TEE
+  - deepseek-ai/DeepSeek-V4.1-Flash-1017
+  - deepseek-ai/DeepSeek-V4-Pro-0813
+  - deepseek-ai/DeepSeek-V3.2-TEE
+  - zai-org/GLM-5.2-TEE
+  - zai-org/GLM-5.3
+  - zai-org/GLM-5.2-Fast
+  - zai-org/GLM-5.1-TEE
+  - tencent/Hy4
+  - google/gemma-4-31B-turbo-TEE
+  - Qwen/Qwen3.8-Max-0902
+  - Qwen/Qwen4-Max
+  - Qwen/Qwen3.5-27B-TEE
+  - Qwen/Qwen3.6-27B-TEE
+  - Qwen/Qwen3.8-2.4T-A95B
+  - Qwen/Qwen3.5-397B-A17B-TEE
+  - Qwen/Qwen3.8-27B-TEE
+  - moonshotai/Kimi-K2.7-Code
+  - moonshotai/Kimi-K3-TEE
+  - moonshotai/Kimi-K2.6-TEE
+
+function_calling:
+  - deepseek-ai/DeepSeek-V4-Flash-0731-TEE
+  - deepseek-ai/DeepSeek-V4.1-Flash-1017
+  - deepseek-ai/DeepSeek-V4-Pro-0813
+  - deepseek-ai/DeepSeek-V3.2-TEE
+  - zai-org/GLM-5.2-TEE
+  - zai-org/GLM-5.3
+  - zai-org/GLM-5.2-Fast
+  - zai-org/GLM-5.1-TEE
+  - tencent/Hy4
+  - google/gemma-4-31B-turbo-TEE
+  - Qwen/Qwen3.8-Max-0902
+  - Qwen/Qwen4-Max
+  - Qwen/Qwen3.5-27B-TEE
+  - Qwen/Qwen3.6-27B-TEE
+  - Qwen/Qwen3.8-2.4T-A95B
+  - Qwen/Qwen3.5-397B-A17B-TEE
+  - Qwen/Qwen3.8-27B-TEE
+  - moonshotai/Kimi-K2.7-Code
+  - moonshotai/Kimi-K3-TEE
+  - moonshotai/Kimi-K2.6-TEE
+
+reasoning:
+  - deepseek-ai/DeepSeek-V4-Flash-0731-TEE
+  - deepseek-ai/DeepSeek-V4.1-Flash-1017
+  - deepseek-ai/DeepSeek-V4-Pro-0813
+  - deepseek-ai/DeepSeek-V3.2-TEE
+  - zai-org/GLM-5.2-TEE
+  - zai-org/GLM-5.3
+  - zai-org/GLM-5.2-Fast
+  - zai-org/GLM-5.1-TEE
+  - tencent/Hy4
+  - google/gemma-4-31B-turbo-TEE
+  - Qwen/Qwen3.8-Max-0902
+  - Qwen/Qwen4-Max
+  - Qwen/Qwen3.5-27B-TEE
+  - Qwen/Qwen3.6-27B-TEE
+  - Qwen/Qwen3.8-2.4T-A95B
+  - Qwen/Qwen3.5-397B-A17B-TEE
+  - Qwen/Qwen3.8-27B-TEE
+  - moonshotai/Kimi-K2.7-Code
+  - moonshotai/Kimi-K3-TEE
+  - moonshotai/Kimi-K2.6-TEE
+
+vision:
+  - deepseek-ai/DeepSeek-V4.1-Flash-1017
+  - tencent/Hy4
+  - google/gemma-4-31B-turbo-TEE
+  - Qwen/Qwen3.8-Max-0902
+  - Qwen/Qwen4-Max
+  - Qwen/Qwen3.5-27B-TEE
+  - Qwen/Qwen3.6-27B-TEE
+  - Qwen/Qwen3.5-397B-A17B-TEE
+  - Qwen/Qwen3.8-27B-TEE
+  - moonshotai/Kimi-K2.7-Code
+  - moonshotai/Kimi-K3-TEE
+  - moonshotai/Kimi-K2.6-TEE

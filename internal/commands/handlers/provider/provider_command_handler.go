@@ -16,9 +16,45 @@ import (
 	"github.com/google/uuid"
 )
 
+// ErrNotFound reports that the provider configuration or API key does not
+// exist for the caller's tenant. It is returned for rows owned by another
+// tenant and for platform-owned rows too, so a caller cannot probe ids.
+var ErrNotFound = errors.New("not found")
+
+// ErrBaseURLChangeRequiresKey rejects a base URL change that would keep the
+// stored credential: the stored key would then be sent to the new host.
+var ErrBaseURLChangeRequiresKey = errors.New("re-enter the API key when changing the base URL")
+
+// ErrBaseURLChangeWithStoredKeys rejects a base URL change while the
+// configuration still holds API keys this request does not replace: every
+// stored key is served against the configuration's base URL.
+var ErrBaseURLChangeWithStoredKeys = errors.New("remove this provider's other API keys before changing the base URL")
+
+// ErrProviderNameCollision rejects a new configuration whose provider name
+// matches an existing one of the same tenant except for case or surrounding
+// space. The gateway would merge the two and serve one row's keys against the
+// other's base URL.
+var ErrProviderNameCollision = errors.New("this provider is already configured under a different spelling")
+
+// sameProviderGroup reports whether two provider names land in the same
+// group when the gateway builds a tenant's provider bundle.
+func sameProviderGroup(a, b string) bool {
+	return strings.EqualFold(strings.TrimSpace(a), strings.TrimSpace(b))
+}
+
+// configStore is the slice of the provider configuration repository the
+// handler uses. Every method is tenant-scoped.
+type configStore interface {
+	GetForOrg(ctx context.Context, orgID, providerName string) (*provider_config.Configuration, error)
+	GetByIDForOrg(ctx context.Context, orgID, id string) (*provider_config.Configuration, error)
+	ListForOrg(ctx context.Context, orgID string) ([]*provider_config.Configuration, error)
+	UpsertForOrg(ctx context.Context, orgID string, config *provider_config.Configuration) error
+	DeleteForOrg(ctx context.Context, orgID, providerName string) error
+}
+
 // Handler handles provider-related commands
 type Handler struct {
-	repo       *provider_config.Repository
+	repo       configStore
 	apiKeyRepo provider_api_keys.Repository
 	eventBus   events.Bus
 }
@@ -35,7 +71,7 @@ func isMaskedKeyPlaceholder(key string) bool {
 
 // NewHandler creates a new provider command handler
 func NewHandler(
-	repo *provider_config.Repository,
+	repo configStore,
 	apiKeyRepo provider_api_keys.Repository,
 	eventBus events.Bus,
 ) *Handler {
@@ -67,14 +103,42 @@ func (h *Handler) HandleConfigureProvider(ctx context.Context, cmd provider.Conf
 		return nil, fmt.Errorf("failed to get existing configuration: %w", err)
 	}
 
+	// The gateway groups a tenant's rows by lowercased provider name when it
+	// builds the provider bundle, and one row's base URL then serves every
+	// key in the group. A second row whose name differs only by case or
+	// surrounding space ("OpenAI" beside "openai") would therefore redirect
+	// the first row's stored keys to its own base URL without ever meeting
+	// the base URL check below, which only sees the exact-name row.
+	if existingConfig == nil {
+		siblings, err := h.repo.ListForOrg(ctx, cmd.TenantID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check existing providers: %w", err)
+		}
+		for _, cfg := range siblings {
+			if cfg.ProviderName != cmd.ProviderName && sameProviderGroup(cfg.ProviderName, cmd.ProviderName) {
+				return nil, fmt.Errorf("%w: use %q", ErrProviderNameCollision, cfg.ProviderName)
+			}
+		}
+	}
+
 	var apiKey string
 	inputKey := strings.TrimSpace(cmd.APIKey)
-	if inputKey != "" && !isMaskedKeyPlaceholder(inputKey) {
+	freshKey := inputKey != "" && !isMaskedKeyPlaceholder(inputKey)
+	// named decides both the base URL check and which key row the write
+	// below touches, so the two can never disagree (e.g. on a blank name).
+	named := strings.TrimSpace(cmd.APIKeyName) != ""
+	if freshKey {
 		apiKey = inputKey
 	} else if existingConfig != nil {
 		apiKey = existingConfig.APIKeyEncrypted
 	} else {
 		return nil, fmt.Errorf("api_key is required for initial configuration")
+	}
+
+	if existingConfig != nil && provider_config.BaseURLChanged(existingConfig.CustomBaseURL, cmd.CustomBaseURL, cmd.DefaultBaseURL) {
+		if err := h.checkBaseURLChange(ctx, cmd.TenantID, existingConfig.ID, freshKey, named); err != nil {
+			return nil, err
+		}
 	}
 
 	if cmd.CustomSettings == nil || cmd.CustomSettings["default"] != "true" {
@@ -128,7 +192,7 @@ func (h *Handler) HandleConfigureProvider(ctx context.Context, cmd provider.Conf
 		return nil, fmt.Errorf("failed to save configuration: %w", err)
 	}
 
-	if inputKey != "" && cmd.APIKeyName != "" {
+	if inputKey != "" && named {
 		weight := cmd.APIKeyWeight
 		if weight <= 0 {
 			weight = 1
@@ -145,10 +209,15 @@ func (h *Handler) HandleConfigureProvider(ctx context.Context, cmd provider.Conf
 			CreatedAt:        time.Now(),
 			UpdatedAt:        time.Now(),
 		}
-		if err := h.apiKeyRepo.Create(ctx, initialKey); err != nil {
+		if err := h.apiKeyRepo.CreateForOrg(ctx, cmd.TenantID, initialKey); err != nil {
 			return nil, fmt.Errorf("failed to save initial API key: %w", err)
 		}
 	} else if inputKey != "" {
+		// An unnamed key is stored as the config's single replace-in-place
+		// "Config API Key" row. Its source='config' label drives that upsert
+		// and the modify/delete guards below, not billing: this handler is
+		// always tenant-scoped, so the row is tenant-owned and the gateway
+		// serves it as BYOK (provider_api_keys.BillingSource).
 		configKey := &provider_api_keys.ProviderAPIKey{
 			ProviderConfigID: config.ID,
 			KeyName:          "Config API Key",
@@ -185,9 +254,81 @@ func (h *Handler) HandleConfigureProvider(ctx context.Context, cmd provider.Conf
 	return config, nil
 }
 
-// HandleAddProviderAPIKey handles the add provider API key command
+// checkBaseURLChange is called when a configure request would change the
+// upstream host of an existing configuration. Every key stored on the
+// configuration (its legacy api_key_encrypted column and every
+// provider_api_keys row) is served against that host, so the change is
+// allowed only when this request supplies a fresh key and no stored key row
+// survives the write. An unnamed fresh key replaces the "Config API Key" row
+// in place; a named fresh key adds a row and replaces nothing.
+func (h *Handler) checkBaseURLChange(ctx context.Context, tenantID, configID string, freshKey, named bool) error {
+	if !freshKey {
+		return ErrBaseURLChangeRequiresKey
+	}
+	keys, err := h.apiKeyRepo.ListByProviderConfigForOrg(ctx, tenantID, configID)
+	if err != nil {
+		return fmt.Errorf("failed to check stored API keys: %w", err)
+	}
+	for _, k := range keys {
+		replacedInPlace := !named && k.Source == "config" && k.KeyName == configAPIKeyName
+		if !replacedInPlace {
+			return ErrBaseURLChangeWithStoredKeys
+		}
+	}
+	return nil
+}
+
+// configAPIKeyName is the name of a configuration's single replace-in-place
+// key row (see UpsertConfigKey).
+const configAPIKeyName = "Config API Key"
+
+// validID reports whether id can name a row. Ids are UUIDs; anything else
+// cannot exist, so it is reported as not found rather than letting Postgres
+// fail the cast (which would surface as an internal error).
+func validID(id string) bool {
+	_, err := uuid.Parse(id)
+	return err == nil
+}
+
+// ownedKey loads a key whose configuration the tenant owns. A key that is
+// missing, malformed, or owned by another tenant or the platform is
+// ErrNotFound; any other failure is returned as is.
+func (h *Handler) ownedKey(ctx context.Context, tenantID, keyID string) (*provider_api_keys.ProviderAPIKey, error) {
+	if tenantID == "" {
+		return nil, fmt.Errorf("tenant id is required")
+	}
+	if keyID == "" {
+		return nil, fmt.Errorf("key_id is required")
+	}
+	if !validID(keyID) {
+		return nil, fmt.Errorf("API key %w", ErrNotFound)
+	}
+	key, err := h.apiKeyRepo.GetByIDForOrg(ctx, tenantID, keyID)
+	if err != nil {
+		if errors.Is(err, provider_api_keys.ErrKeyNotFound) {
+			return nil, fmt.Errorf("API key %w", ErrNotFound)
+		}
+		return nil, fmt.Errorf("failed to get API key: %w", err)
+	}
+	return key, nil
+}
+
+// keyWriteErr maps a scoped repository write error: a row that vanished or
+// left the tenant's scope between read and write is ErrNotFound.
+func keyWriteErr(op string, err error) error {
+	if errors.Is(err, provider_api_keys.ErrKeyNotFound) {
+		return fmt.Errorf("API key %w", ErrNotFound)
+	}
+	return fmt.Errorf("failed to %s API key: %w", op, err)
+}
+
+// HandleAddProviderAPIKey handles the add provider API key command. The key
+// is written only to a configuration the caller's tenant owns.
 func (h *Handler) HandleAddProviderAPIKey(ctx context.Context, cmd provider.AddProviderAPIKeyCommand) (*provider_api_keys.ProviderAPIKey, error) {
 	// Validate command
+	if cmd.TenantID == "" {
+		return nil, fmt.Errorf("tenant id is required")
+	}
 	if cmd.ProviderConfigID == "" {
 		return nil, fmt.Errorf("provider_config_id is required")
 	}
@@ -200,6 +341,9 @@ func (h *Handler) HandleAddProviderAPIKey(ctx context.Context, cmd provider.AddP
 	}
 	if cmd.Weight <= 0 {
 		return nil, fmt.Errorf("weight must be greater than 0")
+	}
+	if !validID(cmd.ProviderConfigID) {
+		return nil, fmt.Errorf("provider configuration %w", ErrNotFound)
 	}
 
 	// Create new API key (stored as plaintext)
@@ -215,7 +359,13 @@ func (h *Handler) HandleAddProviderAPIKey(ctx context.Context, cmd provider.AddP
 		UpdatedAt:        time.Now(),
 	}
 
-	if err := h.apiKeyRepo.Create(ctx, newKey); err != nil {
+	// CreateForOrg checks ownership in the same statement, before any
+	// unique-name violation can fire, so "already exists" is only ever
+	// reported for the caller's own configuration.
+	if err := h.apiKeyRepo.CreateForOrg(ctx, cmd.TenantID, newKey); err != nil {
+		if errors.Is(err, provider_api_keys.ErrKeyNotFound) {
+			return nil, fmt.Errorf("provider configuration %w", ErrNotFound)
+		}
 		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique constraint") {
 			return nil, fmt.Errorf("API key with name '%s' already exists for this provider", cmd.KeyName)
 		}
@@ -245,21 +395,15 @@ func (h *Handler) HandleAddProviderAPIKey(ctx context.Context, cmd provider.AddP
 
 // HandleUpdateAPIKeyWeight handles the update API key weight command
 func (h *Handler) HandleUpdateAPIKeyWeight(ctx context.Context, cmd provider.UpdateAPIKeyWeightCommand) (*provider_api_keys.ProviderAPIKey, error) {
-	// Validate command
-	if cmd.KeyID == "" {
-		return nil, fmt.Errorf("key_id is required")
-	}
 	if cmd.Weight <= 0 {
 		return nil, fmt.Errorf("weight must be greater than 0")
 	}
 
-	// Get existing key
-	existingKey, err := h.apiKeyRepo.GetByID(ctx, cmd.KeyID)
+	// Ownership first, so the config-sourced guard below never confirms
+	// that another tenant's key exists.
+	existingKey, err := h.ownedKey(ctx, cmd.TenantID, cmd.KeyID)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return nil, fmt.Errorf("API key not found")
-		}
-		return nil, fmt.Errorf("failed to get API key: %w", err)
+		return nil, err
 	}
 
 	// Prevent modification of config-sourced keys
@@ -273,8 +417,8 @@ func (h *Handler) HandleUpdateAPIKeyWeight(ctx context.Context, cmd provider.Upd
 	existingKey.Weight = cmd.Weight
 	existingKey.UpdatedAt = time.Now()
 
-	if err := h.apiKeyRepo.Update(ctx, existingKey); err != nil {
-		return nil, fmt.Errorf("failed to update API key weight: %w", err)
+	if err := h.apiKeyRepo.UpdateForOrg(ctx, cmd.TenantID, existingKey); err != nil {
+		return nil, keyWriteErr("update", err)
 	}
 
 	// Emit event
@@ -298,18 +442,9 @@ func (h *Handler) HandleUpdateAPIKeyWeight(ctx context.Context, cmd provider.Upd
 
 // HandleToggleAPIKey handles the toggle API key command
 func (h *Handler) HandleToggleAPIKey(ctx context.Context, cmd provider.ToggleAPIKeyCommand) (*provider_api_keys.ProviderAPIKey, error) {
-	// Validate command
-	if cmd.KeyID == "" {
-		return nil, fmt.Errorf("key_id is required")
-	}
-
-	// Get existing key
-	existingKey, err := h.apiKeyRepo.GetByID(ctx, cmd.KeyID)
+	existingKey, err := h.ownedKey(ctx, cmd.TenantID, cmd.KeyID)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return nil, fmt.Errorf("API key not found")
-		}
-		return nil, fmt.Errorf("failed to get API key: %w", err)
+		return nil, err
 	}
 
 	// Prevent modification of config-sourced keys
@@ -321,8 +456,8 @@ func (h *Handler) HandleToggleAPIKey(ctx context.Context, cmd provider.ToggleAPI
 	existingKey.IsActive = cmd.IsActive
 	existingKey.UpdatedAt = time.Now()
 
-	if err := h.apiKeyRepo.Update(ctx, existingKey); err != nil {
-		return nil, fmt.Errorf("failed to toggle API key: %w", err)
+	if err := h.apiKeyRepo.UpdateForOrg(ctx, cmd.TenantID, existingKey); err != nil {
+		return nil, keyWriteErr("toggle", err)
 	}
 
 	// Emit event
@@ -335,15 +470,9 @@ func (h *Handler) HandleToggleAPIKey(ctx context.Context, cmd provider.ToggleAPI
 	}
 
 	if h.eventBus != nil {
-		fmt.Printf("[DEBUG] Publishing ProviderAPIKeyToggledEvent: keyID=%s, isActive=%v, eventType=%s\n",
-			existingKey.ID, cmd.IsActive, event.Event())
 		if err := h.eventBus.Publish(ctx, event); err != nil {
-			fmt.Printf("failed to publish ProviderAPIKeyToggledEvent: %v\n", err)
-		} else {
-			fmt.Printf("[DEBUG] ProviderAPIKeyToggledEvent published successfully\n")
+			logger.Warnf("failed to publish ProviderAPIKeyToggledEvent: %v", err)
 		}
-	} else {
-		fmt.Printf("[WARNING] eventBus is nil, cannot publish ProviderAPIKeyToggledEvent\n")
 	}
 
 	return existingKey, nil
@@ -351,18 +480,9 @@ func (h *Handler) HandleToggleAPIKey(ctx context.Context, cmd provider.ToggleAPI
 
 // HandleDeleteProviderAPIKey handles the delete provider API key command
 func (h *Handler) HandleDeleteProviderAPIKey(ctx context.Context, cmd provider.DeleteProviderAPIKeyCommand) error {
-	// Validate command
-	if cmd.KeyID == "" {
-		return fmt.Errorf("key_id is required")
-	}
-
-	// Get existing key for event data
-	existingKey, err := h.apiKeyRepo.GetByID(ctx, cmd.KeyID)
+	existingKey, err := h.ownedKey(ctx, cmd.TenantID, cmd.KeyID)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return fmt.Errorf("API key not found")
-		}
-		return fmt.Errorf("failed to get API key: %w", err)
+		return err
 	}
 
 	// Prevent deletion of config-sourced keys
@@ -371,8 +491,8 @@ func (h *Handler) HandleDeleteProviderAPIKey(ctx context.Context, cmd provider.D
 	}
 
 	// Delete the key
-	if err := h.apiKeyRepo.Delete(ctx, cmd.KeyID); err != nil {
-		return fmt.Errorf("failed to delete API key: %w", err)
+	if err := h.apiKeyRepo.DeleteForOrg(ctx, cmd.TenantID, existingKey.ID); err != nil {
+		return keyWriteErr("delete", err)
 	}
 
 	// Emit event
@@ -392,6 +512,32 @@ func (h *Handler) HandleDeleteProviderAPIKey(ctx context.Context, cmd provider.D
 	}
 
 	return nil
+}
+
+// HandleListProviderAPIKeys lists the API keys of one provider configuration
+// the caller's tenant owns. Another tenant's or a platform configuration is
+// ErrNotFound, not an empty list.
+func (h *Handler) HandleListProviderAPIKeys(ctx context.Context, q provider.ListProviderAPIKeysQuery) ([]*provider_api_keys.ProviderAPIKey, error) {
+	if q.TenantID == "" {
+		return nil, fmt.Errorf("tenant id is required")
+	}
+	if q.ProviderConfigID == "" {
+		return nil, fmt.Errorf("provider_config_id is required")
+	}
+	if !validID(q.ProviderConfigID) {
+		return nil, fmt.Errorf("provider configuration %w", ErrNotFound)
+	}
+	if _, err := h.repo.GetByIDForOrg(ctx, q.TenantID, q.ProviderConfigID); err != nil {
+		if errors.Is(err, provider_config.ErrNotFound) {
+			return nil, fmt.Errorf("provider configuration %w", ErrNotFound)
+		}
+		return nil, fmt.Errorf("failed to get provider configuration: %w", err)
+	}
+	keys, err := h.apiKeyRepo.ListByProviderConfigForOrg(ctx, q.TenantID, q.ProviderConfigID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list API keys: %w", err)
+	}
+	return keys, nil
 }
 
 // HandleToggleProvider handles the toggle provider command

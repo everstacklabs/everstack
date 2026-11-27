@@ -134,8 +134,8 @@ func TestLoadBrowserUsagePricingFromPlans(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadBrowserUsagePricing() error = %v", err)
 	}
-	if pricing.CostMicrosPerHour != 10_000 {
-		t.Fatalf("browser hourly micros = %d, want 10000", pricing.CostMicrosPerHour)
+	if pricing.CostMicrosPerHour != 50_000 {
+		t.Fatalf("browser hourly micros = %d, want 50000", pricing.CostMicrosPerHour)
 	}
 	if pricing.BillingIncrementSeconds != 1 || pricing.MinimumSessionSeconds != 60 {
 		t.Fatalf("browser billing window = %#v", pricing)

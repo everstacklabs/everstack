@@ -10,12 +10,16 @@ import (
 	"time"
 
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/redis/go-redis/v9"
 )
 
 // VectorStore defines the interface for vector similarity search
 type VectorStore interface {
-	Store(ctx context.Context, key string, embedding []float32, metadata *CachedResponse, tenantID string) error
-	Search(ctx context.Context, query []float32, topK int, threshold float64, tenantID string) ([]SearchResult, error)
+	// Store and Search are scoped by partition (SemanticPartition: a hex
+	// digest of tenant + request context), stored in the indexed tenant_id
+	// TAG field. Search never returns entries of another partition.
+	Store(ctx context.Context, key string, embedding []float32, metadata *CachedResponse, partition string) error
+	Search(ctx context.Context, query []float32, topK int, threshold float64, partition string) ([]SearchResult, error)
 	Delete(ctx context.Context, key string) error
 	Clear(ctx context.Context, tenantID string) error
 }
@@ -34,10 +38,14 @@ type RedisVectorStore struct {
 	client    *RedisClient
 	indexName string
 	dimension int
+	// ttl bounds every stored entry's lifetime (Redis EXPIRE). Partitioned
+	// keys multiply per tenant and conversation context, so entries must
+	// expire rather than accumulate.
+	ttl time.Duration
 }
 
 // NewRedisVectorStore creates a new Redis vector store with HNSW index
-func NewRedisVectorStore(client *RedisClient, indexName string, dimension int) (*RedisVectorStore, error) {
+func NewRedisVectorStore(client *RedisClient, indexName string, dimension int, ttl time.Duration) (*RedisVectorStore, error) {
 	if client == nil {
 		return nil, fmt.Errorf("redis client is required")
 	}
@@ -50,10 +58,15 @@ func NewRedisVectorStore(client *RedisClient, indexName string, dimension int) (
 		return nil, fmt.Errorf("dimension must be positive, got %d", dimension)
 	}
 
+	if ttl <= 0 {
+		ttl = 5 * time.Minute
+	}
+
 	vs := &RedisVectorStore{
 		client:    client,
 		indexName: indexName,
 		dimension: dimension,
+		ttl:       ttl,
 	}
 
 	// Create RedisSearch index if it doesn't exist
@@ -116,7 +129,10 @@ func (vs *RedisVectorStore) createIndex() error {
 }
 
 // Store stores an embedding with metadata in Redis
-func (vs *RedisVectorStore) Store(ctx context.Context, key string, embedding []float32, metadata *CachedResponse, tenantID string) error {
+func (vs *RedisVectorStore) Store(ctx context.Context, key string, embedding []float32, metadata *CachedResponse, partition string) error {
+	if !isPartitionTag(partition) {
+		return fmt.Errorf("vector store: invalid partition")
+	}
 	if len(embedding) != vs.dimension {
 		return fmt.Errorf("embedding dimension mismatch: expected %d, got %d", vs.dimension, len(embedding))
 	}
@@ -131,20 +147,29 @@ func (vs *RedisVectorStore) Store(ctx context.Context, key string, embedding []f
 	}
 
 	// Store in Redis hash
+	ttl := vs.ttl
+	if ttl <= 0 {
+		ttl = 5 * time.Minute
+	}
 	now := time.Now().Unix()
-	ttl := now + int64(metadata.CreatedAt.Add(5*time.Minute).Sub(time.Now()).Seconds())
 
 	fields := map[string]interface{}{
 		"query":      "", // Will be set by caller if needed
-		"tenant_id":  tenantID,
+		"tenant_id":  partition,
 		"embedding":  embeddingBytes,
 		"response":   responseBytes,
 		"model":      metadata.Model,
 		"created_at": now,
-		"ttl":        ttl,
+		"ttl":        now + int64(ttl.Seconds()), // absolute expiry, informational
 	}
 
-	if err := vs.client.Client().HSet(ctx, key, fields).Err(); err != nil {
+	// HSET and EXPIRE in one transaction so no entry is ever left without
+	// an expiry.
+	if _, err := vs.client.Client().TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		pipe.HSet(ctx, key, fields)
+		pipe.Expire(ctx, key, ttl)
+		return nil
+	}); err != nil {
 		return fmt.Errorf("failed to store in Redis: %w", err)
 	}
 
@@ -152,7 +177,13 @@ func (vs *RedisVectorStore) Store(ctx context.Context, key string, embedding []f
 }
 
 // Search performs KNN vector similarity search
-func (vs *RedisVectorStore) Search(ctx context.Context, query []float32, topK int, threshold float64, tenantID string) ([]SearchResult, error) {
+func (vs *RedisVectorStore) Search(ctx context.Context, query []float32, topK int, threshold float64, partition string) ([]SearchResult, error) {
+	// The partition is interpolated into the query, so only accept the hex
+	// digest SemanticPartition produces: no TAG escaping is needed and no
+	// query syntax can be injected.
+	if !isPartitionTag(partition) {
+		return nil, fmt.Errorf("vector store: invalid partition")
+	}
 	if len(query) != vs.dimension {
 		return nil, fmt.Errorf("query dimension mismatch: expected %d, got %d", vs.dimension, len(query))
 	}
@@ -171,8 +202,8 @@ func (vs *RedisVectorStore) Search(ctx context.Context, query []float32, topK in
 	//   RETURN 5 query response model score created_at
 	//   LIMIT 0 <topK>
 
-	// Build the filter query — scope results to the requesting tenant.
-	filterQuery := fmt.Sprintf("@tenant_id:{%s}=>[KNN %d @embedding $query_vec AS score]", tenantID, topK)
+	// Build the filter query — scope results to the requesting partition.
+	filterQuery := fmt.Sprintf("@tenant_id:{%s}=>[KNN %d @embedding $query_vec AS score]", partition, topK)
 
 	cmd := []interface{}{
 		"FT.SEARCH", vs.indexName,
@@ -365,4 +396,19 @@ func deserializeCachedResponse(data []byte) (*CachedResponse, error) {
 		Response:  data,
 		CreatedAt: time.Now(),
 	}, nil
+}
+
+// isPartitionTag reports whether p is a SemanticPartition digest (64 lowercase
+// hex characters).
+func isPartitionTag(p string) bool {
+	if len(p) != 64 {
+		return false
+	}
+	for i := 0; i < len(p); i++ {
+		ch := p[i]
+		if !(ch >= '0' && ch <= '9' || ch >= 'a' && ch <= 'f') {
+			return false
+		}
+	}
+	return true
 }

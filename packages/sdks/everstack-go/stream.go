@@ -17,14 +17,21 @@ type Stream[T any] struct {
 	done    bool
 }
 
+// maxEventSize bounds one SSE line. A streamed response ends with the whole
+// response object on one line, which for a long reply is far larger than
+// bufio.Scanner's default 64 KiB limit.
+const maxEventSize = 32 << 20
+
 func newStream[T any](ctx context.Context, t *Transport, method, path string, body any) (*Stream[T], error) {
 	rc, err := t.StreamRaw(ctx, method, path, body)
 	if err != nil {
 		return nil, err
 	}
+	scanner := bufio.NewScanner(rc)
+	scanner.Buffer(make([]byte, 0, 64<<10), maxEventSize)
 	return &Stream[T]{
 		body:    rc,
-		scanner: bufio.NewScanner(rc),
+		scanner: scanner,
 	}, nil
 }
 

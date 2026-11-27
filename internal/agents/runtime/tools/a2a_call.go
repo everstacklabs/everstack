@@ -1,18 +1,17 @@
 package tools
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
-	"time"
 
+	a2aclient "github.com/everstacklabs/everstack/internal/a2a/client"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 	"github.com/everstacklabs/everstack/internal/telemetry"
 )
@@ -26,21 +25,28 @@ func a2aTargetHost(endpoint string) string {
 	if u, err := url.Parse(endpoint); err == nil && u.Host != "" {
 		return u.Host
 	}
-	return endpoint
+	return ""
 }
 
 // A2ACallHandler is a synthetic tool that lets an Everstack agent call a remote
-// A2A (Agent2Agent) agent — including agents hosted by Google ADK or any other
-// A2A-compliant server — and use its response. It is the client counterpart to
-// the inbound A2A server (internal/a2a/server).
+// A2A agent using the legacy 0.2/0.3 JSON-RPC message/send text subset.
+// It does not implement A2A 1.0 or continuation of asynchronous tasks.
 //
 // The tool speaks A2A's JSON-RPC message/send over HTTP. It is opt-in: it only
 // appears to an agent whose configured tools include "call_external_agent".
 type A2ACallHandler struct {
+	Runs ExternalRuns
+	// HTTPClient is a trusted transport injection for tests/embedders. Production
+	// leaves it nil to enforce connect-time SSRF protection. Deadlines and the
+	// no-redirect policy apply even to injected clients.
 	HTTPClient *http.Client
 	// Remotes optionally resolves a saved remote agent by name (tenant-scoped),
 	// so the caller can pass `remote` instead of a raw `endpoint`.
 	Remotes RemoteResolver
+	// PrivateEndpoints is an operator-only list of exact saved endpoint URLs
+	// allowed to dial RFC1918/ULA addresses. Raw endpoint calls never use it.
+	// Metadata, loopback and link-local destinations remain blocked.
+	PrivateEndpoints []string
 }
 
 // RemoteResolver resolves a saved external A2A agent by name to its endpoint and
@@ -52,11 +58,14 @@ type RemoteResolver interface {
 func (h *A2ACallHandler) Name() string { return "call_external_agent" }
 
 func (h *A2ACallHandler) Definition() gw.ToolDefinition {
+	if h.Runs != nil {
+		return durableCallDefinition()
+	}
 	return gw.ToolDefinition{
 		Type: "function",
 		Function: gw.ToolFunctionDef{
 			Name:        "call_external_agent",
-			Description: "Call an external agent over the A2A (Agent2Agent) protocol and return its response. Provide the agent's A2A endpoint URL and a message. Works with Google ADK agents and any A2A-compliant server.",
+			Description: "Call a remote agent using the legacy A2A 0.2/0.3 JSON-RPC message/send text subset. Use a saved remote name, or an endpoint and optional token. Returns completed text only; streaming, task continuation and A2A 1.0 are unsupported. A timeout may mean work was accepted: do not automatically resend.",
 			Parameters: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
@@ -74,7 +83,7 @@ func (h *A2ACallHandler) Definition() gw.ToolDefinition {
 					},
 					"auth_token": map[string]interface{}{
 						"type":        "string",
-						"description": "Optional bearer token to authenticate with the remote agent (ignored when 'remote' supplies one).",
+						"description": "Optional bearer token for an explicit HTTPS endpoint. Cannot be combined with 'remote'; saved remotes use server-side credentials.",
 					},
 				},
 				"required": []string{"message"},
@@ -83,7 +92,24 @@ func (h *A2ACallHandler) Definition() gw.ToolDefinition {
 	}
 }
 
-func (h *A2ACallHandler) Execute(ctx context.Context, args map[string]interface{}) (string, error) {
+func (h *A2ACallHandler) Execute(ctx context.Context, args map[string]interface{}) (out string, callErr error) {
+	if h.Runs != nil {
+		remote, _ := args["remote"].(string)
+		message, _ := args["message"].(string)
+		key, _ := args["idempotency_key"].(string)
+		if _, ok := args["endpoint"]; ok {
+			return "", errors.New("use a saved remote; endpoint overrides are not allowed")
+		}
+		if _, ok := args["auth_token"]; ok {
+			return "", errors.New("use the saved remote credential; token overrides are not allowed")
+		}
+		if strings.TrimSpace(remote) == "" || len(key) < 8 || len(key) > 128 {
+			return "", errors.New("a saved remote and idempotency_key of 8–128 characters are required; reuse the same key on retry")
+		}
+		return h.Runs.Start(ctx, remote, message, key)
+	}
+	ctx, cancel := context.WithTimeout(ctx, a2aclient.Timeout)
+	defer cancel()
 	endpoint, _ := args["endpoint"].(string)
 	message, _ := args["message"].(string)
 	authToken, _ := args["auth_token"].(string)
@@ -97,160 +123,93 @@ func (h *A2ACallHandler) Execute(ctx context.Context, args map[string]interface{
 	}
 	ctx, span := telemetry.StartA2ACallSpan(ctx, target)
 	defer span.End()
+	defer func() {
+		// Raw bearer arguments remain a legacy API; never newly echo a known
+		// credential from a remote answer or task identifier into tool output.
+		if authToken != "" {
+			out = strings.ReplaceAll(out, authToken, "[redacted]")
+			var taskErr *A2ATaskError
+			if errors.As(callErr, &taskErr) {
+				taskErr.TaskID = strings.ReplaceAll(taskErr.TaskID, authToken, "[redacted]")
+				taskErr.ContextID = strings.ReplaceAll(taskErr.ContextID, authToken, "[redacted]")
+				taskErr.PartialText = strings.ReplaceAll(taskErr.PartialText, authToken, "[redacted]")
+			}
+		}
+		if callErr != nil {
+			// Remote IDs/partial output belong to the tool outcome, not spans.
+			telemetry.RecordError(span, errors.New("a2a_call: external call did not complete successfully"))
+		}
+	}()
 
-	// Resolve a saved remote by name when given (and no explicit endpoint).
-	if endpoint == "" && remote != "" && h.Remotes != nil {
+	if strings.TrimSpace(message) == "" {
+		return "", errors.New("a2a_call: a nonempty message is required")
+	}
+	// A saved remote is authoritative: model-supplied values cannot replace
+	// its endpoint or credentials, including an intentionally empty credential.
+	if remote != "" {
+		if endpoint != "" || authToken != "" {
+			return "", errors.New("a2a_call: remote cannot be combined with endpoint or auth_token")
+		}
+		if h.Remotes == nil {
+			return "", errors.New("a2a_call: saved remote lookup is unavailable")
+		}
 		ep, tok, found, err := h.Remotes.Resolve(ctx, remote)
 		if err != nil {
-			return "", fmt.Errorf("could not resolve remote agent %q: %w", remote, err)
+			return "", errors.New("a2a_call: could not resolve saved remote")
 		}
 		if !found {
-			return "", fmt.Errorf("no saved remote agent named %q", remote)
+			return "", errors.New("a2a_call: saved remote not found")
 		}
 		endpoint = strings.TrimSpace(ep)
-		if authToken == "" {
-			authToken = tok
-		}
+		authToken = tok
 	}
 
-	if endpoint == "" || strings.TrimSpace(message) == "" {
-		return "", fmt.Errorf("a message and either a 'remote' name or an 'endpoint' URL are required")
+	var privateEndpoints []string
+	if remote != "" {
+		privateEndpoints = h.PrivateEndpoints
 	}
-	if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
-		return "", fmt.Errorf("endpoint must be an absolute http(s) URL")
-	}
-
-	client := h.HTTPClient
-	if client == nil {
-		client = &http.Client{Timeout: 120 * time.Second}
-	}
-
-	payload := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"id":      randID(),
-		"method":  "message/send",
-		"params": map[string]interface{}{
-			"message": map[string]interface{}{
-				"role":      "user",
-				"messageId": randID(),
-				"kind":      "message",
-				"parts":     []map[string]interface{}{{"kind": "text", "text": message}},
-			},
-		},
-	}
-	body, err := json.Marshal(payload)
+	result, err := (&a2aclient.Client{HTTPClient: h.HTTPClient, PrivateEndpoints: privateEndpoints}).Send(ctx,
+		a2aclient.Connection{Endpoint: endpoint, Protocol: a2aclient.Legacy, Token: authToken}, message, randID())
 	if err != nil {
-		return "", fmt.Errorf("a2a_call: marshal request: %w", err)
+		return "", a2aCallError(ctx, err)
 	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
-	if err != nil {
-		return "", fmt.Errorf("a2a_call: build request: %w", err)
+	if result.State == "completed" {
+		return result.Text, nil
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	if authToken != "" {
-		req.Header.Set("Authorization", "Bearer "+authToken)
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		telemetry.RecordError(span, err)
-		return "", fmt.Errorf("a2a_call: request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
-	if resp.StatusCode == http.StatusUnauthorized {
-		authErr := fmt.Errorf("a2a_call: remote agent rejected authentication (401); provide a valid auth_token")
-		telemetry.RecordError(span, authErr)
-		return "", authErr
-	}
-	if resp.StatusCode/100 != 2 {
-		httpErr := fmt.Errorf("a2a_call: remote returned HTTP %d: %s", resp.StatusCode, truncate(string(raw), 300))
-		telemetry.RecordError(span, httpErr)
-		return "", httpErr
-	}
-
-	return parseA2AResult(raw)
+	return "", &A2ATaskError{TaskID: result.TaskID, ContextID: result.ContextID, State: result.State, PartialText: result.Text}
 }
 
-// a2aResult mirrors the relevant slice of an A2A message/send JSON-RPC response.
-// The result may be a Task (with status + artifacts) or a Message (with parts).
-type a2aResult struct {
-	Error *struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-	} `json:"error"`
-	Result struct {
-		// Task shape
-		Status struct {
-			State   string `json:"state"`
-			Message struct {
-				Parts []struct {
-					Kind string `json:"kind"`
-					Text string `json:"text"`
-				} `json:"parts"`
-			} `json:"message"`
-		} `json:"status"`
-		Artifacts []struct {
-			Parts []struct {
-				Kind string `json:"kind"`
-				Text string `json:"text"`
-			} `json:"parts"`
-		} `json:"artifacts"`
-		// Message shape
-		Parts []struct {
-			Kind string `json:"kind"`
-			Text string `json:"text"`
-		} `json:"parts"`
-	} `json:"result"`
-}
-
-func parseA2AResult(raw []byte) (string, error) {
-	var r a2aResult
-	if err := json.Unmarshal(raw, &r); err != nil {
-		return "", fmt.Errorf("a2a_call: could not parse A2A response: %w", err)
+func a2aCallError(ctx context.Context, err error) error {
+	code := a2aclient.ErrorCode(err)
+	switch code {
+	case "transport_error", "read_failed":
+		if ctx.Err() != nil {
+			return fmt.Errorf("a2a_call: remote outcome unknown; do not automatically resend: %w", ctx.Err())
+		}
+		return errors.New("a2a_call: request failed or destination blocked; remote outcome unknown; do not automatically resend")
+	case "http_401", "http_403":
+		return fmt.Errorf("a2a_call: remote rejected authentication or access (HTTP %s)", strings.TrimPrefix(code, "http_"))
+	case "response_too_large":
+		return errors.New("a2a_call: response exceeds 8 MiB; no completed result; do not automatically resend")
+	case "invalid_content_type":
+		return errors.New("a2a_call: expected application/json; no completed result; do not automatically resend")
+	case "invalid_endpoint":
+		return errors.New("a2a_call: endpoint must be an absolute HTTP(S) URL without userinfo or fragment")
+	case "https_required":
+		return errors.New("a2a_call: bearer authentication requires an HTTPS endpoint")
 	}
-	if r.Error != nil {
-		return "", fmt.Errorf("a2a_call: remote error %d: %s", r.Error.Code, r.Error.Message)
+	if rpc, ok := strings.CutPrefix(code, "rpc_"); ok {
+		if a2aclient.Rejected(err) {
+			return fmt.Errorf("a2a_call: remote refused the request (JSON-RPC error %s) before doing any work", rpc)
+		}
+		return fmt.Errorf("a2a_call: remote returned JSON-RPC error %s; remote outcome unknown; do not automatically resend", rpc)
 	}
-
-	// Prefer artifacts, then the status message, then a direct Message result.
-	var parts []string
-	for _, a := range r.Result.Artifacts {
-		for _, p := range a.Parts {
-			if p.Text != "" {
-				parts = append(parts, p.Text)
-			}
+	if strings.HasPrefix(code, "http_") {
+		if status, err := strconv.Atoi(strings.TrimPrefix(code, "http_")); err == nil {
+			return fmt.Errorf("a2a_call: remote returned HTTP %d; no completed result; do not automatically resend", status)
 		}
 	}
-	if len(parts) == 0 {
-		for _, p := range r.Result.Status.Message.Parts {
-			if p.Text != "" {
-				parts = append(parts, p.Text)
-			}
-		}
-	}
-	if len(parts) == 0 {
-		for _, p := range r.Result.Parts {
-			if p.Text != "" {
-				parts = append(parts, p.Text)
-			}
-		}
-	}
-
-	out := strings.Join(parts, "\n")
-	if r.Result.Status.State == "failed" {
-		if out == "" {
-			out = "remote agent task failed"
-		}
-		return "", fmt.Errorf("a2a_call: remote agent task failed: %s", out)
-	}
-	if out == "" {
-		return "(remote agent returned no text content)", nil
-	}
-	return out, nil
+	return fmt.Errorf("a2a_call: invalid remote response (%s); no completed result; do not automatically resend", code)
 }
 
 func randID() string {

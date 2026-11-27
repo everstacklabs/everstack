@@ -169,19 +169,22 @@ func (cm *CacheManager) SetSemanticCacheTracingHooks(hooks TracingHooks) {
 }
 
 // GetSemanticCachedResponse looks up a semantically similar cached response
-func (cm *CacheManager) GetSemanticCachedResponse(ctx context.Context, query string) (*CachedResponse, bool) {
-	if cm.semanticCache == nil {
+func (cm *CacheManager) GetSemanticCachedResponse(ctx context.Context, partition, query string) (*CachedResponse, bool) {
+	if cm.semanticCache == nil || partition == "" {
 		return nil, false
 	}
-	return cm.semanticCache.Get(ctx, query)
+	return cm.semanticCache.Get(ctx, partition, query)
 }
 
 // CacheSemanticResponse stores a response in the semantic cache
-func (cm *CacheManager) CacheSemanticResponse(ctx context.Context, query string, resp *CachedResponse) error {
+func (cm *CacheManager) CacheSemanticResponse(ctx context.Context, partition, query string, resp *CachedResponse) error {
 	if cm.semanticCache == nil {
 		return fmt.Errorf("semantic cache not enabled")
 	}
-	return cm.semanticCache.Put(ctx, query, resp)
+	if partition == "" {
+		return fmt.Errorf("semantic cache: refusing to store without a tenant partition")
+	}
+	return cm.semanticCache.Put(ctx, partition, query, resp)
 }
 
 // Close closes all cache connections

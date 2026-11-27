@@ -14,6 +14,7 @@ import (
 
 	"connectrpc.com/connect"
 	agentrt "github.com/everstacklabs/everstack/internal/agents/runtime"
+	"github.com/everstacklabs/everstack/internal/api/grpc/planlimit"
 	agentscmd "github.com/everstacklabs/everstack/internal/commands/handlers/agents"
 	"github.com/everstacklabs/everstack/internal/cqrs"
 	"github.com/everstacklabs/everstack/internal/database"
@@ -604,6 +605,21 @@ func (s *Server) CreateAgentLink(ctx context.Context, req *connect.Request[agent
 	if err != nil {
 		return nil, err
 	}
+	if _, err := s.requireOwnedAgent(ctx, req.Msg.GetSourceAgentId(), tenantID); err != nil {
+		return nil, err
+	}
+	switch strings.ToLower(strings.TrimSpace(req.Msg.GetTargetType())) {
+	case "agent":
+		if _, err := s.requireOwnedAgent(ctx, req.Msg.GetTargetId(), tenantID); err != nil {
+			return nil, err
+		}
+	case "trooper":
+		if err := s.requireOwnedTrooper(ctx, req.Msg.GetTargetId()); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("target_type must be agent or trooper"))
+	}
 	userID := contextkeys.GetUserID(ctx)
 
 	var config map[string]interface{}
@@ -652,6 +668,9 @@ func (s *Server) ListAgentLinks(ctx context.Context, req *connect.Request[agents
 	if err != nil {
 		return nil, err
 	}
+	if _, err := s.requireOwnedAgent(ctx, req.Msg.GetAgentId(), tenantID); err != nil {
+		return nil, err
+	}
 
 	q := agentsquery.NewListAgentLinksQuery(tenantID, req.Msg.GetAgentId())
 	res, err := sys.QueryBus.Execute(ctx, q)
@@ -695,6 +714,9 @@ func (s *Server) DeleteAgentLink(ctx context.Context, req *connect.Request[agent
 	if err != nil {
 		return nil, err
 	}
+	if err := s.requireOwnedAgentLink(ctx, req.Msg.GetLinkId(), tenantID); err != nil {
+		return nil, err
+	}
 	userID := contextkeys.GetUserID(ctx)
 
 	cmd := agentscmd.NewDeleteAgentLinkCommand(req.Msg.GetLinkId(), tenantID, userID, "")
@@ -724,17 +746,28 @@ func (s *Server) BindAgentChannel(ctx context.Context, req *connect.Request[agen
 	if err != nil {
 		return nil, err
 	}
+	if _, err := s.requireOwnedAgent(ctx, req.Msg.GetAgentId(), tenantID); err != nil {
+		return nil, err
+	}
+	if err := s.requireOwnedChannelConfig(ctx, req.Msg.GetChannelConfigId(), tenantID); err != nil {
+		return nil, err
+	}
 	userID := contextkeys.GetUserID(ctx)
 
 	// CHANNEL_BINDINGS covers agent AND trooper bindings together (the legacy
 	// trooper RPC counts against the same cap).
-	if err := enterprise.CheckResourceLimit(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
-		enterprise.UsageTypeChannelBindings,
-		`SELECT (SELECT COUNT(*) FROM agent_channel_bindings WHERE tenant_id = $1 AND deleted_at IS NULL)
-		      + (SELECT COUNT(*) FROM trooper_channel_bindings WHERE tenant_id = $1)`,
-		[]interface{}{tenantID}, 1, "channel binding"); err != nil {
-		return nil, connect.NewError(connect.CodeResourceExhausted, err)
+	// agent_channel_bindings has no deleted_at column (bindings are hard
+	// deleted), and trooper bindings already copied into agent bindings are
+	// counted once (enterprise.CountChannelBindingsQuery).
+	// Serialized per organization: two creators racing for the last slot
+	// take the same advisory lock, and the slot is held until the read
+	// model shows this create.
+	limitSlot, limitErr := enterprise.ReserveLimitSlot(ctx, s.db, enterprise.LicenseMonitorFromContext(ctx),
+		enterprise.ChannelBindingsLimit(tenantID))
+	if limitErr != nil {
+		return nil, planlimit.ConnectError(limitErr, "channel binding")
 	}
+	defer limitSlot.Release()
 
 	cmd := agentscmd.NewBindAgentChannelCommand(
 		tenantID, req.Msg.GetAgentId(), req.Msg.GetChannelConfigId(),
@@ -744,6 +777,7 @@ func (s *Server) BindAgentChannel(ctx context.Context, req *connect.Request[agen
 	if err := sys.CommandBus.Dispatch(ctx, cmd); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	limitSlot.Confirm(ctx)
 
 	return connect.NewResponse(&agentspb.BindAgentChannelResponse{
 		Binding: &agentspb.AgentChannelBinding{
@@ -767,6 +801,12 @@ func (s *Server) UnbindAgentChannel(ctx context.Context, req *connect.Request[ag
 
 	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.requireOwnedAgent(ctx, req.Msg.GetAgentId(), tenantID); err != nil {
+		return nil, err
+	}
+	if err := s.requireOwnedChannelConfig(ctx, req.Msg.GetChannelConfigId(), tenantID); err != nil {
 		return nil, err
 	}
 	userID := contextkeys.GetUserID(ctx)
@@ -798,6 +838,9 @@ func (s *Server) ListAgentChannelBindings(ctx context.Context, req *connect.Requ
 
 	tenantID, err := s.resolveTenantID(ctx, req.Msg.GetTenantId())
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.requireOwnedAgent(ctx, req.Msg.GetAgentId(), tenantID); err != nil {
 		return nil, err
 	}
 
@@ -832,6 +875,43 @@ func (s *Server) ListAgentChannelBindings(ctx context.Context, req *connect.Requ
 		Bindings: protos,
 		Total:    int32(len(protos)),
 	}), nil
+}
+
+func (s *Server) requireOwnedAgentLink(ctx context.Context, linkID, tenantID string) error {
+	if linkID == "" {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("link_id is required"))
+	}
+	if s.db == nil {
+		return connect.NewError(connect.CodeInternal, errors.New("database not available"))
+	}
+	var owned bool
+	if err := s.db.GetContext(ctx, &owned, `SELECT EXISTS(SELECT 1 FROM agent_links WHERE id = $1 AND tenant_id = $2)`, linkID, tenantID); err != nil {
+		return connect.NewError(connect.CodeInternal, err)
+	}
+	if !owned {
+		return connect.NewError(connect.CodeNotFound, errors.New("agent link not found"))
+	}
+	return nil
+}
+
+func (s *Server) requireOwnedChannelConfig(ctx context.Context, channelConfigID, tenantID string) error {
+	if channelConfigID == "" {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("channel_config_id is required"))
+	}
+	if s.requireChannelConfig != nil {
+		return s.requireChannelConfig(ctx, channelConfigID, tenantID)
+	}
+	if s.db == nil {
+		return connect.NewError(connect.CodeInternal, errors.New("database not available"))
+	}
+	var owned bool
+	if err := s.db.GetContext(ctx, &owned, `SELECT EXISTS(SELECT 1 FROM channel_configs WHERE id = $1 AND tenant_id = $2)`, channelConfigID, tenantID); err != nil {
+		return connect.NewError(connect.CodeInternal, err)
+	}
+	if !owned {
+		return connect.NewError(connect.CodeNotFound, errors.New("channel config not found"))
+	}
+	return nil
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────

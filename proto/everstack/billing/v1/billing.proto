@@ -61,6 +61,14 @@ message GetSubscriptionRequest {
 
 message GetSubscriptionResponse {
   optional Subscription subscription = 1;
+  // True when the organization has a Stripe customer, so
+  // CreateBillingPortalSession can open the portal (payment methods and
+  // invoices) even without a subscription, e.g. after a credit top-up.
+  bool has_billing_portal = 2;
+  // Everything one plan summary needs, computed server side. Set whenever
+  // subscription is set. Members without org:manage_billing get the
+  // read-only subset (see SubscriptionSummary).
+  optional SubscriptionSummary summary = 3;
 }
 
 // CreateCheckoutSessionRequest - Create Stripe checkout for plan upgrade
@@ -116,11 +124,23 @@ message CreateBillingPortalSessionResponse {
 // CancelSubscriptionRequest - Cancel subscription at period end
 message CancelSubscriptionRequest {
   string organization_id = 1;
+  // The managed instances to keep running on Starter when the organization
+  // runs more than Starter allows (PreviewPlanChange with
+  // PLAN_CHOICE_STARTER reports keep_choice_required and max_keep); at most
+  // max_keep ids of its own slot-holding instances. Empty keeps the most
+  // recently active. Every other instance pauses at the end of the period.
+  repeated string keep_instance_ids = 2;
 }
 
 message CancelSubscriptionResponse {
   bool success = 1;
   Subscription subscription = 2;
+  SubscriptionSummary summary = 3;
+  // What happens at the period end: the instances that keep running on
+  // Starter and the ones that pause. Without keep_instance_ids the most
+  // recently active are kept.
+  repeated PlanChangeInstance kept_instances = 4;
+  repeated PlanChangeInstance paused_instances = 5;
 }
 
 // ResumeSubscriptionRequest - Resume a cancelled subscription
@@ -131,6 +151,7 @@ message ResumeSubscriptionRequest {
 message ResumeSubscriptionResponse {
   bool success = 1;
   Subscription subscription = 2;
+  SubscriptionSummary summary = 3;
 }
 
 // ListInvoicesRequest - List invoices for an organization
@@ -152,11 +173,24 @@ message GetUsageRequest {
   optional string instance_id = 2;
 }
 
+// UsageMetering says whether billing has a producer for a usage metric, so a
+// client can tell a measured zero from a metric nobody reports yet.
+enum UsageMetering {
+  // Sent by servers older than this field. Clients render the value as before.
+  USAGE_METERING_UNSPECIFIED = 0;
+  // A producer reports this metric for the organization; used is a measurement.
+  USAGE_METERING_METERED = 1;
+  // Nothing reports this metric for the organization yet. used is 0 because
+  // there is no data, not because nothing was used.
+  USAGE_METERING_NOT_METERED = 2;
+}
+
 message UsageMetric {
   string name = 1;
   int64 used = 2;
   int64 limit = 3;  // -1 for unlimited
   string unit = 4;  // "requests", "tokens", etc.
+  UsageMetering metering = 5;
 }
 
 message GetUsageResponse {
@@ -194,6 +228,12 @@ message GetUsageResponse {
   // Enterprise contract) authorizes continued compute.
   bool sandbox_compute_allowed = 19;
   bool sandbox_billing_active = 20;
+  // Names of the top-level usage fields above that nothing reports for this
+  // organization yet, spelled as their proto field names (for example
+  // "cache_savings_micros", "network_rx_bytes"). Clients render these as not
+  // metered instead of 0. Empty from servers older than this field, which
+  // means render every field as before.
+  repeated string unmetered_fields = 21;
 }
 
 // GetUsageHistoryRequest - Get time-series usage data for charts
@@ -463,6 +503,18 @@ enum SpendLimitAction {
   SPEND_LIMIT_ACTION_NOTIFY = 3;
 }
 
+// SpendBasis is what a spend limit counts (docs/design/spend-limits-v2.md
+// 4.1). UNSPECIFIED on a write keeps an existing limit's basis and creates
+// a PLATFORM_CREDIT limit, so callers that predate it are unchanged.
+enum SpendBasis {
+  SPEND_BASIS_UNSPECIFIED = 0;
+  // Everstack credit only: limits written before spend limits v2.
+  SPEND_BASIS_PLATFORM_CREDIT = 1;
+  // Everstack credit charged plus traffic on the organization's own provider
+  // keys at catalog list price: one combined budget.
+  SPEND_BASIS_ALL_INFERENCE = 2;
+}
+
 // SpendLimit represents a spending limit configuration
 message SpendLimit {
   string id = 1;
@@ -476,6 +528,16 @@ message SpendLimit {
   double current_spend = 9;
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;
+  // The gateway API key this limit applies to. Unset on organization and
+  // instance limits.
+  optional string api_key_id = 12;
+  SpendBasis basis = 13;
+  // Percentages of the limit at which owners and admins are emailed. Fixed
+  // at 80 and 100 for now.
+  repeated int32 notify_percents = 14;
+  // Display name of the API key, as given when the limit was set. Unset on
+  // organization and instance limits.
+  optional string api_key_name = 15;
 }
 
 // GetSpendLimitsRequest - Get spend limits for an organization
@@ -498,6 +560,21 @@ message SetSpendLimitRequest {
   SpendLimitPeriod period = 5;
   SpendLimitAction action_on_exceed = 6;
   bool enabled = 7;
+  // Scope the limit to one gateway API key of this organization. Requires
+  // basis ALL_INFERENCE, limit_type ESTIMATED_COST and no instance_id. The
+  // key must belong to this organization: registered by the gateway when it
+  // was created, or seen in this organization's traffic.
+  optional string api_key_id = 8;
+  // UNSPECIFIED keeps an existing limit's basis, or creates PLATFORM_CREDIT.
+  // An existing PLATFORM_CREDIT limit is converted by sending ALL_INFERENCE.
+  SpendBasis basis = 9;
+  // Display name of the API key, used in emails. Required when a key limit
+  // is created; kept when omitted on an update.
+  optional string api_key_name = 10;
+  // The user who created the API key, emailed with owners and admins when
+  // the key's limit is reached. Must be a member of the organization. Kept
+  // when omitted on an update. Unset for keys with no creator.
+  optional string api_key_creator_user_id = 11;
 }
 
 message SetSpendLimitResponse {
@@ -546,4 +623,948 @@ message AdjustSeatsResponse {
   int64 unit_price_cents = 2;
   // ISO 4217 currency code (e.g. "usd").
   string currency = 3;
+}
+
+// ---------------------------------------------------------------------------
+// Prepaid credit wallet (docs/design/prepaid-credits-v2.md, slice S2).
+// Money is integer micro-dollars (1 USD = 1,000,000 micros), USD only.
+// ---------------------------------------------------------------------------
+
+// CreditEntryType is the kind of one credit ledger entry.
+enum CreditEntryType {
+  CREDIT_ENTRY_TYPE_UNSPECIFIED = 0;
+  // Credit issued by Everstack (signup grant, promotion, ops grant).
+  CREDIT_ENTRY_TYPE_GRANT = 1;
+  // Credit bought by the customer.
+  CREDIT_ENTRY_TYPE_PURCHASE = 2;
+  // Usage that consumed credit.
+  CREDIT_ENTRY_TYPE_DEBIT = 3;
+  // Reversal of a debit.
+  CREDIT_ENTRY_TYPE_REFUND = 4;
+  // Unused granted credit removed when it expired.
+  CREDIT_ENTRY_TYPE_EXPIRY = 5;
+  // Correction in either direction.
+  CREDIT_ENTRY_TYPE_ADJUSTMENT = 6;
+}
+
+// CreditWalletState summarises whether the wallet can pay for new usage.
+enum CreditWalletState {
+  CREDIT_WALLET_STATE_UNSPECIFIED = 0;
+  // Available credit is positive.
+  CREDIT_WALLET_STATE_ACTIVE = 1;
+  // Available credit is zero or negative.
+  CREDIT_WALLET_STATE_EXHAUSTED = 2;
+}
+
+message GetCreditBalanceRequest {
+  string organization_id = 1;
+}
+
+// CreditSpend is the net credit one resource consumed (debits minus refunds).
+message CreditSpend {
+  // inference | sandbox | browser | extra_instance | processed_data | ...
+  string resource_type = 1;
+  int64 spent_micros = 2;
+}
+
+message GetCreditBalanceResponse {
+  // Signed sum of every ledger entry. Can be negative.
+  int64 balance_micros = 1;
+  // Credit reserved by in-flight requests and not yet settled.
+  int64 held_micros = 2;
+  // balance_micros - held_micros: what new usage can spend now.
+  int64 available_micros = 3;
+  CreditWalletState wallet_state = 4;
+  // When the ledger was read (database clock).
+  google.protobuf.Timestamp as_of = 5;
+  // Lifetime totals. balance = granted + purchased - spent - expired + adjusted.
+  int64 granted_micros = 6;
+  int64 purchased_micros = 7;
+  // Net consumption: debits minus refunds, as a positive number.
+  int64 spent_micros = 8;
+  // Granted credit that expired unused, as a positive number.
+  int64 expired_micros = 9;
+  // Net of every adjustment entry (signed).
+  int64 adjusted_micros = 10;
+  // Lifetime spend per resource, largest first. Resources with no net
+  // spend are omitted.
+  repeated CreditSpend spend_by_resource = 11;
+  // The one-time signup grant included in granted_micros (0 when none).
+  int64 signup_grant_micros = 12;
+  // Plan credit from the earlier subscription model (fee converted into
+  // period credit, resource_type "subscription"). Included in granted_micros.
+  int64 plan_credit_granted_micros = 13;
+  // The part of plan_credit_granted_micros that expired, as a positive number.
+  // Included in expired_micros.
+  int64 plan_credit_expired_micros = 14;
+  // Headline totals: granted_micros and expired_micros with expired plan
+  // credit netted out of both, so credit that is gone and was never part of
+  // the prepaid wallet does not inflate either figure. The identity
+  // balance = granted_current + purchased - spent - expired_current + adjusted
+  // still holds.
+  int64 granted_current_micros = 15;
+  int64 expired_current_micros = 16;
+  // When the signup grant's unspent remainder expires (30 days after it was
+  // granted). Unset when the org holds no signup grant or its grant predates
+  // the 30-day rule and never expires.
+  google.protobuf.Timestamp signup_grant_expires_at = 17;
+}
+
+message ListCreditLedgerRequest {
+  string organization_id = 1;
+  // 1 to 100; 0 means the default of 25.
+  int32 page_size = 2;
+  // Opaque token from a previous response's next_page_token.
+  string page_token = 3;
+  // Only these entry types. Empty means all.
+  repeated CreditEntryType entry_types = 4;
+  // Only these resource types (inference, sandbox, browser, ...). Empty means all.
+  repeated string resource_types = 5;
+  // Inclusive lower bound on created_at.
+  google.protobuf.Timestamp start_time = 6;
+  // Exclusive upper bound on created_at.
+  google.protobuf.Timestamp end_time = 7;
+}
+
+// CreditLedgerEntry is one customer-visible ledger row.
+message CreditLedgerEntry {
+  string id = 1;
+  CreditEntryType entry_type = 2;
+  // Signed: positive adds credit, negative consumes it.
+  int64 amount_micros = 3;
+  // Empty when the entry is not tied to a resource.
+  string resource_type = 4;
+  string metric_type = 5;
+  // Human readable summary, for example "Inference: gpt-4o-mini".
+  string description = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp period_start = 8;
+  google.protobuf.Timestamp period_end = 9;
+  google.protobuf.Timestamp expires_at = 10;
+  // Model for inference entries, when recorded.
+  string model = 11;
+}
+
+message ListCreditLedgerResponse {
+  repeated CreditLedgerEntry entries = 1;
+  // Empty when there are no more entries.
+  string next_page_token = 2;
+}
+
+// ---- Billed inference attempts ----
+// One gateway request can make several provider attempts: a parallel race
+// dispatches every leg, a fallback tries the next provider after a failure,
+// and a retry repeats a target. Every attempt on an Everstack key that
+// generated tokens is charged, except a retry Everstack made for its own
+// reasons. Attempts on the customer's own provider key are listed and never
+// charged.
+
+// InferenceAttemptRole is why an attempt was made and how it ended.
+enum InferenceAttemptRole {
+  // Not recorded (history from before attempts were recorded).
+  INFERENCE_ATTEMPT_ROLE_UNSPECIFIED = 0;
+  // Its response was returned to the caller.
+  INFERENCE_ATTEMPT_ROLE_SERVED = 1;
+  // A leg of a parallel race that another leg won.
+  INFERENCE_ATTEMPT_ROLE_RACE_LOSER = 2;
+  // Failed, after which fallback tried the next provider.
+  INFERENCE_ATTEMPT_ROLE_FAILED_FALLBACK = 3;
+  // A repeat of the same target that the routing configuration asked for.
+  INFERENCE_ATTEMPT_ROLE_RETRY = 4;
+  // A repeat Everstack made for its own reasons. Never charged.
+  INFERENCE_ATTEMPT_ROLE_PLATFORM_RETRY = 5;
+  // Broke off part way (for example a stream that failed) with nothing
+  // configured to take over. Charged for the tokens it generated.
+  INFERENCE_ATTEMPT_ROLE_INTERRUPTED = 6;
+}
+
+// InferenceAttempt is one provider attempt.
+message InferenceAttempt {
+  InferenceAttemptRole role = 1;
+  string provider = 2;
+  string model = 3;
+  // chat | embeddings | responses | ...
+  string modality = 4;
+  // True when the attempt ran on the customer's own provider key. Such
+  // attempts are never charged.
+  bool customer_key = 5;
+  // Unset when not recorded (history from before attempts were recorded).
+  optional int64 input_tokens = 6;
+  optional int64 output_tokens = 7;
+  // The provider reported no usage (the stream was cut off, or sent no usage
+  // chunk), so the tokens are Everstack's estimate.
+  bool estimated = 8;
+  // Whether the attempt consumed credit, and how much (positive).
+  bool charged = 9;
+  int64 amount_micros = 10;
+  google.protobuf.Timestamp occurred_at = 11;
+  // A call Everstack made for the request itself (a context summary or a
+  // cache lookup), not an answer to it. Charged like any other attempt;
+  // never counted as served.
+  bool internal = 12;
+}
+
+// InferenceRequestAttempts is every attempt of one request, oldest first.
+message InferenceRequestAttempts {
+  // Opaque key, stable across pages, for UI state such as which groups are
+  // expanded. Not an identifier to show.
+  string group_key = 1;
+  google.protobuf.Timestamp first_attempt_at = 2;
+  google.protobuf.Timestamp last_attempt_at = 3;
+  int32 attempt_count = 4;
+  // Attempts whose answer was returned, internal calls excluded.
+  int32 served_count = 5;
+  // Sum of the charged attempts' amounts (positive).
+  int64 charged_micros = 6;
+  repeated InferenceAttempt attempts = 7;
+}
+
+message ListInferenceAttemptsRequest {
+  string organization_id = 1;
+  // Request groups per page: 1 to 50; 0 means the default of 20.
+  int32 page_size = 2;
+  // Opaque token from a previous response's next_page_token.
+  string page_token = 3;
+  // Inclusive lower bound on the group's latest attempt.
+  google.protobuf.Timestamp start_time = 4;
+  // Exclusive upper bound on the group's latest attempt.
+  google.protobuf.Timestamp end_time = 5;
+}
+
+message ListInferenceAttemptsResponse {
+  // Newest request first.
+  repeated InferenceRequestAttempts requests = 1;
+  // Empty when there are no more requests.
+  string next_page_token = 2;
+}
+
+// ---- Spend status (docs/design/spend-limits-v2.md S2) ----
+
+// SpendTotals is estimated inference spend over one window.
+message SpendTotals {
+  // Inclusive window start (00:00 UTC of the day, or of the 1st of the month).
+  google.protobuf.Timestamp start = 1;
+  // Exclusive window end: when the window resets (00:00 UTC).
+  google.protobuf.Timestamp resets_at = 2;
+  // platform_micros + byok_estimated_micros, in USD micros.
+  int64 spent_micros = 3;
+  // Everstack credit charged, as billed (with markup).
+  int64 platform_micros = 4;
+  // Traffic on the organization's own provider keys at catalog list price,
+  // no markup. An estimate: the provider's invoice is authoritative.
+  int64 byok_estimated_micros = 5;
+  // Provider attempts in the window, priced or not.
+  int64 attempts = 6;
+  // Attempts on the organization's own keys for models without a list
+  // price. They count $0 and are not in spent_micros.
+  int64 unpriced_attempts = 7;
+  // True when spent_micros includes an estimate (byok_estimated_micros > 0).
+  bool estimated = 8;
+}
+
+// ApiKeySpend is one gateway API key's spend this month.
+message ApiKeySpend {
+  // The gateway API key id. Empty for traffic that used no API key
+  // (dashboard sessions, agent triggers, workflows, internal calls).
+  string api_key_id = 1;
+  SpendTotals today = 2;
+  SpendTotals month = 3;
+}
+
+message GetSpendStatusRequest {
+  string organization_id = 1;
+}
+
+message GetSpendStatusResponse {
+  string organization_id = 1;
+  // The current UTC day and UTC month, for the whole organization.
+  SpendTotals today = 2;
+  SpendTotals month = 3;
+  // Every API key with recorded attempts this month, highest month spend
+  // first. Sums to the organization totals.
+  repeated ApiKeySpend api_keys = 4;
+  // Attempts recorded up to this time are included. Unset until the rollup
+  // job has completed its first pass.
+  google.protobuf.Timestamp as_of = 5;
+}
+
+// ---- Prepaid credit purchase (docs/design/prepaid-credits-v2.md S3) ----
+
+// CreditPurchaseState mirrors billing.credit_purchases.state.
+enum CreditPurchaseState {
+  CREDIT_PURCHASE_STATE_UNSPECIFIED = 0;
+  // Created; the customer is on (or left) the Stripe Checkout page.
+  CREDIT_PURCHASE_STATE_PENDING = 1;
+  // Paid and minted. The only state that means the credit is available.
+  CREDIT_PURCHASE_STATE_PAID = 2;
+  // A delayed payment method failed.
+  CREDIT_PURCHASE_STATE_FAILED = 3;
+  // The Checkout session expired unpaid.
+  CREDIT_PURCHASE_STATE_EXPIRED = 4;
+  CREDIT_PURCHASE_STATE_CANCELED = 5;
+  // Checkout completed; the payment is still processing.
+  CREDIT_PURCHASE_STATE_ACTION_REQUIRED = 6;
+  // Fully refunded; the credit was clawed back.
+  CREDIT_PURCHASE_STATE_REFUNDED = 7;
+  // A chargeback is open or was lost.
+  CREDIT_PURCHASE_STATE_DISPUTED = 8;
+  // Paid but held for manual review (for example a non-USD payment).
+  CREDIT_PURCHASE_STATE_NEEDS_REVIEW = 9;
+}
+
+// CreditPurchase is one prepaid credit purchase attempt.
+message CreditPurchase {
+  string id = 1;
+  string organization_id = 2;
+  CreditPurchaseState state = 3;
+  // Pre-tax credit requested, in micro-dollars (1 USD = 1,000,000).
+  int64 requested_micros = 4;
+  // Credit minted (0 until paid).
+  int64 minted_micros = 5;
+  // Credit clawed back by refunds and lost disputes.
+  int64 reversed_micros = 6;
+  // Amount charged including tax, in minor units of `currency` (0 until paid).
+  int64 amount_total_minor = 7;
+  int64 amount_tax_minor = 8;
+  string currency = 9;
+  google.protobuf.Timestamp created_at = 10;
+  optional google.protobuf.Timestamp paid_at = 11;
+}
+
+message PurchaseCreditsRequest {
+  string organization_id = 1;
+  // Pre-tax credit to buy, in USD cents. Whole dollars, at least the
+  // configured minimum ($10). Tax, if any, is added on top at checkout.
+  int64 amount_cents = 2;
+  // Relative path in the Cloud app to return to after Checkout (for example
+  // "/acme/settings/billing?tab=overview"). The server joins it to the
+  // configured app origin; absolute URLs are rejected.
+  string return_path = 3;
+  // Set when the buyer left the pre-checked auto top-up box ticked: the
+  // terms shown next to it. Absent (unticked) writes no policy. The policy
+  // is written enabled only once this purchase is paid, and only if the
+  // organization has no auto top-up policy yet.
+  optional AutoTopUpConsent auto_top_up = 4;
+}
+
+// AutoTopUpConsent is the disclosed auto top-up terms a buyer agreed to.
+message AutoTopUpConsent {
+  // Whole USD cents. Charge when the balance drops below this.
+  int64 threshold_cents = 1;
+  // Whole USD cents charged per top-up.
+  int64 amount_cents = 2;
+  // Whole USD cents; at most this much is charged per calendar month (UTC).
+  int64 monthly_cap_cents = 3;
+  // The consent wording version the client rendered
+  // (GetCreditPurchaseOptionsResponse.auto_top_up_consent_version).
+  string consent_version = 4;
+}
+
+message PurchaseCreditsResponse {
+  CreditPurchase purchase = 1;
+  // Stripe Checkout URL to redirect the browser to.
+  string checkout_url = 2;
+}
+
+message GetCreditPurchaseRequest {
+  string organization_id = 1;
+  string purchase_id = 2;
+}
+
+message GetCreditPurchaseResponse {
+  CreditPurchase purchase = 1;
+}
+
+message ListCreditPurchasesRequest {
+  string organization_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListCreditPurchasesResponse {
+  repeated CreditPurchase purchases = 1;
+}
+
+message GetCreditPurchaseOptionsRequest {
+  string organization_id = 1;
+}
+
+message GetCreditPurchaseOptionsResponse {
+  // False while self-serve purchase is switched off; the UI hides Buy.
+  bool enabled = 1;
+  // Preset top-up amounts, whole USD, pre-tax.
+  repeated int64 presets_usd = 2;
+  int64 min_usd = 3;
+  int64 max_usd = 4;
+  // True when the Buy dialog should show the pre-checked auto top-up box:
+  // auto top-up is available and the organization has no policy yet.
+  bool offer_auto_top_up = 5;
+  // Defaults for that box: the threshold, and the monthly cap as a multiple
+  // of the amount being bought (the refill amount is the amount bought).
+  int64 auto_top_up_default_threshold_usd = 6;
+  int64 auto_top_up_default_cap_multiple = 7;
+  // Version of the consent wording; send it back in AutoTopUpConsent.
+  string auto_top_up_consent_version = 8;
+}
+
+// ===== Auto top-up (docs/design/auto-top-up.md) =====
+
+enum AutoTopUpStatus {
+  AUTO_TOP_UP_STATUS_UNSPECIFIED = 0;
+  // Not set up, or turned off.
+  AUTO_TOP_UP_STATUS_OFF = 1;
+  // On and healthy.
+  AUTO_TOP_UP_STATUS_ACTIVE = 2;
+  // On, but the last charge failed; retried automatically after a wait.
+  AUTO_TOP_UP_STATUS_ACTION_REQUIRED = 3;
+  // Stopped after repeated failed charges. Saving the settings resumes it.
+  AUTO_TOP_UP_STATUS_PAUSED = 4;
+}
+
+enum AutoTopUpAttemptOutcome {
+  AUTO_TOP_UP_ATTEMPT_OUTCOME_UNSPECIFIED = 0;
+  // Charge sent to the card, not confirmed yet.
+  AUTO_TOP_UP_ATTEMPT_OUTCOME_PENDING = 1;
+  AUTO_TOP_UP_ATTEMPT_OUTCOME_SUCCEEDED = 2;
+  AUTO_TOP_UP_ATTEMPT_OUTCOME_FAILED = 3;
+}
+
+// AutoTopUpAttempt is one auto top-up charge.
+message AutoTopUpAttempt {
+  AutoTopUpAttemptOutcome outcome = 1;
+  int64 amount_micros = 2;
+  google.protobuf.Timestamp attempted_at = 3;
+  // Customer-safe reason and next step, for a failed attempt.
+  string failure_message = 4;
+}
+
+message AutoTopUpPolicy {
+  // False when the organization never set up auto top-up.
+  bool configured = 1;
+  bool enabled = 2;
+  AutoTopUpStatus status = 3;
+  // Micro-dollars (1 USD = 1,000,000).
+  int64 threshold_micros = 4;
+  int64 amount_micros = 5;
+  int64 monthly_cap_micros = 6;
+  // Charged or in flight this calendar month (UTC), and what is left.
+  int64 used_this_month_micros = 7;
+  int64 remaining_this_month_micros = 8;
+  // Pass back as expected_version when saving.
+  int64 version = 9;
+  optional AutoTopUpAttempt last_attempt = 10;
+  // A charge has been sent to the card and is not settled yet.
+  bool charge_in_flight = 11;
+  // Customer-safe explanation of ACTION_REQUIRED or PAUSED.
+  string action_message = 12;
+  // When the next charge may happen after a failure (ACTION_REQUIRED).
+  optional google.protobuf.Timestamp next_attempt_at = 13;
+  // The consent on record.
+  string consent_text = 14;
+  optional google.protobuf.Timestamp consent_at = 15;
+  // Why it is PAUSED: "failed_payments", "dispute" or "refund". After a
+  // dispute or refund only an owner or admin turning it back on resumes it.
+  string paused_reason = 16;
+}
+
+message GetAutoTopUpPolicyRequest {
+  string organization_id = 1;
+}
+
+message GetAutoTopUpPolicyResponse {
+  AutoTopUpPolicy policy = 1;
+  // False while auto top-up is switched off for this deployment; the UI
+  // hides it.
+  bool available = 2;
+  // Bounds for the edit dialog, whole USD.
+  int64 min_amount_usd = 3;
+  int64 max_amount_usd = 4;
+  int64 min_threshold_usd = 5;
+  int64 max_monthly_cap_usd = 6;
+  string consent_version = 7;
+}
+
+message SetAutoTopUpPolicyRequest {
+  string organization_id = 1;
+  bool enabled = 2;
+  // Whole USD cents. Required when enabled; ignored when turning off.
+  int64 threshold_cents = 3;
+  int64 amount_cents = 4;
+  int64 monthly_cap_cents = 5;
+  // The version the customer edited (0 when no policy existed). A stale
+  // version is refused with Aborted.
+  int64 expected_version = 6;
+  // The consent wording version the dialog showed. Required when enabled.
+  string consent_version = 7;
+}
+
+message SetAutoTopUpPolicyResponse {
+  AutoTopUpPolicy policy = 1;
+}
+
+// ===== Saved payment methods =====
+
+// PaymentMethod is display metadata for a saved Stripe payment method. It
+// never carries a card number or security code: those never reach Everstack.
+message PaymentMethod {
+  // Everstack id of the saved method; pass it to SetDefault/Remove.
+  string id = 1;
+  // Stripe payment method type, for example "card" or "link".
+  string type = 2;
+  // Card network, for example "visa" or "mastercard". Empty for non-cards.
+  string brand = 3;
+  string last4 = 4;
+  int32 exp_month = 5;
+  int32 exp_year = 6;
+  // "credit", "debit", "prepaid" or "unknown".
+  string funding = 7;
+  // Issuing country, ISO 3166-1 alpha-2.
+  string country = 8;
+  bool is_default = 9;
+  // True in the card's last two months of validity (this month or next).
+  bool expiring_soon = 10;
+  // True once the expiry month has passed.
+  bool expired = 11;
+  string billing_name = 12;
+  string billing_postal_code = 13;
+  string billing_country = 14;
+  // Wallet the card was added through, for example "apple_pay". Empty
+  // for a card entered directly.
+  string wallet = 15;
+  google.protobuf.Timestamp created_at = 16;
+  // Email of the Link account, for type "link". Only returned to owners and
+  // admins; empty for other members and for every other type.
+  string link_email = 17;
+  // Billing address lines of a card. Only returned to owners and admins, to
+  // prefill the edit form.
+  string billing_address_line1 = 18;
+  string billing_address_line2 = 19;
+  string billing_address_city = 20;
+  string billing_address_state = 21;
+}
+
+message CreateSetupIntentRequest {
+  string organization_id = 1;
+}
+
+message CreateSetupIntentResponse {
+  // Stripe SetupIntent client secret for stripe.confirmSetup. Short-lived;
+  // never log or persist it.
+  string client_secret = 1;
+  string setup_intent_id = 2;
+}
+
+message ListPaymentMethodsRequest {
+  string organization_id = 1;
+}
+
+message ListPaymentMethodsResponse {
+  repeated PaymentMethod payment_methods = 1;
+}
+
+message SetDefaultPaymentMethodRequest {
+  string organization_id = 1;
+  string payment_method_id = 2;
+}
+
+message SetDefaultPaymentMethodResponse {
+  repeated PaymentMethod payment_methods = 1;
+  // Set when a subscription was past due or unpaid with an open invoice
+  // and the new default card was tried on it. Every live subscription is
+  // moved to the new default card either way.
+  optional PaymentRecovery payment_recovery = 2;
+}
+
+// PaymentRecoveryStatus is the outcome of paying an overdue subscription
+// invoice with a newly chosen default card.
+enum PaymentRecoveryStatus {
+  PAYMENT_RECOVERY_STATUS_UNSPECIFIED = 0;
+  // Paid; the subscription returns to active through the usual webhooks.
+  PAYMENT_RECOVERY_STATUS_PAID = 1;
+  // The bank requires authentication: send the customer to client_action
+  // (CONFIRM_PAYMENT, Stripe's hosted invoice).
+  PAYMENT_RECOVERY_STATUS_ACTION_REQUIRED = 2;
+  // The card was declined or Stripe failed. The card stays the default and
+  // Stripe keeps retrying; client_action points at the hosted invoice to
+  // pay another way.
+  PAYMENT_RECOVERY_STATUS_FAILED = 3;
+}
+
+message PaymentRecovery {
+  PaymentRecoveryStatus status = 1;
+  // Smallest currency unit.
+  int64 amount_due = 2;
+  string currency = 3;
+  optional ClientAction client_action = 4;
+}
+
+message RemovePaymentMethodRequest {
+  string organization_id = 1;
+  string payment_method_id = 2;
+}
+
+message RemovePaymentMethodResponse {
+  repeated PaymentMethod payment_methods = 1;
+}
+
+// UpdatePaymentMethodRequest replaces the editable details of a saved card.
+// Stripe never lets a card number change; to use a different card, add it
+// and remove the old one. Every field is sent: an empty billing field clears
+// it in Stripe.
+message UpdatePaymentMethodRequest {
+  string organization_id = 1;
+  string payment_method_id = 2;
+  // 1 to 12.
+  int32 exp_month = 3;
+  // Four digits. The expiry must not be in the past.
+  int32 exp_year = 4;
+  string billing_name = 5;
+  string billing_address_line1 = 6;
+  string billing_address_line2 = 7;
+  string billing_address_city = 8;
+  string billing_address_state = 9;
+  string billing_postal_code = 10;
+  // ISO 3166-1 alpha-2.
+  string billing_country = 11;
+}
+
+message UpdatePaymentMethodResponse {
+  repeated PaymentMethod payment_methods = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Subscription management (docs/design/subscription-lifecycle.md slices 4-6)
+// ---------------------------------------------------------------------------
+
+// PlanChoice names a self-serve plan. The server maps it (with a
+// BillingPeriod) to the Stripe price; clients never send price ids.
+enum PlanChoice {
+  PLAN_CHOICE_UNSPECIFIED = 0;
+  // Starter (tier "free"). Reached by cancelling; ChangePlan rejects it.
+  PLAN_CHOICE_STARTER = 1;
+  // Build (tier "basic").
+  PLAN_CHOICE_BUILD = 2;
+  // Scale (tier "pro").
+  PLAN_CHOICE_SCALE = 3;
+}
+
+// PlanChangeTiming says when a plan change takes effect.
+enum PlanChangeTiming {
+  PLAN_CHANGE_TIMING_UNSPECIFIED = 0;
+  // Applied now, with a prorated charge for the rest of the period.
+  PLAN_CHANGE_TIMING_IMMEDIATE = 1;
+  // Scheduled for the end of the current period (downgrades, cheaper
+  // intervals, cancellation).
+  PLAN_CHANGE_TIMING_PERIOD_END = 2;
+}
+
+// PlanChangeDirection classifies a change: tier rank first, then the price
+// of the target interval for a same-plan interval switch.
+enum PlanChangeDirection {
+  PLAN_CHANGE_DIRECTION_UNSPECIFIED = 0;
+  PLAN_CHANGE_DIRECTION_UPGRADE = 1;
+  PLAN_CHANGE_DIRECTION_DOWNGRADE = 2;
+  // Target equals the current plan and interval. ChangePlan with no change
+  // withdraws any scheduled change instead.
+  PLAN_CHANGE_DIRECTION_NONE = 3;
+}
+
+// SubscriptionPaymentMethod is the display summary of the card or method
+// that pays the subscription. Never a full number.
+message SubscriptionPaymentMethod {
+  // Stripe payment method type, for example "card" or "link".
+  string type = 1;
+  string brand = 2;
+  string last4 = 3;
+  int32 exp_month = 4;
+  int32 exp_year = 5;
+  // "subscription" when set on the subscription itself, "customer_default"
+  // when it falls back to the organization's default method.
+  string source = 6;
+}
+
+// UpcomingInvoice is the next invoice Stripe will raise for the
+// subscription (Stripe invoice preview, cached for a few minutes).
+message UpcomingInvoice {
+  // Smallest currency unit (cents for USD), tax and credits included.
+  int64 amount_due = 1;
+  string currency = 2;
+  // When Stripe will attempt to collect it.
+  google.protobuf.Timestamp date = 3;
+}
+
+// ScheduledPlanChange is a plan or interval change that takes effect at
+// the end of the current period.
+message ScheduledPlanChange {
+  PlanChoice target_plan = 1;
+  // Catalog display name of the target plan ("Build").
+  string target_plan_name = 2;
+  BillingPeriod target_billing_period = 3;
+  google.protobuf.Timestamp effective_at = 4;
+  // False when the change was scheduled outside the app (for example in
+  // the Stripe portal); keep_instance_ids is then empty.
+  bool scheduled_in_app = 5;
+}
+
+// SubscriptionAllowedActions is what the caller may do now. Server
+// computed; the UI should not re-derive it. All false for members without
+// org:manage_billing.
+message SubscriptionAllowedActions {
+  // CancelSubscription (at period end).
+  bool cancel = 1;
+  // ResumeSubscription: withdraws a scheduled cancellation or a scheduled
+  // plan change.
+  bool resume = 2;
+  // ChangePlan to another plan.
+  bool change_plan = 3;
+  // ChangePlan to the other billing period of the current plan.
+  bool switch_interval = 4;
+  // CreateBillingPortalSession / payment method RPCs.
+  bool update_payment = 5;
+}
+
+// SubscriptionSummary is the plan summary view. Fields marked "manager
+// only" are left unset for members without org:manage_billing.
+message SubscriptionSummary {
+  // Internal tier for logic ("free", "basic", "pro", "enterprise").
+  string plan_tier = 1;
+  PlanChoice plan = 2;
+  // Catalog display name ("Starter", "Build", "Scale"); never the tier.
+  string plan_name = 3;
+  SubscriptionStatus status = 4;
+  BillingPeriod billing_period = 5;
+  // The real period: Stripe's license item when it could be read, else the
+  // stored row. Never projected.
+  google.protobuf.Timestamp current_period_start = 6;
+  google.protobuf.Timestamp current_period_end = 7;
+  // Next renewal; unset when a cancellation is scheduled or the
+  // subscription has ended.
+  optional google.protobuf.Timestamp renews_at = 8;
+  // When a scheduled cancellation takes effect.
+  optional google.protobuf.Timestamp cancels_at = 9;
+  bool cancel_at_period_end = 10;
+  optional ScheduledPlanChange scheduled_change = 11;
+  // End of the past-due grace window. Reserved for the dunning slice; not
+  // set yet.
+  optional google.protobuf.Timestamp past_due_grace_ends_at = 12;
+  // Manager only. Unset when nothing is due (cancellation scheduled,
+  // ended) or Stripe could not be read.
+  optional UpcomingInvoice next_invoice = 13;
+  // Manager only.
+  optional SubscriptionPaymentMethod payment_method = 14;
+  SubscriptionAllowedActions allowed_actions = 15;
+  // True when the stored subscription disagrees with Stripe or with
+  // itself and someone should look (see review_reasons).
+  bool needs_review = 16;
+  // Machine-readable reasons: "stripe_subscription_missing",
+  // "stripe_status_mismatch", "period_ended", "unknown_price",
+  // "org_tier_mismatch".
+  repeated string review_reasons = 17;
+  // Manager only. Instances chosen to keep when the scheduled cancellation
+  // or downgrade takes effect; the rest pause then. Empty means "keep the
+  // most recently active".
+  repeated string keep_instance_ids = 18;
+  // False when the caller lacks org:manage_billing and manager-only fields
+  // were withheld.
+  bool manager_view = 19;
+}
+
+// PlanLimitsSummary is the part of a plan's limits a change affects.
+message PlanLimitsSummary {
+  // 0 means unlimited.
+  int32 instance_limit = 1;
+  int32 seat_limit = 2;
+  // Named usage limits from the catalog (-1 = unlimited).
+  repeated PlanUsageLimit usage_limits = 3;
+}
+
+message PlanUsageLimit {
+  string type = 1;
+  int64 value = 2;
+}
+
+// PlanChangeInstance is one managed instance that holds a plan slot.
+message PlanChangeInstance {
+  string id = 1;
+  string slug = 2;
+  string status = 3;
+  google.protobuf.Timestamp last_active_at = 4;
+  // True when it would pause at the switch under the given (or default)
+  // keep choice.
+  bool would_pause = 5;
+  // True when it already runs as a paid extra instance (credit-funded fee)
+  // and holds no plan slot.
+  bool paid_extra = 6;
+}
+
+// PreviewPlanChangeRequest previews a change to plan + billing_period.
+// PLAN_CHOICE_STARTER previews a cancellation.
+message PreviewPlanChangeRequest {
+  string organization_id = 1;
+  PlanChoice plan = 2;
+  BillingPeriod billing_period = 3;
+  // Optional keep choice to evaluate; empty uses the default (most
+  // recently active), which ChangePlan and CancelSubscription also apply
+  // when they get no choice.
+  repeated string keep_instance_ids = 4;
+}
+
+message PreviewPlanChangeResponse {
+  PlanChangeDirection direction = 1;
+  PlanChangeTiming timing = 2;
+  PlanChoice target_plan = 3;
+  string target_plan_name = 4;
+  BillingPeriod target_billing_period = 5;
+  // Now for an immediate change; the end of the current period otherwise.
+  google.protobuf.Timestamp effective_at = 6;
+  PlanLimitsSummary current_limits = 7;
+  PlanLimitsSummary new_limits = 8;
+  // Every instance holding a slot under the current plan.
+  repeated PlanChangeInstance instances = 9;
+  // The instances that exceed the new limit and would pause at the switch
+  // (would_pause = true), under keep_instance_ids or the default.
+  repeated PlanChangeInstance over_limit_instances = 10;
+  // True when the new limit leaves instances to pause, so the UI should
+  // offer a keep choice (preselect the instances with would_pause = false).
+  // Not required: without one, the most recently active are kept.
+  bool keep_choice_required = 11;
+  // How many instances keep_instance_ids may name (the new instance limit).
+  int32 max_keep = 12;
+  // Immediate changes: the prorated amount charged now, smallest currency
+  // unit (Stripe invoice preview). Unset for scheduled changes or when
+  // Stripe could not price it.
+  optional int64 proration_amount_due = 13;
+  string currency = 14;
+  // The recurring price of the target plan and period, smallest unit.
+  int64 target_price_amount = 15;
+  // Credit-funded extra instances: the monthly wallet fee per instance
+  // beyond the plan limit, and what keeping every over-limit instance as an
+  // extra would cost per month. Both 0 when the option is unavailable.
+  int64 extra_instance_monthly_cents = 16;
+  int64 over_limit_extras_monthly_cents = 17;
+  // Upgrades charge the default saved card. False means ChangePlan will
+  // return an ADD_PAYMENT_METHOD action instead of charging.
+  bool has_payment_method = 18;
+  // Set when ChangePlan would refuse: "past_due", "cancel_scheduled",
+  // "no_subscription", "not_self_serve", "same_plan".
+  string blocked_reason = 19;
+}
+
+// ClientActionKind is a step the customer must finish in Stripe.
+enum ClientActionKind {
+  CLIENT_ACTION_KIND_UNSPECIFIED = 0;
+  // Pay or authenticate (SCA) the upgrade invoice on Stripe's hosted page.
+  // The change applies once it is paid; Stripe drops it if it is not paid
+  // within about a day.
+  CLIENT_ACTION_KIND_CONFIRM_PAYMENT = 1;
+  // Add a payment method in the Stripe portal, then retry ChangePlan.
+  // Nothing was changed.
+  CLIENT_ACTION_KIND_ADD_PAYMENT_METHOD = 2;
+}
+
+message ClientAction {
+  ClientActionKind kind = 1;
+  // Stripe-hosted URL to open.
+  string url = 2;
+}
+
+// PlanChangeOutcome is what ChangePlan did.
+enum PlanChangeOutcome {
+  PLAN_CHANGE_OUTCOME_UNSPECIFIED = 0;
+  // Upgrade applied and paid.
+  PLAN_CHANGE_OUTCOME_APPLIED = 1;
+  // Downgrade or cheaper interval scheduled for the period end.
+  PLAN_CHANGE_OUTCOME_SCHEDULED = 2;
+  // Already on the target (a scheduled change, if any, was withdrawn).
+  PLAN_CHANGE_OUTCOME_UNCHANGED = 3;
+  // The customer must finish client_action.
+  PLAN_CHANGE_OUTCOME_ACTION_REQUIRED = 4;
+}
+
+message ChangePlanRequest {
+  string organization_id = 1;
+  // PLAN_CHOICE_BUILD or PLAN_CHOICE_SCALE.
+  PlanChoice plan = 2;
+  BillingPeriod billing_period = 3;
+  // Instances to keep on a downgrade that leaves the organization over the
+  // new instance limit (at most max_keep). Empty keeps the most recently
+  // active.
+  repeated string keep_instance_ids = 4;
+  // App-relative path ("/acme/settings/billing") Stripe sends the customer
+  // back to after a client action, joined onto the configured app origin.
+  // Defaults to "/".
+  string return_path = 5;
+}
+
+message ChangePlanResponse {
+  PlanChangeOutcome outcome = 1;
+  PlanChangeTiming timing = 2;
+  google.protobuf.Timestamp effective_at = 3;
+  optional ClientAction client_action = 4;
+  SubscriptionSummary summary = 5;
+  // A scheduled downgrade: the instances that keep running and the ones
+  // that pause at the switch.
+  repeated PlanChangeInstance kept_instances = 6;
+  repeated PlanChangeInstance paused_instances = 7;
+}
+
+// RegisterApiKeyRequest - the managed gateway reports a key it created.
+message RegisterApiKeyRequest {
+  // The tenant the gateway stored on the key (api_keys.org_id): an
+  // organization id or a managed instance id.
+  string tenant_id = 1;
+  // The gateway API key id (api_keys.id).
+  string api_key_id = 2;
+}
+
+message RegisterApiKeyResponse {}
+
+// UnregisterApiKeyRequest - the managed gateway reports a key it deleted.
+message UnregisterApiKeyRequest {
+  // The tenant the deleting caller is authenticated as on the gateway: an
+  // organization id or a managed instance id. Only a registry row owned by
+  // the organization this tenant resolves to is removed.
+  string tenant_id = 1;
+  // The gateway API key id (api_keys.id).
+  string api_key_id = 2;
+}
+
+message UnregisterApiKeyResponse {}
+
+message GetModelTrialRequest {
+  string organization_id = 1;
+}
+
+// ModelTrialState is the state of an organization's free model requests.
+enum ModelTrialState {
+  MODEL_TRIAL_STATE_UNSPECIFIED = 0;
+  // Free requests can be used now.
+  MODEL_TRIAL_STATE_ACTIVE = 1;
+  // Every free request is used.
+  MODEL_TRIAL_STATE_EXHAUSTED = 2;
+  // The free requests expired (see expires_at).
+  MODEL_TRIAL_STATE_EXPIRED = 3;
+  // Free requests are paused for everyone: until resumes_at when set,
+  // otherwise until further notice.
+  MODEL_TRIAL_STATE_PAUSED = 4;
+  // The organization has no free requests.
+  MODEL_TRIAL_STATE_NOT_ELIGIBLE = 5;
+}
+
+message GetModelTrialResponse {
+  string organization_id = 1;
+  bool eligible = 2;
+  int32 granted = 3;
+  int32 used = 4;
+  int32 remaining = 5;
+  ModelTrialState state = 6;
+  // Unset until the free requests are granted (on first use); they expire a
+  // fixed number of days after the grant.
+  google.protobuf.Timestamp expires_at = 7;
+  // Set when paused by today's limit: the next 00:00 UTC.
+  google.protobuf.Timestamp resumes_at = 8;
+  // The one model free requests are served on, and the output cap per
+  // request.
+  string model = 9;
+  int32 max_output_tokens = 10;
 }

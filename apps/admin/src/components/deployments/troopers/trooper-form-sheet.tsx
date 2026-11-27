@@ -845,7 +845,7 @@ export function TrooperFormSheet({
                           <button
                             type="button"
                             onClick={() => removeSkill(skill.source)}
-                            className="text-zinc-500 hover:text-red-400 light:hover:text-red-600 transition-colors shrink-0"
+                            className="text-zinc-500 hover:text-danger transition-colors shrink-0"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -951,7 +951,7 @@ export function TrooperFormSheet({
                               {rs.name}
                             </span>
                             {isInstalled && (
-                              <span className="text-[9px] text-green-400 light:text-green-600 shrink-0">
+                              <span className="text-[9px] text-success shrink-0">
                                 installed
                               </span>
                             )}

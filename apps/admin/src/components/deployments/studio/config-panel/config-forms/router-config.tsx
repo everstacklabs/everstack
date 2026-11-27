@@ -30,7 +30,7 @@ export function RouterConfigForm({ config, onChange }: Props) {
                         <Input value={m.model} onChange={(e) => updateMapping(i, 'model', e.target.value)} placeholder="Model" className="bg-brand-main-700/50 border-brand-main-500 text-white light:text-brand-main-50 text-xs h-8" />
                         <Input value={m.provider} onChange={(e) => updateMapping(i, 'provider', e.target.value)} placeholder="Provider" className="bg-brand-main-700/50 border-brand-main-500 text-white light:text-brand-main-50 text-xs h-8" />
                     </div>
-                    <button onClick={() => removeMapping(i)} className="mt-1 p-1 text-brand-main-400 hover:text-red-400 light:hover:text-red-600">
+                    <button onClick={() => removeMapping(i)} className="mt-1 p-1 text-brand-main-400 hover:text-danger">
                         <Icon icon="lucide:x" className="h-3.5 w-3.5" />
                     </button>
                 </div>

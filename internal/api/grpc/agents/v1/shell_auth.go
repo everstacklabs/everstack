@@ -11,6 +11,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 )
 
@@ -42,12 +43,15 @@ const (
 // gateway process), so one forged header plus a sandbox id opened an
 // interactive shell inside another tenant's sandbox.
 func (s *Server) authenticateShellRequest(r *http.Request, sandboxID, tenantID string) error {
-	// Path 1: authenticated caller who owns this sandbox.
-	if callerTenant, err := s.resolveTenantID(r.Context(), ""); err == nil && callerTenant != "" {
+	// Path 1: authenticated caller who owns this sandbox. A tenant id in the
+	// context is not proof of a caller on its own (the standalone local-tenant
+	// middleware sets one on every request), so require a verified principal
+	// before trusting it. Anyone else must prove identity by SSH signature.
+	if callerTenant, err := s.resolveTenantID(r.Context(), ""); contextkeys.HasVerifiedTenantPrincipal(r.Context()) && err == nil && callerTenant != "" {
 		if callerTenant == tenantID {
 			return nil
 		}
-		// Mirror requireSandboxOwnershipHTTP: do not confirm that another
+		// Mirror ownedSandboxHTTP: do not confirm that another
 		// tenant's sandbox exists.
 		logger.WithFields(
 			"sandbox_id", sandboxID,
@@ -60,6 +64,24 @@ func (s *Server) authenticateShellRequest(r *http.Request, sandboxID, tenantID s
 	// Path 2: SSH key signature (CLI), which carries its own proof of identity
 	// and is verified against the sandbox's tenant.
 	return s.verifySSHSignature(r, sandboxID, tenantID)
+}
+
+func (s *Server) prepareShellLookup(r *http.Request) (string, bool, error) {
+	if contextkeys.HasVerifiedTenantPrincipal(r.Context()) {
+		tenantID, err := s.resolveTenantID(r.Context(), "")
+		if err == nil && tenantID != "" {
+			return tenantID, true, nil
+		}
+	}
+	q := r.URL.Query()
+	if q.Get("ts") != "" && q.Get("sig") != "" && q.Get("fp") != "" {
+		return "", false, nil
+	}
+	return "", false, fmt.Errorf("authentication required")
+}
+
+func writeShellAuthenticationRequired(w http.ResponseWriter) {
+	writeJSONError(w, http.StatusUnauthorized, "authentication required")
 }
 
 // verifySSHSignature validates the SSH key signature sent as query parameters.

@@ -1,7 +1,7 @@
 name: "meta-llama/llama-4-scout-17b-16e-instruct"
 display_name: "Llama 4 Scout 17B 16E (Groq)"
 family: "llama"
-status: "stable"
+status: "deprecated"
 release_date: "2025-04-05"
 
 cost:
@@ -59,3 +59,4 @@ parameters:
   - key: "seed"
     display_name: "Seed"
     type: "integer"
+notes: "Shut down by Groq on 2026-07-17. Migrate to openai/gpt-oss-120b."

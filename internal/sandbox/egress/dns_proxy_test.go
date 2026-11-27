@@ -34,12 +34,12 @@ func TestIsAllowedDomain_Wildcard(t *testing.T) {
 		want   bool
 	}{
 		{"registry.npmjs.org", true},
-		{"foo.bar.npmjs.org", true},    // multi-level subdomain
-		{"npmjs.org", false},           // wildcard requires at least one subdomain
+		{"foo.bar.npmjs.org", true}, // multi-level subdomain
+		{"npmjs.org", false},        // wildcard requires at least one subdomain
 		{"api.github.com", true},
 		{"github.com", false},
 		{"crates.io", true},
-		{"static.crates.io", false},    // no wildcard for crates.io
+		{"static.crates.io", false}, // no wildcard for crates.io
 		{"evil.npmjs.org.evil.com", false},
 	}
 
@@ -81,7 +81,7 @@ func TestDNSProxy_IsAllowed(t *testing.T) {
 		{"registry.npmjs.org", true},
 		{"cdn.yarnpkg.com", true},
 		{"deep.nested.yarnpkg.com", true},
-		{"yarnpkg.com", false},         // wildcard needs subdomain
+		{"yarnpkg.com", false}, // wildcard needs subdomain
 		{"pypi.org", true},
 		{"files.pythonhosted.org", true},
 		{"crates.io", true},
@@ -162,5 +162,57 @@ func TestDNSProxy_AuditEmission(t *testing.T) {
 	}
 	if sink.events[1].Action != "blocked" || sink.events[1].Domain != "blocked.com" {
 		t.Errorf("second event wrong: %+v", sink.events[1])
+	}
+}
+
+func TestIsClusterInternalName(t *testing.T) {
+	cases := map[string]bool{
+		"postgres-gateway.everstack-prod.svc.cluster.local": true,
+		"kubernetes.default.svc.cluster.local.":             true,
+		"cluster.local":                                     true,
+		"redis.everstack-prod.svc":                          true,
+		"svc":                                               true,
+		"localhost":                                         true,
+		"api.localhost":                                     true,
+		"10.0.43.10.in-addr.arpa":                           true, // 10.43.0.10
+		"225.0.42.10.in-addr.arpa":                          true, // 10.42.0.225
+		"1.0.0.127.in-addr.arpa":                            true,
+		"254.169.in-addr.arpa":                              true, // zone inside 169.254/16
+		"42.10.in-addr.arpa":                                true, // zone inside 10/8
+		"10.in-addr.arpa":                                   true,
+		"1.0.64.100.in-addr.arpa":                           true, // CGNAT
+		"1.16.172.in-addr.arpa":                             true,
+		"a.b.c.d.ip6.arpa":                                  true,
+		"ip6.arpa":                                          true,
+		"10.2.0.192.in-addr.arpa":                           false, // RFC 5737 public documentation address
+		"in-addr.arpa":                                      false,
+		"172.in-addr.arpa":                                  false, // 172/8 is wider than 172.16/12
+		"100.in-addr.arpa":                                  false, // wider than 100.64/10
+		"example.com":                                       false,
+		"svc.example.com":                                   false,
+		"clusterlocal.example.com":                          false,
+		"registry.npmjs.org":                                false,
+		"":                                                  false,
+	}
+	for domain, want := range cases {
+		if got := IsClusterInternalName(domain); got != want {
+			t.Errorf("IsClusterInternalName(%q) = %v, want %v", domain, got, want)
+		}
+	}
+}
+
+func TestDNSProxy_RefusesInternalNamesAheadOfAllowlist(t *testing.T) {
+	// Allow mode, and even an explicit allowlist entry, cannot reopen a
+	// cluster name; only the operator switch can.
+	p := NewDNSProxy(DNSProxyConfig{AllowedHosts: []string{"*.svc.cluster.local"}})
+	if !p.refusesInternal("postgres.everstack-prod.svc.cluster.local") {
+		t.Fatal("cluster name must be refused despite the allowlist")
+	}
+	if p.refusesInternal("registry.npmjs.org") {
+		t.Fatal("public name must not be refused")
+	}
+	p = NewDNSProxy(DNSProxyConfig{AllowInternalNames: true})
+	if p.refusesInternal("postgres.everstack-prod.svc.cluster.local") {
+		t.Fatal("operator override must let cluster names through")
 	}
 }

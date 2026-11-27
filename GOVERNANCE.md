@@ -22,9 +22,10 @@ should begin as a GitHub Discussion or design issue before implementation.
 Maintainers seek consensus, but retain final responsibility for project scope,
 security, compatibility, and release quality.
 
-Commercial roadmap commitments do not override the Apache 2.0 license of code
-already published in this repository. Edition boundaries are documented in
-[EDITIONS.md](./EDITIONS.md).
+Commercial roadmap commitments do not override the Apache 2.0 license of
+code already published in the public repository.
+[LICENSING.md](./LICENSING.md) states the licence terms. Edition boundaries are
+documented in [EDITIONS.md](./EDITIONS.md).
 
 ## Repository synchronization
 

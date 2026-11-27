@@ -3,6 +3,7 @@ import { ui, Copy, CheckCircle2, useCopyToClipboard } from '@everstack/ui'
 import { ApiKeyType } from '@everstack/proto/everstack/api_key/v1/api_key_pb'
 import { useApiKeys, useCreateApiKey } from '@/hooks/vault/use-api-keys'
 import { toast } from '@everstack/ui/components'
+import { reportIfFirstKey } from '@/lib/first-key-event'
 
 const {
   Dialog,
@@ -45,6 +46,9 @@ export function CreateApiKeyDialog({
       return
     }
 
+    // Snapshot before the create: the mutation refetches the list.
+    const keysBefore = listApiKeysQuery.data
+
     try {
       const response = await createApiKeyMutation.mutateAsync({
         name: name.trim(),
@@ -55,6 +59,7 @@ export function CreateApiKeyDialog({
       // Show the generated key
       if (response.apiKey) {
         setCreatedKey(response.apiKey.hash)
+        reportIfFirstKey(keysBefore)
       }
     } catch (error) {
       console.error('Failed to create API key:', error)
@@ -201,7 +206,7 @@ export function CreateApiKeyDialog({
                 </span>
                 API Key Created
               </DialogTitle>
-              <DialogDescription className="mt-3 rounded border border-amber-500/20 bg-amber-500/8 px-3 py-2 text-xs text-amber-200 light:text-amber-700">
+              <DialogDescription className="mt-3 rounded border border-warning-border bg-warning-surface px-3 py-2 text-xs text-warning">
                 Save this key now — you won't be able to see it again.
               </DialogDescription>
             </DialogHeader>

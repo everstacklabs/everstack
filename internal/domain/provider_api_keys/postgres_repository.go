@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -271,13 +272,11 @@ func (r *PostgresRepository) fromDB(dbKey *dbProviderAPIKey) (*ProviderAPIKey, e
 	}, nil
 }
 
-// UpsertConfigKey upserts a config-sourced API key (special handling)
 // configKeyDuplicatesManual reports whether a user-managed key already holds
-// this exact credential for the provider config. `source` is not decoration:
-// only "config" inference is metered against the wallet
-// (inference_meter.platformKeySource), so a config row carrying a key the user
-// supplied themselves both clutters the key list and bills BYOK traffic as
-// platform traffic.
+// this exact credential for the provider config. A config row carrying a key
+// the user supplied themselves clutters the key list with a locked "Config API
+// Key" duplicate. It no longer affects billing: the served key's provenance is
+// derived from the owning configuration (BillingSource), not from this label.
 func (r *PostgresRepository) configKeyDuplicatesManual(ctx context.Context, key *ProviderAPIKey) (bool, error) {
 	const query = `
 		SELECT EXISTS (
@@ -314,6 +313,8 @@ func (r *PostgresRepository) dropDuplicateConfigKeys(ctx context.Context, provid
 	return nil
 }
 
+// UpsertConfigKey upserts a config-sourced API key (special handling): one
+// row per provider config, replaced in place on the next write.
 func (r *PostgresRepository) UpsertConfigKey(ctx context.Context, key *ProviderAPIKey) error {
 	if err := r.dropDuplicateConfigKeys(ctx, key.ProviderConfigID); err != nil {
 		return err
@@ -390,5 +391,178 @@ func (r *PostgresRepository) DeactivateConfigKeys(ctx context.Context, providerC
 		return fmt.Errorf("failed to deactivate config keys: %w", err)
 	}
 
+	return nil
+}
+
+// Tenant-scoped variants. Each query carries the ownership predicate
+// (provider_configurations.organization_id = the org parameter) in SQL, so a
+// key reached by a bare id can never be read or written for another tenant
+// or for a platform-owned (organization_id NULL) configuration: NULL never
+// equals a parameter. Each $N is used exactly once.
+
+func requireOrg(orgID string) error {
+	if orgID == "" {
+		return fmt.Errorf("org id is required")
+	}
+	return nil
+}
+
+// ListByProviderConfigForOrg returns the keys of a configuration orgID owns.
+func (r *PostgresRepository) ListByProviderConfigForOrg(ctx context.Context, orgID, providerConfigID string) ([]*ProviderAPIKey, error) {
+	if err := requireOrg(orgID); err != nil {
+		return nil, err
+	}
+	const query = `
+		SELECT k.id, k.provider_config_id, k.key_name, k.key_encrypted, k.weight, k.is_active,
+		       COALESCE(k.source, 'manual') as source, k.rate_limit_tracking, k.created_at, k.updated_at
+		FROM provider_api_keys k
+		JOIN provider_configurations c ON c.id = k.provider_config_id
+		WHERE k.provider_config_id = $1 AND c.organization_id = $2
+		ORDER BY k.weight DESC, k.created_at ASC
+	`
+	var dbKeys []dbProviderAPIKey
+	if err := r.db.SelectContext(ctx, &dbKeys, query, providerConfigID, orgID); err != nil {
+		return nil, fmt.Errorf("failed to list provider API keys: %w", err)
+	}
+	keys := make([]*ProviderAPIKey, len(dbKeys))
+	for i := range dbKeys {
+		key, err := r.fromDB(&dbKeys[i])
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert key %s: %w", dbKeys[i].ID, err)
+		}
+		keys[i] = key
+	}
+	return keys, nil
+}
+
+// GetByIDForOrg retrieves a key whose configuration orgID owns.
+func (r *PostgresRepository) GetByIDForOrg(ctx context.Context, orgID, id string) (*ProviderAPIKey, error) {
+	if err := requireOrg(orgID); err != nil {
+		return nil, err
+	}
+	const query = `
+		SELECT k.id, k.provider_config_id, k.key_name, k.key_encrypted, k.weight, k.is_active,
+		       COALESCE(k.source, 'manual') as source, k.rate_limit_tracking, k.created_at, k.updated_at
+		FROM provider_api_keys k
+		JOIN provider_configurations c ON c.id = k.provider_config_id
+		WHERE k.id = $1 AND c.organization_id = $2
+	`
+	var dbKey dbProviderAPIKey
+	if err := r.db.GetContext(ctx, &dbKey, query, id, orgID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrKeyNotFound
+		}
+		return nil, fmt.Errorf("failed to get provider API key: %w", err)
+	}
+	return r.fromDB(&dbKey)
+}
+
+// CreateForOrg inserts key only when orgID owns key.ProviderConfigID. The
+// insert selects the configuration row under the ownership predicate, so
+// nothing is written (ErrKeyNotFound) for a configuration orgID does not
+// own, and a duplicate-name violation can only arise on the caller's own
+// configuration.
+func (r *PostgresRepository) CreateForOrg(ctx context.Context, orgID string, key *ProviderAPIKey) error {
+	if err := requireOrg(orgID); err != nil {
+		return err
+	}
+	dbKey, err := r.toDB(key)
+	if err != nil {
+		return fmt.Errorf("failed to convert key for insert: %w", err)
+	}
+	const query = `
+		INSERT INTO provider_api_keys
+		(id, provider_config_id, key_name, key_encrypted, weight, is_active, source, rate_limit_tracking, created_at, updated_at)
+		SELECT $1::uuid, c.id, $3::text, $4::text, $5::int, $6::boolean, $7::text, $8::jsonb, $9::timestamptz, $10::timestamptz
+		FROM provider_configurations c
+		WHERE c.id = $2::uuid AND c.organization_id = $11
+	`
+	res, err := r.db.ExecContext(ctx, query,
+		dbKey.ID,
+		dbKey.ProviderConfigID,
+		dbKey.KeyName,
+		dbKey.KeyEncrypted,
+		dbKey.Weight,
+		dbKey.IsActive,
+		dbKey.Source,
+		dbKey.RateLimitData,
+		dbKey.CreatedAt,
+		dbKey.UpdatedAt,
+		orgID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create provider API key: %w", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rows == 0 {
+		return ErrKeyNotFound
+	}
+	return nil
+}
+
+// UpdateForOrg updates a key whose configuration orgID owns.
+func (r *PostgresRepository) UpdateForOrg(ctx context.Context, orgID string, key *ProviderAPIKey) error {
+	if err := requireOrg(orgID); err != nil {
+		return err
+	}
+	key.UpdatedAt = time.Now()
+	dbKey, err := r.toDB(key)
+	if err != nil {
+		return fmt.Errorf("failed to convert key for update: %w", err)
+	}
+	const query = `
+		UPDATE provider_api_keys AS k
+		SET key_name = $2, key_encrypted = $3, weight = $4, is_active = $5,
+		    rate_limit_tracking = $6, updated_at = $7
+		FROM provider_configurations AS c
+		WHERE k.id = $1 AND c.id = k.provider_config_id AND c.organization_id = $8
+	`
+	res, err := r.db.ExecContext(ctx, query,
+		dbKey.ID,
+		dbKey.KeyName,
+		dbKey.KeyEncrypted,
+		dbKey.Weight,
+		dbKey.IsActive,
+		dbKey.RateLimitData,
+		dbKey.UpdatedAt,
+		orgID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update provider API key: %w", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rows == 0 {
+		return ErrKeyNotFound
+	}
+	return nil
+}
+
+// DeleteForOrg deletes a key whose configuration orgID owns.
+func (r *PostgresRepository) DeleteForOrg(ctx context.Context, orgID, id string) error {
+	if err := requireOrg(orgID); err != nil {
+		return err
+	}
+	const query = `
+		DELETE FROM provider_api_keys AS k
+		USING provider_configurations AS c
+		WHERE k.id = $1 AND c.id = k.provider_config_id AND c.organization_id = $2
+	`
+	res, err := r.db.ExecContext(ctx, query, id, orgID)
+	if err != nil {
+		return fmt.Errorf("failed to delete provider API key: %w", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rows == 0 {
+		return ErrKeyNotFound
+	}
 	return nil
 }

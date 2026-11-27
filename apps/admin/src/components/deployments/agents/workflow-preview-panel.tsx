@@ -115,8 +115,8 @@ export function WorkflowPreviewPanel({ data }: { data: WorkflowPreviewData }) {
                     <span
                         className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${
                             needsConfig
-                                ? 'bg-amber-500/15 text-amber-400 light:text-amber-700'
-                                : 'bg-green-500/15 text-green-400 light:text-green-600'
+                                ? 'bg-warning-surface-strong text-warning'
+                                : 'bg-success-surface-strong text-success'
                         }`}
                     >
                         {needsConfig ? 'Needs Config' : 'Ready'}

@@ -79,7 +79,7 @@ export type Message = SystemMessage | UserMessage | AssistantMessage | ToolMessa
  */
 export interface ChatCompletionParams<TModel extends string = string> {
     /** ID of the model to use (e.g., "@openai/gpt-4o") */
-    model: TModel;
+    model: TModel | "auto";
 
     /** A list of messages comprising the conversation */
     messages: Message[];

@@ -45,18 +45,18 @@ export function LicenseStatusPage() {
     if (isError) {
         return (
             <div className="flex h-[50vh] items-center justify-center p-4">
-                <Card className="w-full max-w-md border-red-500/20 bg-red-500/5">
+                <Card className="w-full max-w-md border-danger-border bg-danger-surface/60">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-red-400">
+                        <CardTitle className="flex items-center gap-2 text-danger">
                             <Icon icon="lucide:alert-circle" className="h-5 w-5" />
                             Error Loading License
                         </CardTitle>
-                        <CardDescription className="text-red-200/60">
+                        <CardDescription className="text-danger/60">
                             {error?.message || 'Failed to load license information'}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Button onClick={handleRefresh} variant="outline" className="w-full border-red-500/20 hover:bg-red-500/10 hover:text-red-400">
+                        <Button onClick={handleRefresh} variant="outline" className="w-full border-danger-border hover:bg-danger-surface hover:text-danger">
                             <Icon icon="lucide:refresh-cw" className="mr-2 h-4 w-4" />
                             Try Again
                         </Button>
@@ -89,23 +89,23 @@ export function LicenseStatusPage() {
             {/* Alerts Section */}
             <div className="space-y-4">
                 {isLocked && (
-                    <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4 flex items-start gap-4">
-                        <Icon icon="lucide:lock" className="h-5 w-5 text-red-400 mt-0.5" />
+                    <div className="rounded-lg border border-danger-border bg-danger-surface p-4 flex items-start gap-4">
+                        <Icon icon="lucide:lock" className="h-5 w-5 text-danger mt-0.5" />
                         <div>
-                            <h3 className="font-medium text-red-400">Gateway Locked</h3>
-                            <p className="text-sm text-red-300/80 mt-1">{gateway.lock_reason}</p>
+                            <h3 className="font-medium text-danger">Gateway Locked</h3>
+                            <p className="text-sm text-danger/80 mt-1">{gateway.lock_reason}</p>
                         </div>
                     </div>
                 )}
 
                 {(isExpiringSoon || isTrialExpiringSoon) && !isLocked && (
-                    <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4 flex items-start gap-4">
-                        <Icon icon="lucide:alert-triangle" className="h-5 w-5 text-yellow-400 mt-0.5" />
+                    <div className="rounded-lg border border-warning-border bg-warning-surface p-4 flex items-start gap-4">
+                        <Icon icon="lucide:alert-triangle" className="h-5 w-5 text-warning mt-0.5" />
                         <div>
-                            <h3 className="font-medium text-yellow-400">
+                            <h3 className="font-medium text-warning">
                                 {license.is_paid ? 'License Expiring Soon' : 'Free Plan Ending Soon'}
                             </h3>
-                            <p className="text-sm text-yellow-300/80 mt-1">
+                            <p className="text-sm text-warning/80 mt-1">
                                 {license.is_paid && license.expires_at
                                     ? `Your license expires ${dayjs(license.expires_at).fromNow()}. Please renew to avoid service interruption.`
                                     : license.trial_expires
@@ -135,7 +135,7 @@ export function LicenseStatusPage() {
                         <div className="flex items-center justify-between">
                             <span className="text-sm text-white/50 light:text-black/50">Status</span>
                             <div className="flex items-center gap-2">
-                                <div className={`h-2 w-2 rounded-full ${license.active ? 'bg-green-500' : 'bg-red-500'}`} />
+                                <div className={`h-2 w-2 rounded-full ${license.active ? 'bg-success-solid' : 'bg-danger-solid'}`} />
                                 <span className="capitalize font-medium text-white/90 light:text-black/90">{license.status}</span>
                             </div>
                         </div>
@@ -253,7 +253,7 @@ export function LicenseStatusPage() {
                                 }`}
                         >
                             <span>Yearly</span>
-                            <span className="ml-2 text-xs text-green-400">Save 20%</span>
+                            <span className="ml-2 text-xs text-success">Save 20%</span>
                         </button>
                     </div>
                 </div>

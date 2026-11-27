@@ -84,7 +84,7 @@ function ComparePanels({ traceAId, traceBId }: { traceAId: string; traceBId: str
     return (
         <div className="flex-1 min-h-0 grid grid-cols-2 gap-3 p-3 overflow-auto">
             <TracePane label="A" traceId={traceAId} accent="text-brand-secondary-300" />
-            <TracePane label="B" traceId={traceBId} accent="text-amber-300 light:text-amber-700" />
+            <TracePane label="B" traceId={traceBId} accent="text-warning" />
             <div className="col-span-2">
                 <DeltasBar traceAId={traceAId} traceBId={traceBId} />
             </div>
@@ -220,7 +220,7 @@ function DeltasBar({ traceAId, traceBId }: { traceAId: string; traceBId: string 
 
 function Delta({ label, value, sign }: { label: string; value: string; sign: number }) {
     const arrow = sign === 0 ? null : sign > 0 ? <ArrowRight className="size-3.5" /> : <ArrowLeft className="size-3.5" />
-    const color = sign === 0 ? 'text-white/50 light:text-black/50' : sign > 0 ? 'text-amber-400 light:text-amber-700' : 'text-emerald-400 light:text-emerald-600'
+    const color = sign === 0 ? 'text-white/50 light:text-black/50' : sign > 0 ? 'text-warning' : 'text-success'
     return (
         <div className="flex items-center justify-between rounded border border-brand-main-500/60 px-2 py-1 bg-brand-main-700/30">
             <span className="text-white/50 light:text-black/50">{label}</span>
@@ -248,8 +248,8 @@ function OutputDiff({ traceAId, traceBId }: { traceAId: string; traceBId: string
             <CardHeader className="!pb-1.5 flex flex-row items-center justify-between">
                 <CardTitle className="text-white light:text-brand-main-50 text-sm flex items-center gap-2">
                     Output diff
-                    <span className="text-[10px] text-emerald-400 light:text-emerald-600 font-mono">+{stats.adds}</span>
-                    <span className="text-[10px] text-rose-400 light:text-rose-600 font-mono">−{stats.deletes}</span>
+                    <span className="text-[10px] text-success font-mono">+{stats.adds}</span>
+                    <span className="text-[10px] text-danger font-mono">−{stats.deletes}</span>
                 </CardTitle>
                 <div className="flex items-center bg-brand-main-700 rounded p-0.5 text-[11px]">
                     {(['unified', 'split'] as const).map((m) => (
@@ -291,9 +291,9 @@ function UnifiedDiff({ ops }: { ops: DiffOp[] }) {
                     key={i}
                     className={
                         op.type === 'insert'
-                            ? 'bg-emerald-500/15 text-emerald-300 light:text-emerald-600 rounded px-px'
+                            ? 'bg-success-surface-strong text-success rounded px-px'
                             : op.type === 'delete'
-                              ? 'bg-rose-500/15 text-rose-300 light:text-rose-600 line-through rounded px-px'
+                              ? 'bg-danger-surface-strong text-danger line-through rounded px-px'
                               : 'text-zinc-300 light:text-zinc-700'
                     }
                 >
@@ -312,7 +312,7 @@ function SplitDiff({ aOutput, bOutput, ops }: { aOutput: string; bOutput: string
                     op.type === 'insert' ? null : (
                         <span
                             key={`a${i}`}
-                            className={op.type === 'delete' ? 'bg-rose-500/15 text-rose-300 light:text-rose-600 rounded px-px' : 'text-zinc-300 light:text-zinc-700'}
+                            className={op.type === 'delete' ? 'bg-danger-surface-strong text-danger rounded px-px' : 'text-zinc-300 light:text-zinc-700'}
                         >
                             {op.value}
                         </span>
@@ -325,7 +325,7 @@ function SplitDiff({ aOutput, bOutput, ops }: { aOutput: string; bOutput: string
                     op.type === 'delete' ? null : (
                         <span
                             key={`b${i}`}
-                            className={op.type === 'insert' ? 'bg-emerald-500/15 text-emerald-300 light:text-emerald-600 rounded px-px' : 'text-zinc-300 light:text-zinc-700'}
+                            className={op.type === 'insert' ? 'bg-success-surface-strong text-success rounded px-px' : 'text-zinc-300 light:text-zinc-700'}
                         >
                             {op.value}
                         </span>

@@ -36,9 +36,9 @@ function healthLabel(status: string) {
 
 function healthColor(status: string) {
     switch (status) {
-        case 'MCP_SERVER_HEALTH_STATUS_HEALTHY': return '#22c55e'
-        case 'MCP_SERVER_HEALTH_STATUS_UNHEALTHY': return '#ef4444'
-        default: return '#64748b'
+        case 'MCP_SERVER_HEALTH_STATUS_HEALTHY': return 'var(--color-success-solid)'
+        case 'MCP_SERVER_HEALTH_STATUS_UNHEALTHY': return 'var(--color-danger-solid)'
+        default: return 'var(--color-neutral-solid)'
     }
 }
 
@@ -137,7 +137,7 @@ export function McpServersList() {
             width: 140,
             minWidth: 100,
             render: (server: McpServer) => (
-                <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-blue-500/15 text-blue-300 light:text-blue-600">
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-info-surface-strong text-info">
                     {transportLabel(server.transportType)}
                 </span>
             ),
@@ -166,9 +166,9 @@ export function McpServersList() {
                     <span
                         className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
                             isHealthy
-                                ? 'bg-emerald-500/15 text-emerald-300 light:text-emerald-600'
+                                ? 'bg-success-surface-strong text-success'
                                 : isUnhealthy
-                                    ? 'bg-red-500/15 text-red-300 light:text-red-600'
+                                    ? 'bg-danger-surface-strong text-danger'
                                     : 'bg-brand-main-700/50 text-brand-main-200'
                         }`}
                     >
@@ -203,7 +203,7 @@ export function McpServersList() {
                 <div className="flex items-center gap-2 justify-center" data-row-actions>
                     <button
                         type="button"
-                        className="p-1 rounded hover:bg-blue-500/20 hover:text-blue-400 light:hover:text-blue-600 transition-colors"
+                        className="p-1 rounded hover:bg-info-surface-strong hover:text-info transition-colors"
                         onClick={() => handleRefreshTools(server)}
                         disabled={discoverMutation.isPending}
                         title="Refresh tools"
@@ -212,7 +212,7 @@ export function McpServersList() {
                     </button>
                     <button
                         type="button"
-                        className="p-1 rounded hover:bg-blue-500/20 hover:text-blue-400 light:hover:text-blue-600 transition-colors"
+                        className="p-1 rounded hover:bg-info-surface-strong hover:text-info transition-colors"
                         onClick={() => setEditServer(server)}
                         title="Edit server"
                     >
@@ -220,7 +220,7 @@ export function McpServersList() {
                     </button>
                     <button
                         type="button"
-                        className="p-1 rounded hover:bg-red-500/20 hover:text-red-400 light:hover:text-red-600 transition-colors"
+                        className="p-1 rounded hover:bg-danger-surface-strong hover:text-danger transition-colors"
                         onClick={() => {
                             setDeleteConfirmId(server.id)
                             setDeleteConfirmName(server.name)

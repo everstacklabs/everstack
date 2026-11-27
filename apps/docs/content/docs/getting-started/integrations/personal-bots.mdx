@@ -1,0 +1,1109 @@
+---
+title: Connect a personal bot
+description: Give a personal bot such as OpenClaw or Hermes Agent its own key for this gateway's models, tools, traces and agents.
+icon: Bot
+---
+
+A bot connection gives one personal bot its own API key. The key can only use the parts of the gateway you allow, and the dashboard shows the exact config to paste into the bot. Everstack does not host or run the bot: it keeps running wherever you run it today.
+
+## What a bot key can and cannot do
+
+A bot key can:
+
+- Call the surfaces you enabled for that bot, and nothing else. A request to any other surface is refused.
+- Be replaced with a new key, or removed, from the Bots page at any time.
+
+A bot key cannot:
+
+- Sign in to the dashboard or manage the gateway. Bots, keys and settings are managed only from a signed-in dashboard session.
+- Use a surface you did not enable. To change what a bot can use, edit the bot.
+
+Each bot has exactly one key. The key does not appear in the API keys list; manage it from the Bots page.
+
+## Surfaces
+
+| Surface | In the dashboard | What the bot does | Endpoint |
+| --- | --- | --- | --- |
+| `inference` | Models | Uses the gateway as its model provider | `/v1` (OpenAI-compatible), `/v1/messages` (Anthropic-compatible) |
+| `mcp` | Tools | Calls the tools this gateway exposes | `/mcp` (Streamable HTTP) |
+| `telemetry` | Traces | Sends OpenTelemetry traces and logs | `/v1/traces`, `/v1/logs` (OTLP over HTTP) |
+| `a2a` | Agents | Calls your published Everstack agents | `/a2a/agents/<agentId>` |
+
+Bots send the key as `Authorization: Bearer <your bot key>` on `/v1`, `/mcp`, the OTLP endpoints and A2A. On `/v1/messages`, Anthropic clients send it either as `x-api-key` or as a Bearer token, depending on the client and its SDK version. All endpoints are on the gateway origin, the same address you use for the dashboard.
+
+For A2A, the gateway serves both the legacy JSON-RPC binding (`message/send`) and A2A 1.0 (`SendMessage` with the header `A2A-Version: 1.0`). Replies are synchronous: the call returns when the agent run finishes. There is no streaming and no task polling.
+
+Hosted bots (Grok Bot, Meta Muse) can use Tools only. Grok Build can use Models and Tools.
+
+## Connect a bot in the dashboard
+
+<Steps>
+
+<Step>
+### Open the Bots page
+
+Go to **Gateway → Bots** and select **Connect a bot**.
+</Step>
+
+<Step>
+### Choose the type, name and surfaces
+
+Pick the bot type, give the connection a name, and check what it may use. Models, Tools and Traces are on by default where the bot supports them; Agents is off.
+
+Optionally set a **Rate limit** in requests per minute: a whole number from 1 to 100,000. It counts every request the bot key makes, across all its surfaces. Leave it empty for no bot-specific limit. You can change or clear it later with **Edit**.
+</Step>
+
+<Step>
+### Copy the key and the config
+
+The next screen shows the key once, with the config for that bot filled in: this gateway's URL, the key and, if you pick one, a model. Copy what you need before you close it. You will not see the key again.
+</Step>
+
+<Step>
+### Paste the config into the bot
+
+Apply it as described for your bot below. The bot shows as connected after its first call.
+</Step>
+
+</Steps>
+
+Later, **Setup** on a bot shows the same config with `<your bot key>` in place of the key.
+
+## Usage and traces per bot
+
+Each row on the Bots page shows when the bot was last seen, how many calls its key made in the last 30 days, and its rate limit if you set one. Hover the call count to see it split by surface (Models, Tools, Traces, Agents). Last seen updates at most once a minute. A bot that has never called shows no count.
+
+Traces, logs and metrics a bot sends with its key carry the resource attribute `everstack.api_key_id`, set by the gateway to the bot's key id. For a bot with Traces enabled, **Setup** shows that value with a copy button. Making a new key changes the value and starts the 30-day count again from zero.
+
+## Configuration by bot
+
+Every config below was checked against the bot's source or official docs. Replace `https://your-gateway.example.com` with your gateway's address, `<your bot key>` with the key, `<model>` with a model id from the Models page, and `<agent id>` with a published agent. Where a setting name could not be confirmed, the guide lists the values to enter instead of a config.
+
+Configs that use `/v1/messages` are marked as Anthropic-compatible alternatives; the OpenAI-compatible provider is the default.
+
+### OpenClaw
+
+- Settings: `~/.openclaw/openclaw.json` (JSON5).
+- Apply: OpenClaw watches the file and applies most changes on its own. Restart it after changing `channels.a2a`. After a rejected key it pauses the provider for about a minute, so a new key can take that long to start working. Restart OpenClaw after a new key: models and tools pick it up on their own, but trace export can stay off until a restart.
+
+<Tabs items={["One file","Models","Tools","Traces","Agents"]}>
+
+<Tab value="One file">
+
+Merge these keys into your existing file.
+
+```json5
+{
+  models: {
+    providers: {
+      everstack: {
+        baseUrl: "https://your-gateway.example.com/v1",
+        apiKey: "<your bot key>",
+        api: "openai-completions",
+        models: [{ id: "<model>", name: "<model>", input: ["text"], contextWindow: 128000, maxTokens: 8192 }],
+      },
+    },
+  },
+  agents: { defaults: { model: { primary: "everstack/<model>" } } },
+  mcp: {
+    servers: {
+      everstack: {
+        url: "https://your-gateway.example.com/mcp",
+        transport: "streamable-http",
+        headers: { Authorization: "Bearer <your bot key>" },
+      },
+    },
+  },
+  plugins: { entries: { "diagnostics-otel": { enabled: true } } },
+  diagnostics: {
+    enabled: true,
+    otel: {
+      enabled: true,
+      endpoint: "https://your-gateway.example.com",
+      protocol: "http/protobuf",
+      headers: { Authorization: "Bearer <your bot key>" },
+      traces: true,
+      metrics: true,
+      logs: false,
+    },
+  },
+  channels: {
+    a2a: {
+      enabled: true,
+      peers: {
+        everstack: {
+          token: "<a secret of your choice>", // required by the schema even for outbound-only peers
+          url: "https://your-gateway.example.com/a2a/agents/<agent id>",
+          outboundToken: "<your bot key>",
+        },
+      },
+    },
+  },
+}
+```
+
+</Tab>
+
+<Tab value="Models">
+
+**OpenAI-compatible provider**
+
+```json5
+{
+  models: {
+    providers: {
+      everstack: {
+        baseUrl: "https://your-gateway.example.com/v1",
+        apiKey: "<your bot key>",
+        api: "openai-completions", // or "openai-responses" for /v1/responses
+        models: [
+          { id: "<model>", name: "<model>", input: ["text"], contextWindow: 128000, maxTokens: 8192 },
+        ],
+      },
+    },
+  },
+  agents: { defaults: { model: { primary: "everstack/<model>" } } },
+}
+```
+
+- Set `contextWindow` and `maxTokens` to the real limits of your model; the numbers shown are editable defaults.
+
+**Anthropic-compatible provider (alternative)**
+
+```json5
+{
+  models: {
+    providers: {
+      "everstack-anthropic": {
+        baseUrl: "https://your-gateway.example.com", // no /v1: the Anthropic client appends it
+        apiKey: "<your bot key>",
+        api: "anthropic-messages",
+        models: [{ id: "<model>", name: "<model>", input: ["text"], contextWindow: 200000, maxTokens: 8192 }],
+      },
+    },
+  },
+  agents: { defaults: { model: { primary: "everstack-anthropic/<model>" } } },
+}
+```
+
+</Tab>
+
+<Tab value="Tools">
+
+**MCP server**
+
+```json5
+{
+  mcp: {
+    servers: {
+      everstack: {
+        url: "https://your-gateway.example.com/mcp",
+        transport: "streamable-http",
+        headers: { Authorization: "Bearer <your bot key>" },
+      },
+    },
+  },
+}
+```
+
+- Keep `transport: "streamable-http"`: without it OpenClaw uses SSE, which the gateway does not serve.
+- Do not set `auth: "oauth"`, or OpenClaw ignores the Authorization header.
+
+**Or add it with the CLI**
+
+```bash
+openclaw mcp set everstack '{"url":"https://your-gateway.example.com/mcp","transport":"streamable-http","headers":{"Authorization":"Bearer <your bot key>"}}'
+openclaw mcp doctor --probe
+```
+
+</Tab>
+
+<Tab value="Traces">
+
+**Install the telemetry plugin**
+
+```bash
+openclaw plugins install @openclaw/diagnostics-otel
+```
+
+- Without the plugin OpenClaw accepts the config but exports nothing.
+
+**OpenTelemetry export**
+
+```json5
+{
+  plugins: {
+    entries: { "diagnostics-otel": { enabled: true } },
+  },
+  diagnostics: {
+    enabled: true,
+    otel: {
+      enabled: true,
+      endpoint: "https://your-gateway.example.com", // OpenClaw appends /v1/traces, /v1/metrics, /v1/logs
+      protocol: "http/protobuf",
+      serviceName: "openclaw",
+      headers: { Authorization: "Bearer <your bot key>" },
+      traces: true,
+      metrics: true,
+      logs: false,
+    },
+  },
+}
+```
+
+- `diagnostics.otel.endpoint` is a base URL: OpenClaw appends `/v1/traces`, `/v1/metrics` and `/v1/logs` to it.
+- If your config already has `plugins.allow`, add `"diagnostics-otel"` to that list.
+
+</Tab>
+
+<Tab value="Agents">
+
+**A2A peer for an Everstack agent**
+
+```json5
+{
+  channels: {
+    a2a: {
+      enabled: true,
+      peers: {
+        everstack: {
+          token: "<a secret of your choice>", // required by the schema even for outbound-only peers
+          url: "https://your-gateway.example.com/a2a/agents/<agent id>",
+          outboundToken: "<your bot key>",
+        },
+      },
+    },
+  },
+}
+```
+
+- Address messages to `a2a:everstack`.
+- OpenClaw gives up on an outbound A2A call after 30 seconds, so longer agent runs fail on its side.
+
+</Tab>
+
+</Tabs>
+
+### Hermes Agent
+
+- Settings: `~/.hermes/config.yaml`, with secrets optionally in `~/.hermes/.env`.
+- Apply: Run `/reload-mcp` for MCP changes (a running gateway also picks them up within about a minute). Reload or restart Hermes after provider changes.
+
+<Tabs items={["One file","Models","Tools","Traces","Agents"]}>
+
+<Tab value="One file">
+
+Merge these keys into your existing file.
+
+```yaml
+providers:
+  everstack:
+    api: "https://your-gateway.example.com/v1"
+    api_key: "<your bot key>"
+    transport: chat_completions
+model:
+  provider: custom:everstack
+  default: "<model>"
+mcp_servers:
+  everstack:
+    url: "https://your-gateway.example.com/mcp"
+    headers:
+      Authorization: "Bearer <your bot key>"
+    enabled: true
+a2a_agents:
+  everstack:
+    url: "https://your-gateway.example.com/a2a/agents/<agent id>"
+    auth:
+      type: bearer
+      token: "<your bot key>"
+    timeout: 120
+```
+
+</Tab>
+
+<Tab value="Models">
+
+**OpenAI-compatible provider**
+
+```yaml
+# ~/.hermes/config.yaml
+providers:
+  everstack:
+    api: "https://your-gateway.example.com/v1"
+    api_key: "<your bot key>"
+    transport: chat_completions   # or codex_responses for /v1/responses
+model:
+  provider: custom:everstack
+  default: "<model>"
+```
+
+- Keep the quotes around the values.
+
+**Anthropic-compatible provider (alternative)**
+
+```yaml
+providers:
+  everstack-anthropic:
+    api: "https://your-gateway.example.com"            # a trailing /v1 is stripped anyway
+    api_key: "<your bot key>"            # sent as x-api-key for non-anthropic.com hosts
+    transport: anthropic_messages
+model:
+  provider: custom:everstack-anthropic
+  default: "<model>"
+```
+
+</Tab>
+
+<Tab value="Tools">
+
+**MCP server**
+
+```yaml
+mcp_servers:
+  everstack:
+    url: "https://your-gateway.example.com/mcp"
+    headers:
+      Authorization: "Bearer <your bot key>"
+    enabled: true
+    timeout: 300
+    connect_timeout: 60
+```
+
+- Leave `transport` unset: a bare `url` uses Streamable HTTP.
+
+</Tab>
+
+<Tab value="Traces">
+
+**Install the hermes_otel plugin**
+
+```bash
+hermes plugins install hermes_otel
+hermes plugins enable hermes_otel
+```
+
+- Hermes itself exports only health data; run traces need the community `hermes_otel` plugin.
+- Restart Hermes after enabling it (`hermes gateway restart` when the gateway is running).
+
+**~/.hermes/hermes_otel.yaml**
+
+```yaml
+# ~/.hermes/hermes_otel.yaml
+backends:
+  - type: otlp
+    name: everstack
+    endpoint: "https://your-gateway.example.com/v1/traces"
+    headers:
+      Authorization: "Bearer <your bot key>"
+```
+
+- `endpoint` is the full traces URL.
+
+</Tab>
+
+<Tab value="Agents">
+
+**A2A agent**
+
+```yaml
+a2a_agents:
+  everstack:
+    url: "https://your-gateway.example.com/a2a/agents/<agent id>"
+    auth:
+      type: bearer
+      token: "<your bot key>"
+    timeout: 120
+```
+
+- Hermes calls agents with A2A 1.0 (`SendMessage` and the `A2A-Version: 1.0` header).
+
+**Enable the A2A toolset**
+
+```bash
+hermes tools enable a2a --platform <platform>
+```
+
+</Tab>
+
+</Tabs>
+
+### nanobot
+
+- Settings: `~/.nanobot/config.json`.
+- Apply: Model changes apply on the next request. Restart nanobot after MCP changes.
+
+<Tabs items={["One file","Models","Tools"]}>
+
+<Tab value="One file">
+
+Merge these keys into your existing config.json rather than replacing it.
+
+```json
+{
+  "providers": {
+    "everstack": {
+      "apiBase": "https://your-gateway.example.com/v1",
+      "apiKey": "<your bot key>",
+      "api": {
+        "supportedApis": [
+          "chat_completions"
+        ],
+        "preferredApi": "chat_completions"
+      }
+    }
+  },
+  "modelPresets": {
+    "everstack": {
+      "provider": "everstack",
+      "model": "<model>"
+    }
+  },
+  "agents": {
+    "defaults": {
+      "modelPreset": "everstack"
+    }
+  },
+  "tools": {
+    "mcpServers": {
+      "everstack": {
+        "type": "streamableHttp",
+        "url": "https://your-gateway.example.com/mcp",
+        "headers": {
+          "Authorization": "Bearer <your bot key>"
+        },
+        "toolTimeout": 120
+      }
+    }
+  }
+}
+```
+
+</Tab>
+
+<Tab value="Models">
+
+**OpenAI-compatible provider**
+
+```json
+{
+  "providers": {
+    "everstack": {
+      "apiBase": "https://your-gateway.example.com/v1",
+      "apiKey": "<your bot key>",
+      "api": {
+        "supportedApis": [
+          "chat_completions"
+        ],
+        "preferredApi": "chat_completions"
+      }
+    }
+  },
+  "modelPresets": {
+    "everstack": {
+      "provider": "everstack",
+      "model": "<model>"
+    }
+  },
+  "agents": {
+    "defaults": {
+      "modelPreset": "everstack"
+    }
+  }
+}
+```
+
+- For `/v1/responses`, set `supportedApis` to `["responses"]` and `preferredApi` to `"responses"`.
+
+**Anthropic-compatible provider (alternative)**
+
+```json
+{
+  "providers": {
+    "everstackAnthropic": {
+      "apiBase": "https://your-gateway.example.com",
+      "apiKey": "<your bot key>",
+      "api": {
+        "supportedApis": [
+          "anthropic_messages"
+        ],
+        "preferredApi": "anthropic_messages"
+      }
+    }
+  },
+  "modelPresets": {
+    "everstackClaude": {
+      "provider": "everstackAnthropic",
+      "model": "<model>"
+    }
+  },
+  "agents": {
+    "defaults": {
+      "modelPreset": "everstackClaude"
+    }
+  }
+}
+```
+
+- A model preset cannot mix `anthropic_messages` with the OpenAI APIs.
+
+</Tab>
+
+<Tab value="Tools">
+
+**MCP server**
+
+```json
+{
+  "tools": {
+    "mcpServers": {
+      "everstack": {
+        "type": "streamableHttp",
+        "url": "https://your-gateway.example.com/mcp",
+        "headers": {
+          "Authorization": "Bearer <your bot key>"
+        },
+        "toolTimeout": 120
+      }
+    }
+  }
+}
+```
+
+- nanobot blocks private and loopback hosts unless their range is listed, for example `"ssrfWhitelist": ["10.0.0.0/8"]` under `tools`.
+
+</Tab>
+
+</Tabs>
+
+### ZeroClaw
+
+- Settings: `~/.zeroclaw/config.toml` (or the directory in `ZEROCLAW_CONFIG_DIR`).
+- Apply: Reload with `/admin/reload` or restart the daemon. A standalone `zeroclaw gateway start` needs a restart, and MCP grant changes need a new session.
+
+<Tabs items={["One file","Models","Tools","Traces","Agents"]}>
+
+<Tab value="One file">
+
+Merge into your existing file; TOML allows each table header only once.
+
+```toml
+schema_version = 4
+
+[providers.models.custom.everstack]
+uri = "https://your-gateway.example.com/v1"
+api_key = "<your bot key>"
+model = "<model>"
+
+[agents.default]
+enabled = true
+model_provider = "custom.everstack"
+risk_profile = "default"
+mcp_bundles = ["everstack"]
+
+[risk_profiles.default]
+
+[[mcp.servers]]
+name = "everstack"
+transport = "http"
+url = "https://your-gateway.example.com/mcp"
+headers = { Authorization = "Bearer <your bot key>" }
+
+[mcp_bundles.everstack]
+servers = ["everstack"]
+
+[observability]
+backend = "otel"
+otel_endpoint = "https://your-gateway.example.com"
+otel_service_name = "zeroclaw"
+
+[observability.otel_headers]
+Authorization = "Bearer <your bot key>"
+
+[a2a.client]
+enabled = true
+
+[[a2a.client.peers]]
+name = "everstack"
+base_url = "https://your-gateway.example.com/a2a/agents/<agent id>"
+token = "<your bot key>"
+```
+
+</Tab>
+
+<Tab value="Models">
+
+- The agent's `model_provider` picks the provider, and the model comes from that provider entry.
+
+**Anthropic-compatible provider (alternative)**
+
+```toml
+[providers.models.anthropic.everstack]
+uri = "https://your-gateway.example.com"
+api_key = "<your bot key>"
+model = "<model>"
+```
+
+- To use it, set `model_provider = "anthropic.everstack"` in `[agents.default]`.
+
+</Tab>
+
+<Tab value="Tools">
+
+- The `mcp_bundles` grant is required: an agent without it connects to no MCP server.
+
+</Tab>
+
+<Tab value="Traces">
+
+- Needs a ZeroClaw build with the `observability-otel` feature (or the `all-features` image); without it, export is silently off.
+- `otel_endpoint` is a base URL: ZeroClaw appends `/v1/traces`, `/v1/metrics` and `/v1/logs`.
+
+</Tab>
+
+<Tab value="Agents">
+
+- ZeroClaw calls agents with A2A 1.0 only and reads the agent card at the peer URL first.
+
+</Tab>
+
+</Tabs>
+
+### NanoClaw
+
+- Settings: Project-root `.env` for host settings; group settings through the `ncl` CLI.
+- Apply: Apply group changes with `ncl groups restart --id <group id>`.
+
+<Tabs items={["Models","Tools"]}>
+
+<Tab value="Models">
+
+**Anthropic-compatible provider**
+
+<Callout type="warn">
+We have not confirmed the exact setting names for this version of NanoClaw. Use these values in its provider settings.
+</Callout>
+
+- Base URL: `https://your-gateway.example.com`
+- Auth token: `<your bot key>`
+- Model: `<model>`
+
+- NanoClaw sends the key as a Bearer token (`Authorization: Bearer`), not as `x-api-key`.
+
+**OpenAI-compatible provider (with the add-opencode skill)**
+
+<Callout type="warn">
+We have not confirmed the exact setting names for this version of NanoClaw. Use these values in its provider settings.
+</Callout>
+
+- Base URL: `https://your-gateway.example.com/v1`
+- API key: `<your bot key>`
+- Model: `<model>`
+
+- Core NanoClaw is Anthropic-only; this path needs the `/add-opencode` skill.
+
+</Tab>
+
+<Tab value="Tools">
+
+**MCP server for a group**
+
+```bash
+ncl groups config add-mcp-server --id <group id> --name everstack \
+  --url https://your-gateway.example.com/mcp \
+  --headers '{"Authorization":"Bearer <your bot key>"}'
+ncl groups restart --id <group id>
+```
+
+- NanoClaw accepts only https:// MCP URLs.
+- The header value is stored in the group's `container.json` inside the agent container.
+
+</Tab>
+
+</Tabs>
+
+### CopilotKit OpenBot
+
+- Settings: The deployment `.env` file; MCP servers in the web app at `/admin/plugins`.
+- Apply: Restart the server or containers after editing `.env`.
+
+<Tabs items={["Models","Tools","Traces"]}>
+
+<Tab value="Models">
+
+**OpenAI-compatible provider**
+
+```bash
+# .env
+OPENAI_BASE_URL=https://your-gateway.example.com/v1
+OPENAI_API_KEY=<your bot key>
+BOT_MODEL=<model>
+# COPILOTKIT_OPENAI_API=chat   # force /chat/completions for every model; or "responses"
+```
+
+- OpenBot picks Chat Completions or Responses by model name; set `COPILOTKIT_OPENAI_API` to force one.
+
+**Anthropic-compatible provider (alternative)**
+
+<Callout type="warn">
+We have not confirmed the exact setting names for this version of CopilotKit OpenBot. Use these values in its provider settings.
+</Callout>
+
+- Provider: `anthropic`
+- Base URL: `https://your-gateway.example.com`
+- API key: `<your bot key>`
+- Model: `<model>`
+
+</Tab>
+
+<Tab value="Tools">
+
+**Custom MCP server (Admin, Plugins)**
+
+<Callout type="warn">
+We have not confirmed the exact setting names for this version of CopilotKit OpenBot. Use these values in its MCP server settings.
+</Callout>
+
+- URL: `https://your-gateway.example.com/mcp`
+- Token: `<your bot key>`
+
+- OpenBot sends a bare token as `Authorization: Bearer <token>`.
+- Tools from custom MCP servers count as writes by default, so each call goes through OpenBot's approval policy.
+
+</Tab>
+
+<Tab value="Traces">
+
+**OTLP export**
+
+<Callout type="warn">
+We have not confirmed the exact setting names for this version of CopilotKit OpenBot. Use these values in its OpenTelemetry settings.
+</Callout>
+
+- OTLP base URL: `https://your-gateway.example.com`
+- Header: `Authorization: Bearer <your bot key>`
+- Service name: `openbot`
+
+- OpenBot exports audit logs only (to `/v1/logs`), not traces.
+
+</Tab>
+
+</Tabs>
+
+### openbot (nightly-labs)
+
+- Settings: The desktop app settings; there is no config file for these.
+- Apply: Enter the values in the app.
+
+<Tabs items={["Models","Tools"]}>
+
+<Tab value="Models">
+
+**Custom OpenAI-compatible endpoint (Providers)**
+
+<Callout type="warn">
+We have not confirmed the exact setting names for this version of openbot (nightly-labs). Use these values in its provider settings.
+</Callout>
+
+- Base URL: `https://your-gateway.example.com/v1`
+- API key: `<your bot key>`
+- Model: `<model>`
+
+</Tab>
+
+<Tab value="Tools">
+
+**MCP server (Settings)**
+
+<Callout type="warn">
+We have not confirmed the exact setting names for this version of openbot (nightly-labs). Use these values in its MCP server settings.
+</Callout>
+
+- Transport: `http`
+- URL: `https://your-gateway.example.com/mcp`
+- Header: `Authorization: Bearer <your bot key>`
+
+</Tab>
+
+</Tabs>
+
+### Grok Bot
+
+Hosted by xAI. It can use tools only.
+
+- Settings: The Grok Bot app; there is no config file.
+- Apply: Grok Bot adds the server when you ask it to.
+
+**Add the MCP server**
+
+1. In a chat, ask Grok Bot: "Add the MCP server at https://your-gateway.example.com/mcp".
+
+**Connection values**
+
+<Callout type="warn">
+We have not confirmed the exact setting names for this version of Grok Bot. Use these values in its MCP server settings.
+</Callout>
+
+- URL: `https://your-gateway.example.com/mcp`
+- Header: `Authorization: Bearer <your bot key>`
+
+- Grok Bot's docs do not document a static auth header for custom MCP servers, so it may not be able to send this key yet.
+
+### Grok Build
+
+- Settings: `~/.grok/config.toml` (a project `.grok/config.toml` may hold `[mcp_servers]`, but not the model).
+- Apply: Run `grok inspect` to check the loaded config.
+
+<Tabs items={["Models","Tools"]}>
+
+<Tab value="Models">
+
+**Model provider**
+
+```toml
+[model.everstack]
+model = "<model>"
+base_url = "https://your-gateway.example.com/v1"
+name = "Everstack"
+api_key = "<your bot key>"
+api_backend = "chat_completions"
+
+[models]
+default = "everstack"
+```
+
+- To keep the key out of the file, use `env_key = "EVERSTACK_API_KEY"` instead of `api_key` and set that variable in your shell.
+- `api_backend = "responses"` also works if you prefer the Responses API.
+
+</Tab>
+
+<Tab value="Tools">
+
+**MCP server**
+
+```toml
+[mcp_servers.everstack]
+url = "https://your-gateway.example.com/mcp"
+headers = { "Authorization" = "Bearer <your bot key>" }
+```
+
+- To keep the key out of the file, use `bearer_token_env_var = "EVERSTACK_API_KEY"` instead of `headers`.
+
+**Or add it with the CLI**
+
+```bash
+grok mcp add --transport http everstack https://your-gateway.example.com/mcp --header "Authorization: Bearer <your bot key>"
+```
+
+</Tab>
+
+</Tabs>
+
+### Meta Muse
+
+Hosted by Meta. It can use tools only.
+
+- Settings: Meta's connector platform; there is no user config.
+- Apply: A connector works once Meta approves it.
+
+**Submit a connector**
+
+1. Submit a connector on Meta's connector platform.
+2. Give the endpoint and the API key below as its connection details.
+3. Wait for Meta's review (risk assessment, tool review and end-to-end testing).
+
+**Connection values**
+
+<Callout type="warn">
+We have not confirmed the exact setting names for this version of Meta Muse. Use these values in its connector settings.
+</Callout>
+
+- Endpoint: `https://your-gateway.example.com/mcp`
+- API key: `<your bot key>`
+
+- Meta Muse connectors go through Meta's review before they work.
+
+### Custom bot
+
+- Settings: Wherever your bot reads its settings or environment.
+- Apply: Restart the bot after changing its environment.
+
+<Tabs items={["Models","Tools","Traces","Agents"]}>
+
+<Tab value="Models">
+
+**OpenAI-compatible environment**
+
+```bash
+export OPENAI_BASE_URL="https://your-gateway.example.com/v1"
+export OPENAI_API_KEY="<your bot key>"
+```
+
+- Your bot must send the model id itself; there is no standard variable for it.
+
+**Anthropic-compatible environment (alternative)**
+
+```bash
+export ANTHROPIC_BASE_URL="https://your-gateway.example.com"
+export ANTHROPIC_API_KEY="<your bot key>"
+```
+
+- Leave `/v1` off the base URL; the Anthropic SDKs add it.
+
+</Tab>
+
+<Tab value="Tools">
+
+**Claude Code (.mcp.json)**
+
+```json
+{
+  "mcpServers": {
+    "everstack": {
+      "type": "http",
+      "url": "https://your-gateway.example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer <your bot key>"
+      }
+    }
+  }
+}
+```
+
+- The client must support Streamable HTTP with static headers; SSE-only or OAuth-only clients will not connect.
+
+**Cursor (mcp.json)**
+
+```json
+{
+  "mcpServers": {
+    "everstack": {
+      "url": "https://your-gateway.example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer <your bot key>"
+      }
+    }
+  }
+}
+```
+
+**VS Code (.vscode/mcp.json)**
+
+```json
+{
+  "servers": {
+    "everstack": {
+      "type": "http",
+      "url": "https://your-gateway.example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer <your bot key>"
+      }
+    }
+  }
+}
+```
+
+</Tab>
+
+<Tab value="Traces">
+
+**OpenTelemetry environment**
+
+```bash
+export OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://your-gateway.example.com"   # SDK appends /v1/traces, /v1/metrics, /v1/logs
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer%20<your bot key>"
+export OTEL_SERVICE_NAME="my-bot"
+# exact-URL alternative (not modified by the SDK):
+# export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="https://your-gateway.example.com/v1/traces"
+```
+
+- The bot must use an OpenTelemetry SDK that reads these variables.
+
+</Tab>
+
+<Tab value="Agents">
+
+**Call an agent (legacy A2A)**
+
+```bash
+curl -s https://your-gateway.example.com/a2a/agents/<agent id> \
+  -H "Authorization: Bearer <your bot key>" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":"1","method":"message/send","params":{"message":{"role":"user","messageId":"m1","parts":[{"kind":"text","text":"hello"}]}}}'
+```
+
+- The reply is a Task whose `artifacts[0].parts[0].text` holds the answer; replies are synchronous, with no streaming or task polling.
+
+**Call an agent (A2A 1.0)**
+
+```bash
+curl -s https://your-gateway.example.com/a2a/agents/<agent id> \
+  -H "Authorization: Bearer <your bot key>" \
+  -H "A2A-Version: 1.0" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":"1","method":"SendMessage","params":{"message":{"role":"ROLE_USER","messageId":"m1","parts":[{"text":"hello"}]}}}'
+```
+
+</Tab>
+
+</Tabs>
+
+## Let Everstack agents call a bot
+
+The Agents surface covers the other direction: the bot calling Everstack. For Everstack agents to call the bot, the bot must serve A2A itself, and the gateway needs a saved connection to it.
+
+1. Turn on the bot's A2A server (see below) and make it reachable from the gateway.
+2. In **Gateway → A2A → Remote agents**, add a remote agent with the bot's endpoint, protocol and bearer token.
+3. In **Gateway → Bots**, edit the bot and pick that remote agent. The link shows which saved connection reaches this bot.
+
+**OpenClaw** serves A2A through its `a2a` channel:
+
+```json5
+{
+  channels: {
+    a2a: {
+      enabled: true,
+      advertisedUrl: "https://your-bot.example.com",
+      peers: {
+        everstack: { token: "<a secret you choose>" },
+      },
+    },
+  },
+}
+```
+
+Save the remote agent with endpoint `https://your-bot.example.com/a2a/v1` and the same secret as its bearer token. OpenClaw accepts both `SendMessage` and the older `message/send`. Restart OpenClaw after the change, and make sure its port (18789 by default) is reachable from the gateway.
+
+**ZeroClaw** publishes an agent over A2A 1.0:
+
+```toml
+[a2a.server]
+enabled = true
+public_base_url = "https://your-bot.example.com"
+
+[agents.default.a2a]
+published = true
+```
+
+Save the remote agent with endpoint `https://your-bot.example.com/a2a/default` and protocol A2A 1.0. ZeroClaw refuses the legacy binding. The bearer token is a ZeroClaw pairing token, which you get from ZeroClaw's pairing flow, not from its config.
+
+**Hermes Agent** has an A2A platform (`gateway.platforms.a2a` in `config.yaml`, with `A2A_BEARER_TOKEN` and `A2A_PUBLIC_URL` in `~/.hermes/.env`). We have not confirmed the exact path it serves, so read it from the bot's agent card at `https://your-bot.example.com/.well-known/agent-card.json`.
+
+## Make a new key or remove a bot
+
+- **New key** replaces the bot's key. The current key stops working within 30 seconds, and the new one is shown once, with the config filled in. Update the bot with it.
+- **Remove** deletes the connection and revokes its key, which stops working within 30 seconds. The bot itself keeps running wherever you host it.
+- **Edit** changes the name, the surfaces, the linked remote agent and the rate limit. Turning a surface off takes effect within 30 seconds.
+
+## Limits and notes
+
+- Everstack does not host or run the bot. It gives the bot a key and shows the config.
+- Hosted bots such as Grok Bot and Meta Muse can use tools only. Grok Bot's docs do not document a static auth header for custom MCP servers, and Meta Muse connectors go through Meta's review.
+- A rotated or removed key, or a surface you turned off, takes effect within 30 seconds, not instantly, because gateway replicas cache authenticated keys briefly. The replica that handled the change applies it at once.
+- A bot over its rate limit gets HTTP 429 with a `Retry-After` header.
+- Separately from any bot rate limit, the gateway limits every bot key by default to 300 requests a minute on `/mcp`, 600 a minute on OTLP ingest, and 60 a minute on the A2A server. Operators can change these.
+- Per-bot spend budgets are not available yet.
+- The Bots page needs dashboard sign-in. On Everstack Cloud that is your normal login. On a self-hosted gateway, turn sign-in on (`auth.mode: builtin`); with `auth.mode: none` the Bots and A2A admin pages answer 401.
+- Trace and log ingest (`/v1/traces`, `/v1/logs`) is served only when the gateway has its ClickHouse telemetry store configured. Without it those endpoints return 404 for every caller.
+- The agent call depth is limited: an agent reached through `run_agent` or A2A can start one more agent, and a third level is refused. This stops an agent whose tools point back at the same gateway from calling itself in a loop.
+- The bot must support the setting shown. Where this guide lists plain values, check the bot's own documentation for where they go.

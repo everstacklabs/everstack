@@ -4,6 +4,7 @@ package cqrs
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/everstacklabs/everstack/internal/commands"
@@ -138,7 +139,15 @@ func NewHybridSystem(ctx context.Context, primary *database.Conn, analytics *sql
 	if analytics != nil {
 		chConn := &database.Conn{Type: database.TypeClickHouse, RW: analytics}
 		chWriter := database.NewSQLWriter(chConn, dialect.ClickHouse{})
-		writer = chWriter
+		// Batched, and off the request path. Every command dispatch wrote a
+		// single row synchronously before responding, which is the ClickHouse
+		// anti-pattern: measured on a live instance, 11,670 inserts in ten
+		// minutes at avg_rows_per_insert = 1, driving 2,267 merges, with more
+		// requests blocked on this write than on the model provider.
+		//
+		// Only ClickHouse is wrapped. Postgres is the transactional store and
+		// its writes are expected to be durable by the time a command returns.
+		writer = database.NewBatchingWriter(chWriter, database.BatchingWriterOptions{})
 	}
 
 	// Create buses
@@ -399,15 +408,25 @@ func (s *System) Health() map[string]interface{} {
 	return health
 }
 
-// Shutdown gracefully shuts down the CQRS system.
+// Shutdown flushes event writes that are still buffered, waiting no longer
+// than ctx allows. Call it once nothing can dispatch commands any more: an
+// event appended after this returns is not written.
 func (s *System) Shutdown(ctx context.Context) error {
 	logger.Info("shutting down CQRS system")
 
-	// TODO: Implement graceful shutdown
-	// - Stop accepting new commands/queries
-	// - Wait for in-flight operations to complete
-	// - Close database connections
-	// - Clean up event subscriptions
-
-	return nil
+	// A buffering writer (the batched ClickHouse writer) holds events that a
+	// command already reported as dispatched; closing it drains them. A
+	// writer that writes through has nothing to flush and no Close.
+	closer, buffered := s.Writer.(io.Closer)
+	if !buffered {
+		return nil
+	}
+	drained := make(chan error, 1)
+	go func() { drained <- closer.Close() }()
+	select {
+	case err := <-drained:
+		return err
+	case <-ctx.Done():
+		return fmt.Errorf("event writer did not drain before shutdown: %w", ctx.Err())
+	}
 }

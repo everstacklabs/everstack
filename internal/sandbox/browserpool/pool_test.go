@@ -153,6 +153,44 @@ func TestTenantBrowserConcurrencyLimitIsAtomic(t *testing.T) {
 	}
 }
 
+// The browser cap belongs to the organization: leases held under its own id
+// and under its instances fill one cap together, while another
+// organization's leases never count.
+func TestBrowserConcurrencyCountsTheWholeOrganization(t *testing.T) {
+	runtime := newFakeRuntime(fake.NewSimpleClientset())
+	p := newPoolWithRuntime(testConfig(), runtime)
+	orgA := []string{"org-a", "inst-a1"}
+	p.SetLimitsResolver(func(_ context.Context, tenantID string) (TenantLimits, error) {
+		limits := TenantLimits{MaxConcurrent: 2, MaxSession: time.Hour}
+		if tenantID == "org-a" || tenantID == "inst-a1" {
+			limits.ScopeTenantIDs = orgA
+		}
+		return limits, nil
+	}, true)
+	t.Cleanup(func() { _ = p.Close() })
+	cfg := sandbox.BrowserConfig{Headless: true}
+
+	if _, err := p.EnsureBrowser(context.Background(), "s-b1", "org-b", cfg); err != nil {
+		t.Fatalf("org-b first lease: %v", err)
+	}
+	if _, err := p.EnsureBrowser(context.Background(), "s-a1", "org-a", cfg); err != nil {
+		t.Fatalf("org-a first lease: %v", err)
+	}
+	if _, err := p.EnsureBrowser(context.Background(), "s-a2", "inst-a1", cfg); err != nil {
+		t.Fatalf("org-a second lease via instance: %v", err)
+	}
+	_, err := p.EnsureBrowser(context.Background(), "s-a3", "inst-a1", cfg)
+	if !errors.Is(err, ErrConcurrentBrowserLimit) {
+		t.Fatalf("org-a third lease: err = %v, want ErrConcurrentBrowserLimit", err)
+	}
+	if strings.Contains(err.Error(), "inst-a1") || !strings.Contains(err.Error(), "upgrade your plan") {
+		t.Fatalf("refusal must be customer-facing and carry no tenant id: %q", err.Error())
+	}
+	if _, err := p.EnsureBrowser(context.Background(), "s-b2", "org-b", cfg); err != nil {
+		t.Fatalf("org-b second lease (org-a's leases must not count): %v", err)
+	}
+}
+
 func TestBrowserSessionLimitReleasesAndFinalizesUsage(t *testing.T) {
 	runtime := newFakeRuntime(fake.NewSimpleClientset())
 	recorder := &recordingUsageRecorder{}
@@ -704,3 +742,24 @@ func (r *fakeRuntime) delete(ctx context.Context, podName string) error {
 }
 
 func (r *fakeRuntime) close() error { return nil }
+
+// In shadow the organization scope only reports; the per-tenant count is the
+// gate, as before.
+func TestBrowserShadowOrgScopeEnforcesPerTenantOnly(t *testing.T) {
+	runtime := newFakeRuntime(fake.NewSimpleClientset())
+	p := newPoolWithRuntime(testConfig(), runtime)
+	p.SetLimitsResolver(func(_ context.Context, tenantID string) (TenantLimits, error) {
+		return TenantLimits{MaxConcurrent: 1, MaxSession: time.Hour, ShadowScopeTenantIDs: []string{"org-a", "inst-a1"}}, nil
+	}, true)
+	t.Cleanup(func() { _ = p.Close() })
+	cfg := sandbox.BrowserConfig{Headless: true}
+	if _, err := p.EnsureBrowser(context.Background(), "s1", "org-a", cfg); err != nil {
+		t.Fatalf("first lease: %v", err)
+	}
+	if _, err := p.EnsureBrowser(context.Background(), "s2", "inst-a1", cfg); err != nil {
+		t.Fatalf("shadow: inst-a1 under its own cap must lease: %v", err)
+	}
+	if _, err := p.EnsureBrowser(context.Background(), "s3", "org-a", cfg); !errors.Is(err, ErrConcurrentBrowserLimit) {
+		t.Fatalf("org-a at its own cap: err = %v, want the per-tenant refusal", err)
+	}
+}

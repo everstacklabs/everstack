@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	providerutil "github.com/everstacklabs/everstack/internal/providers"
 	clientx "github.com/everstacklabs/everstack/internal/providers/httpclient"
+	"github.com/everstacklabs/everstack/internal/providers/openai_compatible"
 	"github.com/everstacklabs/everstack/internal/providers/ratelimit"
 )
 
@@ -82,6 +82,7 @@ type mChatReq struct {
 	Tools           []mTool    `json:"tools,omitempty"`
 	Temperature     *float64   `json:"temperature,omitempty"`
 	TopP            *float64   `json:"top_p,omitempty"`
+	Stop            []string   `json:"stop,omitempty"`
 	MaxTokens       int        `json:"max_tokens,omitempty"`
 	ReasoningEffort string     `json:"reasoning_effort,omitempty"`
 	Stream          bool       `json:"stream,omitempty"`
@@ -95,6 +96,7 @@ type mChatResp struct {
 			Content   json.RawMessage `json:"content"`
 			ToolCalls []mToolCall     `json:"tool_calls,omitempty"`
 		} `json:"message"`
+		FinishReason string `json:"finish_reason"`
 	} `json:"choices"`
 	Usage struct {
 		PromptTokens     int `json:"prompt_tokens"`
@@ -136,7 +138,7 @@ func convertMessages(msgs []gw.Message) []mMessage {
 func mistralOutboundContent(parts []gw.ContentPart) json.RawMessage {
 	hasNativeChunks := false
 	for _, part := range parts {
-		if part.ProviderJSON != nil && json.Valid(*part.ProviderJSON) {
+		if (part.ProviderJSON != nil && json.Valid(*part.ProviderJSON)) || (part.Type == "image_url" && part.ImageURL != nil) {
 			hasNativeChunks = true
 			break
 		}
@@ -163,6 +165,15 @@ func mistralOutboundContent(parts []gw.ContentPart) json.RawMessage {
 			encoded, _ := json.Marshal(map[string]string{
 				"type": "text",
 				"text": *part.Text,
+			})
+			chunks = append(chunks, encoded)
+		}
+		if part.Type == "image_url" && part.ImageURL != nil {
+			// Mistral documents image_url as a plain string (ImageURLChunk,
+			// https://docs.mistral.ai/api/).
+			encoded, _ := json.Marshal(map[string]string{
+				"type":      "image_url",
+				"image_url": *part.ImageURL,
 			})
 			chunks = append(chunks, encoded)
 		}
@@ -254,9 +265,8 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 		topP := req.Sampling.TopP
 		mReq.TopP = &topP
 	}
-	if req.Sampling.MaxTokens > 0 {
-		mReq.MaxTokens = req.Sampling.MaxTokens
-	}
+	mReq.MaxTokens = openai_compatible.MaxOutputTokens(req.Sampling)
+	mReq.Stop = req.Sampling.Stop
 	mReq.ReasoningEffort = req.Sampling.ReasoningEffort
 
 	body, _ := json.Marshal(mReq)
@@ -287,8 +297,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	ratelimit.GlobalMonitor.Update(rateLimitInfo)
 
 	if resp.StatusCode >= 400 {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return gw.ChatCompletionResponse{}, fmt.Errorf("mistral error: %s", string(bodyBytes))
+		return gw.ChatCompletionResponse{}, openai_compatible.UpstreamError("mistral", resp)
 	}
 
 	var mResp mChatResp
@@ -298,7 +307,9 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 
 	var contentParts []gw.ContentPart
 	var toolCalls []gw.ToolCall
+	var finishReason string
 	if len(mResp.Choices) > 0 {
+		finishReason = mResp.Choices[0].FinishReason
 		contentParts = mistralContentParts(mResp.Choices[0].Message.Content, false)
 		for _, tc := range mResp.Choices[0].Message.ToolCalls {
 			toolCalls = append(toolCalls, gw.ToolCall{
@@ -317,7 +328,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 		TotalTokens:      mResp.Usage.TotalTokens,
 	}
 
-	return gw.NewChatResponse(mResp.ID, mResp.Model, []gw.Choice{{Index: 0, Message: msg}}, usage), nil
+	return gw.NewChatResponse(mResp.ID, mResp.Model, []gw.Choice{{Index: 0, Message: msg, FinishReason: finishReason}}, usage), nil
 }
 
 // --- Chat (streaming) ---
@@ -337,9 +348,8 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 		topP := req.Sampling.TopP
 		mReq.TopP = &topP
 	}
-	if req.Sampling.MaxTokens > 0 {
-		mReq.MaxTokens = req.Sampling.MaxTokens
-	}
+	mReq.MaxTokens = openai_compatible.MaxOutputTokens(req.Sampling)
+	mReq.Stop = req.Sampling.Stop
 	mReq.ReasoningEffort = req.Sampling.ReasoningEffort
 
 	body, _ := json.Marshal(mReq)
@@ -367,8 +377,7 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 	ratelimit.GlobalMonitor.Update(rateLimitInfo)
 
 	if resp.StatusCode >= 400 {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("mistral stream error: %s", string(bodyBytes))
+		return openai_compatible.UpstreamError("mistral", resp)
 	}
 
 	type pendingToolCall struct {
@@ -377,6 +386,7 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 	}
 	pendingCalls := make(map[int]*pendingToolCall)
 
+	sawFinish := false
 	reader := bufio.NewReader(resp.Body)
 	for {
 		line, err := reader.ReadString('\n')
@@ -435,6 +445,9 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 			}
 
 			for _, ch := range partial.Choices {
+				if ch.FinishReason != "" {
+					sawFinish = true
+				}
 				for _, tc := range ch.Delta.ToolCalls {
 					pc, exists := pendingCalls[tc.Index]
 					if !exists {
@@ -483,10 +496,16 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 		}
 		if err != nil {
 			if err == io.EOF {
+				if !sawFinish {
+					return openai_compatible.ErrStreamTruncated("mistral")
+				}
 				return nil
 			}
 			return err
 		}
+	}
+	if !sawFinish {
+		return openai_compatible.ErrStreamTruncated("mistral")
 	}
 	return nil
 }
@@ -522,6 +541,10 @@ func (p *Provider) Embed(ctx context.Context, req gw.EmbeddingsRequest) (gw.Embe
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode >= 300 {
+		return gw.EmbeddingsResponse{}, openai_compatible.UpstreamError("mistral", resp)
+	}
+
 	var mistralResp struct {
 		Data []struct {
 			Embedding []float64 `json:"embedding"`
@@ -532,11 +555,15 @@ func (p *Provider) Embed(ctx context.Context, req gw.EmbeddingsRequest) (gw.Embe
 		return gw.EmbeddingsResponse{}, err
 	}
 
+	var first []float64
 	if len(mistralResp.Data) > 0 {
-		return gw.EmbeddingsResponse{Embedding: mistralResp.Data[0].Embedding}, nil
+		first = mistralResp.Data[0].Embedding
 	}
-
-	return gw.EmbeddingsResponse{Embedding: []float64{}}, nil
+	vec, err := openai_compatible.NonEmptyEmbedding("mistral", first)
+	if err != nil {
+		return gw.EmbeddingsResponse{}, err
+	}
+	return gw.EmbeddingsResponse{Embedding: vec}, nil
 }
 
 // SupportsModel checks if a model is supported

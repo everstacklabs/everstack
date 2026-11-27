@@ -405,8 +405,8 @@ function ResultState({
       <div
         className={`mx-auto flex h-11 w-11 items-center justify-center rounded-full ${
           tone === 'success'
-            ? 'bg-emerald-500/10 text-emerald-400'
-            : 'bg-red-500/10 text-red-400'
+            ? 'bg-success-surface text-success'
+            : 'bg-danger-surface text-danger'
         }`}
       >
         <Icon icon={icon} className="h-6 w-6" />
@@ -425,7 +425,7 @@ function ResultState({
 
 function ErrorMessage({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-start gap-2 rounded-lg bg-red-500/10 px-3 py-2.5 text-sm text-red-300 light:text-red-700">
+    <div className="flex items-start gap-2 rounded-lg bg-danger-surface px-3 py-2.5 text-sm text-danger">
       <Icon icon="lucide:triangle-alert" className="mt-0.5 h-4 w-4 shrink-0" />
       <span>{children}</span>
     </div>

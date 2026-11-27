@@ -72,6 +72,21 @@ const (
 	// ControlPlaneServiceListRegionsProcedure is the fully-qualified name of the ControlPlaneService's
 	// ListRegions RPC.
 	ControlPlaneServiceListRegionsProcedure = "/everstack.controlplane.v1.ControlPlaneService/ListRegions"
+	// ControlPlaneServiceGetInstanceLimitStatusProcedure is the fully-qualified name of the
+	// ControlPlaneService's GetInstanceLimitStatus RPC.
+	ControlPlaneServiceGetInstanceLimitStatusProcedure = "/everstack.controlplane.v1.ControlPlaneService/GetInstanceLimitStatus"
+	// ControlPlaneServicePauseInstanceProcedure is the fully-qualified name of the
+	// ControlPlaneService's PauseInstance RPC.
+	ControlPlaneServicePauseInstanceProcedure = "/everstack.controlplane.v1.ControlPlaneService/PauseInstance"
+	// ControlPlaneServiceResumeInstanceProcedure is the fully-qualified name of the
+	// ControlPlaneService's ResumeInstance RPC.
+	ControlPlaneServiceResumeInstanceProcedure = "/everstack.controlplane.v1.ControlPlaneService/ResumeInstance"
+	// ControlPlaneServiceSetInstanceExtraBillingProcedure is the fully-qualified name of the
+	// ControlPlaneService's SetInstanceExtraBilling RPC.
+	ControlPlaneServiceSetInstanceExtraBillingProcedure = "/everstack.controlplane.v1.ControlPlaneService/SetInstanceExtraBilling"
+	// ControlPlaneServiceGetOrgActivityProcedure is the fully-qualified name of the
+	// ControlPlaneService's GetOrgActivity RPC.
+	ControlPlaneServiceGetOrgActivityProcedure = "/everstack.controlplane.v1.ControlPlaneService/GetOrgActivity"
 )
 
 // ControlPlaneServiceClient is a client for the everstack.controlplane.v1.ControlPlaneService
@@ -106,6 +121,22 @@ type ControlPlaneServiceClient interface {
 	RemoveCustomDomain(context.Context, *connect.Request[v1.RemoveCustomDomainRequest]) (*connect.Response[v1.RemoveCustomDomainResponse], error)
 	// ListRegions returns the regions this controlplane can provision into.
 	ListRegions(context.Context, *connect.Request[v1.ListRegionsRequest]) (*connect.Response[v1.ListRegionsResponse], error)
+	// Instance limit (docs/design/instance-over-limit.md). Reads need org
+	// membership; the three mutations need the owner or admin role.
+	GetInstanceLimitStatus(context.Context, *connect.Request[v1.GetInstanceLimitStatusRequest]) (*connect.Response[v1.GetInstanceLimitStatusResponse], error)
+	// PauseInstance stops serving an instance and keeps everything else.
+	PauseInstance(context.Context, *connect.Request[v1.PauseInstanceRequest]) (*connect.Response[v1.PauseInstanceResponse], error)
+	// ResumeInstance brings a paused instance back; ResourceExhausted when
+	// the org has no free slot.
+	ResumeInstance(context.Context, *connect.Request[v1.ResumeInstanceRequest]) (*connect.Response[v1.ResumeInstanceResponse], error)
+	// SetInstanceExtraBilling opts an instance into (or out of) the monthly
+	// extra-instance fee debited from the prepaid wallet.
+	SetInstanceExtraBilling(context.Context, *connect.Request[v1.SetInstanceExtraBillingRequest]) (*connect.Response[v1.SetInstanceExtraBillingResponse], error)
+	// GetOrgActivity summarises model-call activity across the organization's
+	// own instances (docs/design/org-overview-redesign.md, section 4.3). Any
+	// member may read it. The instance set is resolved server-side from the
+	// organization; the request carries no instance or tenant identifiers.
+	GetOrgActivity(context.Context, *connect.Request[v1.GetOrgActivityRequest]) (*connect.Response[v1.GetOrgActivityResponse], error)
 }
 
 // NewControlPlaneServiceClient constructs a client for the
@@ -198,24 +229,59 @@ func NewControlPlaneServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(controlPlaneServiceMethods.ByName("ListRegions")),
 			connect.WithClientOptions(opts...),
 		),
+		getInstanceLimitStatus: connect.NewClient[v1.GetInstanceLimitStatusRequest, v1.GetInstanceLimitStatusResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceGetInstanceLimitStatusProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("GetInstanceLimitStatus")),
+			connect.WithClientOptions(opts...),
+		),
+		pauseInstance: connect.NewClient[v1.PauseInstanceRequest, v1.PauseInstanceResponse](
+			httpClient,
+			baseURL+ControlPlaneServicePauseInstanceProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("PauseInstance")),
+			connect.WithClientOptions(opts...),
+		),
+		resumeInstance: connect.NewClient[v1.ResumeInstanceRequest, v1.ResumeInstanceResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceResumeInstanceProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("ResumeInstance")),
+			connect.WithClientOptions(opts...),
+		),
+		setInstanceExtraBilling: connect.NewClient[v1.SetInstanceExtraBillingRequest, v1.SetInstanceExtraBillingResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceSetInstanceExtraBillingProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("SetInstanceExtraBilling")),
+			connect.WithClientOptions(opts...),
+		),
+		getOrgActivity: connect.NewClient[v1.GetOrgActivityRequest, v1.GetOrgActivityResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceGetOrgActivityProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("GetOrgActivity")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // controlPlaneServiceClient implements ControlPlaneServiceClient.
 type controlPlaneServiceClient struct {
-	provisionInstance  *connect.Client[v1.ProvisionInstanceRequest, v1.ProvisionInstanceResponse]
-	getInstance        *connect.Client[v1.GetInstanceRequest, v1.GetInstanceResponse]
-	listInstances      *connect.Client[v1.ListInstancesRequest, v1.ListInstancesResponse]
-	startInstance      *connect.Client[v1.StartInstanceRequest, v1.StartInstanceResponse]
-	stopInstance       *connect.Client[v1.StopInstanceRequest, v1.StopInstanceResponse]
-	restartInstance    *connect.Client[v1.RestartInstanceRequest, v1.RestartInstanceResponse]
-	deleteInstance     *connect.Client[v1.DeleteInstanceRequest, v1.DeleteInstanceResponse]
-	getInstanceLogs    *connect.Client[v1.GetInstanceLogsRequest, v1.GetInstanceLogsResponse]
-	pushConfig         *connect.Client[v1.PushConfigRequest, v1.PushConfigResponse]
-	setCustomDomain    *connect.Client[v1.SetCustomDomainRequest, v1.SetCustomDomainResponse]
-	verifyCustomDomain *connect.Client[v1.VerifyCustomDomainRequest, v1.VerifyCustomDomainResponse]
-	removeCustomDomain *connect.Client[v1.RemoveCustomDomainRequest, v1.RemoveCustomDomainResponse]
-	listRegions        *connect.Client[v1.ListRegionsRequest, v1.ListRegionsResponse]
+	provisionInstance       *connect.Client[v1.ProvisionInstanceRequest, v1.ProvisionInstanceResponse]
+	getInstance             *connect.Client[v1.GetInstanceRequest, v1.GetInstanceResponse]
+	listInstances           *connect.Client[v1.ListInstancesRequest, v1.ListInstancesResponse]
+	startInstance           *connect.Client[v1.StartInstanceRequest, v1.StartInstanceResponse]
+	stopInstance            *connect.Client[v1.StopInstanceRequest, v1.StopInstanceResponse]
+	restartInstance         *connect.Client[v1.RestartInstanceRequest, v1.RestartInstanceResponse]
+	deleteInstance          *connect.Client[v1.DeleteInstanceRequest, v1.DeleteInstanceResponse]
+	getInstanceLogs         *connect.Client[v1.GetInstanceLogsRequest, v1.GetInstanceLogsResponse]
+	pushConfig              *connect.Client[v1.PushConfigRequest, v1.PushConfigResponse]
+	setCustomDomain         *connect.Client[v1.SetCustomDomainRequest, v1.SetCustomDomainResponse]
+	verifyCustomDomain      *connect.Client[v1.VerifyCustomDomainRequest, v1.VerifyCustomDomainResponse]
+	removeCustomDomain      *connect.Client[v1.RemoveCustomDomainRequest, v1.RemoveCustomDomainResponse]
+	listRegions             *connect.Client[v1.ListRegionsRequest, v1.ListRegionsResponse]
+	getInstanceLimitStatus  *connect.Client[v1.GetInstanceLimitStatusRequest, v1.GetInstanceLimitStatusResponse]
+	pauseInstance           *connect.Client[v1.PauseInstanceRequest, v1.PauseInstanceResponse]
+	resumeInstance          *connect.Client[v1.ResumeInstanceRequest, v1.ResumeInstanceResponse]
+	setInstanceExtraBilling *connect.Client[v1.SetInstanceExtraBillingRequest, v1.SetInstanceExtraBillingResponse]
+	getOrgActivity          *connect.Client[v1.GetOrgActivityRequest, v1.GetOrgActivityResponse]
 }
 
 // ProvisionInstance calls everstack.controlplane.v1.ControlPlaneService.ProvisionInstance.
@@ -283,6 +349,33 @@ func (c *controlPlaneServiceClient) ListRegions(ctx context.Context, req *connec
 	return c.listRegions.CallUnary(ctx, req)
 }
 
+// GetInstanceLimitStatus calls
+// everstack.controlplane.v1.ControlPlaneService.GetInstanceLimitStatus.
+func (c *controlPlaneServiceClient) GetInstanceLimitStatus(ctx context.Context, req *connect.Request[v1.GetInstanceLimitStatusRequest]) (*connect.Response[v1.GetInstanceLimitStatusResponse], error) {
+	return c.getInstanceLimitStatus.CallUnary(ctx, req)
+}
+
+// PauseInstance calls everstack.controlplane.v1.ControlPlaneService.PauseInstance.
+func (c *controlPlaneServiceClient) PauseInstance(ctx context.Context, req *connect.Request[v1.PauseInstanceRequest]) (*connect.Response[v1.PauseInstanceResponse], error) {
+	return c.pauseInstance.CallUnary(ctx, req)
+}
+
+// ResumeInstance calls everstack.controlplane.v1.ControlPlaneService.ResumeInstance.
+func (c *controlPlaneServiceClient) ResumeInstance(ctx context.Context, req *connect.Request[v1.ResumeInstanceRequest]) (*connect.Response[v1.ResumeInstanceResponse], error) {
+	return c.resumeInstance.CallUnary(ctx, req)
+}
+
+// SetInstanceExtraBilling calls
+// everstack.controlplane.v1.ControlPlaneService.SetInstanceExtraBilling.
+func (c *controlPlaneServiceClient) SetInstanceExtraBilling(ctx context.Context, req *connect.Request[v1.SetInstanceExtraBillingRequest]) (*connect.Response[v1.SetInstanceExtraBillingResponse], error) {
+	return c.setInstanceExtraBilling.CallUnary(ctx, req)
+}
+
+// GetOrgActivity calls everstack.controlplane.v1.ControlPlaneService.GetOrgActivity.
+func (c *controlPlaneServiceClient) GetOrgActivity(ctx context.Context, req *connect.Request[v1.GetOrgActivityRequest]) (*connect.Response[v1.GetOrgActivityResponse], error) {
+	return c.getOrgActivity.CallUnary(ctx, req)
+}
+
 // ControlPlaneServiceHandler is an implementation of the
 // everstack.controlplane.v1.ControlPlaneService service.
 type ControlPlaneServiceHandler interface {
@@ -315,6 +408,22 @@ type ControlPlaneServiceHandler interface {
 	RemoveCustomDomain(context.Context, *connect.Request[v1.RemoveCustomDomainRequest]) (*connect.Response[v1.RemoveCustomDomainResponse], error)
 	// ListRegions returns the regions this controlplane can provision into.
 	ListRegions(context.Context, *connect.Request[v1.ListRegionsRequest]) (*connect.Response[v1.ListRegionsResponse], error)
+	// Instance limit (docs/design/instance-over-limit.md). Reads need org
+	// membership; the three mutations need the owner or admin role.
+	GetInstanceLimitStatus(context.Context, *connect.Request[v1.GetInstanceLimitStatusRequest]) (*connect.Response[v1.GetInstanceLimitStatusResponse], error)
+	// PauseInstance stops serving an instance and keeps everything else.
+	PauseInstance(context.Context, *connect.Request[v1.PauseInstanceRequest]) (*connect.Response[v1.PauseInstanceResponse], error)
+	// ResumeInstance brings a paused instance back; ResourceExhausted when
+	// the org has no free slot.
+	ResumeInstance(context.Context, *connect.Request[v1.ResumeInstanceRequest]) (*connect.Response[v1.ResumeInstanceResponse], error)
+	// SetInstanceExtraBilling opts an instance into (or out of) the monthly
+	// extra-instance fee debited from the prepaid wallet.
+	SetInstanceExtraBilling(context.Context, *connect.Request[v1.SetInstanceExtraBillingRequest]) (*connect.Response[v1.SetInstanceExtraBillingResponse], error)
+	// GetOrgActivity summarises model-call activity across the organization's
+	// own instances (docs/design/org-overview-redesign.md, section 4.3). Any
+	// member may read it. The instance set is resolved server-side from the
+	// organization; the request carries no instance or tenant identifiers.
+	GetOrgActivity(context.Context, *connect.Request[v1.GetOrgActivityRequest]) (*connect.Response[v1.GetOrgActivityResponse], error)
 }
 
 // NewControlPlaneServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -402,6 +511,36 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 		connect.WithSchema(controlPlaneServiceMethods.ByName("ListRegions")),
 		connect.WithHandlerOptions(opts...),
 	)
+	controlPlaneServiceGetInstanceLimitStatusHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceGetInstanceLimitStatusProcedure,
+		svc.GetInstanceLimitStatus,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("GetInstanceLimitStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServicePauseInstanceHandler := connect.NewUnaryHandler(
+		ControlPlaneServicePauseInstanceProcedure,
+		svc.PauseInstance,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("PauseInstance")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServiceResumeInstanceHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceResumeInstanceProcedure,
+		svc.ResumeInstance,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("ResumeInstance")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServiceSetInstanceExtraBillingHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceSetInstanceExtraBillingProcedure,
+		svc.SetInstanceExtraBilling,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("SetInstanceExtraBilling")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServiceGetOrgActivityHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceGetOrgActivityProcedure,
+		svc.GetOrgActivity,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("GetOrgActivity")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/everstack.controlplane.v1.ControlPlaneService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ControlPlaneServiceProvisionInstanceProcedure:
@@ -430,6 +569,16 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 			controlPlaneServiceRemoveCustomDomainHandler.ServeHTTP(w, r)
 		case ControlPlaneServiceListRegionsProcedure:
 			controlPlaneServiceListRegionsHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceGetInstanceLimitStatusProcedure:
+			controlPlaneServiceGetInstanceLimitStatusHandler.ServeHTTP(w, r)
+		case ControlPlaneServicePauseInstanceProcedure:
+			controlPlaneServicePauseInstanceHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceResumeInstanceProcedure:
+			controlPlaneServiceResumeInstanceHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceSetInstanceExtraBillingProcedure:
+			controlPlaneServiceSetInstanceExtraBillingHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceGetOrgActivityProcedure:
+			controlPlaneServiceGetOrgActivityHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -489,4 +638,24 @@ func (UnimplementedControlPlaneServiceHandler) RemoveCustomDomain(context.Contex
 
 func (UnimplementedControlPlaneServiceHandler) ListRegions(context.Context, *connect.Request[v1.ListRegionsRequest]) (*connect.Response[v1.ListRegionsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.controlplane.v1.ControlPlaneService.ListRegions is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) GetInstanceLimitStatus(context.Context, *connect.Request[v1.GetInstanceLimitStatusRequest]) (*connect.Response[v1.GetInstanceLimitStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.controlplane.v1.ControlPlaneService.GetInstanceLimitStatus is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) PauseInstance(context.Context, *connect.Request[v1.PauseInstanceRequest]) (*connect.Response[v1.PauseInstanceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.controlplane.v1.ControlPlaneService.PauseInstance is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) ResumeInstance(context.Context, *connect.Request[v1.ResumeInstanceRequest]) (*connect.Response[v1.ResumeInstanceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.controlplane.v1.ControlPlaneService.ResumeInstance is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) SetInstanceExtraBilling(context.Context, *connect.Request[v1.SetInstanceExtraBillingRequest]) (*connect.Response[v1.SetInstanceExtraBillingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.controlplane.v1.ControlPlaneService.SetInstanceExtraBilling is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) GetOrgActivity(context.Context, *connect.Request[v1.GetOrgActivityRequest]) (*connect.Response[v1.GetOrgActivityResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.controlplane.v1.ControlPlaneService.GetOrgActivity is not implemented"))
 }

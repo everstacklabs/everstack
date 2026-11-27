@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/everstacklabs/everstack/internal/lib/tenantlive"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,6 +17,8 @@ import (
 	"github.com/everstacklabs/everstack/internal/api/common"
 	"github.com/everstacklabs/everstack/internal/api/internalauth"
 	apilic "github.com/everstacklabs/everstack/internal/api/policy"
+	"github.com/everstacklabs/everstack/internal/api/surfaceauth"
+	"github.com/everstacklabs/everstack/internal/auth/sessionlive"
 	"github.com/everstacklabs/everstack/internal/commands/handlers/gateway/chat"
 	"github.com/everstacklabs/everstack/internal/cqrs"
 	"github.com/everstacklabs/everstack/internal/database"
@@ -25,7 +29,6 @@ import (
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/everstacklabs/everstack/internal/query"
 	apikey "github.com/everstacklabs/everstack/internal/query/handlers/api_key"
-	"github.com/everstacklabs/everstack/pkg/tenant"
 )
 
 const (
@@ -42,22 +45,32 @@ type APIKeyInterceptor struct {
 	cacheTTL     time.Duration
 	sessionDB    *sqlx.DB // direct DB session validation for self-hosted mode
 	sessionCache sync.Map // map[token]sessionAuth
+	// lookups shares concurrent key lookups and briefly remembers failed
+	// ones, so a struggling database is not asked by every request.
+	lookups *apikeylib.LookupGuard
 }
 
 // NewAPIKeyInterceptor creates a new API key interceptor with policy loaded from global config
 func NewAPIKeyInterceptor(allowMissing bool) *APIKeyInterceptor {
-	return &APIKeyInterceptor{
+	interceptor := &APIKeyInterceptor{
 		allowMissing: allowMissing,
 		policy:       apilic.FromGlobal(),
 		cache:        make(map[string]apiKeyCacheEntry, 1024),
 		cacheTTL:     60 * time.Second,
+		lookups:      apikeylib.NewLookupGuard(apikeylib.DefaultFailureWindow),
 	}
+	interceptor.registerCacheInvalidation()
+	return interceptor
 }
 
 type apiKeyCacheEntry struct {
-	valid     bool
-	orgID     string
-	expiresAt time.Time
+	valid bool
+	orgID string
+	// keyID is the api_keys.id of a valid key, for spend attribution.
+	keyID        string
+	surfaces     []string
+	rateLimitRPM *int
+	expiresAt    time.Time
 }
 
 // sessionAuth carries the bits of a validated session cookie that downstream
@@ -72,7 +85,16 @@ type sessionAuth struct {
 	tenantID  string
 	role      string
 	expiresAt time.Time
+	// unavailable marks a lookup that could not reach the session store.
+	// Such a result is a deny and is never cached.
+	unavailable bool
 }
+
+// sessionCacheTTL bounds how long a session-cookie answer is reused,
+// independently of the API-key cacheTTL. It must not exceed
+// sessionlive.MaxCacheTTL: a cached "valid" keeps a revoked Better Auth
+// session working until it expires.
+const sessionCacheTTL = sessionlive.MaxCacheTTL
 
 // WithAPIKeyValidation wraps an http.Handler with API key validation
 func (i *APIKeyInterceptor) WithAPIKeyValidation(next http.Handler) http.Handler {
@@ -99,7 +121,7 @@ func (i *APIKeyInterceptor) WithAPIKeyValidation(next http.Handler) http.Handler
 		// limits by IP.
 		policyBypass := i.policy != nil && i.policy.ShouldBypassPath(path)
 		anonHosting := isAnonymousHostingPath(path)
-		if policyBypass || anonHosting {
+		if (policyBypass || anonHosting) && extractAPIKeyFromHeaders(r.Header) == "" {
 			// For hosting, only bypass when the caller presented NO credential
 			// at all. An API key or a Bearer (device-auth JWT) must fall
 			// through to normal validation so the publish is attributed to the
@@ -115,17 +137,25 @@ func (i *APIKeyInterceptor) WithAPIKeyValidation(next http.Handler) http.Handler
 		}
 
 		// Skip API key validation for Vite dev server assets (HMR, client, etc.)
-		if isViteDevServerPath(path) {
+		if isViteDevServerPath(path) && extractAPIKeyFromHeaders(r.Header) == "" {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		// Managed/shared tenant requests are authenticated by tenant middleware.
-		if tenant.ConfigFromContext(r.Context()) != nil {
-			next.ServeHTTP(w, r)
-			return
-		}
+		// Host selection alone is not authentication. Recheck key identities.
 		if contextkeys.IsTenantAuthenticated(r.Context()) {
+			if contextkeys.GetAPIKeyHash(r.Context()) != "" && !surfaceauth.Request(contextkeys.GetAPIKeySurfaces(r.Context()), r) {
+				i.writeErrorResponse(w, http.StatusForbidden, "this API key cannot call this API", correlationID)
+				return
+			}
+			if contextkeys.GetAPIKeyHash(r.Context()) != "" {
+				ctx := r.Context()
+				ctx = apikeylib.Accept(ctx, contextkeys.GetAPIKeyID(ctx), contextkeys.GetTenantID(ctx), contextkeys.GetAPIKeySurfaces(ctx), apikeylib.SurfaceInference, contextkeys.GetAPIKeyRateLimit(ctx))
+				if i.rateLimited(w, ctx) {
+					return
+				}
+				r = r.WithContext(ctx)
+			}
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -136,13 +166,19 @@ func (i *APIKeyInterceptor) WithAPIKeyValidation(next http.Handler) http.Handler
 		// see a real tenant context. Without it every admin UI page would 403
 		// with "tenant context missing", which is the regression we hit after
 		// locking down the body-supplied tenant id fallback on 2026-05-06.
-		if i.sessionDB != nil {
+		// A cookie the tenant middleware already refused for this host (non
+		// member, or unresolved host on a managed gateway) must not be
+		// re-authenticated here as the user's own tenant (EVS-309).
+		sessionUnavailable := contextkeys.IsSessionUnavailable(r.Context())
+		if i.sessionDB != nil && !contextkeys.IsTenantAuthRejected(r.Context()) {
 			if cookie, err := r.Cookie("es_everstack_session"); err == nil && cookie.Value != "" {
-				if auth := i.resolveSession(r.Context(), cookie.Value); auth.valid {
+				auth := i.resolveSession(r.Context(), cookie.Value)
+				if auth.valid {
 					r = applySessionAuth(r, auth)
 					next.ServeHTTP(w, r)
 					return
 				}
+				sessionUnavailable = sessionUnavailable || auth.unavailable
 			}
 		}
 
@@ -211,17 +247,27 @@ func (i *APIKeyInterceptor) WithAPIKeyValidation(next http.Handler) http.Handler
 		}
 
 		// Explicitly reject Authorization header for non-exempt routes.
-		// A Bearer token here is almost always an OpenAI SDK pointed at /v1
-		// instead of /openai/v1, so name the endpoint that does accept Bearer
-		// rather than only the header this surface wants.
+		// An issued API key sent as Bearer to an OpenAI verb under /v1 never
+		// gets here: the /v1 mount moves it onto the api-key header first
+		// (see withV1OpenAICompat in internal/api). What remains is a
+		// device-auth JWT, a session token, or a key on a route that takes
+		// only the api-key header, so name both accepted forms.
 		if hasAuthBearer(r.Header) {
 			i.writeErrorResponse(w, http.StatusUnauthorized,
 				"Invalid authorization token; use "+common.EverstackApiKey+
-					", or send OpenAI-compatible requests to /openai/v1, which accepts Authorization: Bearer",
+					", or send an Everstack API key as Authorization: Bearer to the OpenAI-compatible endpoints under /v1",
 				correlationID)
 			return
 		}
 		if !i.validateAPIKey(r) {
+			if sessionUnavailable {
+				// The only credential was a session cookie the session
+				// store could not verify: deny, as 503 rather than 401 so
+				// an outage does not read as a sign-out.
+				w.Header().Set("Retry-After", "1")
+				i.writeErrorResponse(w, http.StatusServiceUnavailable, "session verification unavailable, retry shortly", correlationID)
+				return
+			}
 			i.writeErrorResponse(w, http.StatusUnauthorized, "API key is required. Create one from the dashboard (Settings > Vault > API Keys). Docs: https://docs.everstack.ai/getting-started/vault/api-keys", correlationID)
 			return
 		}
@@ -265,8 +311,23 @@ func (i *APIKeyInterceptor) WithAPIKeyValidation(next http.Handler) http.Handler
 
 		// Cache fast-path
 		cacheStart := time.Now()
-		if orgID, valid, hit := i.lookupCache(hash); hit {
+		if orgID, keyID, surfaces, rpm, valid, hit := i.lookupCache(hash); hit {
+			// A key of a deleted managed instance stops working even while
+			// its positive answer is cached (managed gateways only).
+			if valid && tenantlive.Deleted(orgID) {
+				valid = false
+			}
+			// A valid key on another tenant's hostname is answered exactly
+			// like an unknown key. The cache keeps the positive answer: the
+			// key still works on its own host.
+			if valid && keyRefusedOnHost(r, orgID, hash) {
+				valid = false
+			}
 			if valid {
+				if !surfaceauth.Request(surfaces, r) {
+					i.writeErrorResponse(w, http.StatusForbidden, "this API key cannot call this API", correlationID)
+					return
+				}
 				cacheDuration := time.Since(cacheStart)
 				totalDuration := time.Since(start)
 				logger.WithFields(map[string]interface{}{
@@ -279,9 +340,13 @@ func (i *APIKeyInterceptor) WithAPIKeyValidation(next http.Handler) http.Handler
 					"total_duration_us":    totalDuration.Microseconds(),
 					"cache_hit":            true,
 				}).Debug("API key validation profiling (cache hit)")
-				authCtx := contextkeys.WithAuthenticatedAPIKey(r.Context(), orgID, hash)
+				authCtx := contextkeys.WithAPIKeyRateLimit(contextkeys.WithAPIKeySurfaces(contextkeys.WithAuthenticatedAPIKeyID(r.Context(), orgID, hash, keyID), surfaces), rpm)
 				if orgID != "" {
 					authCtx = database.WithTenantSchema(authCtx, orgID)
+				}
+				authCtx = apikeylib.Accept(authCtx, contextkeys.GetAPIKeyID(authCtx), contextkeys.GetTenantID(authCtx), surfaces, apikeylib.SurfaceInference, rpm)
+				if i.rateLimited(w, authCtx) {
+					return
 				}
 				r = r.WithContext(authCtx)
 				next.ServeHTTP(w, r)
@@ -293,45 +358,86 @@ func (i *APIKeyInterceptor) WithAPIKeyValidation(next http.Handler) http.Handler
 		cacheDuration := time.Since(cacheStart)
 
 		// Database lookup
+		revision := apikeylib.CacheRevision()
 		dbStart := time.Now()
 		q := apikey.NewGetApiKeyByHashQuery(hash, "", "")
-		queryCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		resp, qerr := sys.QueryBus.Execute(queryCtx, q)
-		cancel()
-		if qerr != nil || resp == nil {
-			i.rememberCache(hash, false, "")
+		q.CallerEnforces = true
+		resp, qerr := i.lookups.Do(ctx, hash, func(lctx context.Context) (interface{}, error) {
+			return sys.QueryBus.Execute(lctx, q)
+		})
+		if qerr != nil {
+			// The lookup failed (database unreachable, out of connections,
+			// timed out), so whether the key is valid is unknown. Refuse this
+			// request as retryable and do not cache it as invalid: that
+			// turned one refused connection into a minute of 401s for every
+			// caller using a valid key.
+			w.Header().Set("Retry-After", "1")
+			i.writeErrorResponse(w, http.StatusServiceUnavailable, apikeylib.ErrLookupUnavailable.Error(), correlationID)
+			return
+		}
+		if resp == nil {
+			i.rememberCache(hash, false, "", "", nil)
 			i.writeErrorResponse(w, http.StatusUnauthorized, "Invalid API key", correlationID)
 			return
 		}
-		var resolvedOrgID string
+		var resolvedOrgID, resolvedKeyID string
+		var surfaces []string
+		var rpm *int
 		if qr, ok := resp.(*query.Response); ok {
 			if qr.Data == nil {
-				i.rememberCache(hash, false, "")
+				i.rememberCache(hash, false, "", "", nil)
 				i.writeErrorResponse(w, http.StatusUnauthorized, "Invalid API key", correlationID)
 				return
 			}
 			if rm, ok := qr.Data.(apikey.APIKeyReadModel); ok {
+				resolvedKeyID = rm.ID
+				surfaces = rm.Surfaces
+				rpm = rm.RateLimitRPM
 				if rm.InstanceID != nil && *rm.InstanceID != "" {
 					resolvedOrgID = *rm.InstanceID
 				} else if rm.OrgID != nil {
 					resolvedOrgID = *rm.OrgID
 				}
+			} else {
+				i.rememberCache(hash, false, "", "", nil)
+				i.writeErrorResponse(w, http.StatusUnauthorized, "Invalid API key", correlationID)
+				return
 			}
-			i.rememberCache(hash, true, resolvedOrgID)
+			if tenantlive.Deleted(resolvedOrgID) {
+				i.rememberCache(hash, false, "", "", nil)
+				i.writeErrorResponse(w, http.StatusUnauthorized, "Invalid API key", correlationID)
+				return
+			}
+			if !i.rememberCacheAt(revision, hash, true, resolvedOrgID, resolvedKeyID, surfaces, rpm) {
+				i.writeErrorResponse(w, http.StatusUnauthorized, "API key changed; retry request", correlationID)
+				return
+			}
 
 			// Mark as valid in fast-path cache
 			if engine := fastpath.GetGlobalEngine(); engine != nil && engine.IsEnabled() {
 				engine.MarkAPIKeyValid(apiKey)
 			}
+			if keyRefusedOnHost(r, resolvedOrgID, hash) {
+				i.writeErrorResponse(w, http.StatusUnauthorized, "Invalid API key", correlationID)
+				return
+			}
 		} else {
-			i.rememberCache(hash, false, "")
+			i.rememberCache(hash, false, "", "", nil)
 			i.writeErrorResponse(w, http.StatusUnauthorized, "Invalid API key", correlationID)
 			return
 		}
+		if !surfaceauth.Request(surfaces, r) {
+			i.writeErrorResponse(w, http.StatusForbidden, "this API key cannot call this API", correlationID)
+			return
+		}
 		dbDuration := time.Since(dbStart)
-		authCtx := contextkeys.WithAuthenticatedAPIKey(r.Context(), resolvedOrgID, hash)
+		authCtx := contextkeys.WithAPIKeyRateLimit(contextkeys.WithAPIKeySurfaces(contextkeys.WithAuthenticatedAPIKeyID(r.Context(), resolvedOrgID, hash, resolvedKeyID), surfaces), rpm)
 		if resolvedOrgID != "" {
 			authCtx = database.WithTenantSchema(authCtx, resolvedOrgID)
+		}
+		authCtx = apikeylib.Accept(authCtx, contextkeys.GetAPIKeyID(authCtx), contextkeys.GetTenantID(authCtx), surfaces, apikeylib.SurfaceInference, rpm)
+		if i.rateLimited(w, authCtx) {
+			return
 		}
 		r = r.WithContext(authCtx)
 
@@ -351,6 +457,34 @@ func (i *APIKeyInterceptor) WithAPIKeyValidation(next http.Handler) http.Handler
 		// Call the next handler
 		next.ServeHTTP(w, r)
 	})
+}
+
+// keyRefusedOnHost reports whether a valid key that resolves to tenantID must
+// be refused because the request's hostname names a different tenant (see
+// contextkeys.HostScopeAdmitsTenant). Without this, tenant A's key sent to
+// tenant B's hostname ran as A while host-based attribution, limits and
+// last-use tracking filed it under B. Callers answer with the same 401 as an
+// unknown key, so the response does not reveal that the key is valid
+// elsewhere. Only tenant and host metadata are logged.
+func keyRefusedOnHost(r *http.Request, tenantID, hash string) bool {
+	if contextkeys.HostScopeAdmitsTenant(r.Context(), tenantID) {
+		return false
+	}
+	hostInstance := ""
+	if scope, ok := contextkeys.HostSelectedTenantFromContext(r.Context()); ok {
+		hostInstance = scope.InstanceID
+	} else if scope, ok := contextkeys.RequestInstanceScopeFromContext(r.Context()); ok {
+		hostInstance = scope.InstanceID
+	}
+	logger.WithFields(map[string]interface{}{
+		"audit_event":   true,
+		"event_type":    "apikey.host_mismatch",
+		"key_tenant_id": tenantID,
+		"host_instance": hostInstance,
+		"host":          r.Host,
+		"path":          r.URL.Path,
+	}).Warn("apikey: key presented on another tenant's host; refused as invalid")
+	return true
 }
 
 // isViteDevServerPath checks if the request is for Vite dev server assets
@@ -379,26 +513,47 @@ func isViteDevServerPath(path string) bool {
 	return false
 }
 
-// lookupCache returns (orgID, valid, hit). Carrying orgID in the cache lets
+// lookupCache returns the identity, surfaces, limit, validity and cache hit.
+// Carrying orgID in the cache lets
 // the wrapper install it on the request context after a warm-cache validation,
 // without re-querying the DB. Without that, every API-key authenticated
 // request would still need a follow-up lookup to know which tenant it
 // belongs to — or, worse, fall through with no tenant context at all.
-func (i *APIKeyInterceptor) lookupCache(hash string) (string, bool, bool) {
+func (i *APIKeyInterceptor) lookupCache(hash string) (string, string, []string, *int, bool, bool) {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 	if e, ok := i.cache[hash]; ok {
 		if time.Now().Before(e.expiresAt) {
-			return e.orgID, e.valid, true
+			return e.orgID, e.keyID, e.surfaces, e.rateLimitRPM, e.valid, true
 		}
 	}
-	return "", false, false
+	return "", "", nil, nil, false, false
 }
 
-func (i *APIKeyInterceptor) rememberCache(hash string, valid bool, orgID string) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	i.cache[hash] = apiKeyCacheEntry{valid: valid, orgID: orgID, expiresAt: time.Now().Add(i.cacheTTL)}
+func (i *APIKeyInterceptor) rememberCache(hash string, valid bool, orgID, keyID string, surfaces []string, rateLimits ...*int) {
+	i.rememberCacheAt(apikeylib.CacheRevision(), hash, valid, orgID, keyID, surfaces, rateLimits...)
+}
+func (i *APIKeyInterceptor) rememberCacheAt(revision uint64, hash string, valid bool, orgID, keyID string, surfaces []string, rateLimits ...*int) bool {
+	var rpm *int
+	if len(rateLimits) > 0 {
+		rpm = rateLimits[0]
+	}
+	return apikeylib.WithCacheRevision(revision, func() {
+		i.mu.Lock()
+		defer i.mu.Unlock()
+		i.cache[hash] = apiKeyCacheEntry{valid: valid, orgID: orgID, keyID: keyID, surfaces: surfaces, rateLimitRPM: rpm, expiresAt: time.Now().Add(apikeylib.CacheTTL(surfaces, i.cacheTTL))}
+	})
+}
+func (i *APIKeyInterceptor) registerCacheInvalidation() {
+	apikeylib.RegisterCacheInvalidator(func(hash, keyID string) {
+		i.mu.Lock()
+		defer i.mu.Unlock()
+		for k, entry := range i.cache {
+			if hash != "" && k == hash || keyID != "" && entry.keyID == keyID {
+				delete(i.cache, k)
+			}
+		}
+	})
 }
 
 func extractAPIKeyFromHeaders(h http.Header) string {
@@ -494,79 +649,109 @@ func (i *APIKeyInterceptor) writeErrorResponse(w http.ResponseWriter, statusCode
 // NewAPIKeyInterceptorWithSessionDB creates an interceptor with direct DB session validation
 // for self-hosted instances.
 func NewAPIKeyInterceptorWithSessionDB(allowMissing bool, db *sqlx.DB) *APIKeyInterceptor {
-	return &APIKeyInterceptor{
+	interceptor := &APIKeyInterceptor{
 		allowMissing: allowMissing,
 		policy:       apilic.FromGlobal(),
 		cache:        make(map[string]apiKeyCacheEntry, 1024),
 		cacheTTL:     60 * time.Second,
 		sessionDB:    db,
+		lookups:      apikeylib.NewLookupGuard(apikeylib.DefaultFailureWindow),
 	}
+	interceptor.registerCacheInvalidation()
+	return interceptor
 }
 
 // resolveSession validates a session token against the sessions table and
 // resolves the user's primary organisation id. The org id is the missing
 // piece that lets downstream handlers read tenant from context only — see
 // the comment on sessionAuth for the rationale. Results are cached for
-// cacheTTL because every admin UI request goes through here.
+// sessionCacheTTL because every admin UI request goes through here.
 //
 // Org selection: pick the user's earliest-joined organisation. The admin
 // UI today reads `session.user.organizations[0]`, which is also ordered by
 // joined_at. A future "active org" concept (header / cookie field) would
 // override this; until then we mirror what the FE already does.
 func (i *APIKeyInterceptor) resolveSession(ctx context.Context, token string) sessionAuth {
-	// Cache hit?
-	if cached, ok := i.sessionCache.Load(token); ok {
+	// A hostname-selected instance changes the answer, so it is part of the
+	// cache key: the same cookie on tenant B's host must not reuse tenant A.
+	hostScope, hasHostScope := contextkeys.RequestInstanceScopeFromContext(ctx)
+	cacheKey := token
+	if hasHostScope {
+		cacheKey = token + "\x00" + hostScope.InstanceID
+	}
+	if cached, ok := i.sessionCache.Load(cacheKey); ok {
 		if entry, ok := cached.(sessionAuth); ok {
 			if time.Now().Before(entry.expiresAt) {
 				return entry
 			}
-			i.sessionCache.Delete(token)
+			i.sessionCache.Delete(cacheKey)
 		}
 	}
 
 	queryCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	var (
-		userID         string
-		sessionExpires time.Time
-	)
-	// Sessions are written to everstack.sessions by services/auth (see
-	// session_repo.go). Earlier this query targeted unqualified `sessions`,
-	// which resolves to the public schema and is empty in real deployments —
-	// resolveSession then returned valid=false, the caller fell back to
-	// "authenticated, no tenant", and every admin page got
-	// permission_denied. Always qualify the schema.
-	err := i.sessionDB.QueryRowContext(queryCtx,
-		`SELECT user_id::text, expires_at FROM everstack.sessions WHERE token = $1`, token,
-	).Scan(&userID, &sessionExpires)
+	// sessionlive.Lookup reads everstack.sessions (schema-qualified: the
+	// unqualified table resolves to public.* and is empty in real
+	// deployments, which once made every admin page permission_denied) and,
+	// for a row mirrored from Better Auth, confirms the identity session is
+	// still live.
+	session, err := sessionlive.Lookup(queryCtx, i.sessionDB, token)
 	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
+		if !sessionlive.IsRejected(err) {
 			logger.WithFields(map[string]interface{}{
 				"error": err.Error(),
-			}).Warn("apikey: self-hosted session DB lookup failed")
+			}).Warn("apikey: session verification failed")
+			return sessionAuth{unavailable: true}
 		}
-		i.sessionCache.Store(token, sessionAuth{expiresAt: time.Now().Add(i.cacheTTL)})
+		i.sessionCache.Store(cacheKey, sessionAuth{expiresAt: time.Now().Add(sessionCacheTTL)})
 		return sessionAuth{}
 	}
-	if !time.Now().Before(sessionExpires) {
-		i.sessionCache.Store(token, sessionAuth{expiresAt: time.Now().Add(i.cacheTTL)})
-		return sessionAuth{}
+	userID := session.UserID
+	// A positive answer is reused for at most sessionCacheTTL and never
+	// past the mirror row's own expiry.
+	validUntil := time.Now().Add(sessionCacheTTL)
+	if session.ExpiresAt.Before(validUntil) {
+		validUntil = session.ExpiresAt
 	}
 
-	// Look up the user's primary org. We don't fail closed if the user has
-	// no org — some pre-onboarding screens (org-create, billing setup) need
-	// to load before membership exists. Tenant-scoped handlers will reject
-	// such requests with PermissionDenied, which is the correct behaviour;
-	// onboarding endpoints should not be tenant-scoped in the first place.
-	// Prefer instance_id from tenant_config (cloud multi-instance mode).
-	// Fall back to organization_id for self-hosted (single-instance) deployments.
 	var tenantID, role string
+	if hasHostScope {
+		// The Host selected an instance: the session is valid for THAT
+		// instance only if the user is a member of its organization. Never
+		// answer with a different tenant the user happens to belong to.
+		if err := i.sessionDB.QueryRowContext(queryCtx,
+			`SELECT COALESCE(om.role, '') FROM everstack.organization_members om
+			 WHERE om.user_id = $1 AND om.organization_id = $2::uuid
+			 LIMIT 1`, userID, hostScope.OrganizationID,
+		).Scan(&role); err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				logger.WithFields(map[string]interface{}{"error": err.Error(), "user_id": userID}).
+					Warn("apikey: host membership lookup failed")
+			}
+			i.sessionCache.Store(cacheKey, sessionAuth{expiresAt: time.Now().Add(sessionCacheTTL)})
+			return sessionAuth{}
+		}
+		auth := sessionAuth{valid: true, userID: userID, tenantID: hostScope.InstanceID, role: role,
+			expiresAt: validUntil}
+		i.sessionCache.Store(cacheKey, auth)
+		return auth
+	}
+
+	// No hostname-selected instance. Look up the user's primary org. We
+	// don't fail closed if the user has no org — some pre-onboarding screens
+	// (org-create, billing setup) need to load before membership exists.
+	// Tenant-scoped handlers will reject such requests with PermissionDenied,
+	// which is the correct behaviour; onboarding endpoints should not be
+	// tenant-scoped in the first place. Prefer instance_id from tenant_config
+	// (cloud multi-instance mode), deterministically ordered; fall back to
+	// organization_id for self-hosted (single-instance) deployments.
 	if err := i.sessionDB.QueryRowContext(queryCtx,
 		`SELECT tc.instance_id::text, COALESCE(om.role, '')
 		 FROM everstack.tenant_config tc
 		 JOIN everstack.organization_members om ON om.organization_id = tc.organization_id
 		 WHERE om.user_id = $1 AND tc.status = 'active'
+		 ORDER BY om.joined_at ASC, tc.instance_id ASC
 		 LIMIT 1`, userID,
 	).Scan(&tenantID, &role); err != nil {
 		tenantID, role = "", ""
@@ -588,9 +773,9 @@ func (i *APIKeyInterceptor) resolveSession(ctx context.Context, token string) se
 		userID:    userID,
 		tenantID:  tenantID,
 		role:      role,
-		expiresAt: time.Now().Add(i.cacheTTL),
+		expiresAt: validUntil,
 	}
-	i.sessionCache.Store(token, auth)
+	i.sessionCache.Store(cacheKey, auth)
 	return auth
 }
 
@@ -629,4 +814,15 @@ func WithAPIKeyValidationAndPolicy(next http.Handler, allowMissing bool, policy 
 		interceptor.policy = policy
 	}
 	return interceptor.WithAPIKeyValidation(next)
+}
+
+func (i *APIKeyInterceptor) rateLimited(w http.ResponseWriter, ctx context.Context) bool {
+	if n := apikeylib.RetryAfter(ctx); n > 0 {
+		w.Header().Set("Retry-After", strconv.Itoa(n))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusTooManyRequests)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"error": map[string]interface{}{"message": "rate limit exceeded", "type": "rate_limit_error", "code": "rate_limit_exceeded"}})
+		return true
+	}
+	return false
 }

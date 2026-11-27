@@ -1,7 +1,7 @@
 name: "meta-llama/llama-4-maverick-17b-128e-instruct"
 display_name: "Llama 4 Maverick 17B 128E (Groq)"
 family: "llama"
-status: "stable"
+status: "deprecated"
 
 cost:
   input_per_1k: 0.0002
@@ -59,3 +59,4 @@ parameters:
   - key: "seed"
     display_name: "Seed"
     type: "integer"
+notes: "Shut down by Groq on 2026-03-09. Migrate to openai/gpt-oss-120b."

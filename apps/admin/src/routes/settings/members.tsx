@@ -34,9 +34,9 @@ function roleBadgeClass(role: string) {
     case 'owner':
       return 'border-brand-secondary-500/30 bg-brand-secondary-500/10 text-brand-secondary-300'
     case 'admin':
-      return 'border-blue-500/30 bg-blue-500/10 text-blue-300 light:text-blue-600'
+      return 'border-info-border bg-info-surface text-info'
     case 'member':
-      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 light:text-emerald-600'
+      return 'border-success-border bg-success-surface text-success'
     default:
       return 'border-brand-main-500/40 bg-brand-main-700/40 text-brand-main-200'
   }
@@ -297,7 +297,7 @@ function MemberRow({
           <button
             onClick={() => onRemove(member.userId)}
             disabled={removePending}
-            className="rounded p-1 text-red-400/50 light:text-red-600/50 opacity-0 transition-all hover:bg-red-500/10 hover:text-red-400 light:hover:text-red-600 group-hover:opacity-100 disabled:opacity-50"
+            className="rounded p-1 text-danger/50 opacity-0 transition-all hover:bg-danger-surface hover:text-danger group-hover:opacity-100 disabled:opacity-50"
             title="Remove from instance"
           >
             <Icon icon="lucide:user-minus" className="size-3.5" />

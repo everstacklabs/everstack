@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerifyMagicLinkRouteImport } from './routes/verify-magic-link'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ChatRouteImport } from './routes/chat'
@@ -45,6 +46,7 @@ import { Route as InviteTokenRouteImport } from './routes/invite/$token'
 import { Route as GatewayMcpRouteImport } from './routes/gateway/mcp'
 import { Route as GatewayGuardrailsRouteImport } from './routes/gateway/guardrails'
 import { Route as GatewayConfigRouteImport } from './routes/gateway/config'
+import { Route as GatewayBotsRouteImport } from './routes/gateway/bots'
 import { Route as GatewayA2aRouteImport } from './routes/gateway/a2a'
 import { Route as EvaluationsScoreConfigsRouteImport } from './routes/evaluations/score-configs'
 import { Route as EvaluationsRunsRouteImport } from './routes/evaluations/runs'
@@ -109,6 +111,11 @@ import { Route as DeploymentsAgentsAgentIdAutomationsRouteImport } from './route
 import { Route as DeploymentsAgentsAgentIdApiRouteImport } from './routes/deployments/agents/$agentId/api'
 import { Route as DeploymentsAgentsAgentIdA2aRouteImport } from './routes/deployments/agents/$agentId/a2a'
 
+const VerifyMagicLinkRoute = VerifyMagicLinkRouteImport.update({
+  id: '/verify-magic-link',
+  path: '/verify-magic-link',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -288,6 +295,11 @@ const GatewayGuardrailsRoute = GatewayGuardrailsRouteImport.update({
 const GatewayConfigRoute = GatewayConfigRouteImport.update({
   id: '/gateway/config',
   path: '/gateway/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GatewayBotsRoute = GatewayBotsRouteImport.update({
+  id: '/gateway/bots',
+  path: '/gateway/bots',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GatewayA2aRoute = GatewayA2aRouteImport.update({
@@ -646,6 +658,7 @@ export interface FileRoutesByFullPath {
   '/chat': typeof ChatRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/verify-magic-link': typeof VerifyMagicLinkRoute
   '/account/profile': typeof AccountProfileRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/deployments/agents': typeof DeploymentsAgentsRouteWithChildren
@@ -666,6 +679,7 @@ export interface FileRoutesByFullPath {
   '/evaluations/runs': typeof EvaluationsRunsRoute
   '/evaluations/score-configs': typeof EvaluationsScoreConfigsRoute
   '/gateway/a2a': typeof GatewayA2aRoute
+  '/gateway/bots': typeof GatewayBotsRoute
   '/gateway/config': typeof GatewayConfigRoute
   '/gateway/guardrails': typeof GatewayGuardrailsRoute
   '/gateway/mcp': typeof GatewayMcpRoute
@@ -747,6 +761,7 @@ export interface FileRoutesByTo {
   '/chat': typeof ChatRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/verify-magic-link': typeof VerifyMagicLinkRoute
   '/account/profile': typeof AccountProfileRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/deployments/channels': typeof DeploymentsChannelsRoute
@@ -763,6 +778,7 @@ export interface FileRoutesByTo {
   '/evaluations/runs': typeof EvaluationsRunsRoute
   '/evaluations/score-configs': typeof EvaluationsScoreConfigsRoute
   '/gateway/a2a': typeof GatewayA2aRoute
+  '/gateway/bots': typeof GatewayBotsRoute
   '/gateway/config': typeof GatewayConfigRoute
   '/gateway/guardrails': typeof GatewayGuardrailsRoute
   '/gateway/mcp': typeof GatewayMcpRoute
@@ -844,6 +860,7 @@ export interface FileRoutesById {
   '/chat': typeof ChatRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/verify-magic-link': typeof VerifyMagicLinkRoute
   '/account/profile': typeof AccountProfileRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/deployments/agents': typeof DeploymentsAgentsRouteWithChildren
@@ -864,6 +881,7 @@ export interface FileRoutesById {
   '/evaluations/runs': typeof EvaluationsRunsRoute
   '/evaluations/score-configs': typeof EvaluationsScoreConfigsRoute
   '/gateway/a2a': typeof GatewayA2aRoute
+  '/gateway/bots': typeof GatewayBotsRoute
   '/gateway/config': typeof GatewayConfigRoute
   '/gateway/guardrails': typeof GatewayGuardrailsRoute
   '/gateway/mcp': typeof GatewayMcpRoute
@@ -947,6 +965,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/login'
     | '/register'
+    | '/verify-magic-link'
     | '/account/profile'
     | '/demo/tanstack-query'
     | '/deployments/agents'
@@ -967,6 +986,7 @@ export interface FileRouteTypes {
     | '/evaluations/runs'
     | '/evaluations/score-configs'
     | '/gateway/a2a'
+    | '/gateway/bots'
     | '/gateway/config'
     | '/gateway/guardrails'
     | '/gateway/mcp'
@@ -1048,6 +1068,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/login'
     | '/register'
+    | '/verify-magic-link'
     | '/account/profile'
     | '/demo/tanstack-query'
     | '/deployments/channels'
@@ -1064,6 +1085,7 @@ export interface FileRouteTypes {
     | '/evaluations/runs'
     | '/evaluations/score-configs'
     | '/gateway/a2a'
+    | '/gateway/bots'
     | '/gateway/config'
     | '/gateway/guardrails'
     | '/gateway/mcp'
@@ -1144,6 +1166,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/login'
     | '/register'
+    | '/verify-magic-link'
     | '/account/profile'
     | '/demo/tanstack-query'
     | '/deployments/agents'
@@ -1164,6 +1187,7 @@ export interface FileRouteTypes {
     | '/evaluations/runs'
     | '/evaluations/score-configs'
     | '/gateway/a2a'
+    | '/gateway/bots'
     | '/gateway/config'
     | '/gateway/guardrails'
     | '/gateway/mcp'
@@ -1246,6 +1270,7 @@ export interface RootRouteChildren {
   ChatRoute: typeof ChatRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  VerifyMagicLinkRoute: typeof VerifyMagicLinkRoute
   AccountProfileRoute: typeof AccountProfileRoute
   DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
   DeploymentsAgentsRoute: typeof DeploymentsAgentsRouteWithChildren
@@ -1266,6 +1291,7 @@ export interface RootRouteChildren {
   EvaluationsRunsRoute: typeof EvaluationsRunsRoute
   EvaluationsScoreConfigsRoute: typeof EvaluationsScoreConfigsRoute
   GatewayA2aRoute: typeof GatewayA2aRoute
+  GatewayBotsRoute: typeof GatewayBotsRoute
   GatewayConfigRoute: typeof GatewayConfigRoute
   GatewayGuardrailsRoute: typeof GatewayGuardrailsRoute
   GatewayMcpRoute: typeof GatewayMcpRoute
@@ -1321,6 +1347,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verify-magic-link': {
+      id: '/verify-magic-link'
+      path: '/verify-magic-link'
+      fullPath: '/verify-magic-link'
+      preLoaderRoute: typeof VerifyMagicLinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
@@ -1571,6 +1604,13 @@ declare module '@tanstack/react-router' {
       path: '/gateway/config'
       fullPath: '/gateway/config'
       preLoaderRoute: typeof GatewayConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gateway/bots': {
+      id: '/gateway/bots'
+      path: '/gateway/bots'
+      fullPath: '/gateway/bots'
+      preLoaderRoute: typeof GatewayBotsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gateway/a2a': {
@@ -2134,6 +2174,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChatRoute: ChatRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  VerifyMagicLinkRoute: VerifyMagicLinkRoute,
   AccountProfileRoute: AccountProfileRoute,
   DemoTanstackQueryRoute: DemoTanstackQueryRoute,
   DeploymentsAgentsRoute: DeploymentsAgentsRouteWithChildren,
@@ -2154,6 +2195,7 @@ const rootRouteChildren: RootRouteChildren = {
   EvaluationsRunsRoute: EvaluationsRunsRoute,
   EvaluationsScoreConfigsRoute: EvaluationsScoreConfigsRoute,
   GatewayA2aRoute: GatewayA2aRoute,
+  GatewayBotsRoute: GatewayBotsRoute,
   GatewayConfigRoute: GatewayConfigRoute,
   GatewayGuardrailsRoute: GatewayGuardrailsRoute,
   GatewayMcpRoute: GatewayMcpRoute,

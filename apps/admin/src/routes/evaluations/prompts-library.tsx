@@ -162,7 +162,7 @@ function PromptsLibraryContent() {
                             <Badge
                                 key={label}
                                 variant="outline"
-                                className="text-[10px] border-emerald-400/30 text-emerald-300 light:text-emerald-600 shrink-0"
+                                className="text-[10px] border-success-border text-success shrink-0"
                             >
                                 {label} → v{version}
                             </Badge>
@@ -215,7 +215,7 @@ function PromptsLibraryContent() {
                 <div className="flex items-center justify-center" data-row-actions>
                     <button
                         type="button"
-                        className="p-1 rounded hover:bg-red-500/20 hover:text-red-400 light:hover:text-red-600 transition-colors"
+                        className="p-1 rounded hover:bg-danger-surface-strong hover:text-danger transition-colors"
                         onClick={() => setDeleteConfirm({ id: prompt.id, name: prompt.name })}
                         title="Delete prompt"
                     >
@@ -286,7 +286,7 @@ function PromptsLibraryContent() {
 
                     <SheetBody>
                         {createMutation.error && (
-                            <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400 light:text-red-600">
+                            <div className="rounded-lg border border-danger-border bg-danger-surface p-3 text-sm text-danger">
                                 {(createMutation.error as Error).message}
                             </div>
                         )}

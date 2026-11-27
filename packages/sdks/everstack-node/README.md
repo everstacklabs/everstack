@@ -81,6 +81,45 @@ for await (const chunk of stream) {
 }
 ```
 
+### Streaming Responses
+
+`client.responses.create({ ..., stream: true })` yields `{ event, data }`
+events, where `data` is a JSON-encoded `ResponseObject`:
+
+- `response.in_progress`: a full snapshot, sent when the response's structure
+  changes (a new output item or content part).
+- `response.delta`: what one output item grew by, in `delta`. The event has no
+  `status` and an empty `output`. `delta.item_id` and `delta.output_index`
+  name the item; `delta.text` is text to append to a message item's content
+  part `delta.content_index`, and `delta.arguments` is a JSON fragment to
+  append to a `function_call` item's arguments.
+- `response.completed` (or `response.failed`, `response.incomplete`): the
+  final, full response.
+
+```typescript
+import type { ResponseObject } from "@everstack/node";
+
+const stream = await client.responses.create({
+  model: "@openai/gpt-4o",
+  input: [{ role: "user", content: [{ type: "text", text: "Write a haiku." }] }],
+  stream: true,
+});
+
+let printed = "";
+for await (const { event, data } of stream) {
+  const res = JSON.parse(data) as ResponseObject;
+  if (res.delta?.text) {
+    process.stdout.write(res.delta.text);
+    printed += res.delta.text;
+  } else if (event === "response.in_progress") {
+    // A snapshot can carry text of its own: print what is new.
+    const text = res.output.find((o) => o.type === "message")?.content?.[0]?.text ?? "";
+    process.stdout.write(text.slice(printed.length));
+    printed = text;
+  }
+}
+```
+
 ### Embeddings
 
 ```typescript

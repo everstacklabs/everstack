@@ -63,6 +63,7 @@ import (
 	openaiagentssvc "github.com/everstacklabs/everstack/internal/api/grpc/openai_agents/v1"
 	prompts "github.com/everstacklabs/everstack/internal/api/grpc/prompts/v1"
 	providers "github.com/everstacklabs/everstack/internal/api/grpc/providers/v1"
+	grpcserver "github.com/everstacklabs/everstack/internal/api/grpc/server"
 	grpcmw "github.com/everstacklabs/everstack/internal/api/grpc/server/middleware"
 	storagesvc "github.com/everstacklabs/everstack/internal/api/grpc/storage/v1"
 	traces "github.com/everstacklabs/everstack/internal/api/grpc/traces/v1"
@@ -77,6 +78,9 @@ import (
 	"github.com/everstacklabs/everstack/internal/auth/m2m"
 	selfhostedauth "github.com/everstacklabs/everstack/internal/auth/selfhosted"
 	"github.com/everstacklabs/everstack/internal/billingidentity"
+	"github.com/everstacklabs/everstack/internal/billingmeter"
+	"github.com/everstacklabs/everstack/internal/bots"
+	"github.com/everstacklabs/everstack/internal/bots/activity"
 	"github.com/everstacklabs/everstack/internal/catalogdistribution"
 	channelpkg "github.com/everstacklabs/everstack/internal/channels"
 	discordpkg "github.com/everstacklabs/everstack/internal/channels/discord"
@@ -99,17 +103,21 @@ import (
 	internalevents "github.com/everstacklabs/everstack/internal/events"
 	edgefeatures "github.com/everstacklabs/everstack/internal/features"
 	functionexecutor "github.com/everstacklabs/everstack/internal/functions/executor"
+	"github.com/everstacklabs/everstack/internal/functions/toolloop"
 	ingressgw "github.com/everstacklabs/everstack/internal/gateway"
 	ghpkg "github.com/everstacklabs/everstack/internal/github"
 	"github.com/everstacklabs/everstack/internal/interop"
 	issuepkg "github.com/everstacklabs/everstack/internal/issues"
 	apikeylib "github.com/everstacklabs/everstack/internal/lib/apikey"
+	"github.com/everstacklabs/everstack/internal/lib/authratelimit"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	domain "github.com/everstacklabs/everstack/internal/lib/domain"
 	"github.com/everstacklabs/everstack/internal/lib/handlers/gateway/cache"
 	"github.com/everstacklabs/everstack/internal/lib/handlers/gateway/fastpath"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/everstacklabs/everstack/internal/lib/metricsserver"
 	"github.com/everstacklabs/everstack/internal/lib/region"
+	"github.com/everstacklabs/everstack/internal/lib/tenantstatus"
 	"github.com/everstacklabs/everstack/internal/logcolumns"
 	"github.com/everstacklabs/everstack/internal/mcp"
 	mcpserver "github.com/everstacklabs/everstack/internal/mcp/server"
@@ -171,9 +179,11 @@ import (
 
 // Package-level shutdown functions for OTEL cleanup
 var (
+	globalActivityRecorder     *activity.Recorder
 	globalOTELShutdown         func()
 	globalCollectorShutdown    func() error
 	globalAgentsShutdown       func(context.Context) error
+	globalEventsShutdown       func(context.Context) error
 	globalSandboxProxyShutdown func(context.Context) error
 )
 
@@ -190,38 +200,39 @@ var (
 // primary if unset (CE single-binary mode where both DBs collapse).
 var cookieSessionAuthDB *sqlx.DB
 
-func databaseDependencyChecks(config *validator.Config) []api.DependencyCheck {
+// dependencyPools are the gateway's already-open database pools. Readiness
+// pings these instead of dialling a fresh connection on every probe, which
+// cost a TCP+auth handshake per check and could exhaust server connection
+// slots under frequent probes.
+type dependencyPools struct {
+	Primary   *sqlx.DB // postgres (or single-mode clickhouse)
+	Analytics *sqlx.DB // clickhouse in hybrid mode
+}
+
+func databaseDependencyChecks(config *validator.Config, pools dependencyPools) []api.DependencyCheck {
 	if config == nil || config.Database == nil {
 		return nil
 	}
 
-	newCheck := func(name string, dbType database.Type, dsn string, required bool) api.DependencyCheck {
+	newCheck := func(name string, pool *sqlx.DB, required bool) api.DependencyCheck {
 		return api.DependencyCheck{
 			Name:     name,
 			Required: required,
 			Check: func(ctx context.Context) error {
-				if strings.TrimSpace(dsn) == "" {
-					return fmt.Errorf("%s DSN is not configured", name)
+				if pool == nil {
+					return fmt.Errorf("%s connection pool not initialized", name)
 				}
 				pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 				defer cancel()
-				conn, err := database.Open(pingCtx, database.Config{Type: dbType, DSN: dsn})
-				if err != nil {
-					return err
-				}
-				defer conn.Close(pingCtx)
-				if conn.RW == nil {
-					return fmt.Errorf("%s connection not initialized", name)
-				}
-				return conn.RW.PingContext(pingCtx)
+				return pool.PingContext(pingCtx)
 			},
 		}
 	}
 
 	if strings.EqualFold(config.Database.Mode, "hybrid") {
 		return []api.DependencyCheck{
-			newCheck("postgres", database.TypePostgres, database.PostgresDSN(config), true),
-			newCheck("clickhouse", database.TypeClickHouse, database.ClickHouseDSN(config), !config.Database.ClickHouse.Optional),
+			newCheck("postgres", pools.Primary, true),
+			newCheck("clickhouse", pools.Analytics, !config.Database.ClickHouse.Optional),
 		}
 	}
 
@@ -229,14 +240,14 @@ func databaseDependencyChecks(config *validator.Config) []api.DependencyCheck {
 	case "memory":
 		return nil
 	case "clickhouse":
-		return []api.DependencyCheck{newCheck("clickhouse", database.TypeClickHouse, database.ClickHouseDSN(config), true)}
+		return []api.DependencyCheck{newCheck("clickhouse", pools.Primary, true)}
 	default:
-		return []api.DependencyCheck{newCheck("postgres", database.TypePostgres, database.PostgresDSN(config), true)}
+		return []api.DependencyCheck{newCheck("postgres", pools.Primary, true)}
 	}
 }
 
-func gatewayDependencyChecks(config *validator.Config, redisClient *cache.RedisClient) []api.DependencyCheck {
-	checks := databaseDependencyChecks(config)
+func gatewayDependencyChecks(config *validator.Config, pools dependencyPools, redisClient *cache.RedisClient) []api.DependencyCheck {
+	checks := databaseDependencyChecks(config, pools)
 	if config == nil || config.Cache == nil || !config.Cache.Redis.Required {
 		return checks
 	}
@@ -490,7 +501,40 @@ func gatewayRuntimeContext(ctx context.Context, sharedMode bool) (context.Contex
 	return ctx, managedGateway
 }
 
+// errOIDCAuthNotImplemented: auth.mode "oidc" is accepted by the config
+// schema, but the gateway registers no OIDC authentication for it (the
+// relying-party routes are a separate, env-gated part of builtin auth).
+// Starting would serve the dashboard with no authentication at all.
+var errOIDCAuthNotImplemented = errors.New("oidc auth mode is not implemented yet; use builtin or none")
+
+// errBuiltinAuthNeedsDatabase: builtin auth keeps users and sessions in the
+// primary database, so without one it cannot authenticate anybody.
+var errBuiltinAuthNeedsDatabase = errors.New(`auth mode "builtin" needs a primary Postgres database (database.postgres.dsn / EVS_POSTGRES_DSN) and none is configured; refusing to start without authentication. Configure the database, or set auth.mode to "none" explicitly`)
+
+// authModeStartupError reports why the configured auth mode cannot actually
+// authenticate in this process, or nil when it can. Each of these used to
+// log a warning and start with no authentication; an operator who asked for
+// authentication must get a startup error instead. "none" (or unset) is an
+// explicit choice and always starts.
+func authModeStartupError(mode string, injectedProvider, primaryDB bool) error {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "oidc":
+		return errOIDCAuthNotImplemented
+	case "builtin":
+		if !injectedProvider && !primaryDB {
+			return errBuiltinAuthNeedsDatabase
+		}
+	}
+	return nil
+}
+
 func startAPI(ctx context.Context, config *validator.Config, configPath string, embeddedDefaults *EmbeddedDefaults, router *mux.Router, runtime *GatewayAPIRuntime) (*api.API, error) {
+	// Refuse an auth mode that cannot authenticate before anything starts.
+	if config != nil && config.Auth != nil {
+		if err := authModeStartupError(config.Auth.Mode, true, true); err != nil {
+			return nil, err
+		}
+	}
 	// In shared gateway mode (SharedDB provided), per-tenant API key secrets
 	// come from context so we skip the global secret check.
 	sharedMode := embeddedDefaults != nil && embeddedDefaults.SharedDB != nil
@@ -500,10 +544,33 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 	// Store managed mode in context so request-scoped components, including
 	// provider routing, use tenant bundles for both supported cloud topologies.
 	ctx, managedGateway := gatewayRuntimeContext(ctx, sharedMode)
+	// Only a self-hosted gateway serves one organization; see
+	// toolloop.SetSingleTenant for what that permits.
+	toolloop.SetSingleTenant(!managedGateway)
+	// Prometheus default registry (billing loss and stall signals) on its own
+	// listener, off the public API port. Opt-in via EVS_METRICS_ADDR.
+	metricsserver.StartFromEnv(ctx, "gateway")
 	// Entitlement resolution runs on request contexts that do not always
 	// descend from this one, so the managed flag is process state rather than
 	// a context value.
 	enterprise.SetManagedGateway(managedGateway)
+	// Every spend-limit enforcement point (gRPC interceptor, metered REST,
+	// openai-agents, license middleware) asks the license monitor, which
+	// never blocks on a managed gateway: Cloud admission is the prepaid wallet.
+	licensemonitor.SetManagedGateway(managedGateway)
+	// A stdio MCP server is a child process of this gateway. On a managed
+	// gateway every tenant shares this process, so stdio is switched off
+	// process-wide before anything can construct an MCP transport; the
+	// registry, NewTransport and the exec itself all consult this switch.
+	// Tenant-chosen MCP URLs are fetched from inside the platform network,
+	// so on a managed gateway every MCP HTTP connection (transports, OAuth
+	// discovery and token requests) is limited to public unicast addresses.
+	if managedGateway {
+		mcp.DisallowStdio()
+		mcp.RequirePublicEndpoints()
+		// Provider base URLs are tenant-chosen in the same way.
+		httpclient.RequirePublicEndpoints()
+	}
 
 	// Load services config early so bypass policies are available in global viper
 	// This must happen before any policy.FromGlobal() calls
@@ -562,6 +629,13 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 		var err error
 		initRes, err = database.InitializeFromConfig(ctx, config)
 		if err != nil {
+			return nil, err
+		}
+	}
+	if config != nil && config.Auth != nil {
+		injectedProvider := embeddedDefaults != nil && embeddedDefaults.AuthProvider != nil
+		primaryDB := initRes != nil && initRes.Primary != nil && initRes.Primary.RW != nil
+		if err := authModeStartupError(config.Auth.Mode, injectedProvider, primaryDB); err != nil {
 			return nil, err
 		}
 	}
@@ -682,6 +756,15 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 			logger.Info("cookie_session_auth: using platform DB for cloud session lookups")
 		}
 	}
+	if initRes != nil && initRes.Primary != nil && initRes.Primary.RW != nil {
+		globalActivityRecorder = activity.New(initRes.Primary.RW)
+		var limitStore authratelimit.Store = authratelimit.NewMemoryStore()
+		if redisClient != nil {
+			limitStore = authratelimit.NewRedisStore(redisClient.Client(), "evs:key:rl:")
+		}
+		apikeylib.SetRuntime(apikeylib.NewRuntime(limitStore, globalActivityRecorder))
+	}
+
 	if cookieSessionAuthDB == nil && initRes != nil && initRes.Primary != nil && initRes.Primary.RW != nil {
 		cookieSessionAuthDB = initRes.Primary.RW
 	}
@@ -693,18 +776,84 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 	// is the same handle the cookie-session middleware just resolved (and which
 	// collapses to the primary pool on single-binary deployments).
 	//
-	// Enforcement stays OFF by default. These tenants have been running
-	// uncapped, so switching straight to enforcement would deny workloads that
-	// are legal today; shadow mode reports what would apply instead. Set
-	// EVS_PLAN_LIMIT_ENFORCEMENT=enforce once that report has been reviewed.
+	// Enforcement is ON by default on a managed gateway (owner decision
+	// 2026-10-06): count caps block new creation at the plan cap; orgs
+	// already over a cap keep everything they have. EVS_PLAN_LIMIT_ENFORCEMENT
+	// overrides it: "shadow" is the kill switch (report only), "pro=shadow"
+	// exempts one tier. A value that does not parse keeps every tier in
+	// shadow and logs an error, so a typo can never tighten enforcement.
+	// Paused managed instances: one cached tenant_config.status lookup that
+	// the host guard, the pause sweep and every background loop consult
+	// (docs/design/instance-over-limit.md).
+	if managedGateway && cookieSessionAuthDB != nil {
+		pausedTenants = tenantstatus.New(cookieSessionAuthDB, tenantstatus.DefaultTTL)
+		// Only a verified member is shown a paused org's billing page.
+		pausedTenants.SetViewerCheck(pausedTenantViewerCheck(func() *sqlx.DB { return cookieSessionAuthDB }))
+		// In-flight agent runs stop at their next iteration once paused.
+		agentrt.SetTenantActiveFn(pausedTenants.ActiveFn())
+	}
+
 	if managedGateway && cookieSessionAuthDB != nil {
 		enterprise.SetPlanTierResolver(enterprise.NewDBPlanTierResolver(cookieSessionAuthDB, time.Minute))
-		enforce := strings.EqualFold(strings.TrimSpace(os.Getenv("EVS_PLAN_LIMIT_ENFORCEMENT")), "enforce")
-		enterprise.SetShadowEnforcement(!enforce)
-		if enforce {
-			logger.Info("entitlements: managed plan limits are ENFORCED")
-		} else {
+		rawPolicy := os.Getenv("EVS_PLAN_LIMIT_ENFORCEMENT")
+		defaultEnforce, overrides, err := enterprise.ManagedEnforcementPolicy(rawPolicy)
+		if err != nil {
+			logger.WithFields("error", err.Error(), "value", rawPolicy).Error("entitlements: invalid enforcement policy, keeping all tiers in shadow")
+			enterprise.SetShadowEnforcement(true)
 			logger.Info("entitlements: managed plan limits resolve in shadow mode (reported, not enforced)")
+		} else {
+			enterprise.SetEnforcementPolicy(defaultEnforce, overrides)
+			if len(overrides) == 0 {
+				if defaultEnforce {
+					logger.Info("entitlements: managed plan limits are ENFORCED for all tiers")
+				} else {
+					logger.Info("entitlements: managed plan limits resolve in shadow mode (reported, not enforced)")
+				}
+			} else {
+				logger.WithFields("overrides", rawPolicy).Info("entitlements: managed plan limits are ENFORCED with per-tier exceptions")
+			}
+		}
+		// Activity caps (MESSAGES_MONTHLY, CONCURRENT_RUNNING,
+		// CONCURRENT_SANDBOXES, CONCURRENT_BROWSERS, SPAWN_DEPTH) have their
+		// own switch and stay shadow (logged only) unless
+		// EVS_PLAN_LIMIT_ENFORCEMENT_ACTIVITY=enforce. The sandbox and browser
+		// concurrency hard gates are enforced by their own subsystems and are
+		// not affected by this switch.
+		rawActivity := os.Getenv("EVS_PLAN_LIMIT_ENFORCEMENT_ACTIVITY")
+		activity, activityErr := enterprise.ParseActivityEnforcement(rawActivity)
+		if activityErr != nil {
+			logger.WithFields("error", activityErr.Error(), "value", rawActivity).
+				Error("entitlements: invalid activity enforcement mode, keeping activity caps in shadow")
+		}
+		enterprise.SetActivityEnforcement(activity)
+		if activity {
+			logger.Info("entitlements: activity plan caps are ENFORCED")
+		} else {
+			logger.Info("entitlements: activity plan caps resolve in shadow mode (reported, not enforced)")
+		}
+	}
+
+	// Cloud spend limits (customer-set budgets in billing.spend_limits).
+	// Legacy platform_credit rows are evaluated for platform-key inference
+	// and stay shadow (counted in billing_spend_limit_evaluated_total and
+	// logged, never refused) unless EVS_SPEND_LIMIT_ENFORCEMENT=enforce. The
+	// v2 all_inference rows (organization and per API key, platform and BYOK;
+	// docs/design/spend-limits-v2.md) are evaluated in shadow whatever this
+	// switch says until per-organization enforcement ships. Self-hosted
+	// gateways enforce spend limits through the license monitor instead and
+	// ignore this switch.
+	if managedGateway {
+		rawSpend := os.Getenv("EVS_SPEND_LIMIT_ENFORCEMENT")
+		spendEnforce, spendErr := billingmeter.ParseSpendLimitEnforcement(rawSpend)
+		if spendErr != nil {
+			logger.WithFields("error", spendErr.Error(), "value", rawSpend).
+				Error("billing: invalid spend limit enforcement mode, keeping spend limits in shadow")
+		}
+		billingmeter.SetSpendLimitEnforcement(spendEnforce)
+		if spendEnforce {
+			logger.Info("billing: Cloud spend limits are ENFORCED for platform-key inference")
+		} else {
+			logger.Info("billing: Cloud spend limits resolve in shadow mode (reported, not enforced)")
 		}
 	}
 
@@ -769,7 +918,7 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 					// gateway, where no per-request tenant is injected into
 					// context and the api-key interceptor would otherwise reject
 					// the Bearer token (see isOTLPIngestPath bypass).
-					otlpAuth := mcpserverauth.NewAPIKeyAuthenticator(initRes.Primary.RW, nil)
+					otlpAuth := mcpserverauth.NewAPIKeyAuthenticator(initRes.Primary.RW, nil).ForSurface(apikeylib.SurfaceTelemetry)
 
 					// Per-tenant processed-bytes meter: buffers decompressed
 					// OTLP ingest bytes and flushes them to billing_usage_records
@@ -830,6 +979,8 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 		// Eval runner is started later, after memory and sandbox initialization.
 
 		ctx = cqrs.WithSystem(ctx, sys)
+		// Buffered event writes are flushed on shutdown (see shutdownServer).
+		globalEventsShutdown = sys.Shutdown
 		if initRes.Primary.RW != nil {
 			ctx = context.WithValue(ctx, contextkeys.PrimaryDB, initRes.Primary.RW)
 		}
@@ -839,6 +990,15 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 			// other people's tenants, and must not have a single local tenant
 			// injected into every request.
 			router.Use(middleware.NewLocalTenantMiddleware(initRes.Primary.RW, isManagedGateway(sharedMode)).Wrap)
+			// Raw sandbox/WebSocket/SSE routes precede the /v1 catch-all. Resolve
+			// presented gateway keys here too, before any local-tenant fallback.
+			keyedREST := middleware.NewAPIKeyInterceptor(false)
+			router.Use(func(next http.Handler) http.Handler {
+				guarded := keyedREST.WithKeyedRESTValidation(next)
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					guarded.ServeHTTP(w, r.WithContext(cqrs.WithSystem(r.Context(), sys)))
+				})
+			})
 		}
 
 		// In managed cloud mode, license/trial/activation is managed by the
@@ -2004,15 +2164,18 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 	// Transactional dependencies participate in readiness. Optional analytics
 	// dependencies remain visible at /debug/health/dependencies but do not take
 	// customer APIs out of service.
-	apis.SetDependencies(gatewayDependencyChecks(config, redisClient))
+	var readinessPools dependencyPools
+	if initRes != nil {
+		if initRes.Primary != nil {
+			readinessPools.Primary = initRes.Primary.RW
+		}
+		readinessPools.Analytics = initRes.Analytics
+	}
+	apis.SetDependencies(gatewayDependencyChecks(config, readinessPools, redisClient))
+	globalShutdownDrainTimeout = shutdownDrainTimeoutFromConfig(config)
 
 	// Initialize registry BEFORE registering services so all services get proper interceptors
-	serviceRegistry := registry.New(registry.AuthPolicy{
-		M2MServices: []string{
-			"/everstack.gateway.v1.GatewayService/",
-		},
-		JWTServices: []string{""},
-	})
+	serviceRegistry := registry.New()
 	// isManagedGateway, not sharedMode: this gates LocalTenantInterceptor, and a
 	// cloud gateway handed a platform DSN rather than a pre-opened SharedDB
 	// still serves other people's tenants. Keying it off sharedMode alone left
@@ -2075,6 +2238,27 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 	}
 
 	gwServer := gateway.CreateServerWithContext(ctx, config.Gateway, config.Features)
+
+	// Managed gateways: forward request and token counts (every provider
+	// attempt, platform and BYOK, counted at the dispatch seam) to billing's
+	// usage display. One elected replica reports per tick; see
+	// inferenceUsageReporter. Never on the request path.
+	if managedGateway && initRes != nil && initRes.Primary != nil && initRes.Primary.RW != nil {
+		if startsUsageReporter("inference", managedGateway, sharedMode) {
+			startInferenceUsageReporter(ctx, initRes.Primary.RW, cookieSessionAuthDB, managedInferenceUsageURL(embeddedDefaults))
+		}
+		// Plan-limit resource counts (agents, datasets, channels, storage),
+		// per organization, for Billing display only. Charges nothing.
+		if startsUsageReporter("resource", managedGateway, sharedMode) {
+			startOrgResourceUsageReporter(ctx, initRes.Primary.RW, cookieSessionAuthDB, managedResourceUsageURL(embeddedDefaults))
+		}
+		// A deleted instance's API keys stop authenticating at once and are
+		// revoked in the gateway DB within a minute (instance deletion runs
+		// in the services pod and cannot reach this table).
+		if cookieSessionAuthDB != nil {
+			startDeletedInstanceKeyGuard(ctx, cookieSessionAuthDB, initRes.Primary.RW, time.Minute)
+		}
+	}
 
 	// Set isolation availability in context for functions service to check
 	isolationAvailable := false
@@ -2194,39 +2378,13 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 		}
 	}
 
-	// Warm the fast-path router cache after gateway server is initialized
+	// The fast-path router cache is not warmed with provider instances: the
+	// router resolves from its own bundle's registry only (see
+	// gw.Router.ResolveWithContext), so a process-wide cache of instances
+	// would serve one bundle's credentials to every router.
 	if config.Features.FastPath.Enabled {
 		if engine := fastpath.GetGlobalEngine(); engine != nil {
-			router := gwServer.GetRouter(ctx)
 			registry := gwServer.GetRegistry(ctx)
-
-			if router != nil && registry != nil {
-				// Create warming function that extracts routes from the gateway
-				warmFn := func() map[string]fastpath.RouteInfo {
-					routes := make(map[string]fastpath.RouteInfo)
-
-					// Get all providers from registry
-					for providerName, provider := range registry.All() {
-						// For each provider, we need to discover which models it supports
-						// This is done by checking the provider's catalog or configuration
-
-						// Add provider info
-						routes[providerName] = fastpath.RouteInfo{
-							ProviderName: providerName,
-							ModelName:    providerName, // Use provider name as fallback
-							IsCustom:     false,
-							Provider:     provider,
-						}
-					}
-
-					return routes
-				}
-
-				engine.WarmRouterCache(warmFn)
-				logger.WithFields(
-					"models_cached", engine.RouterCache().Size(),
-				).Info("Router cache warmed successfully")
-			}
 
 			// Pre-warm HTTP connections to providers if enabled
 			if config.Features.FastPath.ConnectionPool.PrewarmOnStartup && registry != nil {
@@ -2327,6 +2485,20 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 
 	// Register ApiKey gRPC service with same context (for CQRS access)
 	apikeyServer := api_key.CreateServerWithContext(ctx)
+	// A managed gateway reports each key it creates to billing, so a spend
+	// limit can be set on a key before its first request. Without it billing
+	// still accepts limits on keys that have traffic, and refuses the rest.
+	if managedGateway {
+		if usageURL := managedBillingUsageURL(embeddedDefaults); usageURL == "" {
+			logger.Warn("api key: billing URL not configured; new keys are not registered with billing")
+		} else if billingClient, clientErr := newManagedBillingHTTPClient(); clientErr != nil {
+			logger.WithFields("error", clientErr.Error()).Warn("api key: M2M client unavailable; new keys are not registered with billing")
+		} else if registrar, regErr := newBillingKeyRegistrar(usageURL, billingClient); regErr != nil {
+			logger.WithFields("error", regErr.Error()).Warn("api key: new keys are not registered with billing")
+		} else {
+			apikeyServer.SetKeyRegistrar(registrar)
+		}
+	}
 	if err := apis.RegisterService(ctx, apikeyServer); err != nil {
 		return nil, err
 	}
@@ -2356,6 +2528,7 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 	var cliServer *clisvc.CLIServer
 	if initRes != nil && initRes.Primary != nil && initRes.Primary.RW != nil {
 		cliServer = clisvc.NewCLIServer(initRes.Primary.RW, cliDeviceTokens)
+		cliServer.SetAuthorizationDB(cookieSessionAuthDB)
 		if err := apis.RegisterService(ctx, cliServer); err != nil {
 			return nil, err
 		}
@@ -2466,6 +2639,10 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 		}
 		triggerExecutor := agenttrigger.NewExecutor(triggerStore, agentsServer.GetSessionManager(), triggerCmdBus, triggerQryBus)
 		agentsServer.SetTriggerExecutor(triggerExecutor)
+		if pausedTenants != nil {
+			// Cron, webhook, event and workflow triggers all execute here.
+			triggerExecutor.SetTenantActiveFn(pausedTenants.ActiveFn())
+		}
 
 		// Cron scheduler
 		triggerScheduler := agenttrigger.NewScheduler(triggerStore, triggerExecutor, agentsDB)
@@ -2473,6 +2650,18 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 
 		// Webhook handler
 		triggerWebhookHandler := agenttrigger.NewWebhookHandler(triggerStore, triggerExecutor)
+		if pausedTenants != nil {
+			// Webhook paths are looked up across tenants; bind them to the
+			// tenant of the request host.
+			checker := pausedTenants
+			triggerWebhookHandler.SetHostTenantResolver(func(ctx context.Context, host string) (string, bool) {
+				t, found, err := checker.ResolveHost(ctx, host)
+				if err != nil || !found {
+					return "", false
+				}
+				return t.InstanceID, true
+			})
+		}
 		triggerWebhookRouteHandler = http.HandlerFunc(triggerWebhookHandler.Handle)
 
 		// Event subscriber
@@ -2485,8 +2674,15 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 	}
 
 	// Wire user input (ask_user) HTTP handler (pre-registered on router before /v1 middleware chain)
-	userInputHandler = http.HandlerFunc(agentsServer.HandleSubmitUserInputHTTP)
-	stopTurnHandler = http.HandlerFunc(agentsServer.HandleStopSessionTurnHTTP)
+	// Both handlers require a verified principal and check that the session
+	// belongs to the caller's tenant; the wrapper only adds the CLI login
+	// token as an accepted credential.
+	sessionRawAuthDB := cookieSessionAuthDB
+	if sessionRawAuthDB == nil {
+		sessionRawAuthDB = agentsDB
+	}
+	userInputHandler = withRawDeviceTokenAuth(http.HandlerFunc(agentsServer.HandleSubmitUserInputHTTP), cliDeviceTokens, sessionRawAuthDB)
+	stopTurnHandler = withRawDeviceTokenAuth(http.HandlerFunc(agentsServer.HandleStopSessionTurnHTTP), cliDeviceTokens, sessionRawAuthDB)
 	agentCapabilitiesHandler = http.HandlerFunc(agentsServer.HandleAgentCapabilitiesHTTP)
 
 	// Initialize sandbox backend if Docker or Kubernetes is available
@@ -2496,6 +2692,11 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 		sandboxCfg = &config.Features.Sandbox
 	}
 	sandboxMgr := initSandboxManager(sandboxCfg, managedGateway)
+	if sandboxMgr != nil && pausedTenants != nil {
+		// Allocation, revival, connect and exec refuse a paused instance;
+		// sandbox crons and webhooks fall back to the same gate.
+		sandboxMgr.SetTenantActiveFn(pausedTenants.ActiveFn())
+	}
 	var browserPool *browserpool.Pool
 	var browserUsageMeter *browserpool.PostgresUsageMeter
 	browserPoolEnabled := os.Getenv("EVS_BROWSER_POOL_ENABLED")
@@ -2569,6 +2770,13 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 		sandboxMgr.SetManagedMachineProfilesRequired(managedGateway)
 		if agentsDB != nil {
 			sandboxMgr.SetDB(agentsDB)
+			// Tell firecracker agents which rootfs images are still
+			// referenced, so their rootfs GC keeps them. No-op for other
+			// backends. Reporter is "everstack-gateway/<pod>": the name is
+			// allowlisted on the agent, the pod keeps replicas apart.
+			instance, _ := os.Hostname()
+			sandboxMgr.StartRootfsReferenceReporter(ctx, sandbox.RootfsReporterID(instance),
+				os.Getenv("EVS_OPENAI_AGENTS_EXECUTOR_IMAGE"))
 		}
 		// Per-tenant sandbox resource caps from runtime_config.features.sandbox.
 		// Tenant values are clamped against the global cap (smaller wins),
@@ -2630,7 +2838,11 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 			// starter credit, and establish the cumulative meter before
 			// allocation. Enterprise is covered by its negotiated contract.
 			if managedGateway {
-				billingUsageURL := managedBillingUsageURL(embeddedDefaults)
+				// CONCURRENT_SANDBOXES and CONCURRENT_BROWSERS belong to the
+				// organization: count every tenant id it owns, and lock on
+				// the organization so its instances serialize together.
+				sandboxMgr.SetTenantScopeResolver(managedSandboxConcurrencyScope)
+				billingUsageURL := sharedSandboxBillingURL(managedBillingUsageURL(embeddedDefaults), managedGateway, sharedMode)
 				if browserPool != nil {
 					limitsByTier, limitsErr := loadBrowserTenantLimits(sandboxPlansConfigPath())
 					if limitsErr != nil {
@@ -2647,6 +2859,13 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 							limits, ok := limitsByTier[organization.Tier]
 							if !ok {
 								return browserpool.TenantLimits{}, fmt.Errorf("browser limits are not configured for plan %q", organization.Tier)
+							}
+							if scope, scoped := managedSandboxConcurrencyScope(limitCtx, tenantID); scoped {
+								if scope.ShadowOnly {
+									limits.ShadowScopeTenantIDs = scope.Aliases
+								} else {
+									limits.ScopeTenantIDs = scope.Aliases
+								}
 							}
 							return limits, nil
 						}, true)
@@ -2671,9 +2890,16 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 						db:       tdb,
 						reporter: reporter,
 						meter:    browserUsageMeter,
+						shadowDB: cookieSessionAuthDB,
 					}, true)
 				}
-				if strings.TrimSpace(billingUsageURL) == "" {
+				if !startsUsageReporter("sandbox", managedGateway, sharedMode) {
+					// The services-embedded gateway sees none of the plane's
+					// sandbox or browser usage (it lives in the standalone
+					// gateway's DB), so it files nothing under the plane
+					// source and refuses allocations it could not meter.
+					logger.Info("usage billing: sandbox and browser usage is reported by the standalone gateway; embedded gateway allocations fail closed")
+				} else if strings.TrimSpace(billingUsageURL) == "" {
 					logger.Warn("usage billing: internal endpoint missing; public-tier sandbox and browser allocation will fail closed")
 				} else {
 					go reporter.Run(ctx)
@@ -2681,6 +2907,16 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 						Info("usage billing: shared sandbox and browser reporter started")
 				}
 
+				// G1 shadow compute admission (prepaid-credits-v2 S4):
+				// dry-run only, evaluated in the background against the
+				// platform DB. Not installed without one (and never on
+				// self-hosted, which does not reach this branch).
+				if cookieSessionAuthDB != nil {
+					platformDB := cookieSessionAuthDB
+					sandboxMgr.SetComputeAdmissionShadow(func(tenantID, surface string) {
+						billingmeter.ShadowAdmitComputeTenant(platformDB, tenantID, surface)
+					})
+				}
 				sandboxMgr.SetSandboxBillingResolver(func(tenantID string) bool {
 					lookupCtx, cancel := context.WithTimeout(context.Background(), sharedSandboxBillingRequestTimeout)
 					defer cancel()
@@ -2734,6 +2970,15 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 		// Env-driven config keeps the schema change small for the first
 		// ship — YAML/validator wiring lands when we promote this out
 		// of "experimental" status.
+		// Sleep size cap for /workspace tarballs (bytes). Unset keeps
+		// the 1 GiB default; larger values clamp to the transport ceiling.
+		if raw := strings.TrimSpace(os.Getenv("EVS_SANDBOX_WORKSPACE_MAX_BYTES")); raw != "" {
+			if n, err := strconv.ParseInt(raw, 10, 64); err != nil || n <= 0 {
+				logger.WithFields("value", raw).Warn("sandbox: EVS_SANDBOX_WORKSPACE_MAX_BYTES is not a positive integer; using the default")
+			} else {
+				sandboxMgr.SetWorkspaceMaxBytes(n)
+			}
+		}
 		if endpoint := os.Getenv("EVS_SANDBOX_R2_ENDPOINT"); endpoint != "" {
 			bucket := os.Getenv("EVS_SANDBOX_R2_BUCKET")
 			accessKey := os.Getenv("EVS_SANDBOX_R2_ACCESS_KEY")
@@ -2747,13 +2992,19 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 					Bucket:          bucket,
 					AccessKeyID:     accessKey,
 					SecretAccessKey: secretKey,
+					// R2's S3 API verifies Content-MD5 on PutObject and
+					// UploadPart; the SHA-256 of the whole workspace
+					// tarball is kept in object metadata and re-checked
+					// after upload. Same choice as managed storage.
+					WireChecksum: s3pkg.WireChecksumContentMD5,
 				})
 				if err != nil {
 					logger.WithError(err).Warn("sandbox: failed to construct R2 client; snapshots disabled")
 				} else {
 					sandboxMgr.SetSnapshotStore(snapshot.NewFromObjectStore(objectStore, bucket))
 					sandboxMgr.StartSnapshotGC()
-					logger.WithFields("bucket", bucket).Info("sandbox: R2 snapshot store enabled")
+					logger.WithFields("bucket", bucket, "workspace_max_bytes", sandboxMgr.WorkspaceMaxBytes()).
+						Info("sandbox: R2 snapshot store enabled; sleeping workspaces are persisted to object storage")
 
 					// Persistent volumes share the sandbox R2 store. Wire it
 					// for create/delete purge + start the hourly usage-metering
@@ -2782,6 +3033,14 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 					}
 				}
 			}
+		}
+		// Drains the terminated-workspace purge outbox and publishes the
+		// everstack_sandbox_workspace_* gauges.
+		sandboxMgr.StartWorkspaceMaintenance(ctx)
+		if !sandboxMgr.WorkspacePersistenceConfigured() {
+			logger.Warn("sandbox: workspace persistence is NOT configured (EVS_SANDBOX_R2_ENDPOINT/BUCKET/ACCESS_KEY/SECRET_KEY); " +
+				"a sleeping sandbox's /workspace is kept only on this gateway's local disk and is lost if that disk is not persistent. " +
+				"See docs/deployment/sandbox-r2-snapshots.md")
 		}
 
 		// Sandbox lifecycle reconciler — phase 1 + phase 2.
@@ -2962,40 +3221,61 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 			agentsServer.ReconcilePersistentAgents(ctx)
 		}()
 
-		// Wire sandbox HTTP handlers (pre-registered on router before /v1 middleware chain)
+		// Wire sandbox HTTP handlers (pre-registered on router before /v1 middleware chain).
+		//
+		// These routes sit outside the /v1 auth chain, so each one must carry
+		// its own caller check. Every handler below is wired through one of:
+		//   - rawSandboxOwned: verified principal AND the sandbox named in the
+		//     path belongs to the caller's tenant (404 otherwise).
+		//   - rawTenantVerified: verified principal, for tenant-wide routes
+		//     whose handler scopes by the caller's tenant itself.
+		//   - bare http.HandlerFunc: only for handlers that authenticate inside
+		//     (shell and browser stream accept an SSH signature or verified
+		//     principal and scope the sandbox before use).
+		// rawRouteAuthWiringTest keeps this list honest.
+		rawAuthDB := cookieSessionAuthDB
+		if rawAuthDB == nil {
+			rawAuthDB = agentsDB
+		}
+		rawSandboxOwned := func(h http.HandlerFunc) http.Handler {
+			return withRawDeviceTokenAuth(agentsServer.RequireSandboxOwnership(h), cliDeviceTokens, rawAuthDB)
+		}
+		rawTenantVerified := func(h http.HandlerFunc) http.Handler {
+			return withRawDeviceTokenAuth(agentsServer.RequireVerifiedTenant(h), cliDeviceTokens, rawAuthDB)
+		}
 		sandboxShellHandler = http.HandlerFunc(agentsServer.HandleSandboxShell)
 		sandboxShellByIDHandler = http.HandlerFunc(agentsServer.HandleSandboxShellByIDOrName)
-		sandboxLifecycleEventsHandler = http.HandlerFunc(agentsServer.HandleSandboxEvents)
-		sandboxLogsHandler = http.HandlerFunc(agentsServer.HandleSandboxLogsHTTP)
-		sandboxStatsHandler = http.HandlerFunc(agentsServer.HandleSandboxStatsHTTP)
-		sandboxEventsHandler = http.HandlerFunc(agentsServer.HandleSandboxEventsHTTP)
-		sandboxFilesHandler = http.HandlerFunc(agentsServer.HandleSandboxFilesHTTP)
-		sandboxFileSearchHandler = http.HandlerFunc(agentsServer.HandleSearchSandboxFilesHTTP)
-		sandboxSSHInfoHandler = http.HandlerFunc(agentsServer.HandleSandboxSSHInfoHTTP)
+		sandboxLifecycleEventsHandler = rawTenantVerified(agentsServer.HandleSandboxEvents)
+		sandboxLogsHandler = rawSandboxOwned(agentsServer.HandleSandboxLogsHTTP)
+		sandboxStatsHandler = rawSandboxOwned(agentsServer.HandleSandboxStatsHTTP)
+		sandboxEventsHandler = rawSandboxOwned(agentsServer.HandleSandboxEventsHTTP)
+		sandboxFilesHandler = rawSandboxOwned(agentsServer.HandleSandboxFilesHTTP)
+		sandboxFileSearchHandler = rawSandboxOwned(agentsServer.HandleSearchSandboxFilesHTTP)
+		sandboxSSHInfoHandler = rawSandboxOwned(agentsServer.HandleSandboxSSHInfoHTTP)
 		sandboxShellSessionsHandler = http.HandlerFunc(agentsServer.HandleListSandboxShellSessions)
 		sandboxKillShellSessionHandler = http.HandlerFunc(agentsServer.HandleKillSandboxShellSession)
-		sandboxRestoreHandler = http.HandlerFunc(agentsServer.HandleRestoreFromArchive)
-		sandboxRecoverHandler = http.HandlerFunc(agentsServer.HandleRecoverSandbox)
-		sandboxStartVerbHandler = http.HandlerFunc(agentsServer.HandleStartSandbox)
-		sandboxStopVerbHandler = http.HandlerFunc(agentsServer.HandleStopSandboxVerb)
-		sandboxArchiveVerbHandler = http.HandlerFunc(agentsServer.HandleArchiveSandbox)
-		sandboxDeleteVerbHandler = http.HandlerFunc(agentsServer.HandleDeleteSandboxVerb)
-		sandboxFSListHandler = http.HandlerFunc(agentsServer.HandleSandboxFSList)
-		sandboxFSUploadHandler = http.HandlerFunc(agentsServer.HandleSandboxFSUpload)
-		sandboxFSDownloadHandler = http.HandlerFunc(agentsServer.HandleSandboxFSDownload)
-		sandboxFSMkdirHandler = http.HandlerFunc(agentsServer.HandleSandboxFSMkdir)
-		sandboxFSDeleteHandler = http.HandlerFunc(agentsServer.HandleSandboxFSDelete)
-		sandboxFSMoveHandler = http.HandlerFunc(agentsServer.HandleSandboxFSMove)
-		sandboxFSPermissionsHandler = http.HandlerFunc(agentsServer.HandleSandboxFSPermissions)
-		sandboxProcessSessionsHandler = http.HandlerFunc(agentsServer.HandleProcessSessions)
-		sandboxProcessSessionHandler = http.HandlerFunc(agentsServer.HandleProcessSessionDelete)
-		sandboxProcessExecHandler = http.HandlerFunc(agentsServer.HandleProcessSessionExec)
-		sandboxProcessCommandHandler = http.HandlerFunc(agentsServer.HandleProcessCommandStatus)
-		sandboxProcessLogsHandler = http.HandlerFunc(agentsServer.HandleProcessCommandLogs)
-		imageBuildHandler = http.HandlerFunc(agentsServer.HandleBuildImage)
-		otlpGetHandler = http.HandlerFunc(agentsServer.HandleGetOTLPConfig)
-		otlpUpsertHandler = http.HandlerFunc(agentsServer.HandleUpsertOTLPConfig)
-		otlpTestHandler = http.HandlerFunc(agentsServer.HandleTestOTLPConfig)
+		sandboxRestoreHandler = rawSandboxOwned(agentsServer.HandleRestoreFromArchive)
+		sandboxRecoverHandler = rawSandboxOwned(agentsServer.HandleRecoverSandbox)
+		sandboxStartVerbHandler = rawSandboxOwned(agentsServer.HandleStartSandbox)
+		sandboxStopVerbHandler = rawSandboxOwned(agentsServer.HandleStopSandboxVerb)
+		sandboxArchiveVerbHandler = rawSandboxOwned(agentsServer.HandleArchiveSandbox)
+		sandboxDeleteVerbHandler = rawSandboxOwned(agentsServer.HandleDeleteSandboxVerb)
+		sandboxFSListHandler = rawSandboxOwned(agentsServer.HandleSandboxFSList)
+		sandboxFSUploadHandler = rawSandboxOwned(agentsServer.HandleSandboxFSUpload)
+		sandboxFSDownloadHandler = rawSandboxOwned(agentsServer.HandleSandboxFSDownload)
+		sandboxFSMkdirHandler = rawSandboxOwned(agentsServer.HandleSandboxFSMkdir)
+		sandboxFSDeleteHandler = rawSandboxOwned(agentsServer.HandleSandboxFSDelete)
+		sandboxFSMoveHandler = rawSandboxOwned(agentsServer.HandleSandboxFSMove)
+		sandboxFSPermissionsHandler = rawSandboxOwned(agentsServer.HandleSandboxFSPermissions)
+		sandboxProcessSessionsHandler = rawSandboxOwned(agentsServer.HandleProcessSessions)
+		sandboxProcessSessionHandler = rawSandboxOwned(agentsServer.HandleProcessSessionDelete)
+		sandboxProcessExecHandler = rawSandboxOwned(agentsServer.HandleProcessSessionExec)
+		sandboxProcessCommandHandler = rawSandboxOwned(agentsServer.HandleProcessCommandStatus)
+		sandboxProcessLogsHandler = rawSandboxOwned(agentsServer.HandleProcessCommandLogs)
+		imageBuildHandler = rawTenantVerified(agentsServer.HandleBuildImage)
+		otlpGetHandler = rawTenantVerified(agentsServer.HandleGetOTLPConfig)
+		otlpUpsertHandler = rawTenantVerified(agentsServer.HandleUpsertOTLPConfig)
+		otlpTestHandler = rawTenantVerified(agentsServer.HandleTestOTLPConfig)
 		mcpConfigHandler = http.HandlerFunc(agentsServer.HandleMCPConfig)
 		// Volumes (POR-77) migrated to ConnectRPC — no raw handler wiring.
 		browserStreamHandler = http.HandlerFunc(agentsServer.HandleBrowserStream)
@@ -3004,60 +3284,54 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 		if agentsDB != nil {
 			lcRepo := sandboxlcwebhooks.NewRepository(agentsDB)
 			agentsServer.SetLCWebhookRepository(lcRepo)
-			lcWebhookListHandler = http.HandlerFunc(agentsServer.HandleListLCWebhooks)
-			lcWebhookCreateHandler = http.HandlerFunc(agentsServer.HandleCreateLCWebhook)
-			lcWebhookDeleteHandler = http.HandlerFunc(agentsServer.HandleDeleteLCWebhook)
-			lcWebhookDeliveriesHandler = http.HandlerFunc(agentsServer.HandleListLCWebhookDeliveries)
-			lcWebhookTestHandler = http.HandlerFunc(agentsServer.HandleTestLCWebhook)
+			lcWebhookListHandler = rawTenantVerified(agentsServer.HandleListLCWebhooks)
+			lcWebhookCreateHandler = rawTenantVerified(agentsServer.HandleCreateLCWebhook)
+			lcWebhookDeleteHandler = rawTenantVerified(agentsServer.HandleDeleteLCWebhook)
+			lcWebhookDeliveriesHandler = rawTenantVerified(agentsServer.HandleListLCWebhookDeliveries)
+			lcWebhookTestHandler = rawTenantVerified(agentsServer.HandleTestLCWebhook)
 		}
 		// Named snapshots
 		if agentsDB != nil {
 			snapRepo := sandboxsnapshots.NewRepository(agentsDB)
 			agentsServer.SetSnapshotRepository(snapRepo)
-			snapshotListHandler = http.HandlerFunc(agentsServer.HandleListSnapshots)
-			snapshotCreateHandler = http.HandlerFunc(agentsServer.HandleCreateSnapshot)
-			snapshotGetHandler = http.HandlerFunc(agentsServer.HandleGetSnapshot)
-			snapshotDeleteHandler = http.HandlerFunc(agentsServer.HandleDeleteSnapshot)
+			snapshotListHandler = rawTenantVerified(agentsServer.HandleListSnapshots)
+			snapshotCreateHandler = rawTenantVerified(agentsServer.HandleCreateSnapshot)
+			snapshotGetHandler = rawTenantVerified(agentsServer.HandleGetSnapshot)
+			snapshotDeleteHandler = rawTenantVerified(agentsServer.HandleDeleteSnapshot)
 		}
 		browserStreamByIDHandler = http.HandlerFunc(agentsServer.HandleBrowserStreamByIDOrName)
 
-		// Wire sandbox execution API handlers.
-		//
-		// NOTE: tenant/instance-ownership enforcement (RequireSandboxOwnership)
-		// is intentionally NOT wired here yet. It depends on the request
-		// resolving deterministically to the caller's instance, but the cookie
-		// path resolves instance via `tenant_config ... LIMIT 1` with no
-		// ORDER BY, which is nondeterministic for a one-org-many-instances org
-		// and would cause intermittent 404s across the 2 gateway replicas.
-		// The middleware + scoped resolvers are implemented and tested; wiring
-		// is gated on the deterministic-instance-resolution fix. See the
-		// rectification plan.
-		sandboxCommandHandler = http.HandlerFunc(agentsServer.HandleSandboxCommand)
-		sandboxExecuteCodeHandler = http.HandlerFunc(agentsServer.HandleExecuteCode)
-		sandboxMetricsWatchHandler = http.HandlerFunc(agentsServer.HandleSandboxMetricsStream)
-		sandboxPingHandler = http.HandlerFunc(agentsServer.HandleSandboxPing)
-		sandboxCommandInterruptHandler = http.HandlerFunc(agentsServer.HandleSandboxCommandInterrupt)
-		sandboxCommandStatusHandler = http.HandlerFunc(agentsServer.HandleSandboxCommandStatus)
-		sandboxCommandLogsHandler = http.HandlerFunc(agentsServer.HandleSandboxCommandLogs)
-		sandboxCreateCodeCtxHandler = http.HandlerFunc(agentsServer.HandleCreateCodeContext)
-		sandboxListCodeCtxHandler = http.HandlerFunc(agentsServer.HandleListCodeContexts)
-		sandboxGetCodeCtxHandler = http.HandlerFunc(agentsServer.HandleGetCodeContext)
-		sandboxDeleteCodeCtxHandler = http.HandlerFunc(agentsServer.HandleDeleteCodeContext)
-		sandboxDeleteCodeCtxByLangHandler = http.HandlerFunc(agentsServer.HandleDeleteCodeContextsByLang)
-		sandboxInterruptCodeHandler = http.HandlerFunc(agentsServer.HandleInterruptCode)
-		sandboxFileInfoHandler = http.HandlerFunc(agentsServer.HandleFileInfo)
-		sandboxDeleteFilesHandler = http.HandlerFunc(agentsServer.HandleDeleteFiles)
-		sandboxFilePermissionsHandler = http.HandlerFunc(agentsServer.HandleFilePermissions)
-		sandboxMoveFilesHandler = http.HandlerFunc(agentsServer.HandleMoveFiles)
-		sandboxSearchFilesExecdHandler = http.HandlerFunc(agentsServer.HandleSearchFilesExecd)
-		sandboxBulkUploadHandler = http.HandlerFunc(agentsServer.HandleBulkUpload)
-		sandboxReplaceFileHandler = http.HandlerFunc(agentsServer.HandleReplaceFileContent)
-		sandboxUploadFileHandler = http.HandlerFunc(agentsServer.HandleUploadFile)
-		sandboxDownloadFileHandler = http.HandlerFunc(agentsServer.HandleDownloadFile)
-		sandboxCreateDirsHandler = http.HandlerFunc(agentsServer.HandleCreateDirectories)
-		sandboxDeleteDirsHandler = http.HandlerFunc(agentsServer.HandleDeleteDirectories)
-		sandboxMetricsHandler = http.HandlerFunc(agentsServer.HandleSandboxMetrics)
-		sandboxRenewExpirationHandler = http.HandlerFunc(agentsServer.HandleRenewExpiration)
+		// Wire sandbox execution API handlers. These run commands and read and
+		// write files inside a sandbox, so every one goes through
+		// rawSandboxOwned. The instance a cookie session resolves to is now
+		// selected by the request host (cookie_session_auth.go), which is what
+		// the earlier decision to leave these unwired was waiting on.
+		sandboxCommandHandler = rawSandboxOwned(agentsServer.HandleSandboxCommand)
+		sandboxExecuteCodeHandler = rawSandboxOwned(agentsServer.HandleExecuteCode)
+		sandboxMetricsWatchHandler = rawSandboxOwned(agentsServer.HandleSandboxMetricsStream)
+		sandboxPingHandler = rawSandboxOwned(agentsServer.HandleSandboxPing)
+		sandboxCommandInterruptHandler = rawSandboxOwned(agentsServer.HandleSandboxCommandInterrupt)
+		sandboxCommandStatusHandler = rawSandboxOwned(agentsServer.HandleSandboxCommandStatus)
+		sandboxCommandLogsHandler = rawSandboxOwned(agentsServer.HandleSandboxCommandLogs)
+		sandboxCreateCodeCtxHandler = rawSandboxOwned(agentsServer.HandleCreateCodeContext)
+		sandboxListCodeCtxHandler = rawSandboxOwned(agentsServer.HandleListCodeContexts)
+		sandboxGetCodeCtxHandler = rawSandboxOwned(agentsServer.HandleGetCodeContext)
+		sandboxDeleteCodeCtxHandler = rawSandboxOwned(agentsServer.HandleDeleteCodeContext)
+		sandboxDeleteCodeCtxByLangHandler = rawSandboxOwned(agentsServer.HandleDeleteCodeContextsByLang)
+		sandboxInterruptCodeHandler = rawSandboxOwned(agentsServer.HandleInterruptCode)
+		sandboxFileInfoHandler = rawSandboxOwned(agentsServer.HandleFileInfo)
+		sandboxDeleteFilesHandler = rawSandboxOwned(agentsServer.HandleDeleteFiles)
+		sandboxFilePermissionsHandler = rawSandboxOwned(agentsServer.HandleFilePermissions)
+		sandboxMoveFilesHandler = rawSandboxOwned(agentsServer.HandleMoveFiles)
+		sandboxSearchFilesExecdHandler = rawSandboxOwned(agentsServer.HandleSearchFilesExecd)
+		sandboxBulkUploadHandler = rawSandboxOwned(agentsServer.HandleBulkUpload)
+		sandboxReplaceFileHandler = rawSandboxOwned(agentsServer.HandleReplaceFileContent)
+		sandboxUploadFileHandler = rawSandboxOwned(agentsServer.HandleUploadFile)
+		sandboxDownloadFileHandler = rawSandboxOwned(agentsServer.HandleDownloadFile)
+		sandboxCreateDirsHandler = rawSandboxOwned(agentsServer.HandleCreateDirectories)
+		sandboxDeleteDirsHandler = rawSandboxOwned(agentsServer.HandleDeleteDirectories)
+		sandboxMetricsHandler = rawSandboxOwned(agentsServer.HandleSandboxMetrics)
+		sandboxRenewExpirationHandler = rawSandboxOwned(agentsServer.HandleRenewExpiration)
 
 		// Metrics history (POR-81)
 		if agentsDB != nil {
@@ -3162,6 +3436,9 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 			if err != nil {
 				logger.WithError(err).Error("gateway: failed to create")
 			} else {
+				if pausedTenants != nil {
+					gw.SetTenantActiveFn(pausedTenants.ActiveFn())
+				}
 				globalSandboxProxyShutdown = gw.Shutdown
 
 				// Extract port from listen address for URL construction
@@ -3277,7 +3554,15 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 			logger.Warn("github: agents DB is unavailable; skipping GitHub integration initialization")
 		} else {
 			ghStore := ghpkg.NewStore(agentsDB)
+			ghStore.SetSharedGateway(isManagedGateway(sharedMode))
 			var ghApp *ghpkg.App
+
+			// Sandboxes on a managed instance carry the instance id; GitHub
+			// rows are keyed by the owning organization. Resolve through the
+			// same tenant_config table host resolution reads.
+			if sandboxMgr != nil && cookieSessionAuthDB != nil {
+				sandboxMgr.SetGitHubTenantKeyResolver(ghpkg.NewInstanceOrgResolver(cookieSessionAuthDB))
+			}
 
 			// Legacy static app credentials (optional). Manifest mode does not need these env vars.
 			ghAppID := os.Getenv("EVS_GITHUB_APP_ID")
@@ -3305,7 +3590,17 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 
 			// Manifest flow endpoints (Dokploy-style): start + callback.
 			manifestHandler := ghpkg.NewManifestHandler(ghStore)
-			router.HandleFunc("/integrations/github/manifest/start", manifestHandler.Start).Methods("GET")
+			// Start binds the new app to the caller's tenant, so it needs an
+			// authenticated principal: the cloud cookie (cookieAuth, outer
+			// middleware), a self-hosted session cookie or an API key. The
+			// callback stays public; it is bound to Start's one-time state.
+			manifestAuthDB := cookieSessionAuthDB
+			if manifestAuthDB == nil {
+				manifestAuthDB = agentsDB
+			}
+			manifestStart := middleware.NewAPIKeyInterceptorWithSessionDB(false, manifestAuthDB).
+				WithAPIKeyValidation(http.HandlerFunc(manifestHandler.Start))
+			router.Handle("/integrations/github/manifest/start", manifestStart).Methods("GET")
 			router.HandleFunc("/integrations/github/callback", manifestHandler.Callback).Methods("GET")
 
 			// Dynamic per-tenant webhook path for manifest-created apps.
@@ -3358,6 +3653,9 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 							KeyStore:       sshKeyStore,
 							SandboxManager: sandboxMgr,
 						})
+						if pausedTenants != nil {
+							proxy.SetTenantActiveFn(pausedTenants.ActiveFn())
+						}
 
 						if err := proxy.Start(); err != nil {
 							logger.WithError(err).Error("ssh: failed to start SSH proxy")
@@ -3410,7 +3708,7 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 					logger.WithFields("error", memErr.Error()).Warn("memory: pgvector store init failed — memory tools disabled")
 				} else {
 					memStore = store
-					memEmbedder = memory.NewEmbedder(gwServer.GetRegistry(ctx), gwServer.GetRouter(ctx))
+					memEmbedder = memory.NewEmbedder(gwServer)
 					logger.WithFields("backend", backend, "default_model", memDefaultModel, "default_dimension", memDefaultDim, "models", len(memoryCfg.EmbeddingModels)).
 						Info("memory backend initialized")
 				}
@@ -3424,7 +3722,7 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 					Warn("memory: qdrant health check failed — memory tools may not work")
 			}
 			memStore = store
-			memEmbedder = memory.NewEmbedder(gwServer.GetRegistry(ctx), gwServer.GetRouter(ctx))
+			memEmbedder = memory.NewEmbedder(gwServer)
 			logger.WithFields("backend", backend, "address", qdrantAddr, "default_model", memDefaultModel, "default_dimension", memDefaultDim).
 				Info("memory backend initialized")
 		case "pinecone":
@@ -3440,7 +3738,7 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 					Warn("memory: pinecone health check failed — memory tools may not work")
 			}
 			memStore = store
-			memEmbedder = memory.NewEmbedder(gwServer.GetRegistry(ctx), gwServer.GetRouter(ctx))
+			memEmbedder = memory.NewEmbedder(gwServer)
 			logger.WithFields("backend", backend, "default_model", memDefaultModel, "default_dimension", memDefaultDim).
 				Info("memory backend initialized")
 		case "weaviate":
@@ -3454,7 +3752,7 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 					Warn("memory: weaviate health check failed — memory tools may not work")
 			}
 			memStore = store
-			memEmbedder = memory.NewEmbedder(gwServer.GetRegistry(ctx), gwServer.GetRouter(ctx))
+			memEmbedder = memory.NewEmbedder(gwServer)
 			logger.WithFields("backend", backend, "url", weaviateCfg.URL, "default_model", memDefaultModel, "default_dimension", memDefaultDim).
 				Info("memory backend initialized")
 		default:
@@ -3496,6 +3794,11 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 	// a server that answers Unavailable rather than nothing at all, which is a
 	// far better signal than a 404 for a service that is supposed to exist.
 	hostingServer, hostingEnabled := buildHostingServer(ctx, initRes, embeddedDefaults)
+	if hostingEnabled && managedGateway {
+		// A deleted instance's hosted sites are taken down by the
+		// deleted-instance sweep (its HOSTED_SITES quota is freed).
+		setDeletedInstanceSiteTakedown(hostingServer.TakeDownTenantSites)
+	}
 	if err := apis.RegisterService(ctx, hostingServer); err != nil {
 		return nil, err
 	}
@@ -3523,10 +3826,16 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 		// exists, code scorers fail closed by design (no in-process fallback).
 		evalOpts.AllowUnsandboxedScorers = false
 		evalRunner = evalrunner.Start(ctx, evalOpts)
+		if pausedTenants != nil {
+			evalRunner.SetTenantActiveFn(pausedTenants.ActiveFn())
+		}
 		logger.Info("Eval runner started")
 
 		// Start eval scheduler for cron-based eval runs
-		evalrunner.StartScheduler(ctx, initRes.Primary.RW)
+		evalScheduler := evalrunner.StartScheduler(ctx, initRes.Primary.RW)
+		if pausedTenants != nil {
+			evalScheduler.SetTenantActiveFn(pausedTenants.ActiveFn())
+		}
 	}
 
 	// ─── Channel Connectors (Discord, Slack, Telegram) ──────────────
@@ -3541,6 +3850,9 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 		// MESSAGES_MONTHLY from the monitor directly rather than from a tenant
 		// config it will never see.
 		channelMgr.SetLicenseMonitor(enterprise.LicenseMonitorFromContext(ctx))
+		if pausedTenants != nil {
+			channelMgr.SetTenantActiveFn(pausedTenants.ActiveFn())
+		}
 
 		// Register platform connector factories
 		channelMgr.RegisterFactory(channelpkg.PlatformDiscord, discordpkg.Factory)
@@ -3635,6 +3947,21 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 				logger.Info("issues: error-tracking service initialized")
 			}
 		}
+	}
+
+	// Paused managed instances: stop what they still run on this replica
+	// (sandboxes, persistent agents, channel connectors) and restore agents
+	// and channels once they are resumed (docs/design/instance-over-limit.md).
+	if pausedTenants != nil {
+		var workloads pausedTenantWorkloads
+		if sandboxMgr != nil {
+			workloads = sandboxMgr
+		}
+		var connectors pausedTenantConnectors
+		if channelMgr != nil {
+			connectors = channelMgr
+		}
+		startPausedTenantSweep(ctx, pausedTenants, workloads, connectors)
 	}
 
 	// ─── Storage service (created early so voice + workflows can use it) ──
@@ -3739,6 +4066,18 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 	// Register MCP Gateway gRPC service (Connect)
 	if agentsDB != nil {
 		mcpRegistry := mcp.NewRegistry(nil)
+		// A stdio MCP server is a child process of this gateway, started
+		// with this process's environment and privileges. On a managed
+		// gateway every tenant shares that process, so tenant-configured
+		// stdio servers are refused at write time (RegisterMcpServer,
+		// UpdateMcpServer) and at start time (registry, hydration, the
+		// transport constructor and the exec), so rows written before this
+		// guard cannot run either. Self-hosted single-tenant gateways keep
+		// stdio. mcp.DisallowStdio already ran above; this repeats it on
+		// the registry so the decision is visible (and logged) here.
+		if managedGateway {
+			mcpRegistry.DisallowStdio()
+		}
 		if openAIAgentsService != nil {
 			toolStore, toolStoreErr := openaiapitools.NewPostgresStore(agentsDB, 2*time.Minute)
 			approvalGate, approvalErr := openaiapitools.NewPostgresApprovalGate(agentsDB, 15*time.Minute)
@@ -3875,13 +4214,14 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 				// provider exposes run_adk_agent whenever the runtime exists.
 			})
 			mcpAuth := mcpserverauth.NewAPIKeyAuthenticator(initRes.Primary.RW, nil)
-			mcpInbound := mcpserver.New(mcpToolProvider, mcpAuth, nil)
+			mcpInbound := mcpserver.New(mcpToolProvider, mcpAuth.ForSurface(apikeylib.SurfaceMCP), nil)
 			apis.HandleFunc("/mcp", mcpInbound.ServeHTTP)
 			logger.Info("mcp: inbound server mounted at /mcp (authenticate with an Everstack API key as a Bearer token)")
 
 			// Admin control-plane endpoints for the interop UI (first-party,
 			// tenant resolved from request context).
 			interop.NewHandlers(interopStore, sharedMode, adkRuntime != nil).Mount(apis)
+			bots.NewHandlers(bots.NewStore(agentsDB), apikeyServer, interopStore).Mount(apis)
 
 			// A2A server: expose deployed Everstack agents as A2A agents so
 			// external A2A clients (Google ADK, ...) can use them as sub-agents.
@@ -3890,7 +4230,7 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 				a2aSrv := a2aserver.New(a2aserver.Deps{
 					Agents:    a2aserver.NewDBAgentLookup(agentsDB),
 					Runner:    agentRunner,
-					Auth:      mcpAuth,
+					Auth:      mcpAuth.ForSurface(apikeylib.SurfaceA2A),
 					Publisher: interopStore,
 					// PublicURL left empty: Agent Card URLs are derived from the
 					// inbound request (scheme + host), which is correct behind the
@@ -3917,10 +4257,16 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 	}
 
 	// Register Auth gRPC service (Connect) - for admin dashboard authentication
-	// Supports auth modes: none, builtin, oidc
-	authMode := ""
+	// Supports auth modes: none, builtin, oidc. The mode is normalised again
+	// here because not every caller runs validator.ValidateAndFix, and an
+	// unknown value must stop startup rather than fall through to no auth.
+	rawAuthMode := ""
 	if config.Auth != nil {
-		authMode = config.Auth.Mode
+		rawAuthMode = config.Auth.Mode
+	}
+	authMode, authModeErr := validator.NormalizeAuthMode(rawAuthMode)
+	if authModeErr != nil {
+		return nil, authModeErr
 	}
 
 	switch authMode {
@@ -3975,12 +4321,18 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 			seatLimit := builtinCfg.SeatLimit
 			authServer, err := selfhostedauth.CreateServer(initRes.Primary.RW, authConfig, seatLimit)
 			if err != nil {
-				logger.WithError(err).Warn("auth: failed to initialize builtin auth service, skipping")
+				// Builtin auth was asked for; running without it would leave
+				// the gateway unauthenticated.
+				return nil, fmt.Errorf("auth: builtin authentication could not be initialized; refusing to start without authentication: %w", err)
 			} else if authServer != nil {
 				if err := apis.RegisterService(ctx, authServer); err != nil {
-					logger.WithError(err).Warn("auth: failed to register builtin auth service")
+					return nil, fmt.Errorf("auth: builtin authentication could not be registered; refusing to start without authentication: %w", err)
 				} else {
 					logger.Info("auth: builtin authentication enabled")
+					if !enterprise.ManagedGateway() {
+						selfhostedauth.BootstrapOwnerFromEnv(ctx, initRes.Primary.RW)
+						selfhostedauth.RevokeOrglessSessions(ctx, initRes.Primary.RW)
+					}
 					// Register HTTP routes for login/register (needed because ConnectRPC can't set cookies)
 					authServer.RegisterHTTPRoutes(router)
 					// Register OrganizationService alongside the auth service
@@ -3994,27 +4346,19 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 				}
 			}
 		} else {
-			logger.Warn("auth: builtin mode requires database, falling back to no auth")
+			// Unreachable after authModeStartupError; kept so this switch
+			// can never fall back to no auth on its own.
+			return nil, errBuiltinAuthNeedsDatabase
 		}
 
 	case "oidc":
-		// OpenID Connect authentication (Keycloak, Auth0, Okta, Authelia, etc.)
-		oidcCfg := config.Auth.OIDC
-		if oidcCfg.IssuerURL == "" || oidcCfg.ClientID == "" {
-			logger.Warn("auth: oidc mode requires issuer_url and client_id, falling back to no auth")
-		} else {
-			logger.WithFields(
-				"issuer_url", oidcCfg.IssuerURL,
-				"client_id", oidcCfg.ClientID,
-			).Info("auth: oidc authentication enabled")
-			// TODO: Register OIDC auth middleware and callback routes
-		}
+		// Rejected by authModeStartupError at the top of startAPI. OIDC as a
+		// gateway auth mode is not implemented: nothing here would
+		// authenticate a request.
+		return nil, errOIDCAuthNotImplemented
 
-	case "none", "":
+	case "none":
 		logger.Info("auth: authentication disabled (mode=none)")
-
-	default:
-		logger.WithFields("mode", authMode).Warn("auth: unknown auth mode, falling back to no auth")
 	}
 
 	// Register Logs gRPC service (Connect)
@@ -4049,7 +4393,10 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 			// via RunSamplingEvalRuleNow.
 			if evalRunner != nil {
 				evalRunner.SetScoreRecorder(scoreRecorder)
-				evalrunner.StartSamplingScheduler(ctx, evalRunner)
+				samplingScheduler := evalrunner.StartSamplingScheduler(ctx, evalRunner)
+				if pausedTenants != nil {
+					samplingScheduler.SetTenantActiveFn(pausedTenants.ActiveFn())
+				}
 				logger.Info("sampling eval scheduler enabled (online eval on production traces)")
 			}
 			logger.Info("autoscorer: outcome scoring pipeline enabled for agent turns")
@@ -4277,8 +4624,18 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 		}
 	}
 
-	// Mount SSE streaming route for curl testing
-	path, h := gwServer.SSEChatHandler()
+	// Mount SSE streaming route for curl testing. The handler itself checks
+	// nothing and spends provider credits, so it only runs for a verified
+	// caller. Today the /v1 prefix shadows it; this keeps it closed if that
+	// ever changes.
+	path, sseChat := gwServer.SSEChatHandler()
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !contextkeys.HasVerifiedTenantPrincipal(r.Context()) {
+			http.Error(w, `{"error":"authentication required"}`, http.StatusUnauthorized)
+			return
+		}
+		sseChat.ServeHTTP(w, r)
+	})
 	apis.RegisterHandlerOnPrefix(path, h)
 	router.Handle(path, h)
 
@@ -4373,58 +4730,48 @@ func startAPI(ctx context.Context, config *validator.Config, configPath string, 
 		}
 
 		for _, prefix := range licensePrefixes {
-			// Capture prefix in closure
-			p := prefix
-			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// Add CORS headers for browser requests
-				w.Header().Set("Access-Control-Allow-Origin", "*")
-				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Connect-Protocol-Version, Connect-Timeout-Ms, X-User-Agent")
-				w.Header().Set("Access-Control-Expose-Headers", "Connect-Content-Encoding, Connect-Timeout-Ms")
-
-				if r.Method == "OPTIONS" {
-					w.WriteHeader(http.StatusOK)
-					return
-				}
-
-				// Create M2M authenticated HTTP client
-				var httpClient *http.Client
-				if m2mProvider != nil {
-					httpClient = m2m.NewHTTPClient(m2mProvider, 30*time.Second)
-					logger.WithFields("client", "portal", "path", r.URL.Path).Debug("license_proxy: using new M2M authenticated client")
-				} else {
-					// Fallback: try without authentication (will likely fail)
-					httpClient = &http.Client{Timeout: 30 * time.Second}
-					logger.WithFields("path", r.URL.Path).Warn("license_proxy: no M2M provider available, request may fail")
-				}
-
-				// Create reverse proxy for this request
-				targetURL, _ := url.Parse(licenseURLStr)
-				proxy := nethttputil.NewSingleHostReverseProxy(targetURL)
-				proxy.Transport = httpClient.Transport
-
-				// Fix the director to properly set the host
-				originalDirector := proxy.Director
-				proxy.Director = func(req *http.Request) {
-					originalDirector(req)
-					req.Host = targetURL.Host
-					req.Header.Del("Origin")
-					req.Header.Del("Referer")
-				}
-
-				proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, e error) {
-					logger.WithFields("path", r.URL.Path, "error", e.Error()).Error("license proxy error")
-					http.Error(w, "License service unavailable", http.StatusBadGateway)
-				}
-
-				proxy.ServeHTTP(w, r)
-				_ = p // use captured prefix (for logging if needed)
-			})
-
-			apis.RegisterHandlerPrefixes(handler, prefix)
+			// Create M2M authenticated transport (portal service credentials).
+			var transport http.RoundTripper = http.DefaultTransport
+			if m2mProvider != nil {
+				transport = m2m.NewHTTPClient(m2mProvider, 30*time.Second).Transport
+			} else {
+				logger.Warn("license_proxy: no M2M provider available, requests may fail")
+			}
+			// SECURITY: this proxy forwards browser requests with SERVICE
+			// credentials. It only forwards the admin-UI procedures
+			// (licenseProxyAllowedProcedures); everything else, in particular
+			// GenerateActivationToken and license CRUD, is refused here.
+			// Callers are authenticated per procedure and organization_id /
+			// instance_id are pinned to the license this gateway holds.
+			licensedIdentity := func() (string, string) { return enterprise.LicensedIdentity(ctx) }
+			apis.RegisterHandlerPrefixes(newLicenseProxyHandler(licenseURLStr, transport, licensedIdentity), prefix)
 			apis.AddExternalServicePrefixes(prefix)
 		}
 		logger.WithFields("url", licenseURLStr).Info("License service proxy registered with M2M authentication")
+	}
+
+	// Billing service proxy for the instance console's own read-only billing
+	// views (free model requests, apps/admin/src/server/billing.ts). Managed
+	// gateways only: it rides the same billing host and gateway M2M client as
+	// the usage reporters and key registrar. SECURITY: the proxy forwards
+	// browser requests with SERVICE credentials, so it only forwards
+	// GetModelTrial, requires a cookie session the host middleware scoped to
+	// this request's instance (one shared process serves every tenant), and
+	// names that scope's organization itself; the request body's
+	// organization_id is discarded.
+	if managedGateway {
+		if billingBase := billingServiceBaseURL(managedBillingUsageURL(embeddedDefaults)); billingBase == "" {
+			logger.Warn("billing_proxy: billing URL not configured; free-request status is not available to the console")
+		} else if billingProxyClient, clientErr := newManagedBillingHTTPClient(); clientErr != nil {
+			logger.WithFields("error", clientErr.Error()).Warn("billing_proxy: M2M client unavailable; free-request status is not available to the console")
+		} else if billingProxy, proxyErr := newBillingProxyHandler(billingBase, billingProxyClient.Transport); proxyErr != nil {
+			logger.WithFields("error", proxyErr.Error()).Warn("billing_proxy: not registered; free-request status is not available to the console")
+		} else {
+			billingPrefix := "/everstack.billing.v1.BillingService/"
+			apis.RegisterHandlerPrefixes(billingProxy, billingPrefix)
+			apis.AddExternalServicePrefixes(billingPrefix)
+			logger.WithFields("url", billingBase).Info("Billing service proxy registered for GetModelTrial")
+		}
 	}
 
 	// Auth Service proxy for managed (cloud) instances.
@@ -4575,8 +4922,24 @@ func listenAndServe(ctx context.Context, router *mux.Router, port uint16, extern
 	// falls through to "admin" on every cookie-authenticated request.
 	cookieAuth := cookieSessionAuthMiddleware(func() *sqlx.DB { return cookieSessionAuthDB })
 	managedStorageBootstrap := newManagedStorageTenantBootstrap(managedStorageDefaults)
-	wrapped := withInFlight(http_mw.CallDurationHandler(cookieAuth(managedStorageBootstrap.Wrap(router))))
-	http1Server := &http.Server{Handler: h2c.NewHandler(wrapped, http2Server), TLSConfig: tlsConfig}
+	// The paused-instance guard sits outside auth so a paused tenant's host
+	// is refused before any credential or route is looked at.
+	wrapped := withInFlight(http_mw.CallDurationHandler(pausedTenantHostGuard(cookieAuth(managedStorageBootstrap.Wrap(router)))))
+	wrapped = grpcserver.StripClientGatewayIdentity(wrapped)
+	http1Server := &http.Server{
+		Handler:           h2c.NewHandler(wrapped, http2Server),
+		TLSConfig:         tlsConfig,
+		ReadHeaderTimeout: publicReadHeaderTimeout,
+		IdleTimeout:       publicIdleTimeout,
+	}
+
+	// The REST gateway's calls back into this process arrive here instead of
+	// on the public listener. Same handler tree, so the same middleware runs.
+	if loopback := grpcserver.LoopbackFromContext(ctx); loopback != nil {
+		stopLoopback := loopback.Serve(wrapped)
+		defer stopLoopback()
+		logger.Info("REST gateway reaches Connect handlers over the in-memory loopback transport")
+	}
 
 	lc := internalnet.ListenConfig()
 	lis, err := lc.Listen(ctx, "tcp", fmt.Sprintf(":%d", port))
@@ -4605,45 +4968,20 @@ func listenAndServe(ctx context.Context, router *mux.Router, port uint16, extern
 	case err := <-errCh:
 		return fmt.Errorf("error starting server: %w", err)
 	case <-shutdown:
-		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
 		return shutdownServer(ctx, http1Server)
 	case <-ctx.Done():
 		return shutdownServer(ctx, http1Server)
 	}
 }
 
+// eventsDrainTimeout bounds the final flush of buffered event writes. A flush
+// is one multi-row insert per tenant, so this is ample when ClickHouse is up
+// and short enough not to hold a terminating pod when it is not.
+const eventsDrainTimeout = 5 * time.Second
+
 func shutdownServer(ctx context.Context, server *http.Server) error {
-	// Shut down sandbox proxy first (before agents, so in-flight proxy requests drain)
-	if globalSandboxProxyShutdown != nil {
-		fmt.Printf("[Shutdown] Shutting down sandbox proxy...\n")
-		if err := globalSandboxProxyShutdown(ctx); err != nil {
-			logger.WithFields("error", err.Error()).Warn("Error shutting down sandbox proxy")
-		}
-	}
-
-	// Gracefully shut down agent sessions (checkpoint in-flight turns)
-	if globalAgentsShutdown != nil {
-		fmt.Printf("[Shutdown] Shutting down agent sessions...\n")
-		if err := globalAgentsShutdown(ctx); err != nil {
-			logger.WithFields("error", err.Error()).Warn("Error shutting down agent sessions")
-		}
-	}
-
-	// Shutdown OTEL and collector
-	if globalOTELShutdown != nil {
-		fmt.Printf("[Shutdown] Shutting down OpenTelemetry...\n")
-		globalOTELShutdown()
-	}
-	if globalCollectorShutdown != nil {
-		fmt.Printf("[Shutdown] Shutting down embedded collector...\n")
-		if err := globalCollectorShutdown(); err != nil {
-			logger.WithFields("error", err.Error()).Warn("Error shutting down collector")
-		}
-	}
-
-	err := server.Shutdown(ctx)
-	if err != nil {
+	// Order and budgets live in shutdown.go: HTTP drain first, telemetry last.
+	if err := runShutdownPhases(ctx, gatewayShutdownPhases(server, globalShutdownDrainTimeout)); err != nil {
 		return fmt.Errorf("could not shutdown gracefully: %w", err)
 	}
 	logger.New().Info("server shutdown gracefully")
@@ -4976,10 +5314,11 @@ func reconcilerEnabled() bool {
 	return enabled
 }
 
-// sandboxOwnershipEnforceEnabled reports whether the sandbox-ownership
-// interceptor should hard-reject cross-tenant access instead of only
-// audit-logging would-be rejections. Off by default; flip
-// EVS_SANDBOX_OWNERSHIP_ENFORCE=true after the audit logs run clean.
+// sandboxOwnershipEnforceEnabled reports whether EVS_SANDBOX_OWNERSHIP_ENFORCE
+// explicitly asks for enforcement. The agents Server constructors already
+// enforce by default, so this can only turn enforcement on, never off; the
+// interceptor hard-rejects cross-tenant sandbox access whether or not the
+// variable is set.
 func sandboxOwnershipEnforceEnabled() bool {
 	v := strings.TrimSpace(strings.ToLower(os.Getenv("EVS_SANDBOX_OWNERSHIP_ENFORCE")))
 	return v == "1" || v == "true" || v == "yes" || v == "on"
@@ -5380,6 +5719,9 @@ func initSandboxManager(cfg *validator.SandboxFeaturesConfig, sharedMode bool) *
 				ServerCA:   cfg.FirecrackerAgent.TLSServerCA,
 				ServerName: cfg.FirecrackerAgent.TLSServerName,
 			}
+			// Env fallback (EVS_SANDBOX_FIRECRACKER_AGENT_AUTH_TOKEN) is
+			// applied inside sandboxfcagent.New so every caller gets it.
+			fcaCfg.AuthToken = cfg.FirecrackerAgent.AuthToken
 		}
 		if v := strings.TrimSpace(os.Getenv("EVS_SANDBOX_FIRECRACKER_AGENT_SERVICE")); v != "" {
 			fcaCfg.Service = v

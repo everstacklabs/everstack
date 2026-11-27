@@ -119,7 +119,7 @@ export function StudioToolbar() {
                     </Badge>
                     {isCopied && (
                         <div>
-                            <Check className='size-3 text-green-500' />
+                            <Check className='size-3 text-success' />
                         </div>
                     )}
                 </>
@@ -136,13 +136,13 @@ export function StudioToolbar() {
                     </span>
                 )}
                 {autosaveStatus === 'saved' && (
-                    <span className="flex items-center gap-1 text-emerald-400 light:text-emerald-600">
+                    <span className="flex items-center gap-1 text-success">
                         <Icon icon="lucide:check" className="h-3.5 w-3.5" />
                         Saved
                     </span>
                 )}
                 {autosaveStatus === 'error' && (
-                    <span className="flex items-center gap-1 text-red-400 light:text-red-600">
+                    <span className="flex items-center gap-1 text-danger">
                         <Icon icon="lucide:alert-circle" className="h-3.5 w-3.5" />
                         Save failed
                     </span>
@@ -245,7 +245,7 @@ export function StudioToolbar() {
                 <button
                     onClick={handleMoveToDraft}
                     disabled={publishWorkflow.isPending || unpublishWorkflow.isPending}
-                    className="flex items-center gap-1.5 rounded border border-amber-500/50 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-300 light:text-amber-700 hover:bg-amber-500/20 disabled:opacity-50 transition-colors"
+                    className="flex items-center gap-1.5 rounded border border-warning-border bg-warning-surface px-3 py-1.5 text-sm font-medium text-warning hover:bg-warning-surface-strong disabled:opacity-50 transition-colors"
                 >
                     {unpublishWorkflow.isPending ? (
                         <Icon icon="lucide:loader-2" className="h-4 w-4 animate-spin" />

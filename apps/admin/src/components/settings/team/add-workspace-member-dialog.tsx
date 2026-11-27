@@ -67,7 +67,7 @@ export function AddWorkspaceMemberDialog({ open, onOpenChange, workspaceId }: Ad
         </DialogHeader>
 
         {addMutation.error && (
-          <div className="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300 light:text-red-600">
+          <div className="rounded-md border border-danger-border bg-danger-surface p-3 text-sm text-danger">
             {(addMutation.error as Error).message}
           </div>
         )}

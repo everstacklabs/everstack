@@ -2,12 +2,15 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/domain"
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/repository"
+	"github.com/everstacklabs/everstack/internal/enterprise"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/everstacklabs/everstack/internal/lib/orgident"
 )
 
 // OrganizationService handles organization management
@@ -26,6 +29,21 @@ func NewOrganizationService(orgRepo *repository.OrganizationRepository, authConf
 
 // CreateOrganization creates a new organization and adds the user as owner
 func (s *OrganizationService) CreateOrganization(ctx context.Context, userID uuid.UUID, name string, slug *string, billingEmail *string) (*domain.Organization, error) {
+	// On a self-hosted instance a session alone does not entitle anyone to
+	// an organization: only an owner or admin of an existing one may create
+	// another. Otherwise a user with no membership (removed, or never
+	// invited) could create one and own it. A managed gateway's
+	// organizations are the platform's, so this rule is not applied there.
+	if !enterprise.ManagedGateway() {
+		allowed, err := s.managesAnOrganization(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check memberships: %w", err)
+		}
+		if !allowed {
+			return nil, fmt.Errorf("insufficient permissions: only an owner or admin of an organization can create one")
+		}
+	}
+
 	// Generate slug if not provided
 	var orgSlug string
 	var err error
@@ -44,6 +62,12 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, userID uui
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate slug: %w", err)
 		}
+	}
+
+	// Org slugs and ids are both accepted wherever an org is named, so a
+	// slug, given or generated, must never be readable as an id.
+	if err := orgident.ValidateSlug(orgSlug); err != nil {
+		return nil, err
 	}
 
 	// Create organization
@@ -67,6 +91,21 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, userID uui
 
 	logger.Infof("org: created organization %s (%s) by user %s", org.Name, org.Slug, userID)
 	return org, nil
+}
+
+// managesAnOrganization reports whether userID is an owner or admin of any
+// organization.
+func (s *OrganizationService) managesAnOrganization(ctx context.Context, userID uuid.UUID) (bool, error) {
+	orgs, err := s.orgRepo.ListByUserID(ctx, userID)
+	if err != nil {
+		return false, err
+	}
+	for _, o := range orgs {
+		if domain.CanManageMembers(o.Role) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // GetOrganization gets an organization by ID or slug
@@ -158,7 +197,17 @@ func (s *OrganizationService) DeleteOrganization(ctx context.Context, userID, or
 		return fmt.Errorf("only owners can delete organizations")
 	}
 
-	if err := s.orgRepo.Delete(ctx, orgID); err != nil {
+	// A self-hosted instance keeps at least one organization: deleting the
+	// last would leave every user, its owner included, with nothing to sign
+	// in to. A managed gateway's organizations are the platform's.
+	if enterprise.ManagedGateway() {
+		if err := s.orgRepo.Delete(ctx, orgID); err != nil {
+			return fmt.Errorf("failed to delete organization: %w", err)
+		}
+	} else if err := s.orgRepo.DeleteOrganizationKeepingOne(ctx, orgID); err != nil {
+		if errors.Is(err, repository.ErrLastOrganization) {
+			return fmt.Errorf("cannot delete the last organization on this instance")
+		}
 		return fmt.Errorf("failed to delete organization: %w", err)
 	}
 
@@ -215,18 +264,12 @@ func (s *OrganizationService) UpdateMemberRole(ctx context.Context, currentUserI
 		return nil, fmt.Errorf("only owners can modify owner roles")
 	}
 
-	// Prevent removing the last owner
-	if targetMember.Role == domain.RoleOwner && newRole != domain.RoleOwner {
-		count, err := s.orgRepo.CountOwners(ctx, orgID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to count owners: %w", err)
-		}
-		if count <= 1 {
+	// The last-owner check and the update are one locked step, so two
+	// owners demoting each other at once cannot leave no owner.
+	if err := s.orgRepo.UpdateMemberRoleKeepingOwner(ctx, orgID, targetUserID, newRole); err != nil {
+		if errors.Is(err, repository.ErrLastOwner) {
 			return nil, fmt.Errorf("cannot remove the last owner")
 		}
-	}
-
-	if err := s.orgRepo.UpdateMemberRole(ctx, orgID, targetUserID, newRole); err != nil {
 		return nil, fmt.Errorf("failed to update role: %w", err)
 	}
 
@@ -258,18 +301,20 @@ func (s *OrganizationService) RemoveMember(ctx context.Context, currentUserID, o
 		return fmt.Errorf("target user is not a member")
 	}
 
-	// Prevent removing the last owner
-	if targetMember.Role == domain.RoleOwner {
-		count, err := s.orgRepo.CountOwners(ctx, orgID)
-		if err != nil {
-			return fmt.Errorf("failed to count owners: %w", err)
-		}
-		if count <= 1 {
-			return fmt.Errorf("cannot remove the last owner")
-		}
+	// Only an owner can remove an owner; an owner may still leave on their
+	// own, subject to the last-owner rule below.
+	if targetMember.Role == domain.RoleOwner && currentUserID != targetUserID && member.Role != domain.RoleOwner {
+		return fmt.Errorf("only owners can remove owners")
 	}
 
-	if err := s.orgRepo.RemoveMember(ctx, orgID, targetUserID); err != nil {
+	// The last-owner check and the delete are one locked step, so two owners
+	// leaving at once cannot leave no owner. Losing the last membership also
+	// ends the user's sessions; on a managed gateway the platform owns
+	// sessions and membership, so it is left to the platform.
+	if err := s.orgRepo.RemoveMemberKeepingOwner(ctx, orgID, targetUserID, !enterprise.ManagedGateway()); err != nil {
+		if errors.Is(err, repository.ErrLastOwner) {
+			return fmt.Errorf("cannot remove the last owner")
+		}
 		return fmt.Errorf("failed to remove member: %w", err)
 	}
 

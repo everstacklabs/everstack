@@ -330,7 +330,7 @@ export function AlertRuleSheet({ open, onOpenChange, mode, rule }: AlertRuleShee
                 </SheetHeader>
 
                 {mutation.error && (
-                    <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400 light:text-red-600 mx-4">
+                    <div className="rounded-lg border border-danger-border bg-danger-surface p-3 text-sm text-danger mx-4">
                         {(mutation.error as Error).message}
                     </div>
                 )}
@@ -659,7 +659,7 @@ export function NotificationTargetSheet({ open, onOpenChange, mode, target }: No
                 </SheetHeader>
 
                 {mutation.error && (
-                    <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400 light:text-red-600 mx-4">
+                    <div className="rounded-lg border border-danger-border bg-danger-surface p-3 text-sm text-danger mx-4">
                         {(mutation.error as Error).message}
                     </div>
                 )}

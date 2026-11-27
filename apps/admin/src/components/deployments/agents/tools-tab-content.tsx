@@ -342,12 +342,12 @@ function ToolCategorySection({
 
       {/* Dependency hint */}
       {category.dependency && !depMet && (
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/5 border-b border-amber-500/10">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-warning-surface/60 border-b border-warning-border">
           <Iconify.Icon
             icon="heroicons:exclamation-triangle"
-            className="h-3 w-3 text-amber-400/70 shrink-0"
+            className="h-3 w-3 text-warning/70 shrink-0"
           />
-          <span className="text-[11px] text-amber-300/70">
+          <span className="text-[11px] text-warning/70">
             {category.dependencyHint}
           </span>
         </div>

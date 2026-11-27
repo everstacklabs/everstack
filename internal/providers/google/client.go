@@ -15,6 +15,7 @@ import (
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	providerutil "github.com/everstacklabs/everstack/internal/providers"
+	"github.com/everstacklabs/everstack/internal/providers/google/geminiusage"
 	clientx "github.com/everstacklabs/everstack/internal/providers/httpclient"
 	"github.com/everstacklabs/everstack/internal/providers/ratelimit"
 )
@@ -80,6 +81,7 @@ type geminiFuncDecl struct {
 }
 
 type geminiChatReq struct {
+	ToolConfig       map[string]interface{} `json:"toolConfig,omitempty"`
 	Contents         []geminiContent        `json:"contents"`
 	Tools            []geminiToolDecl       `json:"tools,omitempty"`
 	GenerationConfig map[string]interface{} `json:"generationConfig,omitempty"`
@@ -87,20 +89,15 @@ type geminiChatReq struct {
 
 type geminiChatResp struct {
 	Candidates []struct {
-		Content struct {
+		FinishReason string `json:"finishReason"`
+		Content      struct {
 			Parts []struct {
 				Text         string              `json:"text,omitempty"`
 				FunctionCall *geminiFunctionCall `json:"functionCall,omitempty"`
 			} `json:"parts"`
 		} `json:"content"`
 	} `json:"candidates"`
-	UsageMetadata struct {
-		PromptTokenCount        int `json:"promptTokenCount"`
-		CandidatesTokenCount    int `json:"candidatesTokenCount"`
-		TotalTokenCount         int `json:"totalTokenCount"`
-		CachedContentTokenCount int `json:"cachedContentTokenCount,omitempty"`
-		ThoughtTokenCount       int `json:"thoughtTokenCount,omitempty"`
-	} `json:"usageMetadata"`
+	UsageMetadata geminiusage.Metadata `json:"usageMetadata"`
 }
 
 // --- Conversion helpers ---
@@ -210,6 +207,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 
 	geminiReq := geminiChatReq{
 		Contents:         convertMessages(req.Messages),
+		ToolConfig:       geminiToolConfig(req.ToolChoice),
 		Tools:            convertTools(req.Tools),
 		GenerationConfig: genConfig,
 	}
@@ -277,25 +275,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	msg := gw.NewMessage(gw.RoleAssistant, gw.Text(content))
 	msg.ToolCalls = toolCalls
 
-	usage := gw.Usage{
-		PromptTokens:     geminiResp.UsageMetadata.PromptTokenCount,
-		CompletionTokens: geminiResp.UsageMetadata.CandidatesTokenCount,
-		TotalTokens:      geminiResp.UsageMetadata.TotalTokenCount,
-	}
-
-	if geminiResp.UsageMetadata.CachedContentTokenCount > 0 {
-		usage.PromptDetails = &gw.TokenDetails{
-			CachedTokens: geminiResp.UsageMetadata.CachedContentTokenCount,
-			TextTokens:   geminiResp.UsageMetadata.PromptTokenCount - geminiResp.UsageMetadata.CachedContentTokenCount,
-		}
-	}
-	if geminiResp.UsageMetadata.ThoughtTokenCount > 0 {
-		if usage.CompletionDetails == nil {
-			usage.CompletionDetails = &gw.TokenDetails{}
-		}
-		usage.CompletionDetails.ReasoningTokens = geminiResp.UsageMetadata.ThoughtTokenCount
-		usage.CompletionDetails.TextTokens = geminiResp.UsageMetadata.CandidatesTokenCount - geminiResp.UsageMetadata.ThoughtTokenCount
-	}
+	usage := geminiResp.UsageMetadata.ToUsage()
 
 	return gw.NewChatResponse(fmt.Sprintf("google-%d", time.Now().Unix()), req.Model, []gw.Choice{{Index: 0, Message: msg}}, usage), nil
 }
@@ -315,6 +295,7 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 
 	geminiReq := geminiChatReq{
 		Contents:         convertMessages(req.Messages),
+		ToolConfig:       geminiToolConfig(req.ToolChoice),
 		Tools:            convertTools(req.Tools),
 		GenerationConfig: genConfig,
 	}
@@ -352,6 +333,7 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 
 	reader := bufio.NewReader(resp.Body)
 	chunkID := fmt.Sprintf("google-%d", time.Now().Unix())
+	nextToolID := 0
 
 	for {
 		line, err := reader.ReadString('\n')
@@ -376,7 +358,7 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 			chunk := gw.NewChatChunk(chunkID, req.Model, nil)
 
 			if len(partial.Candidates) > 0 {
-				for i, part := range partial.Candidates[0].Content.Parts {
+				for _, part := range partial.Candidates[0].Content.Parts {
 					// Text content
 					if part.Text != "" {
 						chunk.Choices = append(chunk.Choices, gw.ChoiceDelta{
@@ -387,15 +369,19 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 					// Function call
 					if part.FunctionCall != nil {
 						argsJSON, _ := json.Marshal(part.FunctionCall.Args)
+						if string(argsJSON) == "null" {
+							argsJSON = []byte("{}")
+						}
 						msg := gw.NewMessage(gw.RoleAssistant, gw.Text(""))
 						msg.ToolCalls = []gw.ToolCall{{
-							ID:   fmt.Sprintf("call_%d", i),
+							ID:   fmt.Sprintf("call_%d", nextToolID),
 							Type: "function",
 							Function: gw.ToolCallFunction{
 								Name:      part.FunctionCall.Name,
 								Arguments: string(argsJSON),
 							},
 						}}
+						nextToolID++
 						chunk.Choices = append(chunk.Choices, gw.ChoiceDelta{
 							Index:        0,
 							Delta:        msg,
@@ -405,23 +391,24 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 				}
 			}
 
+			// Gemini also sends terminal candidates with no content parts.
+			if len(partial.Candidates) > 0 && partial.Candidates[0].FinishReason != "" {
+				finish := strings.ToLower(partial.Candidates[0].FinishReason)
+				switch partial.Candidates[0].FinishReason {
+				case "STOP":
+					finish = "stop"
+				case "MAX_TOKENS":
+					finish = "length"
+				case "SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII":
+					finish = "content_filter"
+				}
+				chunk.Choices = append(chunk.Choices, gw.ChoiceDelta{Index: 0, Delta: gw.Message{Role: gw.RoleAssistant}, FinishReason: finish})
+			}
+
 			// Add usage from chunk if available
 			if partial.UsageMetadata.TotalTokenCount > 0 {
-				chunk.Usage = &gw.Usage{
-					PromptTokens:     partial.UsageMetadata.PromptTokenCount,
-					CompletionTokens: partial.UsageMetadata.CandidatesTokenCount,
-					TotalTokens:      partial.UsageMetadata.TotalTokenCount,
-				}
-				if partial.UsageMetadata.CachedContentTokenCount > 0 {
-					chunk.Usage.PromptDetails = &gw.TokenDetails{
-						CachedTokens: partial.UsageMetadata.CachedContentTokenCount,
-					}
-				}
-				if partial.UsageMetadata.ThoughtTokenCount > 0 {
-					chunk.Usage.CompletionDetails = &gw.TokenDetails{
-						ReasoningTokens: partial.UsageMetadata.ThoughtTokenCount,
-					}
-				}
+				usage := partial.UsageMetadata.ToUsage()
+				chunk.Usage = &usage
 			}
 
 			if len(chunk.Choices) > 0 || chunk.Usage != nil {
@@ -484,6 +471,14 @@ func applySamplingWindow(genConfig map[string]interface{}, sampling gw.SamplingP
 	}
 }
 
+// ApplyThinkingConfig adds Gemini's generationConfig.thinkingConfig for the
+// request's reasoning controls. Exported so the Vertex AI adapter, which
+// speaks the same generateContent format for Gemini models, sends the same
+// thinking controls as the Gemini API adapter.
+func ApplyThinkingConfig(config map[string]interface{}, sampling gw.SamplingParams) {
+	applyThinkingConfig(config, sampling)
+}
+
 func applyThinkingConfig(config map[string]interface{}, sampling gw.SamplingParams) {
 	thinking := make(map[string]interface{})
 	if sampling.ReasoningEffort != "" {
@@ -525,4 +520,35 @@ func convertRole(role string) string {
 	default:
 		return "user"
 	}
+}
+
+// Gemini selects functions through toolConfig rather than OpenAI tool_choice.
+func geminiToolConfig(choice interface{}) map[string]interface{} {
+	if choice == nil {
+		return nil
+	}
+	config := map[string]interface{}{}
+	switch c := choice.(type) {
+	case string:
+		switch c {
+		case "auto":
+			config["mode"] = "AUTO"
+		case "none":
+			config["mode"] = "NONE"
+		case "required":
+			config["mode"] = "ANY"
+		default:
+			return nil
+		}
+	case map[string]interface{}:
+		f, ok := c["function"].(map[string]interface{})
+		if !ok {
+			return nil
+		}
+		config["mode"] = "ANY"
+		config["allowedFunctionNames"] = []string{fmt.Sprint(f["name"])}
+	default:
+		return nil
+	}
+	return map[string]interface{}{"functionCallingConfig": config}
 }

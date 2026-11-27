@@ -273,9 +273,21 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (*Deploym
 		return nil, "", false
 	}
 
+	// The URL names the agent the caller believes it is invoking. Refuse when
+	// it is a different agent than the one this key was issued for, rather
+	// than silently running the key's agent.
+	if dep.AgentID != "" && agentID != dep.AgentID {
+		writeJSONError(w, http.StatusNotFound, "deployment not found")
+		return nil, "", false
+	}
+
 	// If a specific version was requested and it differs, try to load that version
 	if version != nil && *version != dep.Version {
-		dep, err = h.store.GetActiveDeployment(r.Context(), agentID, key.TenantID, version)
+		// Look the version up under the key's own agent, never the agent in
+		// the URL: a deployment key is issued for one agent, and resolving
+		// the URL's agent here let it invoke any other agent in the tenant,
+		// including superseded versions.
+		dep, err = h.store.GetActiveDeployment(r.Context(), dep.AgentID, key.TenantID, version)
 		if err != nil {
 			writeJSONError(w, http.StatusNotFound, "deployment version not found")
 			return nil, "", false

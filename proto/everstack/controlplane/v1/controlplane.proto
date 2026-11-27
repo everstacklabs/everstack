@@ -17,6 +17,9 @@ enum InstanceStatus {
   INSTANCE_STATUS_DEGRADED = 6;
   INSTANCE_STATUS_FAILED = 7;
   INSTANCE_STATUS_DELETING = 8;
+  // Paused by the instance-limit flow: traffic refused, everything kept.
+  // Only ResumeInstance leaves it. See docs/design/instance-over-limit.md.
+  INSTANCE_STATUS_PAUSED = 9;
 }
 
 // InstanceResources describes the resource allocation and usage for an instance.
@@ -62,6 +65,18 @@ message GatewayInstance {
   string custom_domain = 20;
   string custom_domain_status = 21; // "" | "pending_dns" | "verifying" | "active" | "failed"
   string region = 22;               // "eu", "americas", ...
+
+  // Instance-limit flow (docs/design/instance-over-limit.md).
+  string pause_reason = 23;                               // "over_limit_choice" | "over_limit_auto" | "extra_billing_unpaid" | ""
+  google.protobuf.Timestamp paused_at = 24;
+  google.protobuf.Timestamp last_used_at = 25;            // last accepted API request (throttled); unset = never
+  bool extra_billing = 26;                                // owner/admin opted to pay the monthly extra-instance fee
+  google.protobuf.Timestamp extra_billing_paid_through = 27; // fee covers until here; unset = unpaid
+  // The instance holds a slot the plan does not have: it is paused when the
+  // over-limit grace period ends unless the org frees a slot or pays for it.
+  // Set on GetInstanceLimitStatus, from the limit engine's own selection
+  // (instance_limits.go, billing ledger included); false elsewhere.
+  bool over_limit = 28;
 }
 
 // ========== Provision ==========
@@ -121,8 +136,64 @@ message ListInstancesRequest {
 
 message ListInstancesResponse {
   repeated GatewayInstance instances = 1;
-  int32 instance_count = 2;  // Number of active instances
+  int32 instance_count = 2;  // Instances occupying a plan slot (running; not stopped, paused or paid extra)
   int32 instance_limit = 3;  // Max allowed instances for the org's plan (0 = unlimited)
+}
+
+// ========== Instance limit (docs/design/instance-over-limit.md) ==========
+
+message GetInstanceLimitStatusRequest {
+  string organization_id = 1;
+}
+
+message InstanceLimitStatus {
+  int32 instance_limit = 1;   // 0 = unlimited
+  int32 slots_used = 2;
+  bool over_limit = 3;        // an over-limit episode is open
+  google.protobuf.Timestamp over_limit_since = 4;
+  google.protobuf.Timestamp grace_ends_at = 5; // auto-pause happens after this
+  bool extra_billing_available = 6;            // the pay-per-extra-instance option can be offered
+  double extra_instance_usd_per_month = 7;     // its monthly price
+  string plan_tier = 8;
+  // Spendable wallet balance (balance minus holds) in USD, valid when
+  // available_credit_known. Lets the UI disable the pay option up front.
+  double available_credit_usd = 9;
+  bool available_credit_known = 10;
+  // Customers can buy credit (prepaid v2 slice S3 is live).
+  bool credit_purchase_available = 11;
+}
+
+message GetInstanceLimitStatusResponse {
+  InstanceLimitStatus status = 1;
+  repeated GatewayInstance instances = 2; // most recently used first
+}
+
+message PauseInstanceRequest {
+  string instance_id = 1;
+}
+
+message PauseInstanceResponse {
+  GatewayInstance instance = 1;
+  InstanceLimitStatus status = 2;
+}
+
+message ResumeInstanceRequest {
+  string instance_id = 1;
+}
+
+message ResumeInstanceResponse {
+  GatewayInstance instance = 1;
+  InstanceLimitStatus status = 2;
+}
+
+message SetInstanceExtraBillingRequest {
+  string instance_id = 1;
+  bool enabled = 2;
+}
+
+message SetInstanceExtraBillingResponse {
+  GatewayInstance instance = 1;
+  InstanceLimitStatus status = 2;
 }
 
 // ========== Lifecycle ==========
@@ -214,4 +285,84 @@ message RemoveCustomDomainRequest {
 
 message RemoveCustomDomainResponse {
   bool success = 1;
+}
+
+// ========== Org activity (docs/design/org-overview-redesign.md) ==========
+
+message GetOrgActivityRequest {
+  // The only scope input. Membership-gated by the auth interceptor.
+  string organization_id = 1;
+  // "24h" | "7d" | "30d".
+  string range = 2;
+}
+
+// One model call is one generation span: a provider call made by the
+// gateway (each retry or fallback attempt counts), or an LLM span the
+// customer's app sent over OTLP. An app span whose trace also holds a
+// gateway generation span is the same call seen twice and is not counted.
+message OrgActivityBucket {
+  google.protobuf.Timestamp start = 1;
+  string instance_id = 2; // mapped to a name client-side, never displayed
+  int64 requests = 3;
+  int64 tokens = 4;
+  int64 errors = 5;
+}
+
+// p95 latency of one bucket across all of the org's instances (quantiles
+// do not add up across instances, so this is not per instance). Only
+// buckets with at least one timed call are sent.
+message OrgActivityLatencyBucket {
+  google.protobuf.Timestamp start = 1;
+  double p95_latency_ms = 2;
+  int64 samples = 3;
+}
+
+message OrgActivityTotals {
+  int64 requests = 1;
+  int64 tokens = 2;
+  int64 errors = 3;
+  double error_rate = 4;     // errors / requests, 0..1; 0 when there are no requests
+  double p95_latency_ms = 5; // valid when p95_available
+  bool p95_available = 6;
+}
+
+// Change versus the previous equal-length window. has_value is false when
+// the previous window is not available or its value is zero.
+message OrgActivityDelta {
+  bool has_value = 1;
+  // Relative change (0.12 = +12%) for requests, tokens and p95; for the
+  // error rate it is the difference of the two rates (0.004 = +0.4 points).
+  double change = 2;
+}
+
+message OrgActivityModel {
+  string model = 1;
+  int64 requests = 2;
+  int64 tokens = 3;
+}
+
+message GetOrgActivityResponse {
+  google.protobuf.Timestamp window_start = 1;
+  google.protobuf.Timestamp window_end = 2;
+  // Bucket width. Buckets are sparse (only non-empty (start, instance)
+  // pairs); bucket starts are UTC multiples of bucket_seconds, the first one
+  // at or before window_start. Clients fill the gaps with zeros.
+  int64 bucket_seconds = 3;
+  repeated OrgActivityBucket buckets = 4;
+  OrgActivityTotals current = 5;
+  OrgActivityTotals previous = 6;
+  // False when the previous window reaches past raw telemetry retention, so
+  // a delta would compare against data that has already expired.
+  bool previous_available = 7;
+  OrgActivityDelta requests_delta = 8;
+  OrgActivityDelta tokens_delta = 9;
+  OrgActivityDelta error_rate_delta = 10;
+  OrgActivityDelta p95_latency_delta = 11;
+  repeated OrgActivityModel top_models = 12; // by requests, at most 5
+  // False when this deployment has no telemetry store; every number is then
+  // zero because it was not measured, not because nothing happened.
+  bool available = 13;
+  // Per-bucket p95 over the current window, same bucket starts as buckets.
+  // Sparse: a bucket with no timed calls is absent.
+  repeated OrgActivityLatencyBucket latency_buckets = 14;
 }

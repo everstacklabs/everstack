@@ -5,15 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/everstacklabs/everstack/internal/auth/deviceauth"
 	"github.com/everstacklabs/everstack/internal/auth/oauthserver"
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/domain"
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/service"
+	"github.com/everstacklabs/everstack/internal/enterprise"
 	"github.com/everstacklabs/everstack/internal/lib/authratelimit"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/everstacklabs/everstack/internal/lib/requesthost"
 	"github.com/everstacklabs/everstack/pkg/authz/authzhttp"
 	"github.com/everstacklabs/everstack/pkg/ctxkeys"
 	authv1 "github.com/everstacklabs/everstack/pkg/grpc/everstack/auth/v1"
@@ -262,25 +265,66 @@ func (h *SelfHostedAuthHandler) resolveSessionUser(ctx context.Context, header h
 		return nil
 	}
 
-	// 4. Final safety net for users whose local row exists but predates the
-	//    org feature. In cloud-relay mode the tenant_org context already
-	//    seeded an org, so this only kicks in for purely-self-hosted sessions.
+	// 3b. Managed gateway: the platform is the only authority on membership.
+	//     cookieSessionAuthMiddleware verified this user against the
+	//     host-selected instance's organization in the platform DB and put
+	//     that org (scope) and role in context. Gateway-local membership rows
+	//     are not maintained per tenant (logins no longer upsert them), so
+	//     they may be missing or name another tenant's org; the session is
+	//     scoped to exactly the host org with the platform role.
+	user = scopeManagedSessionToHostOrganization(ctx, user)
+
+	// 4. In cloud-relay mode the tenant_org context seeds the membership the
+	//    middleware verified. A purely self-hosted session whose user belongs
+	//    to no organization (a removed member) is not signed in to anything:
+	//    a session never grants a membership, so it resolves to no user.
 	if len(user.Organizations) == 0 {
-		if tenantOrgID != "" {
-			if orgUUID, err := uuid.Parse(tenantOrgID); err == nil {
-				user.Organizations = []domain.OrganizationMembership{
-					{ID: orgUUID, Role: "member"},
-				}
-			}
-		} else {
-			logger.Info("auth: session user has no organization, creating default organization")
-			if err := h.selfHostedSvc.EnsureUserHasOrganization(ctx, user.User.ID, user); err != nil {
-				logger.WithError(err).Warn("auth: failed to create default organization for session user")
-			}
+		orgUUID, err := uuid.Parse(tenantOrgID)
+		if tenantOrgID == "" || err != nil {
+			logger.Infof("auth: session user %s has no organization", user.User.ID)
+			return nil
+		}
+		user.Organizations = []domain.OrganizationMembership{
+			{ID: orgUUID, Role: "member"},
 		}
 	}
 
 	return user
+}
+
+// scopeManagedSessionToHostOrganization replaces a session user's
+// organizations with the single host-selected organization and the role the
+// platform verified for it. It applies only on a managed gateway, and only
+// when the request was authenticated for the host instance; otherwise user is
+// returned unchanged.
+func scopeManagedSessionToHostOrganization(ctx context.Context, user *domain.UserWithOrganizations) *domain.UserWithOrganizations {
+	if user == nil || !enterprise.ManagedGateway() || !contextkeys.IsTenantAuthenticated(ctx) {
+		return user
+	}
+	scope, ok := contextkeys.RequestInstanceScopeFromContext(ctx)
+	if !ok {
+		return user
+	}
+	orgID, err := uuid.Parse(scope.OrganizationID)
+	if err != nil {
+		return user
+	}
+	role := strings.TrimSpace(contextkeys.GetUserRole(ctx))
+	if role == "" {
+		role = "member"
+	}
+	membership := domain.OrganizationMembership{ID: orgID, Slug: scope.OrganizationSlug, Name: scope.OrganizationSlug, Role: role}
+	for _, local := range user.Organizations {
+		if local.ID == orgID && local.Name != "" {
+			membership.Name = local.Name
+			if membership.Slug == "" {
+				membership.Slug = local.Slug
+			}
+		}
+	}
+	scoped := *user
+	scoped.Organizations = []domain.OrganizationMembership{membership}
+	return &scoped
 }
 
 func sessionOrganizationID(ctx context.Context) string {
@@ -377,13 +421,14 @@ func (h *SelfHostedAuthHandler) Register(ctx context.Context, req *connect.Reque
 	protoUser := userToProto(&userWithOrgs.User, userWithOrgs.Organizations)
 
 	resp := connect.NewResponse(&authv1.RegisterResponse{
-		Success:      true,
-		User:         protoUser,
-		SessionToken: session.Token,
+		Success: true,
+		User:    protoUser,
+		// SessionToken is left empty on purpose: the HttpOnly cookie below
+		// carries the session, and a token in the body is readable by script.
 	})
 
 	// Set session cookie in response header
-	cookie := h.buildSessionCookie(session)
+	cookie := h.buildSessionCookie(ctx, req.Header(), session)
 	resp.Header().Add("Set-Cookie", cookie)
 
 	return resp, nil
@@ -406,6 +451,9 @@ func (h *SelfHostedAuthHandler) Login(ctx context.Context, req *connect.Request[
 		if errors.Is(err, service.ErrInvalidCredentials) {
 			return nil, connect.NewError(connect.CodeUnauthenticated, err)
 		}
+		if errors.Is(err, service.ErrNoOrganization) {
+			return nil, connect.NewError(connect.CodePermissionDenied, err)
+		}
 		logger.WithError(err).Error("auth: login failed")
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -413,13 +461,14 @@ func (h *SelfHostedAuthHandler) Login(ctx context.Context, req *connect.Request[
 	protoUser := userToProto(&userWithOrgs.User, userWithOrgs.Organizations)
 
 	resp := connect.NewResponse(&authv1.LoginResponse{
-		Success:      true,
-		User:         protoUser,
-		SessionToken: session.Token,
+		Success: true,
+		User:    protoUser,
+		// SessionToken is left empty on purpose: the HttpOnly cookie below
+		// carries the session, and a token in the body is readable by script.
 	})
 
 	// Set session cookie in response header
-	cookie := h.buildSessionCookie(session)
+	cookie := h.buildSessionCookie(ctx, req.Header(), session)
 	resp.Header().Add("Set-Cookie", cookie)
 
 	return resp, nil
@@ -459,17 +508,27 @@ func (h *SelfHostedAuthHandler) VerifyMagicLink(ctx context.Context, req *connec
 		if errors.Is(err, service.ErrInvalidToken) {
 			return nil, connect.NewError(connect.CodeUnauthenticated, err)
 		}
+		if errors.Is(err, service.ErrNoOrganization) {
+			return nil, connect.NewError(connect.CodePermissionDenied, err)
+		}
 		logger.WithError(err).Error("auth: magic link verification failed")
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	protoUser := userToProto(&userWithOrgs.User, userWithOrgs.Organizations)
 
-	return connect.NewResponse(&authv1.VerifyMagicLinkResponse{
-		Success:      true,
-		User:         protoUser,
-		SessionToken: session.Token,
-	}), nil
+	resp := connect.NewResponse(&authv1.VerifyMagicLinkResponse{
+		Success: true,
+		User:    protoUser,
+		// SessionToken is left empty on purpose: the HttpOnly cookie below
+		// carries the session, and a token in the body is readable by script.
+	})
+
+	// Without this the session existed only in the database and the browser
+	// that followed the link stayed signed out.
+	resp.Header().Add("Set-Cookie", h.buildSessionCookie(ctx, req.Header(), session))
+
+	return resp, nil
 }
 
 // errPasswordResetNotImplementedSelfHosted documents the gap: self-hosted has
@@ -519,8 +578,17 @@ func (h *SelfHostedAuthHandler) InviteTeamMember(ctx context.Context, req *conne
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("email is required"))
 	}
 
-	result, err := h.selfHostedSvc.InviteTeamMember(ctx, sessionUser.User.ID, email, role, h.seatLimit)
+	// The active organization header only chooses among the caller's own
+	// memberships; the service refuses anything else.
+	activeOrgID := req.Header().Get("x-org-id")
+	result, err := h.selfHostedSvc.InviteTeamMember(ctx, sessionUser, activeOrgID, email, role, h.seatLimit)
 	if err != nil {
+		if errors.Is(err, service.ErrRoleNotGrantable) {
+			return nil, connect.NewError(connect.CodePermissionDenied, err)
+		}
+		if errors.Is(err, service.ErrOrganizationRequired) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		}
 		if errors.Is(err, service.ErrUserAlreadyExists) {
 			return nil, connect.NewError(connect.CodeAlreadyExists, err)
 		}
@@ -566,7 +634,7 @@ func (h *SelfHostedAuthHandler) AcceptInvitation(ctx context.Context, req *conne
 	ipAddress := getClientIP(req.Header())
 	userAgent := req.Header().Get("User-Agent")
 
-	userWithOrgs, session, err := h.selfHostedSvc.AcceptInvitation(ctx, token, password, name, &ipAddress, &userAgent)
+	userWithOrgs, _, err := h.selfHostedSvc.AcceptInvitation(ctx, token, password, name, &ipAddress, &userAgent)
 	if err != nil {
 		if errors.Is(err, service.ErrInvitationNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
@@ -577,6 +645,13 @@ func (h *SelfHostedAuthHandler) AcceptInvitation(ctx context.Context, req *conne
 		if errors.Is(err, service.ErrInvitationUsed) {
 			return nil, connect.NewError(connect.CodeAlreadyExists, err)
 		}
+		if errors.Is(err, service.ErrInvitationRevoked) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		}
+		// An existing account invited back must use its current password.
+		if errors.Is(err, service.ErrInvalidCredentials) {
+			return nil, connect.NewError(connect.CodeUnauthenticated, err)
+		}
 		logger.WithError(err).Error("auth: accept invitation failed")
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -584,9 +659,10 @@ func (h *SelfHostedAuthHandler) AcceptInvitation(ctx context.Context, req *conne
 	protoUser := userToProto(&userWithOrgs.User, userWithOrgs.Organizations)
 
 	return connect.NewResponse(&authv1.AcceptInvitationResponse{
-		Success:      true,
-		User:         protoUser,
-		SessionToken: session.Token,
+		Success: true,
+		User:    protoUser,
+		// SessionToken is left empty on purpose: no caller reads it, and a
+		// session token in a response body is readable by page script.
 	}), nil
 }
 
@@ -598,12 +674,17 @@ func (h *SelfHostedAuthHandler) ListTeamMembers(ctx context.Context, req *connec
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("not authenticated"))
 	}
 
-	_, err := h.selfHostedSvc.GetSessionUser(ctx, token)
-	if err != nil {
+	sessionUser, err := h.selfHostedSvc.GetSessionUser(ctx, token)
+	if err != nil || sessionUser == nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid session"))
 	}
 
-	members, pending, err := h.selfHostedSvc.ListTeamMembers(ctx)
+	// Scope to the caller's own organizations; never list the whole table.
+	orgIDs := make([]uuid.UUID, 0, len(sessionUser.Organizations))
+	for _, org := range sessionUser.Organizations {
+		orgIDs = append(orgIDs, org.ID)
+	}
+	members, pending, err := h.selfHostedSvc.ListTeamMembers(ctx, orgIDs)
 	if err != nil {
 		logger.WithError(err).Error("auth: list team members failed")
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -666,8 +747,11 @@ func (h *SelfHostedAuthHandler) RemoveTeamMember(ctx context.Context, req *conne
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid user_id"))
 	}
 
-	err = h.selfHostedSvc.RemoveTeamMember(ctx, sessionUser.User.ID, userID)
+	err = h.selfHostedSvc.RemoveTeamMember(ctx, sessionUser.User.ID, userID, managedOrganizationIDs(sessionUser))
 	if err != nil {
+		if errors.Is(err, service.ErrMemberNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
 		if errors.Is(err, service.ErrCannotRemoveOwner) {
 			return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 		}
@@ -691,8 +775,8 @@ func (h *SelfHostedAuthHandler) RevokeInvitation(ctx context.Context, req *conne
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("not authenticated"))
 	}
 
-	_, err := h.selfHostedSvc.GetSessionUser(ctx, token)
-	if err != nil {
+	sessionUser, err := h.selfHostedSvc.GetSessionUser(ctx, token)
+	if err != nil || sessionUser == nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid session"))
 	}
 
@@ -706,7 +790,7 @@ func (h *SelfHostedAuthHandler) RevokeInvitation(ctx context.Context, req *conne
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid invitation_id"))
 	}
 
-	err = h.selfHostedSvc.RevokeInvitation(ctx, invitationID)
+	err = h.selfHostedSvc.RevokeInvitation(ctx, invitationID, managedOrganizationIDs(sessionUser))
 	if err != nil {
 		if errors.Is(err, service.ErrInvitationNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
@@ -723,7 +807,9 @@ func (h *SelfHostedAuthHandler) RevokeInvitation(ctx context.Context, req *conne
 // NewSelfHostedConnectHandler creates an http.Handler for the self-hosted auth service
 func NewSelfHostedConnectHandler(cfg *domain.InternalConfig, svc *service.SelfHostedAuthService, seatLimit int) (string, http.Handler) {
 	h := NewSelfHostedAuthHandler(cfg, svc, seatLimit, nil)
-	return authconnect.NewAuthServiceHandler(h)
+	path, handler := authconnect.NewAuthServiceHandler(h)
+	// See Server.RegisterConnectServer: the cookie helpers need the Host.
+	return path, requesthost.Middleware(handler)
 }
 
 // Limiter exposes the handler's rate limiter so the Connect surface can share
@@ -814,6 +900,9 @@ func (h *SelfHostedAuthHandler) RegisterHTTPRoutes(router *mux.Router) {
 			if errors.Is(err, service.ErrInvalidCredentials) {
 				w.WriteHeader(http.StatusUnauthorized)
 				json.NewEncoder(w).Encode(map[string]string{"error": "invalid credentials"})
+			} else if errors.Is(err, service.ErrNoOrganization) {
+				w.WriteHeader(http.StatusForbidden)
+				json.NewEncoder(w).Encode(map[string]string{"error": noOrganizationMessage})
 			} else {
 				w.WriteHeader(http.StatusInternalServerError)
 				json.NewEncoder(w).Encode(map[string]string{"error": "login failed"})
@@ -876,6 +965,9 @@ func (h *SelfHostedAuthHandler) RegisterHTTPRoutes(router *mux.Router) {
 			if errors.Is(err, service.ErrInstanceHasOwner) {
 				w.WriteHeader(http.StatusConflict)
 				json.NewEncoder(w).Encode(map[string]string{"error": "instance already has an owner"})
+			} else if errors.Is(err, service.ErrSelfHostedOnly) {
+				w.WriteHeader(http.StatusForbidden)
+				json.NewEncoder(w).Encode(map[string]string{"error": "registration is not available on this instance"})
 			} else if errors.Is(err, service.ErrUserAlreadyExists) {
 				w.WriteHeader(http.StatusConflict)
 				json.NewEncoder(w).Encode(map[string]string{"error": "user already exists"})
@@ -906,3 +998,23 @@ func (h *SelfHostedAuthHandler) RegisterHTTPRoutes(router *mux.Router) {
 
 // Ensure SelfHostedAuthHandler implements authconnect.AuthServiceHandler at compile time.
 var _ authconnect.AuthServiceHandler = (*SelfHostedAuthHandler)(nil)
+
+// managedOrganizationIDs returns the organizations in which the session user
+// may manage members (owner or admin). Member-management calls act only
+// inside these.
+func managedOrganizationIDs(user *domain.UserWithOrganizations) []uuid.UUID {
+	if user == nil {
+		return nil
+	}
+	ids := make([]uuid.UUID, 0, len(user.Organizations))
+	for _, org := range user.Organizations {
+		if domain.CanManageMembers(org.Role) {
+			ids = append(ids, org.ID)
+		}
+	}
+	return ids
+}
+
+// noOrganizationMessage is what the login form shows someone whose password
+// is right but who belongs to no organization on this instance.
+const noOrganizationMessage = "You're not a member of any organization on this instance. Ask an admin to invite you."

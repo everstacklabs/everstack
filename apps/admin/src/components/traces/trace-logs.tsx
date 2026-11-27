@@ -18,12 +18,12 @@ function severityStyle(severity: string): { bg: string; text: string; border: st
     switch (severity.toUpperCase()) {
         case 'FATAL':
         case 'ERROR':
-            return { bg: 'bg-rose-500/15', text: 'text-rose-300', border: 'border-rose-500/25' }
+            return { bg: 'bg-danger-surface-strong', text: 'text-danger', border: 'border-danger-border' }
         case 'WARN':
         case 'WARNING':
-            return { bg: 'bg-amber-500/15', text: 'text-amber-300', border: 'border-amber-500/25' }
+            return { bg: 'bg-warning-surface-strong', text: 'text-warning', border: 'border-warning-border' }
         case 'INFO':
-            return { bg: 'bg-sky-500/15', text: 'text-sky-300', border: 'border-sky-500/25' }
+            return { bg: 'bg-info-surface-strong', text: 'text-info', border: 'border-info-border' }
         case 'DEBUG':
             return { bg: 'bg-slate-500/15', text: 'text-slate-300', border: 'border-slate-500/25' }
         default:
@@ -105,7 +105,7 @@ export function TraceLogs({ traceId, sessionId, selectedSpanId }: TraceLogsProps
 
             {isLoading && <div className="py-8 text-center text-xs text-brand-main-50 light:text-black">Loading logs…</div>}
             {isError && (
-                <div className="py-8 text-center text-xs text-rose-300">Failed to load logs for this trace.</div>
+                <div className="py-8 text-center text-xs text-danger">Failed to load logs for this trace.</div>
             )}
             {!isLoading && !isError && visible.length === 0 && (
                 <div className="py-8 text-center text-xs text-brand-main-50 light:text-black">

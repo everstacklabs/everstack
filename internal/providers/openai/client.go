@@ -34,6 +34,12 @@ type Provider struct {
 }
 
 func NewProvider(cfg Config) *Provider {
+	// Trim the key once, here, so every request path validates and sends the
+	// same value. Surrounding whitespace (a YAML `api_key: "sk-... "`, a pasted
+	// key with a trailing tab or newline) worked before key validation existed
+	// because net/http trims header values; interior whitespace is still
+	// rejected by gw.ValidateAPIKeyFormat.
+	cfg.APIKey = strings.TrimSpace(cfg.APIKey)
 	cli := cfg.HTTPClient
 	if cli == nil {
 		cli = clientx.Default()
@@ -43,19 +49,27 @@ func NewProvider(cfg Config) *Provider {
 	if cli.Transport == nil {
 		cli.Transport = http.DefaultTransport
 	}
-	cli.Transport = attrs.NewInstrumentedTransport(cli.Transport, "openai")
+	name := providerName(cfg)
+	cli.Transport = attrs.NewInstrumentedTransport(cli.Transport, name)
 
 	unary := cfg.HTTPClient
 	if unary == nil {
 		unary = clientx.Unary()
-		unary.Transport = attrs.NewInstrumentedTransport(unary.Transport, "openai")
+		unary.Transport = attrs.NewInstrumentedTransport(unary.Transport, name)
 	}
 
 	// BaseURL should be provided by bootstrap via provider catalog; do not hardcode here.
 	return &Provider{cfg: cfg, client: cli, unaryClient: unary}
 }
 
-func (p *Provider) Name() string { return "openai" }
+func (p *Provider) Name() string { return providerName(p.cfg) }
+
+func providerName(cfg Config) string {
+	if name := strings.TrimSpace(cfg.ProviderName); name != "" {
+		return name
+	}
+	return "openai"
+}
 
 func (p *Provider) SupportsModel(model string) bool {
 	if len(p.cfg.SupportedModels) == 0 {
@@ -114,6 +128,7 @@ func sanitizeMetadata(m map[string]interface{}) map[string]interface{} {
 // OpenAI Chat API payloads
 type oaChatMessage struct {
 	Role       string          `json:"role"`
+	Name       string          `json:"name,omitempty"`
 	Content    []oaContentPart `json:"content,omitempty"`
 	ToolCalls  []oaToolCall    `json:"tool_calls,omitempty"`
 	ToolCallID string          `json:"tool_call_id,omitempty"`
@@ -145,9 +160,12 @@ type oaToolFuncDef struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description,omitempty"`
 	Parameters  map[string]interface{} `json:"parameters,omitempty"`
+	Strict      *bool                  `json:"strict,omitempty"`
 }
 
 type oaChatRequest struct {
+	User                string                 `json:"user,omitempty"`
+	ParallelToolCalls   *bool                  `json:"parallel_tool_calls,omitempty"`
 	Model               string                 `json:"model"`
 	Messages            []oaChatMessage        `json:"messages"`
 	Tools               []oaTool               `json:"tools,omitempty"`
@@ -166,6 +184,12 @@ type oaChatRequest struct {
 	PresencePenalty     *float64               `json:"presence_penalty,omitempty"`
 	Seed                *int64                 `json:"seed,omitempty"`
 	Verbosity           string                 `json:"verbosity,omitempty"`
+	// ResponseFormat's JSON tags already match OpenAI's response_format.
+	ResponseFormat *gw.ChatResponseFormat `json:"response_format,omitempty"`
+	Logprobs       *bool                  `json:"logprobs,omitempty"`
+	TopLogprobs    *int                   `json:"top_logprobs,omitempty"`
+	LogitBias      map[string]float64     `json:"logit_bias,omitempty"`
+	ServiceTier    string                 `json:"service_tier,omitempty"`
 }
 
 type oaStreamOptions struct {
@@ -253,27 +277,43 @@ type oaResponsesTool struct {
 	Name        string                 `json:"name,omitempty"`
 	Description string                 `json:"description,omitempty"`
 	Parameters  map[string]interface{} `json:"parameters,omitempty"`
+	Strict      *bool                  `json:"strict,omitempty"`
 }
 
 type oaResponsesRequest struct {
-	Model           string                 `json:"model"`
-	Input           interface{}            `json:"input"`                  // string or []oaResponsesInputItem
-	Include         []string               `json:"include,omitempty"`      // Additional response state needed for stateless continuation
-	Instructions    string                 `json:"instructions,omitempty"` // system prompt
-	MaxOutputTokens int                    `json:"max_output_tokens,omitempty"`
-	Temperature     *float64               `json:"temperature,omitempty"`
-	TopP            *float64               `json:"top_p,omitempty"`
-	Tools           []oaResponsesTool      `json:"tools,omitempty"`
-	Stream          bool                   `json:"stream,omitempty"`
-	Metadata        map[string]interface{} `json:"metadata,omitempty"`
-	Reasoning       *oaReasoningConfig     `json:"reasoning,omitempty"`
-	Text            *oaResponsesTextConfig `json:"text,omitempty"`
+	ToolChoice        interface{}            `json:"tool_choice,omitempty"`
+	ParallelToolCalls *bool                  `json:"parallel_tool_calls,omitempty"`
+	Model             string                 `json:"model"`
+	Input             interface{}            `json:"input"`                  // string or []oaResponsesInputItem
+	Include           []string               `json:"include,omitempty"`      // Additional response state needed for stateless continuation
+	Instructions      string                 `json:"instructions,omitempty"` // system prompt
+	MaxOutputTokens   int                    `json:"max_output_tokens,omitempty"`
+	Temperature       *float64               `json:"temperature,omitempty"`
+	TopP              *float64               `json:"top_p,omitempty"`
+	Tools             []oaResponsesTool      `json:"tools,omitempty"`
+	Stream            bool                   `json:"stream,omitempty"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	Reasoning         *oaReasoningConfig     `json:"reasoning,omitempty"`
+	Text              *oaResponsesTextConfig `json:"text,omitempty"`
+	ServiceTier       string                 `json:"service_tier,omitempty"`
 }
 
 // oaResponsesTextConfig carries the Responses API's text options. Verbosity
 // lives here rather than at the top level, unlike Chat Completions.
 type oaResponsesTextConfig struct {
-	Verbosity string `json:"verbosity,omitempty"`
+	Verbosity string                 `json:"verbosity,omitempty"`
+	Format    *oaResponsesTextFormat `json:"format,omitempty"`
+}
+
+// oaResponsesTextFormat is the Responses API structured output format. Unlike
+// Chat Completions, the json_schema fields sit beside type, not under a
+// json_schema object.
+type oaResponsesTextFormat struct {
+	Type        string                 `json:"type"`
+	Name        string                 `json:"name,omitempty"`
+	Description string                 `json:"description,omitempty"`
+	Schema      map[string]interface{} `json:"schema,omitempty"`
+	Strict      *bool                  `json:"strict,omitempty"`
 }
 
 func responsesTextConfig(sampling gw.SamplingParams) *oaResponsesTextConfig {
@@ -281,6 +321,46 @@ func responsesTextConfig(sampling gw.SamplingParams) *oaResponsesTextConfig {
 		return nil
 	}
 	return &oaResponsesTextConfig{Verbosity: sampling.Verbosity}
+}
+
+// responsesTextConfigFor is responsesTextConfig plus the request's
+// structured output format.
+func responsesTextConfigFor(req gw.ChatCompletionRequest) *oaResponsesTextConfig {
+	cfg := responsesTextConfig(req.Sampling)
+	rf := req.ResponseFormat
+	if rf == nil || rf.Type == "" {
+		return cfg
+	}
+	if cfg == nil {
+		cfg = &oaResponsesTextConfig{}
+	}
+	format := &oaResponsesTextFormat{Type: rf.Type}
+	if js := rf.JSONSchema; js != nil {
+		format.Name = js.Name
+		format.Description = js.Description
+		format.Schema = js.Schema
+		format.Strict = js.Strict
+	}
+	cfg.Format = format
+	return cfg
+}
+
+// requiresMaxCompletionTokens reports whether model rejects max_tokens.
+// OpenAI's Chat Completions reference: max_tokens "is now deprecated in favor
+// of max_completion_tokens, and is not compatible with o-series models"
+// (https://developers.openai.com/api/reference/resources/chat). Every
+// o-series name is "o" followed by a digit (o1, o3, o3-pro, o4-mini, ...), so
+// one rule covers the family, including future members. The GPT-5 and GPT-6
+// families take max_completion_tokens too.
+func requiresMaxCompletionTokens(model string) bool {
+	m := strings.ToLower(strings.TrimSpace(model))
+	if i := strings.LastIndex(m, "/"); i >= 0 {
+		m = m[i+1:]
+	}
+	if len(m) >= 2 && m[0] == 'o' && m[1] >= '0' && m[1] <= '9' {
+		return true
+	}
+	return strings.HasPrefix(m, "gpt-5") || strings.HasPrefix(m, "gpt-6")
 }
 
 type oaReasoningConfig struct {
@@ -581,6 +661,11 @@ func toOAChatRequest(req gw.ChatCompletionRequest) oaChatRequest {
 	msgs := make([]oaChatMessage, 0, len(req.Messages))
 	for _, m := range req.Messages {
 		msg := oaChatMessage{Role: string(m.Role)}
+		// name is documented on system, user and assistant messages (and
+		// required on the legacy function role), not on tool messages.
+		if m.Role != gw.RoleTool {
+			msg.Name = m.Name
+		}
 
 		// Convert content parts
 		if len(m.Content) > 0 {
@@ -593,7 +678,11 @@ func toOAChatRequest(req gw.ChatCompletionRequest) oaChatRequest {
 					}
 				case "image_url":
 					if c.ImageURL != nil {
-						parts = append(parts, oaContentPart{Type: "image_url", ImageURL: map[string]string{"url": *c.ImageURL}})
+						image := map[string]string{"url": *c.ImageURL}
+						if c.ImageDetail != "" {
+							image["detail"] = c.ImageDetail
+						}
+						parts = append(parts, oaContentPart{Type: "image_url", ImageURL: image})
 					}
 				}
 			}
@@ -627,13 +716,8 @@ func toOAChatRequest(req gw.ChatCompletionRequest) oaChatRequest {
 	maxTokens := req.Sampling.MaxTokens
 	maxCompletionTokens := req.Sampling.MaxCompletionTokens
 
-	// Models that require max_completion_tokens instead of max_tokens
-	// o1 models, o3-mini models, and gpt-5 models
-	requiresMaxCompletionTokens := strings.HasPrefix(req.Model, "o1") ||
-		strings.HasPrefix(req.Model, "o3-mini") ||
-		strings.HasPrefix(req.Model, "gpt-5")
-
-	if requiresMaxCompletionTokens {
+	// Models that require max_completion_tokens instead of max_tokens.
+	if requiresMaxCompletionTokens(req.Model) {
 		// If max_completion_tokens is not set but max_tokens is, use max_tokens as max_completion_tokens
 		if maxCompletionTokens == 0 && maxTokens > 0 {
 			maxCompletionTokens = maxTokens
@@ -644,6 +728,7 @@ func toOAChatRequest(req gw.ChatCompletionRequest) oaChatRequest {
 
 	oaReq := oaChatRequest{
 		Model:               req.Model,
+		ParallelToolCalls:   req.ParallelToolCalls,
 		Messages:            msgs,
 		Temperature:         optionalTemperature(req.Sampling),
 		TopP:                optionalTopP(req.Sampling),
@@ -658,8 +743,16 @@ func toOAChatRequest(req gw.ChatCompletionRequest) oaChatRequest {
 		PresencePenalty:     optionalPresencePenalty(req.Sampling),
 		Seed:                req.Sampling.Seed,
 		Verbosity:           req.Sampling.Verbosity,
+		ResponseFormat:      req.ResponseFormat,
+		Logprobs:            req.Sampling.Logprobs,
+		TopLogprobs:         req.Sampling.TopLogprobs,
+		LogitBias:           req.Sampling.LogitBias,
+		ServiceTier:         req.ServiceTier,
 	}
 
+	if user, ok := req.Metadata["user"].(string); ok {
+		oaReq.User = user
+	}
 	// Convert tools
 	for _, t := range req.Tools {
 		oaReq.Tools = append(oaReq.Tools, oaTool{
@@ -668,6 +761,7 @@ func toOAChatRequest(req gw.ChatCompletionRequest) oaChatRequest {
 				Name:        t.Function.Name,
 				Description: t.Function.Description,
 				Parameters:  t.Function.Parameters,
+				Strict:      t.Function.Strict,
 			},
 		})
 	}
@@ -683,6 +777,9 @@ func toOAChatRequest(req gw.ChatCompletionRequest) oaChatRequest {
 func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.ChatCompletionResponse, error) {
 	if strings.TrimSpace(p.cfg.APIKey) == "" {
 		return gw.ChatCompletionResponse{}, fmt.Errorf("openai api key not provided")
+	}
+	if err := gw.ValidateAPIKeyFormat(p.Name(), p.cfg.APIKey); err != nil {
+		return gw.ChatCompletionResponse{}, err
 	}
 	if req.Stream {
 		return gw.ChatCompletionResponse{}, gw.ErrNotImplemented("chat_stream_unary")
@@ -708,7 +805,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	// Observability: log outgoing provider request
 	cid := correlation.GetCorrelationID(ctx)
 	logger.WithFields(
-		"provider", "openai",
+		"provider", p.Name(),
 		"endpoint", p.cfg.BaseURL+"/chat/completions",
 		"model", req.Model,
 		"stream", false,
@@ -722,12 +819,12 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	defer resp.Body.Close()
 
 	// Capture and monitor rate limit information
-	rateLimitInfo := ratelimit.ParseHeaders(resp.Header, "openai", req.Model)
+	rateLimitInfo := ratelimit.ParseHeaders(resp.Header, p.Name(), req.Model)
 	ratelimit.GlobalMonitor.Update(rateLimitInfo)
 
 	if resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(resp.Body)
-		return gw.ChatCompletionResponse{}, errors.New("openai chat error: " + string(b))
+		return gw.ChatCompletionResponse{}, gw.NewUpstreamError(p.Name(), resp.StatusCode, b)
 	}
 	var oa oaChatResponse
 	if err := json.NewDecoder(resp.Body).Decode(&oa); err != nil {
@@ -741,13 +838,15 @@ func (p *Provider) chatViaResponses(ctx context.Context, req gw.ChatCompletionRe
 	instructions, input := messagesToResponsesInput(req.Messages)
 
 	payload := oaResponsesRequest{
+		ToolChoice: responsesToolChoice(req.ToolChoice), ParallelToolCalls: req.ParallelToolCalls,
 		Model:        req.Model,
 		Input:        input,
 		Include:      []string{"reasoning.encrypted_content"},
 		Instructions: instructions,
 		Temperature:  optionalTemperature(req.Sampling),
 		TopP:         optionalTopP(req.Sampling),
-		Text:         responsesTextConfig(req.Sampling),
+		Text:         responsesTextConfigFor(req),
+		ServiceTier:  req.ServiceTier,
 		Metadata:     sanitizeMetadata(req.Metadata),
 	}
 	// Determine max output tokens
@@ -766,6 +865,7 @@ func (p *Provider) chatViaResponses(ctx context.Context, req gw.ChatCompletionRe
 			Name:        t.Function.Name,
 			Description: t.Function.Description,
 			Parameters:  t.Function.Parameters,
+			Strict:      t.Function.Strict,
 		})
 	}
 
@@ -783,7 +883,7 @@ func (p *Provider) chatViaResponses(ctx context.Context, req gw.ChatCompletionRe
 
 	cid := correlation.GetCorrelationID(ctx)
 	logger.WithFields(
-		"provider", "openai",
+		"provider", p.Name(),
 		"endpoint", endpoint,
 		"model", req.Model,
 		"stream", false,
@@ -796,12 +896,12 @@ func (p *Provider) chatViaResponses(ctx context.Context, req gw.ChatCompletionRe
 	}
 	defer resp.Body.Close()
 
-	rateLimitInfo := ratelimit.ParseHeaders(resp.Header, "openai", req.Model)
+	rateLimitInfo := ratelimit.ParseHeaders(resp.Header, p.Name(), req.Model)
 	ratelimit.GlobalMonitor.Update(rateLimitInfo)
 
 	if resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(resp.Body)
-		return gw.ChatCompletionResponse{}, errors.New("openai responses error: " + string(b))
+		return gw.ChatCompletionResponse{}, gw.NewUpstreamError(p.Name(), resp.StatusCode, b)
 	}
 
 	var oa oaResponsesResponse
@@ -901,6 +1001,9 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 	if strings.TrimSpace(p.cfg.APIKey) == "" {
 		return fmt.Errorf("openai api key not provided")
 	}
+	if err := gw.ValidateAPIKeyFormat(p.Name(), p.cfg.APIKey); err != nil {
+		return err
+	}
 
 	// Route Responses API models or explicit api_type=responses to /v1/responses streaming
 	if req.UseResponsesAPI || p.isResponsesModel(req.Model) {
@@ -924,12 +1027,12 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 	defer resp.Body.Close()
 
 	// Capture and monitor rate limit information for streaming
-	rateLimitInfo := ratelimit.ParseHeaders(resp.Header, "openai", req.Model)
+	rateLimitInfo := ratelimit.ParseHeaders(resp.Header, p.Name(), req.Model)
 	ratelimit.GlobalMonitor.Update(rateLimitInfo)
 
 	if resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(resp.Body)
-		return errors.New("openai chat stream error: " + string(b))
+		return gw.NewUpstreamError(p.Name(), resp.StatusCode, b)
 	}
 	// OpenAI streams SSE events prefixed by "data: ", ending with [DONE].
 	// Use bufio.Reader (same as Anthropic/Cohere) for correct buffering across reads.
@@ -1033,8 +1136,9 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 				var toolCalls []gw.ToolCall
 				for _, tc := range ch.Delta.ToolCalls {
 					toolCalls = append(toolCalls, gw.ToolCall{
-						ID:   tc.ID,
-						Type: tc.Type,
+						Index: &tc.Index,
+						ID:    tc.ID,
+						Type:  tc.Type,
 						Function: gw.ToolCallFunction{
 							Name:      tc.Function.Name,
 							Arguments: tc.Function.Arguments,
@@ -1071,13 +1175,15 @@ func (p *Provider) chatStreamViaResponses(ctx context.Context, req gw.ChatComple
 	instructions, input := messagesToResponsesInput(req.Messages)
 
 	payload := oaResponsesRequest{
+		ToolChoice: responsesToolChoice(req.ToolChoice), ParallelToolCalls: req.ParallelToolCalls,
 		Model:        req.Model,
 		Input:        input,
 		Include:      []string{"reasoning.encrypted_content"},
 		Instructions: instructions,
 		Temperature:  optionalTemperature(req.Sampling),
 		TopP:         optionalTopP(req.Sampling),
-		Text:         responsesTextConfig(req.Sampling),
+		Text:         responsesTextConfigFor(req),
+		ServiceTier:  req.ServiceTier,
 		Stream:       true,
 		Metadata:     sanitizeMetadata(req.Metadata),
 	}
@@ -1095,6 +1201,7 @@ func (p *Provider) chatStreamViaResponses(ctx context.Context, req gw.ChatComple
 			Name:        t.Function.Name,
 			Description: t.Function.Description,
 			Parameters:  t.Function.Parameters,
+			Strict:      t.Function.Strict,
 		})
 	}
 
@@ -1113,12 +1220,12 @@ func (p *Provider) chatStreamViaResponses(ctx context.Context, req gw.ChatComple
 	}
 	defer resp.Body.Close()
 
-	rateLimitInfo := ratelimit.ParseHeaders(resp.Header, "openai", req.Model)
+	rateLimitInfo := ratelimit.ParseHeaders(resp.Header, p.Name(), req.Model)
 	ratelimit.GlobalMonitor.Update(rateLimitInfo)
 
 	if resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(resp.Body)
-		return errors.New("openai responses stream error: " + string(b))
+		return gw.NewUpstreamError(p.Name(), resp.StatusCode, b)
 	}
 
 	// Bound the SSE read loop with an idle timeout. If no bytes arrive
@@ -1715,7 +1822,11 @@ func (p *Provider) Embed(ctx context.Context, req gw.EmbeddingsRequest) (gw.Embe
 }
 
 func (p *Provider) setHeaders(h http.Header) {
-	h.Set("Authorization", "Bearer "+p.cfg.APIKey)
+	if p.cfg.SetAuth != nil {
+		p.cfg.SetAuth(h)
+	} else {
+		h.Set("Authorization", "Bearer "+p.cfg.APIKey)
+	}
 	if p.cfg.Organization != "" {
 		h.Set("OpenAI-Organization", p.cfg.Organization)
 	}
@@ -1800,4 +1911,13 @@ func (p *Provider) toGatewayChatResponse(oa oaChatResponse) gw.ChatCompletionRes
 		Choices: choices,
 		Usage:   usage,
 	}
+}
+
+func responsesToolChoice(choice interface{}) interface{} {
+	if m, ok := choice.(map[string]interface{}); ok {
+		if f, ok := m["function"].(map[string]interface{}); ok {
+			return map[string]interface{}{"type": "function", "name": f["name"]}
+		}
+	}
+	return choice
 }

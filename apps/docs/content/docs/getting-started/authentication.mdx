@@ -91,6 +91,44 @@ The instance owner and admins can invite team members:
 
 Team member limits are enforced by your license. The `seatLimit` is checked when sending invitations.
 
+Membership only comes from registering the instance's first account or from an invitation:
+
+- Someone who belongs to no organization cannot sign in. They see "You're not a member of any organization on this instance" and need an invitation.
+- Removing someone's last membership signs them out everywhere.
+- A removed member can be invited again. They accept with their existing password.
+- Only an owner or admin of an organization can create another one, and the last organization on an instance can't be deleted.
+
+#### Instances with users but no organization
+
+Signing in only creates the first organization on a fresh instance, with no organization and a single account. An instance that has several accounts and no organization (for example, after several cloud sign-ins before anyone registered) needs the operator to name its owner. Set this and restart Everstack:
+
+```bash
+EVS_SELFHOSTED_BOOTSTRAP_OWNER_EMAIL=you@example.com
+```
+
+On startup, if the instance has no organization, the existing account with that email becomes owner of a new organization. If any organization exists, the setting does nothing. Unset it after use.
+
+#### Recovering owner access
+
+If no one can sign in as an owner (for example, the only owner's account was removed directly in the database), promote an existing user from the database. Connect to the instance's PostgreSQL database and run:
+
+```sql
+-- Make the user an owner of an existing organization.
+INSERT INTO everstack.organization_members (organization_id, user_id, role)
+SELECT o.id, u.id, 'owner'
+FROM everstack.organizations o, everstack.users u
+WHERE o.slug = 'default' AND u.email = 'you@example.com'
+ON CONFLICT (organization_id, user_id) DO UPDATE SET role = 'owner';
+```
+
+Replace `default` with your organization's slug (`SELECT slug, name FROM everstack.organizations;`) and the email with the account to promote. If the instance has no organization at all, create one first:
+
+```sql
+INSERT INTO everstack.organizations (slug, name) VALUES ('default', 'Default Organization');
+```
+
+Then sign in with that account.
+
 ### Session Management
 
 After logging in:
@@ -180,7 +218,7 @@ API keys are passed via the `x-evs-api-key` header:
 curl -X POST https://your-instance.example.com/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "x-evs-api-key: evs_your_api_key_here" \
-  -d '{"model": "gpt-4", "messages": [{"role": "user", "content": "Hello"}]}'
+  -d '{"model": "gpt-5.4", "messages": [{"role": "user", "content": "Hello"}]}'
 ```
 
 ---

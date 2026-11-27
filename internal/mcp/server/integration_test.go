@@ -24,11 +24,11 @@ import (
 // tenant; unauthenticated requests are rejected (fail closed).
 type stubAuth struct{ tenant string }
 
-func (s stubAuth) Authenticate(r *http.Request) (string, bool) {
+func (s stubAuth) AuthenticateKey(r *http.Request) (string, string, bool) {
 	if r.Header.Get("Authorization") == "" {
-		return "", false
+		return "", "", false
 	}
-	return s.tenant, true
+	return s.tenant, "", true
 }
 
 func newServer(t *testing.T) *httptest.Server {

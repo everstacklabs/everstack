@@ -1,0 +1,73 @@
+# Copied from the first-party entry; Azure lists the same model at the same list price on models.dev (2026-11-26).
+# Not checked against Azure's own pricing page, which renders prices client-side.
+name: "gpt-6.2-astra"
+display_name: "GPT-6.2 Astra (Azure)"
+family: "gpt-6"
+status: "stable"
+release_date: "2026-11-17"
+api_type: "responses"
+cost:
+  input_per_1k: 0.008
+  output_per_1k: 0.04
+  cache_read_per_1k: 0.0004
+  cache_write_per_1k: 0.01
+  long_context:
+    threshold_tokens: 272000
+    input_multiplier: 2
+    cache_multiplier: 2
+    output_multiplier: 1.5
+limits:
+  max_tokens: 1050000
+  max_completion_tokens: 128000
+capabilities:
+  - "chat"
+  - "function_calling"
+  - "vision"
+  - "reasoning"
+  - "coding"
+modalities:
+  input:
+    - "text"
+    - "image"
+  output:
+    - "text"
+knowledge_cutoff: "2026-05-18"
+notes: "OpenAI's model for demanding reasoning and coding. Tool calling requires the Responses API. Reasoning effort none is rejected; OpenAI does not publish the full effort list for GPT-6.2, so only low, medium and high are listed; omit temperature, top_p, logprobs and top_logprobs; Flex processing is not supported. Cache write price is the 30-minute retention rate. Prompts over 272K input tokens bill the whole request at 2x input and cache rates and 1.5x output. On Azure this model is served by the v1 Responses API; the deployment must be named after the model id."
+unsupported_parameters:
+  - "temperature"
+  - "top_p"
+structured_output: false
+parameters:
+  -
+    key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 128000
+    has_max_value: true
+  -
+    key: "reasoning_effort"
+    display_name: "Reasoning effort"
+    type: "enum"
+    options:
+      - "low"
+      - "medium"
+      - "high"
+variants:
+  -
+    id: "low"
+    display_name: "Low reasoning"
+    parameters:
+      reasoning_effort: "low"
+  -
+    id: "medium"
+    display_name: "Medium reasoning"
+    parameters:
+      reasoning_effort: "medium"
+  -
+    id: "high"
+    display_name: "High reasoning"
+    parameters:
+      reasoning_effort: "high"
+added_in_version: "2.13.0"

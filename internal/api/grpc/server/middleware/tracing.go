@@ -12,6 +12,7 @@ import (
 // All other gRPC methods (CRUD, admin, config) are excluded.
 var tracedMethods = []string{
 	"ChatCompletion",
+	"SystemOne",
 	"Embeddings",
 	"RunTurn",
 	"RunTurnStream",

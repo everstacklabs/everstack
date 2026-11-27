@@ -34,10 +34,18 @@ func (s *Server) CreateAgentTrigger(ctx context.Context, req *connect.Request[ag
 	if agentID == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("agent_id is required"))
 	}
+	if _, err := s.requireOwnedAgent(ctx, agentID, tenantID); err != nil {
+		return nil, err
+	}
 
 	triggerType := trigger.TriggerType(req.Msg.GetTriggerType())
 	if triggerType != trigger.TriggerCron && triggerType != trigger.TriggerWebhook && triggerType != trigger.TriggerEvent {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("trigger_type must be 'cron', 'webhook', or 'event'"))
+	}
+	if triggerType == trigger.TriggerEvent && req.Msg.GetEventSourceAgentId() != "" {
+		if _, err := s.requireOwnedAgent(ctx, req.Msg.GetEventSourceAgentId(), tenantID); err != nil {
+			return nil, err
+		}
 	}
 
 	name := strings.TrimSpace(req.Msg.GetName())
@@ -121,6 +129,9 @@ func (s *Server) ListAgentTriggers(ctx context.Context, req *connect.Request[age
 	if err != nil {
 		return nil, err
 	}
+	if _, err := s.requireOwnedAgent(ctx, req.Msg.GetAgentId(), tenantID); err != nil {
+		return nil, err
+	}
 
 	triggers, err := s.triggerStore.ListTriggers(ctx, req.Msg.GetAgentId(), tenantID)
 	if err != nil {
@@ -191,6 +202,9 @@ func (s *Server) UpdateAgentTrigger(ctx context.Context, req *connect.Request[ag
 		t.CronTimezone = tz
 	}
 	if src := req.Msg.GetEventSourceAgentId(); src != "" {
+		if _, err := s.requireOwnedAgent(ctx, src, tenantID); err != nil {
+			return nil, err
+		}
 		t.EventSourceAgentID = src
 	}
 	if et := req.Msg.GetEventType(); et != "" {
@@ -263,8 +277,14 @@ func (s *Server) DeleteAgentTrigger(ctx context.Context, req *connect.Request[ag
 	if err != nil {
 		return nil, err
 	}
+	if _, err := s.triggerStore.GetTrigger(ctx, req.Msg.GetId(), tenantID); err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("trigger not found"))
+	}
 
 	if err := s.triggerStore.DeleteTrigger(ctx, req.Msg.GetId(), tenantID); err != nil {
+		if errors.Is(err, trigger.ErrTriggerNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("trigger not found"))
+		}
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
@@ -317,7 +337,17 @@ func (s *Server) ListAgentTriggerExecutions(ctx context.Context, req *connect.Re
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("triggers not configured"))
 	}
 
-	executions, total, err := s.triggerStore.ListExecutions(ctx, req.Msg.GetTriggerId(), int(req.Msg.GetLimit()), int(req.Msg.GetOffset()))
+	tenantID, err := s.resolveTenantID(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	// NotFound, not PermissionDenied, so another tenant's trigger ids are
+	// not confirmed to exist.
+	if _, err := s.triggerStore.GetTrigger(ctx, req.Msg.GetTriggerId(), tenantID); err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("trigger not found"))
+	}
+
+	executions, total, err := s.triggerStore.ListExecutions(ctx, req.Msg.GetTriggerId(), tenantID, int(req.Msg.GetLimit()), int(req.Msg.GetOffset()))
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}

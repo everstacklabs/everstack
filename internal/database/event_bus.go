@@ -9,6 +9,7 @@ import (
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/lib/correlation"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/sirupsen/logrus"
 )
 
 // EventHandler represents a function that handles domain events.
@@ -152,20 +153,22 @@ func (bus *InMemoryEventBus) Publish(ctx context.Context, events ...Event) error
 		}
 	}
 
-	// Build structured payload for event publication
-	payload := logger.NewPayload().
-		WithCorrelation(correlationID).
-		WithLogging("system", "event_publication", "info", "event_bus", "events published to bus").
-		Build()
+	// Internal gateway log - not forwarded to OTEL (CategorySystem). The JSON
+	// payload is only built when the line will be written.
+	if logger.IsLevelEnabled(logrus.DebugLevel) {
+		payload := logger.NewPayload().
+			WithCorrelation(correlationID).
+			WithLogging("system", "event_publication", "info", "event_bus", "events published to bus").
+			Build()
 
-	// Internal gateway log - not forwarded to OTEL (CategorySystem)
-	logger.WithCategory(logger.CategorySystem).
-		WithLogEvent("event.bus.published").
-		WithPayload(payload).
-		SetFields(
-			"event_count", len(events),
-			"correlation_id", correlationID,
-		).Debug("events published to bus")
+		logger.WithCategory(logger.CategorySystem).
+			WithLogEvent("event.bus.published").
+			WithPayload(payload).
+			SetFields(
+				"event_count", len(events),
+				"correlation_id", correlationID,
+			).Debug("events published to bus")
+	}
 
 	return nil
 }

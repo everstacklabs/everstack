@@ -3,6 +3,7 @@ package v1
 import (
 	"context"
 	"fmt"
+	"github.com/everstacklabs/everstack/pkg/decision"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -27,6 +28,7 @@ import (
 // bundles the registry/router for tenant A is stable for the lifetime of a
 // request even while tenant B's request reloads its own bundle in parallel.
 type tenantBundle struct {
+	decisionRouting  decision.RoutingConfig
 	reg              *gw.Registry
 	router           *gw.Router
 	providerDefaults map[string]modelRequestDefaults
@@ -46,6 +48,33 @@ type tenantBundleCache struct {
 	// requests don't both query the DB and build duplicate bundles. We use
 	// per-key sync.Mutex via sync.Map; each key is collected lazily.
 	loadLocks sync.Map // map[string]*sync.Mutex
+
+	// reloadFailedAt records when a tenant's last reload failed, so that
+	// while a stale bundle can serve it, requests do not each wait on
+	// another failing reload under the load lock (see reloadBackoff).
+	reloadFailedAt sync.Map // map[string]time.Time
+}
+
+// providerReloadRetryAfter is how long after a failed reload the next one
+// is skipped while the tenant's stale bundle can serve. Without it, every
+// request in a database outage queued on the per-tenant load lock behind
+// the previous request's timed-out reload before being served stale.
+const providerReloadRetryAfter = 5 * time.Second
+
+// reloadBackoff reports whether key's last reload failed within
+// providerReloadRetryAfter.
+func (c *tenantBundleCache) reloadBackoff(key string) bool {
+	v, ok := c.reloadFailedAt.Load(key)
+	return ok && time.Since(v.(time.Time)) < providerReloadRetryAfter
+}
+
+// noteReload records the outcome of a reload of key.
+func (c *tenantBundleCache) noteReload(key string, err error) {
+	if err != nil {
+		c.reloadFailedAt.Store(key, time.Now())
+		return
+	}
+	c.reloadFailedAt.Delete(key)
 }
 
 // loadLockFor returns (and creates if necessary) the mutex for a tenant key.
@@ -66,6 +95,33 @@ func (c *tenantBundleCache) get(key string, ttl time.Duration) *tenantBundle {
 	}
 	b := v.(*tenantBundle)
 	if ttl > 0 && !b.loadedAt.IsZero() && time.Since(b.loadedAt) > ttl {
+		return nil
+	}
+	return b
+}
+
+// providerStaleServeMax bounds how long a tenant's last loaded bundle may
+// still serve that tenant after its reload started failing (a provider
+// database outage longer than the providerRefreshStaleness TTL). Past it
+// the tenant's requests answer Unavailable rather than run on configuration
+// that may have been changed or revoked since.
+const providerStaleServeMax = 10 * time.Minute
+
+// getStale returns the cached bundle for a tenant key while it is younger
+// than maxAge, ignoring the refresh TTL. It reads only that key's own
+// entry: there is no fallback to another key or to the default bundle. An
+// invalidated bundle (invalidateBundle) is deleted, so it never comes back
+// here.
+func (c *tenantBundleCache) getStale(key string, maxAge time.Duration) *tenantBundle {
+	if key == "" {
+		return nil
+	}
+	v, ok := c.bundles.Load(key)
+	if !ok {
+		return nil
+	}
+	b := v.(*tenantBundle)
+	if b.loadedAt.IsZero() || time.Since(b.loadedAt) > maxAge {
 		return nil
 	}
 	return b
@@ -113,7 +169,14 @@ func (s *Server) providersFor(ctx context.Context) *tenantBundle {
 		// fail-closed posture the auth layer adopted on 2026-05-06.
 		return nil
 	}
-	return s.tenantBundles.get(key, providerRefreshStaleness)
+	if b := s.tenantBundles.get(key, providerRefreshStaleness); b != nil {
+		return b
+	}
+	// Stale-while-revalidate: EnsureProvidersForRequest reloads an expired
+	// bundle on every request; while that reload fails (and only for a
+	// bounded time) the same tenant's last bundle keeps serving it, keyed
+	// by the same tenant key and never another tenant's or the default.
+	return s.tenantBundles.getStale(key, providerStaleServeMax)
 }
 
 // ProviderBundleForRequest atomically returns the registry and router for one

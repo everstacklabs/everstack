@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"io"
 	"net/http"
 	"strings"
@@ -42,7 +43,7 @@ func newSSETransport(cfg ServerConfig) (*sseTransport, error) {
 	return &sseTransport{
 		baseURL: cfg.URL,
 		headers: headers,
-		client:  &http.Client{},
+		client:  newHTTPClient(0),
 		pending: make(map[string]chan *JsonRpcResponse),
 	}, nil
 }
@@ -56,7 +57,7 @@ func (t *sseTransport) connect(ctx context.Context) error {
 	}
 	t.mu.Unlock()
 
-	sseCtx, cancel := context.WithCancel(context.Background())
+	sseCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
 
 	req, err := http.NewRequestWithContext(sseCtx, http.MethodGet, t.baseURL, nil)
 	if err != nil {
@@ -69,6 +70,7 @@ func (t *sseTransport) connect(ctx context.Context) error {
 		req.Header.Set(k, v)
 	}
 
+	contextkeys.WriteAgentHop(ctx, req.Header)
 	resp, err := t.client.Do(req)
 	if err != nil {
 		cancel()
@@ -142,6 +144,7 @@ func (t *sseTransport) Send(ctx context.Context, req *JsonRpcRequest) (*JsonRpcR
 		httpReq.Header.Set(k, v)
 	}
 
+	contextkeys.WriteAgentHop(ctx, httpReq.Header)
 	httpResp, err := t.client.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("mcp: post request: %w", err)
@@ -252,7 +255,7 @@ func (t *sseTransport) readSSE(body io.ReadCloser, endpointCh chan<- string) {
 				dataBuf.WriteByte('\n')
 			}
 			dataBuf.WriteString(trimSSEFieldValue(line[len("data:"):]))
-		// id:, retry: are spec-defined but not used by MCP today; ignore.
+			// id:, retry: are spec-defined but not used by MCP today; ignore.
 		}
 		if err != nil {
 			// Stream closed. Flush any pending event that lacked a

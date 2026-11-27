@@ -79,14 +79,23 @@ export declare type PublicMetricValues = Message<"everstack.modelmetrics.v1.Publ
   avgLatencyMs: number;
 
   /**
-   * @generated from field: double avg_ttft_ms = 13;
+   * avg_ttft_ms and avg_throughput_tps are streaming-only measures: they are
+   * derived from the subset of requests that actually streamed. They are
+   * `optional` so that "no publishable sample" is a distinct state from a
+   * genuine zero -- an unset field is omitted from the JSON entirely, while a
+   * real 0 ms TTFT (a first chunk inside the same millisecond) is emitted as
+   * 0. The server leaves them unset when the streaming sample is too thin to
+   * mean anything; see MinimumStreamSamples / MinimumStreamCoverage in
+   * internal/modelmetrics/service.go.
+   *
+   * @generated from field: optional double avg_ttft_ms = 13;
    */
-  avgTtftMs: number;
+  avgTtftMs?: number;
 
   /**
-   * @generated from field: double avg_throughput_tps = 14;
+   * @generated from field: optional double avg_throughput_tps = 14;
    */
-  avgThroughputTps: number;
+  avgThroughputTps?: number;
 
   /**
    * @generated from field: double success_rate = 15;
@@ -162,12 +171,21 @@ export declare type PublicMetricValuesJson = {
   avgLatencyMs?: number | "NaN" | "Infinity" | "-Infinity";
 
   /**
-   * @generated from field: double avg_ttft_ms = 13;
+   * avg_ttft_ms and avg_throughput_tps are streaming-only measures: they are
+   * derived from the subset of requests that actually streamed. They are
+   * `optional` so that "no publishable sample" is a distinct state from a
+   * genuine zero -- an unset field is omitted from the JSON entirely, while a
+   * real 0 ms TTFT (a first chunk inside the same millisecond) is emitted as
+   * 0. The server leaves them unset when the streaming sample is too thin to
+   * mean anything; see MinimumStreamSamples / MinimumStreamCoverage in
+   * internal/modelmetrics/service.go.
+   *
+   * @generated from field: optional double avg_ttft_ms = 13;
    */
   avgTtftMs?: number | "NaN" | "Infinity" | "-Infinity";
 
   /**
-   * @generated from field: double avg_throughput_tps = 14;
+   * @generated from field: optional double avg_throughput_tps = 14;
    */
   avgThroughputTps?: number | "NaN" | "Infinity" | "-Infinity";
 

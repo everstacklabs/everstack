@@ -134,7 +134,7 @@ function LLMProvidersPage() {
 
             {/* Error State */}
             {error && (
-                <div className='flex-1 flex items-center justify-center text-red-400 light:text-red-600'>
+                <div className='flex-1 flex items-center justify-center text-danger'>
                     Error loading providers: {error.message}
                 </div>
             )}
@@ -272,14 +272,14 @@ function SelfHostedConfigSyncNotice() {
     }
 
     return (
-        <div className='flex items-center justify-between gap-3 border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-100 light:text-amber-900'>
+        <div className='flex items-center justify-between gap-3 border border-warning-border bg-warning-surface px-3 py-2 text-xs text-warning'>
             <div className='flex min-w-0 items-center gap-2.5'>
-                <span className='flex size-6 shrink-0 items-center justify-center rounded-sm bg-amber-500/10 text-amber-200 light:text-amber-700'>
+                <span className='flex size-6 shrink-0 items-center justify-center rounded-sm bg-warning-surface text-warning'>
                     <Iconify.Icon icon='mdi:file-refresh-outline' className='h-4 w-4' />
                 </span>
                 <div className='min-w-0'>
-                    <p className='font-medium text-amber-100 light:text-amber-900'>Provider config file changed</p>
-                    <p className='mt-0.5 truncate text-amber-100/65 light:text-amber-900/65'>
+                    <p className='font-medium text-warning'>Provider config file changed</p>
+                    <p className='mt-0.5 truncate text-warning/65'>
                         Reload to apply the latest YAML provider settings to the database.
                     </p>
                 </div>
@@ -294,7 +294,7 @@ function SelfHostedConfigSyncNotice() {
                     }
                 }}
                 disabled={reloadMutation.isPending}
-                className='shrink-0 rounded-xs border border-amber-400/25 px-2 py-1 text-amber-100 light:text-amber-900 hover:bg-amber-400/10 disabled:cursor-not-allowed disabled:opacity-50'
+                className='shrink-0 rounded-xs border border-warning-border px-2 py-1 text-warning hover:bg-warning-surface disabled:cursor-not-allowed disabled:opacity-50'
             >
                 {reloadMutation.isPending ? 'Reloading...' : 'Reload config'}
             </button>

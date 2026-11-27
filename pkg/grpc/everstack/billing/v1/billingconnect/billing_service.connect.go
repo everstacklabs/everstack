@@ -103,6 +103,66 @@ const (
 	// BillingServiceAdjustSeatsProcedure is the fully-qualified name of the BillingService's
 	// AdjustSeats RPC.
 	BillingServiceAdjustSeatsProcedure = "/everstack.billing.v1.BillingService/AdjustSeats"
+	// BillingServiceGetCreditBalanceProcedure is the fully-qualified name of the BillingService's
+	// GetCreditBalance RPC.
+	BillingServiceGetCreditBalanceProcedure = "/everstack.billing.v1.BillingService/GetCreditBalance"
+	// BillingServiceListCreditLedgerProcedure is the fully-qualified name of the BillingService's
+	// ListCreditLedger RPC.
+	BillingServiceListCreditLedgerProcedure = "/everstack.billing.v1.BillingService/ListCreditLedger"
+	// BillingServiceListInferenceAttemptsProcedure is the fully-qualified name of the BillingService's
+	// ListInferenceAttempts RPC.
+	BillingServiceListInferenceAttemptsProcedure = "/everstack.billing.v1.BillingService/ListInferenceAttempts"
+	// BillingServiceGetSpendStatusProcedure is the fully-qualified name of the BillingService's
+	// GetSpendStatus RPC.
+	BillingServiceGetSpendStatusProcedure = "/everstack.billing.v1.BillingService/GetSpendStatus"
+	// BillingServicePurchaseCreditsProcedure is the fully-qualified name of the BillingService's
+	// PurchaseCredits RPC.
+	BillingServicePurchaseCreditsProcedure = "/everstack.billing.v1.BillingService/PurchaseCredits"
+	// BillingServiceGetCreditPurchaseProcedure is the fully-qualified name of the BillingService's
+	// GetCreditPurchase RPC.
+	BillingServiceGetCreditPurchaseProcedure = "/everstack.billing.v1.BillingService/GetCreditPurchase"
+	// BillingServiceListCreditPurchasesProcedure is the fully-qualified name of the BillingService's
+	// ListCreditPurchases RPC.
+	BillingServiceListCreditPurchasesProcedure = "/everstack.billing.v1.BillingService/ListCreditPurchases"
+	// BillingServiceGetCreditPurchaseOptionsProcedure is the fully-qualified name of the
+	// BillingService's GetCreditPurchaseOptions RPC.
+	BillingServiceGetCreditPurchaseOptionsProcedure = "/everstack.billing.v1.BillingService/GetCreditPurchaseOptions"
+	// BillingServiceGetAutoTopUpPolicyProcedure is the fully-qualified name of the BillingService's
+	// GetAutoTopUpPolicy RPC.
+	BillingServiceGetAutoTopUpPolicyProcedure = "/everstack.billing.v1.BillingService/GetAutoTopUpPolicy"
+	// BillingServiceSetAutoTopUpPolicyProcedure is the fully-qualified name of the BillingService's
+	// SetAutoTopUpPolicy RPC.
+	BillingServiceSetAutoTopUpPolicyProcedure = "/everstack.billing.v1.BillingService/SetAutoTopUpPolicy"
+	// BillingServiceCreateSetupIntentProcedure is the fully-qualified name of the BillingService's
+	// CreateSetupIntent RPC.
+	BillingServiceCreateSetupIntentProcedure = "/everstack.billing.v1.BillingService/CreateSetupIntent"
+	// BillingServiceListPaymentMethodsProcedure is the fully-qualified name of the BillingService's
+	// ListPaymentMethods RPC.
+	BillingServiceListPaymentMethodsProcedure = "/everstack.billing.v1.BillingService/ListPaymentMethods"
+	// BillingServiceSetDefaultPaymentMethodProcedure is the fully-qualified name of the
+	// BillingService's SetDefaultPaymentMethod RPC.
+	BillingServiceSetDefaultPaymentMethodProcedure = "/everstack.billing.v1.BillingService/SetDefaultPaymentMethod"
+	// BillingServiceRemovePaymentMethodProcedure is the fully-qualified name of the BillingService's
+	// RemovePaymentMethod RPC.
+	BillingServiceRemovePaymentMethodProcedure = "/everstack.billing.v1.BillingService/RemovePaymentMethod"
+	// BillingServiceUpdatePaymentMethodProcedure is the fully-qualified name of the BillingService's
+	// UpdatePaymentMethod RPC.
+	BillingServiceUpdatePaymentMethodProcedure = "/everstack.billing.v1.BillingService/UpdatePaymentMethod"
+	// BillingServicePreviewPlanChangeProcedure is the fully-qualified name of the BillingService's
+	// PreviewPlanChange RPC.
+	BillingServicePreviewPlanChangeProcedure = "/everstack.billing.v1.BillingService/PreviewPlanChange"
+	// BillingServiceChangePlanProcedure is the fully-qualified name of the BillingService's ChangePlan
+	// RPC.
+	BillingServiceChangePlanProcedure = "/everstack.billing.v1.BillingService/ChangePlan"
+	// BillingServiceRegisterApiKeyProcedure is the fully-qualified name of the BillingService's
+	// RegisterApiKey RPC.
+	BillingServiceRegisterApiKeyProcedure = "/everstack.billing.v1.BillingService/RegisterApiKey"
+	// BillingServiceUnregisterApiKeyProcedure is the fully-qualified name of the BillingService's
+	// UnregisterApiKey RPC.
+	BillingServiceUnregisterApiKeyProcedure = "/everstack.billing.v1.BillingService/UnregisterApiKey"
+	// BillingServiceGetModelTrialProcedure is the fully-qualified name of the BillingService's
+	// GetModelTrial RPC.
+	BillingServiceGetModelTrialProcedure = "/everstack.billing.v1.BillingService/GetModelTrial"
 )
 
 // BillingServiceClient is a client for the everstack.billing.v1.BillingService service.
@@ -113,9 +173,14 @@ type BillingServiceClient interface {
 	CreateCheckoutSession(context.Context, *connect.Request[v1.CreateCheckoutSessionRequest]) (*connect.Response[v1.CreateCheckoutSessionResponse], error)
 	// CreateBillingPortalSession creates a Stripe billing portal session
 	CreateBillingPortalSession(context.Context, *connect.Request[v1.CreateBillingPortalSessionRequest]) (*connect.Response[v1.CreateBillingPortalSessionResponse], error)
-	// CancelSubscription cancels a subscription at period end
+	// CancelSubscription schedules cancellation at the period end (no
+	// refund). When the organization runs more instances than Starter allows,
+	// keep_instance_ids is required; the others pause at the period end.
+	// Idempotent. Owner or admin only.
 	CancelSubscription(context.Context, *connect.Request[v1.CancelSubscriptionRequest]) (*connect.Response[v1.CancelSubscriptionResponse], error)
-	// ResumeSubscription resumes a cancelled subscription
+	// ResumeSubscription withdraws a scheduled cancellation or scheduled
+	// downgrade before it takes effect, and the instance pauses that came
+	// with it. Idempotent. Owner or admin only.
 	ResumeSubscription(context.Context, *connect.Request[v1.ResumeSubscriptionRequest]) (*connect.Response[v1.ResumeSubscriptionResponse], error)
 	// ListInvoices lists invoices for an organization
 	ListInvoices(context.Context, *connect.Request[v1.ListInvoicesRequest]) (*connect.Response[v1.ListInvoicesResponse], error)
@@ -149,9 +214,13 @@ type BillingServiceClient interface {
 	CreateInstanceMapping(context.Context, *connect.Request[v1.CreateInstanceMappingRequest]) (*connect.Response[v1.CreateInstanceMappingResponse], error)
 	// GetSpendLimits retrieves all spend limits for an organization
 	GetSpendLimits(context.Context, *connect.Request[v1.GetSpendLimitsRequest]) (*connect.Response[v1.GetSpendLimitsResponse], error)
-	// SetSpendLimit creates or updates a spend limit
+	// SetSpendLimit creates or updates a spend limit. Owners and admins only.
+	// Creating, enabling or raising a limit needs a plan with the spend_limits
+	// feature, otherwise FAILED_PRECONDITION with ErrorInfo reason
+	// spend_limits_not_in_plan. Lowering, disabling and deleting are always
+	// allowed. Every change is audited.
 	SetSpendLimit(context.Context, *connect.Request[v1.SetSpendLimitRequest]) (*connect.Response[v1.SetSpendLimitResponse], error)
-	// DeleteSpendLimit removes a spend limit
+	// DeleteSpendLimit removes a spend limit. Owners and admins only; audited.
 	DeleteSpendLimit(context.Context, *connect.Request[v1.DeleteSpendLimitRequest]) (*connect.Response[v1.DeleteSpendLimitResponse], error)
 	// MigrateSubscription migrates a multi-item subscription to single-item (admin only)
 	MigrateSubscription(context.Context, *connect.Request[v1.MigrateSubscriptionRequest]) (*connect.Response[v1.MigrateSubscriptionResponse], error)
@@ -160,6 +229,92 @@ type BillingServiceClient interface {
 	// at 0). Free / Enterprise tiers reject. Stripe handles proration on
 	// the per-seat line item with create_prorations.
 	AdjustSeats(context.Context, *connect.Request[v1.AdjustSeatsRequest]) (*connect.Response[v1.AdjustSeatsResponse], error)
+	// GetCreditBalance returns the organization's prepaid credit wallet:
+	// ledger balance, credit reserved by in-flight requests, what is spendable
+	// now, and lifetime totals. Read by any organization member. A read that
+	// cannot reach the ledger fails with Unavailable, never a zero balance.
+	GetCreditBalance(context.Context, *connect.Request[v1.GetCreditBalanceRequest]) (*connect.Response[v1.GetCreditBalanceResponse], error)
+	// ListCreditLedger pages the organization's credit history, newest first,
+	// with optional entry type, resource type and time filters. Read by any
+	// organization member. Internal deduplication keys are never returned.
+	ListCreditLedger(context.Context, *connect.Request[v1.ListCreditLedgerRequest]) (*connect.Response[v1.ListCreditLedgerResponse], error)
+	// ListInferenceAttempts pages the organization's inference requests,
+	// newest first, each with every provider attempt it made: what was served,
+	// what lost a race or failed before a fallback, and what each attempt was
+	// charged. Read by any organization member. Internal identifiers (request,
+	// key and ledger ids) are never returned.
+	ListInferenceAttempts(context.Context, *connect.Request[v1.ListInferenceAttemptsRequest]) (*connect.Response[v1.ListInferenceAttemptsResponse], error)
+	// GetSpendStatus returns the organization's estimated inference spend for
+	// the current UTC day and UTC month: Everstack credit charged plus
+	// traffic on the organization's own provider keys at list price, in total
+	// and per gateway API key, with the count of attempts on models that have
+	// no list price (not priced, not counted). Read-only, from hourly rollups
+	// that trail live traffic by about a minute (see as_of). Read by any
+	// organization member.
+	GetSpendStatus(context.Context, *connect.Request[v1.GetSpendStatusRequest]) (*connect.Response[v1.GetSpendStatusResponse], error)
+	// PurchaseCredits starts a prepaid credit top-up: it records a pending
+	// purchase and returns a Stripe Checkout URL. Owner or admin only.
+	// FailedPrecondition while purchases are switched off.
+	PurchaseCredits(context.Context, *connect.Request[v1.PurchaseCreditsRequest]) (*connect.Response[v1.PurchaseCreditsResponse], error)
+	// GetCreditPurchase returns one purchase of the organization. The return
+	// page polls it; only state PAID means the credit is available.
+	GetCreditPurchase(context.Context, *connect.Request[v1.GetCreditPurchaseRequest]) (*connect.Response[v1.GetCreditPurchaseResponse], error)
+	// ListCreditPurchases lists the organization's purchases, newest first.
+	ListCreditPurchases(context.Context, *connect.Request[v1.ListCreditPurchasesRequest]) (*connect.Response[v1.ListCreditPurchasesResponse], error)
+	// GetCreditPurchaseOptions returns whether self-serve purchase is on and
+	// the top-up presets and limits.
+	GetCreditPurchaseOptions(context.Context, *connect.Request[v1.GetCreditPurchaseOptionsRequest]) (*connect.Response[v1.GetCreditPurchaseOptionsResponse], error)
+	// GetAutoTopUpPolicy returns the organization's auto top-up settings,
+	// this month's usage of the cap and the last attempt. Any organization
+	// member (docs/design/auto-top-up.md).
+	GetAutoTopUpPolicy(context.Context, *connect.Request[v1.GetAutoTopUpPolicyRequest]) (*connect.Response[v1.GetAutoTopUpPolicyResponse], error)
+	// SetAutoTopUpPolicy turns auto top-up on or off or changes its terms.
+	// Turning it on or editing records consent to the exact terms shown.
+	// A charge already in progress is not affected. Owner or admin only.
+	SetAutoTopUpPolicy(context.Context, *connect.Request[v1.SetAutoTopUpPolicyRequest]) (*connect.Response[v1.SetAutoTopUpPolicyResponse], error)
+	// CreateSetupIntent starts saving a card for the organization's Stripe
+	// customer (created if missing) and returns the SetupIntent client secret
+	// for Stripe Elements. Owner or admin only.
+	CreateSetupIntent(context.Context, *connect.Request[v1.CreateSetupIntentRequest]) (*connect.Response[v1.CreateSetupIntentResponse], error)
+	// ListPaymentMethods lists the organization's active saved payment
+	// methods, default first. Any organization member.
+	ListPaymentMethods(context.Context, *connect.Request[v1.ListPaymentMethodsRequest]) (*connect.Response[v1.ListPaymentMethodsResponse], error)
+	// SetDefaultPaymentMethod makes one saved payment method the default for
+	// future charges. Owner or admin only.
+	SetDefaultPaymentMethod(context.Context, *connect.Request[v1.SetDefaultPaymentMethodRequest]) (*connect.Response[v1.SetDefaultPaymentMethodResponse], error)
+	// RemovePaymentMethod detaches a saved payment method in Stripe. Removing
+	// the default promotes the most recently added remaining card. Owner or
+	// admin only.
+	RemovePaymentMethod(context.Context, *connect.Request[v1.RemovePaymentMethodRequest]) (*connect.Response[v1.RemovePaymentMethodResponse], error)
+	// UpdatePaymentMethod changes a saved card's expiry and billing details
+	// in Stripe, then re-syncs it. Cards only (a Link method is replaced, not
+	// edited). Owner or admin only.
+	UpdatePaymentMethod(context.Context, *connect.Request[v1.UpdatePaymentMethodRequest]) (*connect.Response[v1.UpdatePaymentMethodResponse], error)
+	// PreviewPlanChange prices and explains a plan or interval change before
+	// it is made: timing, new limits, instances over the new limit, the
+	// prorated charge for an upgrade. Owner or admin only.
+	PreviewPlanChange(context.Context, *connect.Request[v1.PreviewPlanChangeRequest]) (*connect.Response[v1.PreviewPlanChangeResponse], error)
+	// ChangePlan upgrades now with proration (charging the default card) or
+	// schedules a downgrade for the period end. Owner or admin only. Refused
+	// while the organization is past due.
+	ChangePlan(context.Context, *connect.Request[v1.ChangePlanRequest]) (*connect.Response[v1.ChangePlanResponse], error)
+	// RegisterApiKey records which organization a gateway API key belongs to,
+	// so SetSpendLimit can accept a limit for a key that has made no request
+	// yet. Internal only: callable by the managed gateway's M2M client right
+	// after it creates the key, never by a customer session. The tenant is
+	// the one the gateway stored on the key; billing resolves it to the
+	// organization. Idempotent.
+	RegisterApiKey(context.Context, *connect.Request[v1.RegisterApiKeyRequest]) (*connect.Response[v1.RegisterApiKeyResponse], error)
+	// UnregisterApiKey removes the ownership record of a gateway API key the
+	// gateway deleted. Internal only, same caller as RegisterApiKey. Removes
+	// only the row for that key id owned by the organization the tenant
+	// resolves to; a key of another organization is never touched. Idempotent.
+	UnregisterApiKey(context.Context, *connect.Request[v1.UnregisterApiKeyRequest]) (*connect.Response[v1.UnregisterApiKeyResponse], error)
+	// GetModelTrial returns the organization's free model requests: how many
+	// it has, how many it used, and whether it can use them now
+	// (docs/design/free-trial-onboarding.md 4.2). Read-only; never grants.
+	// Read by any organization member.
+	GetModelTrial(context.Context, *connect.Request[v1.GetModelTrialRequest]) (*connect.Response[v1.GetModelTrialResponse], error)
 }
 
 // NewBillingServiceClient constructs a client for the everstack.billing.v1.BillingService service.
@@ -317,6 +472,126 @@ func NewBillingServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(billingServiceMethods.ByName("AdjustSeats")),
 			connect.WithClientOptions(opts...),
 		),
+		getCreditBalance: connect.NewClient[v1.GetCreditBalanceRequest, v1.GetCreditBalanceResponse](
+			httpClient,
+			baseURL+BillingServiceGetCreditBalanceProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("GetCreditBalance")),
+			connect.WithClientOptions(opts...),
+		),
+		listCreditLedger: connect.NewClient[v1.ListCreditLedgerRequest, v1.ListCreditLedgerResponse](
+			httpClient,
+			baseURL+BillingServiceListCreditLedgerProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("ListCreditLedger")),
+			connect.WithClientOptions(opts...),
+		),
+		listInferenceAttempts: connect.NewClient[v1.ListInferenceAttemptsRequest, v1.ListInferenceAttemptsResponse](
+			httpClient,
+			baseURL+BillingServiceListInferenceAttemptsProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("ListInferenceAttempts")),
+			connect.WithClientOptions(opts...),
+		),
+		getSpendStatus: connect.NewClient[v1.GetSpendStatusRequest, v1.GetSpendStatusResponse](
+			httpClient,
+			baseURL+BillingServiceGetSpendStatusProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("GetSpendStatus")),
+			connect.WithClientOptions(opts...),
+		),
+		purchaseCredits: connect.NewClient[v1.PurchaseCreditsRequest, v1.PurchaseCreditsResponse](
+			httpClient,
+			baseURL+BillingServicePurchaseCreditsProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("PurchaseCredits")),
+			connect.WithClientOptions(opts...),
+		),
+		getCreditPurchase: connect.NewClient[v1.GetCreditPurchaseRequest, v1.GetCreditPurchaseResponse](
+			httpClient,
+			baseURL+BillingServiceGetCreditPurchaseProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("GetCreditPurchase")),
+			connect.WithClientOptions(opts...),
+		),
+		listCreditPurchases: connect.NewClient[v1.ListCreditPurchasesRequest, v1.ListCreditPurchasesResponse](
+			httpClient,
+			baseURL+BillingServiceListCreditPurchasesProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("ListCreditPurchases")),
+			connect.WithClientOptions(opts...),
+		),
+		getCreditPurchaseOptions: connect.NewClient[v1.GetCreditPurchaseOptionsRequest, v1.GetCreditPurchaseOptionsResponse](
+			httpClient,
+			baseURL+BillingServiceGetCreditPurchaseOptionsProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("GetCreditPurchaseOptions")),
+			connect.WithClientOptions(opts...),
+		),
+		getAutoTopUpPolicy: connect.NewClient[v1.GetAutoTopUpPolicyRequest, v1.GetAutoTopUpPolicyResponse](
+			httpClient,
+			baseURL+BillingServiceGetAutoTopUpPolicyProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("GetAutoTopUpPolicy")),
+			connect.WithClientOptions(opts...),
+		),
+		setAutoTopUpPolicy: connect.NewClient[v1.SetAutoTopUpPolicyRequest, v1.SetAutoTopUpPolicyResponse](
+			httpClient,
+			baseURL+BillingServiceSetAutoTopUpPolicyProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("SetAutoTopUpPolicy")),
+			connect.WithClientOptions(opts...),
+		),
+		createSetupIntent: connect.NewClient[v1.CreateSetupIntentRequest, v1.CreateSetupIntentResponse](
+			httpClient,
+			baseURL+BillingServiceCreateSetupIntentProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("CreateSetupIntent")),
+			connect.WithClientOptions(opts...),
+		),
+		listPaymentMethods: connect.NewClient[v1.ListPaymentMethodsRequest, v1.ListPaymentMethodsResponse](
+			httpClient,
+			baseURL+BillingServiceListPaymentMethodsProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("ListPaymentMethods")),
+			connect.WithClientOptions(opts...),
+		),
+		setDefaultPaymentMethod: connect.NewClient[v1.SetDefaultPaymentMethodRequest, v1.SetDefaultPaymentMethodResponse](
+			httpClient,
+			baseURL+BillingServiceSetDefaultPaymentMethodProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("SetDefaultPaymentMethod")),
+			connect.WithClientOptions(opts...),
+		),
+		removePaymentMethod: connect.NewClient[v1.RemovePaymentMethodRequest, v1.RemovePaymentMethodResponse](
+			httpClient,
+			baseURL+BillingServiceRemovePaymentMethodProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("RemovePaymentMethod")),
+			connect.WithClientOptions(opts...),
+		),
+		updatePaymentMethod: connect.NewClient[v1.UpdatePaymentMethodRequest, v1.UpdatePaymentMethodResponse](
+			httpClient,
+			baseURL+BillingServiceUpdatePaymentMethodProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("UpdatePaymentMethod")),
+			connect.WithClientOptions(opts...),
+		),
+		previewPlanChange: connect.NewClient[v1.PreviewPlanChangeRequest, v1.PreviewPlanChangeResponse](
+			httpClient,
+			baseURL+BillingServicePreviewPlanChangeProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("PreviewPlanChange")),
+			connect.WithClientOptions(opts...),
+		),
+		changePlan: connect.NewClient[v1.ChangePlanRequest, v1.ChangePlanResponse](
+			httpClient,
+			baseURL+BillingServiceChangePlanProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("ChangePlan")),
+			connect.WithClientOptions(opts...),
+		),
+		registerApiKey: connect.NewClient[v1.RegisterApiKeyRequest, v1.RegisterApiKeyResponse](
+			httpClient,
+			baseURL+BillingServiceRegisterApiKeyProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("RegisterApiKey")),
+			connect.WithClientOptions(opts...),
+		),
+		unregisterApiKey: connect.NewClient[v1.UnregisterApiKeyRequest, v1.UnregisterApiKeyResponse](
+			httpClient,
+			baseURL+BillingServiceUnregisterApiKeyProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("UnregisterApiKey")),
+			connect.WithClientOptions(opts...),
+		),
+		getModelTrial: connect.NewClient[v1.GetModelTrialRequest, v1.GetModelTrialResponse](
+			httpClient,
+			baseURL+BillingServiceGetModelTrialProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("GetModelTrial")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -346,6 +621,26 @@ type billingServiceClient struct {
 	deleteSpendLimit           *connect.Client[v1.DeleteSpendLimitRequest, v1.DeleteSpendLimitResponse]
 	migrateSubscription        *connect.Client[v1.MigrateSubscriptionRequest, v1.MigrateSubscriptionResponse]
 	adjustSeats                *connect.Client[v1.AdjustSeatsRequest, v1.AdjustSeatsResponse]
+	getCreditBalance           *connect.Client[v1.GetCreditBalanceRequest, v1.GetCreditBalanceResponse]
+	listCreditLedger           *connect.Client[v1.ListCreditLedgerRequest, v1.ListCreditLedgerResponse]
+	listInferenceAttempts      *connect.Client[v1.ListInferenceAttemptsRequest, v1.ListInferenceAttemptsResponse]
+	getSpendStatus             *connect.Client[v1.GetSpendStatusRequest, v1.GetSpendStatusResponse]
+	purchaseCredits            *connect.Client[v1.PurchaseCreditsRequest, v1.PurchaseCreditsResponse]
+	getCreditPurchase          *connect.Client[v1.GetCreditPurchaseRequest, v1.GetCreditPurchaseResponse]
+	listCreditPurchases        *connect.Client[v1.ListCreditPurchasesRequest, v1.ListCreditPurchasesResponse]
+	getCreditPurchaseOptions   *connect.Client[v1.GetCreditPurchaseOptionsRequest, v1.GetCreditPurchaseOptionsResponse]
+	getAutoTopUpPolicy         *connect.Client[v1.GetAutoTopUpPolicyRequest, v1.GetAutoTopUpPolicyResponse]
+	setAutoTopUpPolicy         *connect.Client[v1.SetAutoTopUpPolicyRequest, v1.SetAutoTopUpPolicyResponse]
+	createSetupIntent          *connect.Client[v1.CreateSetupIntentRequest, v1.CreateSetupIntentResponse]
+	listPaymentMethods         *connect.Client[v1.ListPaymentMethodsRequest, v1.ListPaymentMethodsResponse]
+	setDefaultPaymentMethod    *connect.Client[v1.SetDefaultPaymentMethodRequest, v1.SetDefaultPaymentMethodResponse]
+	removePaymentMethod        *connect.Client[v1.RemovePaymentMethodRequest, v1.RemovePaymentMethodResponse]
+	updatePaymentMethod        *connect.Client[v1.UpdatePaymentMethodRequest, v1.UpdatePaymentMethodResponse]
+	previewPlanChange          *connect.Client[v1.PreviewPlanChangeRequest, v1.PreviewPlanChangeResponse]
+	changePlan                 *connect.Client[v1.ChangePlanRequest, v1.ChangePlanResponse]
+	registerApiKey             *connect.Client[v1.RegisterApiKeyRequest, v1.RegisterApiKeyResponse]
+	unregisterApiKey           *connect.Client[v1.UnregisterApiKeyRequest, v1.UnregisterApiKeyResponse]
+	getModelTrial              *connect.Client[v1.GetModelTrialRequest, v1.GetModelTrialResponse]
 }
 
 // GetSubscription calls everstack.billing.v1.BillingService.GetSubscription.
@@ -468,6 +763,106 @@ func (c *billingServiceClient) AdjustSeats(ctx context.Context, req *connect.Req
 	return c.adjustSeats.CallUnary(ctx, req)
 }
 
+// GetCreditBalance calls everstack.billing.v1.BillingService.GetCreditBalance.
+func (c *billingServiceClient) GetCreditBalance(ctx context.Context, req *connect.Request[v1.GetCreditBalanceRequest]) (*connect.Response[v1.GetCreditBalanceResponse], error) {
+	return c.getCreditBalance.CallUnary(ctx, req)
+}
+
+// ListCreditLedger calls everstack.billing.v1.BillingService.ListCreditLedger.
+func (c *billingServiceClient) ListCreditLedger(ctx context.Context, req *connect.Request[v1.ListCreditLedgerRequest]) (*connect.Response[v1.ListCreditLedgerResponse], error) {
+	return c.listCreditLedger.CallUnary(ctx, req)
+}
+
+// ListInferenceAttempts calls everstack.billing.v1.BillingService.ListInferenceAttempts.
+func (c *billingServiceClient) ListInferenceAttempts(ctx context.Context, req *connect.Request[v1.ListInferenceAttemptsRequest]) (*connect.Response[v1.ListInferenceAttemptsResponse], error) {
+	return c.listInferenceAttempts.CallUnary(ctx, req)
+}
+
+// GetSpendStatus calls everstack.billing.v1.BillingService.GetSpendStatus.
+func (c *billingServiceClient) GetSpendStatus(ctx context.Context, req *connect.Request[v1.GetSpendStatusRequest]) (*connect.Response[v1.GetSpendStatusResponse], error) {
+	return c.getSpendStatus.CallUnary(ctx, req)
+}
+
+// PurchaseCredits calls everstack.billing.v1.BillingService.PurchaseCredits.
+func (c *billingServiceClient) PurchaseCredits(ctx context.Context, req *connect.Request[v1.PurchaseCreditsRequest]) (*connect.Response[v1.PurchaseCreditsResponse], error) {
+	return c.purchaseCredits.CallUnary(ctx, req)
+}
+
+// GetCreditPurchase calls everstack.billing.v1.BillingService.GetCreditPurchase.
+func (c *billingServiceClient) GetCreditPurchase(ctx context.Context, req *connect.Request[v1.GetCreditPurchaseRequest]) (*connect.Response[v1.GetCreditPurchaseResponse], error) {
+	return c.getCreditPurchase.CallUnary(ctx, req)
+}
+
+// ListCreditPurchases calls everstack.billing.v1.BillingService.ListCreditPurchases.
+func (c *billingServiceClient) ListCreditPurchases(ctx context.Context, req *connect.Request[v1.ListCreditPurchasesRequest]) (*connect.Response[v1.ListCreditPurchasesResponse], error) {
+	return c.listCreditPurchases.CallUnary(ctx, req)
+}
+
+// GetCreditPurchaseOptions calls everstack.billing.v1.BillingService.GetCreditPurchaseOptions.
+func (c *billingServiceClient) GetCreditPurchaseOptions(ctx context.Context, req *connect.Request[v1.GetCreditPurchaseOptionsRequest]) (*connect.Response[v1.GetCreditPurchaseOptionsResponse], error) {
+	return c.getCreditPurchaseOptions.CallUnary(ctx, req)
+}
+
+// GetAutoTopUpPolicy calls everstack.billing.v1.BillingService.GetAutoTopUpPolicy.
+func (c *billingServiceClient) GetAutoTopUpPolicy(ctx context.Context, req *connect.Request[v1.GetAutoTopUpPolicyRequest]) (*connect.Response[v1.GetAutoTopUpPolicyResponse], error) {
+	return c.getAutoTopUpPolicy.CallUnary(ctx, req)
+}
+
+// SetAutoTopUpPolicy calls everstack.billing.v1.BillingService.SetAutoTopUpPolicy.
+func (c *billingServiceClient) SetAutoTopUpPolicy(ctx context.Context, req *connect.Request[v1.SetAutoTopUpPolicyRequest]) (*connect.Response[v1.SetAutoTopUpPolicyResponse], error) {
+	return c.setAutoTopUpPolicy.CallUnary(ctx, req)
+}
+
+// CreateSetupIntent calls everstack.billing.v1.BillingService.CreateSetupIntent.
+func (c *billingServiceClient) CreateSetupIntent(ctx context.Context, req *connect.Request[v1.CreateSetupIntentRequest]) (*connect.Response[v1.CreateSetupIntentResponse], error) {
+	return c.createSetupIntent.CallUnary(ctx, req)
+}
+
+// ListPaymentMethods calls everstack.billing.v1.BillingService.ListPaymentMethods.
+func (c *billingServiceClient) ListPaymentMethods(ctx context.Context, req *connect.Request[v1.ListPaymentMethodsRequest]) (*connect.Response[v1.ListPaymentMethodsResponse], error) {
+	return c.listPaymentMethods.CallUnary(ctx, req)
+}
+
+// SetDefaultPaymentMethod calls everstack.billing.v1.BillingService.SetDefaultPaymentMethod.
+func (c *billingServiceClient) SetDefaultPaymentMethod(ctx context.Context, req *connect.Request[v1.SetDefaultPaymentMethodRequest]) (*connect.Response[v1.SetDefaultPaymentMethodResponse], error) {
+	return c.setDefaultPaymentMethod.CallUnary(ctx, req)
+}
+
+// RemovePaymentMethod calls everstack.billing.v1.BillingService.RemovePaymentMethod.
+func (c *billingServiceClient) RemovePaymentMethod(ctx context.Context, req *connect.Request[v1.RemovePaymentMethodRequest]) (*connect.Response[v1.RemovePaymentMethodResponse], error) {
+	return c.removePaymentMethod.CallUnary(ctx, req)
+}
+
+// UpdatePaymentMethod calls everstack.billing.v1.BillingService.UpdatePaymentMethod.
+func (c *billingServiceClient) UpdatePaymentMethod(ctx context.Context, req *connect.Request[v1.UpdatePaymentMethodRequest]) (*connect.Response[v1.UpdatePaymentMethodResponse], error) {
+	return c.updatePaymentMethod.CallUnary(ctx, req)
+}
+
+// PreviewPlanChange calls everstack.billing.v1.BillingService.PreviewPlanChange.
+func (c *billingServiceClient) PreviewPlanChange(ctx context.Context, req *connect.Request[v1.PreviewPlanChangeRequest]) (*connect.Response[v1.PreviewPlanChangeResponse], error) {
+	return c.previewPlanChange.CallUnary(ctx, req)
+}
+
+// ChangePlan calls everstack.billing.v1.BillingService.ChangePlan.
+func (c *billingServiceClient) ChangePlan(ctx context.Context, req *connect.Request[v1.ChangePlanRequest]) (*connect.Response[v1.ChangePlanResponse], error) {
+	return c.changePlan.CallUnary(ctx, req)
+}
+
+// RegisterApiKey calls everstack.billing.v1.BillingService.RegisterApiKey.
+func (c *billingServiceClient) RegisterApiKey(ctx context.Context, req *connect.Request[v1.RegisterApiKeyRequest]) (*connect.Response[v1.RegisterApiKeyResponse], error) {
+	return c.registerApiKey.CallUnary(ctx, req)
+}
+
+// UnregisterApiKey calls everstack.billing.v1.BillingService.UnregisterApiKey.
+func (c *billingServiceClient) UnregisterApiKey(ctx context.Context, req *connect.Request[v1.UnregisterApiKeyRequest]) (*connect.Response[v1.UnregisterApiKeyResponse], error) {
+	return c.unregisterApiKey.CallUnary(ctx, req)
+}
+
+// GetModelTrial calls everstack.billing.v1.BillingService.GetModelTrial.
+func (c *billingServiceClient) GetModelTrial(ctx context.Context, req *connect.Request[v1.GetModelTrialRequest]) (*connect.Response[v1.GetModelTrialResponse], error) {
+	return c.getModelTrial.CallUnary(ctx, req)
+}
+
 // BillingServiceHandler is an implementation of the everstack.billing.v1.BillingService service.
 type BillingServiceHandler interface {
 	// GetSubscription returns the subscription for an organization
@@ -476,9 +871,14 @@ type BillingServiceHandler interface {
 	CreateCheckoutSession(context.Context, *connect.Request[v1.CreateCheckoutSessionRequest]) (*connect.Response[v1.CreateCheckoutSessionResponse], error)
 	// CreateBillingPortalSession creates a Stripe billing portal session
 	CreateBillingPortalSession(context.Context, *connect.Request[v1.CreateBillingPortalSessionRequest]) (*connect.Response[v1.CreateBillingPortalSessionResponse], error)
-	// CancelSubscription cancels a subscription at period end
+	// CancelSubscription schedules cancellation at the period end (no
+	// refund). When the organization runs more instances than Starter allows,
+	// keep_instance_ids is required; the others pause at the period end.
+	// Idempotent. Owner or admin only.
 	CancelSubscription(context.Context, *connect.Request[v1.CancelSubscriptionRequest]) (*connect.Response[v1.CancelSubscriptionResponse], error)
-	// ResumeSubscription resumes a cancelled subscription
+	// ResumeSubscription withdraws a scheduled cancellation or scheduled
+	// downgrade before it takes effect, and the instance pauses that came
+	// with it. Idempotent. Owner or admin only.
 	ResumeSubscription(context.Context, *connect.Request[v1.ResumeSubscriptionRequest]) (*connect.Response[v1.ResumeSubscriptionResponse], error)
 	// ListInvoices lists invoices for an organization
 	ListInvoices(context.Context, *connect.Request[v1.ListInvoicesRequest]) (*connect.Response[v1.ListInvoicesResponse], error)
@@ -512,9 +912,13 @@ type BillingServiceHandler interface {
 	CreateInstanceMapping(context.Context, *connect.Request[v1.CreateInstanceMappingRequest]) (*connect.Response[v1.CreateInstanceMappingResponse], error)
 	// GetSpendLimits retrieves all spend limits for an organization
 	GetSpendLimits(context.Context, *connect.Request[v1.GetSpendLimitsRequest]) (*connect.Response[v1.GetSpendLimitsResponse], error)
-	// SetSpendLimit creates or updates a spend limit
+	// SetSpendLimit creates or updates a spend limit. Owners and admins only.
+	// Creating, enabling or raising a limit needs a plan with the spend_limits
+	// feature, otherwise FAILED_PRECONDITION with ErrorInfo reason
+	// spend_limits_not_in_plan. Lowering, disabling and deleting are always
+	// allowed. Every change is audited.
 	SetSpendLimit(context.Context, *connect.Request[v1.SetSpendLimitRequest]) (*connect.Response[v1.SetSpendLimitResponse], error)
-	// DeleteSpendLimit removes a spend limit
+	// DeleteSpendLimit removes a spend limit. Owners and admins only; audited.
 	DeleteSpendLimit(context.Context, *connect.Request[v1.DeleteSpendLimitRequest]) (*connect.Response[v1.DeleteSpendLimitResponse], error)
 	// MigrateSubscription migrates a multi-item subscription to single-item (admin only)
 	MigrateSubscription(context.Context, *connect.Request[v1.MigrateSubscriptionRequest]) (*connect.Response[v1.MigrateSubscriptionResponse], error)
@@ -523,6 +927,92 @@ type BillingServiceHandler interface {
 	// at 0). Free / Enterprise tiers reject. Stripe handles proration on
 	// the per-seat line item with create_prorations.
 	AdjustSeats(context.Context, *connect.Request[v1.AdjustSeatsRequest]) (*connect.Response[v1.AdjustSeatsResponse], error)
+	// GetCreditBalance returns the organization's prepaid credit wallet:
+	// ledger balance, credit reserved by in-flight requests, what is spendable
+	// now, and lifetime totals. Read by any organization member. A read that
+	// cannot reach the ledger fails with Unavailable, never a zero balance.
+	GetCreditBalance(context.Context, *connect.Request[v1.GetCreditBalanceRequest]) (*connect.Response[v1.GetCreditBalanceResponse], error)
+	// ListCreditLedger pages the organization's credit history, newest first,
+	// with optional entry type, resource type and time filters. Read by any
+	// organization member. Internal deduplication keys are never returned.
+	ListCreditLedger(context.Context, *connect.Request[v1.ListCreditLedgerRequest]) (*connect.Response[v1.ListCreditLedgerResponse], error)
+	// ListInferenceAttempts pages the organization's inference requests,
+	// newest first, each with every provider attempt it made: what was served,
+	// what lost a race or failed before a fallback, and what each attempt was
+	// charged. Read by any organization member. Internal identifiers (request,
+	// key and ledger ids) are never returned.
+	ListInferenceAttempts(context.Context, *connect.Request[v1.ListInferenceAttemptsRequest]) (*connect.Response[v1.ListInferenceAttemptsResponse], error)
+	// GetSpendStatus returns the organization's estimated inference spend for
+	// the current UTC day and UTC month: Everstack credit charged plus
+	// traffic on the organization's own provider keys at list price, in total
+	// and per gateway API key, with the count of attempts on models that have
+	// no list price (not priced, not counted). Read-only, from hourly rollups
+	// that trail live traffic by about a minute (see as_of). Read by any
+	// organization member.
+	GetSpendStatus(context.Context, *connect.Request[v1.GetSpendStatusRequest]) (*connect.Response[v1.GetSpendStatusResponse], error)
+	// PurchaseCredits starts a prepaid credit top-up: it records a pending
+	// purchase and returns a Stripe Checkout URL. Owner or admin only.
+	// FailedPrecondition while purchases are switched off.
+	PurchaseCredits(context.Context, *connect.Request[v1.PurchaseCreditsRequest]) (*connect.Response[v1.PurchaseCreditsResponse], error)
+	// GetCreditPurchase returns one purchase of the organization. The return
+	// page polls it; only state PAID means the credit is available.
+	GetCreditPurchase(context.Context, *connect.Request[v1.GetCreditPurchaseRequest]) (*connect.Response[v1.GetCreditPurchaseResponse], error)
+	// ListCreditPurchases lists the organization's purchases, newest first.
+	ListCreditPurchases(context.Context, *connect.Request[v1.ListCreditPurchasesRequest]) (*connect.Response[v1.ListCreditPurchasesResponse], error)
+	// GetCreditPurchaseOptions returns whether self-serve purchase is on and
+	// the top-up presets and limits.
+	GetCreditPurchaseOptions(context.Context, *connect.Request[v1.GetCreditPurchaseOptionsRequest]) (*connect.Response[v1.GetCreditPurchaseOptionsResponse], error)
+	// GetAutoTopUpPolicy returns the organization's auto top-up settings,
+	// this month's usage of the cap and the last attempt. Any organization
+	// member (docs/design/auto-top-up.md).
+	GetAutoTopUpPolicy(context.Context, *connect.Request[v1.GetAutoTopUpPolicyRequest]) (*connect.Response[v1.GetAutoTopUpPolicyResponse], error)
+	// SetAutoTopUpPolicy turns auto top-up on or off or changes its terms.
+	// Turning it on or editing records consent to the exact terms shown.
+	// A charge already in progress is not affected. Owner or admin only.
+	SetAutoTopUpPolicy(context.Context, *connect.Request[v1.SetAutoTopUpPolicyRequest]) (*connect.Response[v1.SetAutoTopUpPolicyResponse], error)
+	// CreateSetupIntent starts saving a card for the organization's Stripe
+	// customer (created if missing) and returns the SetupIntent client secret
+	// for Stripe Elements. Owner or admin only.
+	CreateSetupIntent(context.Context, *connect.Request[v1.CreateSetupIntentRequest]) (*connect.Response[v1.CreateSetupIntentResponse], error)
+	// ListPaymentMethods lists the organization's active saved payment
+	// methods, default first. Any organization member.
+	ListPaymentMethods(context.Context, *connect.Request[v1.ListPaymentMethodsRequest]) (*connect.Response[v1.ListPaymentMethodsResponse], error)
+	// SetDefaultPaymentMethod makes one saved payment method the default for
+	// future charges. Owner or admin only.
+	SetDefaultPaymentMethod(context.Context, *connect.Request[v1.SetDefaultPaymentMethodRequest]) (*connect.Response[v1.SetDefaultPaymentMethodResponse], error)
+	// RemovePaymentMethod detaches a saved payment method in Stripe. Removing
+	// the default promotes the most recently added remaining card. Owner or
+	// admin only.
+	RemovePaymentMethod(context.Context, *connect.Request[v1.RemovePaymentMethodRequest]) (*connect.Response[v1.RemovePaymentMethodResponse], error)
+	// UpdatePaymentMethod changes a saved card's expiry and billing details
+	// in Stripe, then re-syncs it. Cards only (a Link method is replaced, not
+	// edited). Owner or admin only.
+	UpdatePaymentMethod(context.Context, *connect.Request[v1.UpdatePaymentMethodRequest]) (*connect.Response[v1.UpdatePaymentMethodResponse], error)
+	// PreviewPlanChange prices and explains a plan or interval change before
+	// it is made: timing, new limits, instances over the new limit, the
+	// prorated charge for an upgrade. Owner or admin only.
+	PreviewPlanChange(context.Context, *connect.Request[v1.PreviewPlanChangeRequest]) (*connect.Response[v1.PreviewPlanChangeResponse], error)
+	// ChangePlan upgrades now with proration (charging the default card) or
+	// schedules a downgrade for the period end. Owner or admin only. Refused
+	// while the organization is past due.
+	ChangePlan(context.Context, *connect.Request[v1.ChangePlanRequest]) (*connect.Response[v1.ChangePlanResponse], error)
+	// RegisterApiKey records which organization a gateway API key belongs to,
+	// so SetSpendLimit can accept a limit for a key that has made no request
+	// yet. Internal only: callable by the managed gateway's M2M client right
+	// after it creates the key, never by a customer session. The tenant is
+	// the one the gateway stored on the key; billing resolves it to the
+	// organization. Idempotent.
+	RegisterApiKey(context.Context, *connect.Request[v1.RegisterApiKeyRequest]) (*connect.Response[v1.RegisterApiKeyResponse], error)
+	// UnregisterApiKey removes the ownership record of a gateway API key the
+	// gateway deleted. Internal only, same caller as RegisterApiKey. Removes
+	// only the row for that key id owned by the organization the tenant
+	// resolves to; a key of another organization is never touched. Idempotent.
+	UnregisterApiKey(context.Context, *connect.Request[v1.UnregisterApiKeyRequest]) (*connect.Response[v1.UnregisterApiKeyResponse], error)
+	// GetModelTrial returns the organization's free model requests: how many
+	// it has, how many it used, and whether it can use them now
+	// (docs/design/free-trial-onboarding.md 4.2). Read-only; never grants.
+	// Read by any organization member.
+	GetModelTrial(context.Context, *connect.Request[v1.GetModelTrialRequest]) (*connect.Response[v1.GetModelTrialResponse], error)
 }
 
 // NewBillingServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -676,6 +1166,126 @@ func NewBillingServiceHandler(svc BillingServiceHandler, opts ...connect.Handler
 		connect.WithSchema(billingServiceMethods.ByName("AdjustSeats")),
 		connect.WithHandlerOptions(opts...),
 	)
+	billingServiceGetCreditBalanceHandler := connect.NewUnaryHandler(
+		BillingServiceGetCreditBalanceProcedure,
+		svc.GetCreditBalance,
+		connect.WithSchema(billingServiceMethods.ByName("GetCreditBalance")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceListCreditLedgerHandler := connect.NewUnaryHandler(
+		BillingServiceListCreditLedgerProcedure,
+		svc.ListCreditLedger,
+		connect.WithSchema(billingServiceMethods.ByName("ListCreditLedger")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceListInferenceAttemptsHandler := connect.NewUnaryHandler(
+		BillingServiceListInferenceAttemptsProcedure,
+		svc.ListInferenceAttempts,
+		connect.WithSchema(billingServiceMethods.ByName("ListInferenceAttempts")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceGetSpendStatusHandler := connect.NewUnaryHandler(
+		BillingServiceGetSpendStatusProcedure,
+		svc.GetSpendStatus,
+		connect.WithSchema(billingServiceMethods.ByName("GetSpendStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServicePurchaseCreditsHandler := connect.NewUnaryHandler(
+		BillingServicePurchaseCreditsProcedure,
+		svc.PurchaseCredits,
+		connect.WithSchema(billingServiceMethods.ByName("PurchaseCredits")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceGetCreditPurchaseHandler := connect.NewUnaryHandler(
+		BillingServiceGetCreditPurchaseProcedure,
+		svc.GetCreditPurchase,
+		connect.WithSchema(billingServiceMethods.ByName("GetCreditPurchase")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceListCreditPurchasesHandler := connect.NewUnaryHandler(
+		BillingServiceListCreditPurchasesProcedure,
+		svc.ListCreditPurchases,
+		connect.WithSchema(billingServiceMethods.ByName("ListCreditPurchases")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceGetCreditPurchaseOptionsHandler := connect.NewUnaryHandler(
+		BillingServiceGetCreditPurchaseOptionsProcedure,
+		svc.GetCreditPurchaseOptions,
+		connect.WithSchema(billingServiceMethods.ByName("GetCreditPurchaseOptions")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceGetAutoTopUpPolicyHandler := connect.NewUnaryHandler(
+		BillingServiceGetAutoTopUpPolicyProcedure,
+		svc.GetAutoTopUpPolicy,
+		connect.WithSchema(billingServiceMethods.ByName("GetAutoTopUpPolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceSetAutoTopUpPolicyHandler := connect.NewUnaryHandler(
+		BillingServiceSetAutoTopUpPolicyProcedure,
+		svc.SetAutoTopUpPolicy,
+		connect.WithSchema(billingServiceMethods.ByName("SetAutoTopUpPolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceCreateSetupIntentHandler := connect.NewUnaryHandler(
+		BillingServiceCreateSetupIntentProcedure,
+		svc.CreateSetupIntent,
+		connect.WithSchema(billingServiceMethods.ByName("CreateSetupIntent")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceListPaymentMethodsHandler := connect.NewUnaryHandler(
+		BillingServiceListPaymentMethodsProcedure,
+		svc.ListPaymentMethods,
+		connect.WithSchema(billingServiceMethods.ByName("ListPaymentMethods")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceSetDefaultPaymentMethodHandler := connect.NewUnaryHandler(
+		BillingServiceSetDefaultPaymentMethodProcedure,
+		svc.SetDefaultPaymentMethod,
+		connect.WithSchema(billingServiceMethods.ByName("SetDefaultPaymentMethod")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceRemovePaymentMethodHandler := connect.NewUnaryHandler(
+		BillingServiceRemovePaymentMethodProcedure,
+		svc.RemovePaymentMethod,
+		connect.WithSchema(billingServiceMethods.ByName("RemovePaymentMethod")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceUpdatePaymentMethodHandler := connect.NewUnaryHandler(
+		BillingServiceUpdatePaymentMethodProcedure,
+		svc.UpdatePaymentMethod,
+		connect.WithSchema(billingServiceMethods.ByName("UpdatePaymentMethod")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServicePreviewPlanChangeHandler := connect.NewUnaryHandler(
+		BillingServicePreviewPlanChangeProcedure,
+		svc.PreviewPlanChange,
+		connect.WithSchema(billingServiceMethods.ByName("PreviewPlanChange")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceChangePlanHandler := connect.NewUnaryHandler(
+		BillingServiceChangePlanProcedure,
+		svc.ChangePlan,
+		connect.WithSchema(billingServiceMethods.ByName("ChangePlan")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceRegisterApiKeyHandler := connect.NewUnaryHandler(
+		BillingServiceRegisterApiKeyProcedure,
+		svc.RegisterApiKey,
+		connect.WithSchema(billingServiceMethods.ByName("RegisterApiKey")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceUnregisterApiKeyHandler := connect.NewUnaryHandler(
+		BillingServiceUnregisterApiKeyProcedure,
+		svc.UnregisterApiKey,
+		connect.WithSchema(billingServiceMethods.ByName("UnregisterApiKey")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceGetModelTrialHandler := connect.NewUnaryHandler(
+		BillingServiceGetModelTrialProcedure,
+		svc.GetModelTrial,
+		connect.WithSchema(billingServiceMethods.ByName("GetModelTrial")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/everstack.billing.v1.BillingService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case BillingServiceGetSubscriptionProcedure:
@@ -726,6 +1336,46 @@ func NewBillingServiceHandler(svc BillingServiceHandler, opts ...connect.Handler
 			billingServiceMigrateSubscriptionHandler.ServeHTTP(w, r)
 		case BillingServiceAdjustSeatsProcedure:
 			billingServiceAdjustSeatsHandler.ServeHTTP(w, r)
+		case BillingServiceGetCreditBalanceProcedure:
+			billingServiceGetCreditBalanceHandler.ServeHTTP(w, r)
+		case BillingServiceListCreditLedgerProcedure:
+			billingServiceListCreditLedgerHandler.ServeHTTP(w, r)
+		case BillingServiceListInferenceAttemptsProcedure:
+			billingServiceListInferenceAttemptsHandler.ServeHTTP(w, r)
+		case BillingServiceGetSpendStatusProcedure:
+			billingServiceGetSpendStatusHandler.ServeHTTP(w, r)
+		case BillingServicePurchaseCreditsProcedure:
+			billingServicePurchaseCreditsHandler.ServeHTTP(w, r)
+		case BillingServiceGetCreditPurchaseProcedure:
+			billingServiceGetCreditPurchaseHandler.ServeHTTP(w, r)
+		case BillingServiceListCreditPurchasesProcedure:
+			billingServiceListCreditPurchasesHandler.ServeHTTP(w, r)
+		case BillingServiceGetCreditPurchaseOptionsProcedure:
+			billingServiceGetCreditPurchaseOptionsHandler.ServeHTTP(w, r)
+		case BillingServiceGetAutoTopUpPolicyProcedure:
+			billingServiceGetAutoTopUpPolicyHandler.ServeHTTP(w, r)
+		case BillingServiceSetAutoTopUpPolicyProcedure:
+			billingServiceSetAutoTopUpPolicyHandler.ServeHTTP(w, r)
+		case BillingServiceCreateSetupIntentProcedure:
+			billingServiceCreateSetupIntentHandler.ServeHTTP(w, r)
+		case BillingServiceListPaymentMethodsProcedure:
+			billingServiceListPaymentMethodsHandler.ServeHTTP(w, r)
+		case BillingServiceSetDefaultPaymentMethodProcedure:
+			billingServiceSetDefaultPaymentMethodHandler.ServeHTTP(w, r)
+		case BillingServiceRemovePaymentMethodProcedure:
+			billingServiceRemovePaymentMethodHandler.ServeHTTP(w, r)
+		case BillingServiceUpdatePaymentMethodProcedure:
+			billingServiceUpdatePaymentMethodHandler.ServeHTTP(w, r)
+		case BillingServicePreviewPlanChangeProcedure:
+			billingServicePreviewPlanChangeHandler.ServeHTTP(w, r)
+		case BillingServiceChangePlanProcedure:
+			billingServiceChangePlanHandler.ServeHTTP(w, r)
+		case BillingServiceRegisterApiKeyProcedure:
+			billingServiceRegisterApiKeyHandler.ServeHTTP(w, r)
+		case BillingServiceUnregisterApiKeyProcedure:
+			billingServiceUnregisterApiKeyHandler.ServeHTTP(w, r)
+		case BillingServiceGetModelTrialProcedure:
+			billingServiceGetModelTrialHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -829,4 +1479,84 @@ func (UnimplementedBillingServiceHandler) MigrateSubscription(context.Context, *
 
 func (UnimplementedBillingServiceHandler) AdjustSeats(context.Context, *connect.Request[v1.AdjustSeatsRequest]) (*connect.Response[v1.AdjustSeatsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.AdjustSeats is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) GetCreditBalance(context.Context, *connect.Request[v1.GetCreditBalanceRequest]) (*connect.Response[v1.GetCreditBalanceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.GetCreditBalance is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) ListCreditLedger(context.Context, *connect.Request[v1.ListCreditLedgerRequest]) (*connect.Response[v1.ListCreditLedgerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.ListCreditLedger is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) ListInferenceAttempts(context.Context, *connect.Request[v1.ListInferenceAttemptsRequest]) (*connect.Response[v1.ListInferenceAttemptsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.ListInferenceAttempts is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) GetSpendStatus(context.Context, *connect.Request[v1.GetSpendStatusRequest]) (*connect.Response[v1.GetSpendStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.GetSpendStatus is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) PurchaseCredits(context.Context, *connect.Request[v1.PurchaseCreditsRequest]) (*connect.Response[v1.PurchaseCreditsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.PurchaseCredits is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) GetCreditPurchase(context.Context, *connect.Request[v1.GetCreditPurchaseRequest]) (*connect.Response[v1.GetCreditPurchaseResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.GetCreditPurchase is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) ListCreditPurchases(context.Context, *connect.Request[v1.ListCreditPurchasesRequest]) (*connect.Response[v1.ListCreditPurchasesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.ListCreditPurchases is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) GetCreditPurchaseOptions(context.Context, *connect.Request[v1.GetCreditPurchaseOptionsRequest]) (*connect.Response[v1.GetCreditPurchaseOptionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.GetCreditPurchaseOptions is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) GetAutoTopUpPolicy(context.Context, *connect.Request[v1.GetAutoTopUpPolicyRequest]) (*connect.Response[v1.GetAutoTopUpPolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.GetAutoTopUpPolicy is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) SetAutoTopUpPolicy(context.Context, *connect.Request[v1.SetAutoTopUpPolicyRequest]) (*connect.Response[v1.SetAutoTopUpPolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.SetAutoTopUpPolicy is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) CreateSetupIntent(context.Context, *connect.Request[v1.CreateSetupIntentRequest]) (*connect.Response[v1.CreateSetupIntentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.CreateSetupIntent is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) ListPaymentMethods(context.Context, *connect.Request[v1.ListPaymentMethodsRequest]) (*connect.Response[v1.ListPaymentMethodsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.ListPaymentMethods is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) SetDefaultPaymentMethod(context.Context, *connect.Request[v1.SetDefaultPaymentMethodRequest]) (*connect.Response[v1.SetDefaultPaymentMethodResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.SetDefaultPaymentMethod is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) RemovePaymentMethod(context.Context, *connect.Request[v1.RemovePaymentMethodRequest]) (*connect.Response[v1.RemovePaymentMethodResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.RemovePaymentMethod is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) UpdatePaymentMethod(context.Context, *connect.Request[v1.UpdatePaymentMethodRequest]) (*connect.Response[v1.UpdatePaymentMethodResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.UpdatePaymentMethod is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) PreviewPlanChange(context.Context, *connect.Request[v1.PreviewPlanChangeRequest]) (*connect.Response[v1.PreviewPlanChangeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.PreviewPlanChange is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) ChangePlan(context.Context, *connect.Request[v1.ChangePlanRequest]) (*connect.Response[v1.ChangePlanResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.ChangePlan is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) RegisterApiKey(context.Context, *connect.Request[v1.RegisterApiKeyRequest]) (*connect.Response[v1.RegisterApiKeyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.RegisterApiKey is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) UnregisterApiKey(context.Context, *connect.Request[v1.UnregisterApiKeyRequest]) (*connect.Response[v1.UnregisterApiKeyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.UnregisterApiKey is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) GetModelTrial(context.Context, *connect.Request[v1.GetModelTrialRequest]) (*connect.Response[v1.GetModelTrialResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("everstack.billing.v1.BillingService.GetModelTrial is not implemented"))
 }

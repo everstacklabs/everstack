@@ -109,8 +109,8 @@ function SyncBadge({
   if (sync.kind === 'drifted') {
     return (
       <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded bg-amber-500/15 px-2 py-1 text-[11px] text-amber-300">
-          <span className="size-1.5 rounded-full bg-amber-400" />
+        <span className="inline-flex items-center gap-1.5 rounded bg-warning-surface-strong px-2 py-1 text-[11px] text-warning">
+          <span className="size-1.5 rounded-full bg-warning-solid" />
           Drifted
         </span>
         <span className="text-[11px] text-white/45 light:text-black/45">
@@ -124,8 +124,8 @@ function SyncBadge({
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 rounded bg-emerald-500/15 px-2 py-1 text-[11px] text-emerald-300">
-      <span className="size-1.5 rounded-full bg-emerald-400" />
+    <span className="inline-flex items-center gap-1.5 rounded bg-success-surface-strong px-2 py-1 text-[11px] text-success">
+      <span className="size-1.5 rounded-full bg-success-solid" />
       In sync with the last deploy
     </span>
   )
@@ -316,7 +316,7 @@ export function AgentWorkspace() {
       <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
         <Iconify.Icon
           icon="lucide:triangle-alert"
-          className="size-6 text-red-300"
+          className="size-6 text-danger"
         />
         <p className="text-sm text-white light:text-brand-main-50">
           Agent workspace could not be loaded

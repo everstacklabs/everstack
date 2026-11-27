@@ -42,7 +42,7 @@ export function A2aPublishTable() {
                                         <span className="truncate text-[11px] text-brand-main-300">{a.description}</span>
                                     ) : null}
                                     {!deployed ? (
-                                        <span className="mt-0.5 text-[11px] text-amber-300/80 light:text-amber-700/80">
+                                        <span className="mt-0.5 text-[11px] text-warning/80">
                                             {on
                                                 ? 'Published but has no active deployment — A2A calls will fail until you deploy it.'
                                                 : 'Needs an active deployment before it can be published over A2A.'}

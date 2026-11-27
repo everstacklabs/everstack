@@ -143,6 +143,24 @@ func TestLifecycleServiceRecreateCopiesExistingConfig(t *testing.T) {
 	}
 }
 
+func TestLifecycleServiceRecreateRejectsReservedStoredName(t *testing.T) {
+	mgr := &fakeLifecycleManager{
+		config:   &sandbox.InstanceConfig{Name: "wks_stored", Image: "node:20"},
+		recreate: &sandbox.Instance{ID: "sbx-new"},
+	}
+	_, err := NewLifecycleService(nil, mgr).Recreate(context.Background(), RecreateRequest{
+		SandboxID: "sbx-old",
+		SessionID: "sess-new",
+		TenantID:  "tenant-a",
+	})
+	if !errors.Is(err, sandbox.ErrReservedSandboxName) {
+		t.Fatalf("error = %v, want ErrReservedSandboxName", err)
+	}
+	if mgr.recreateSessionID != "" {
+		t.Fatalf("GetOrCreate called for session %q", mgr.recreateSessionID)
+	}
+}
+
 func TestLifecycleServiceRecreateValidatesInputs(t *testing.T) {
 	t.Parallel()
 

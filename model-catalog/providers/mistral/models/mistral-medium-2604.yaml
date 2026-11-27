@@ -22,7 +22,7 @@ modalities:
   input: ["text","image"]
   output: ["text"]
 
-notes: "Balanced Mistral model for enterprise assistants, multilingual work, and tools"
+notes: "Mistral Medium 3.5 was deprecated by Mistral on 2026-10-31; retires 2027-04-30. Migrate to mistral-large-4."
 parameters:
   - key: "max_output_tokens"
     display_name: "Max output tokens"

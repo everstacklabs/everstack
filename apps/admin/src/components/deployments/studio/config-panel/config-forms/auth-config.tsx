@@ -96,7 +96,7 @@ export function AuthConfigForm({ config, onChange }: Props) {
                             <div key={key} className="flex gap-2 items-center">
                                 <Input value={key} onChange={(e) => updateWebhookHeader(key, e.target.value, value)} placeholder="Header" className="flex-1 bg-brand-main-700/50 border-brand-main-500 text-white light:text-brand-main-50 text-xs h-8" />
                                 <Input value={value} onChange={(e) => updateWebhookHeader(key, key, e.target.value)} placeholder="Value" className="flex-1 bg-brand-main-700/50 border-brand-main-500 text-white light:text-brand-main-50 text-xs h-8" />
-                                <button onClick={() => removeWebhookHeader(key)} className="p-1 text-brand-main-400 hover:text-red-400 light:hover:text-red-600">
+                                <button onClick={() => removeWebhookHeader(key)} className="p-1 text-brand-main-400 hover:text-danger">
                                     <Icon icon="lucide:x" className="h-3.5 w-3.5" />
                                 </button>
                             </div>

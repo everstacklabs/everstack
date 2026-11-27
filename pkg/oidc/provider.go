@@ -78,6 +78,7 @@ type AuthorizeRequest struct {
 	Name          string
 	OrgID         string
 	OrgSlug       string
+	OrgRole       string
 	InstanceID    string
 	AuthTime      time.Time
 }
@@ -125,6 +126,7 @@ func (p *Provider) Authorize(ctx context.Context, req AuthorizeRequest) (string,
 		Name:                req.Name,
 		OrgID:               req.OrgID,
 		OrgSlug:             req.OrgSlug,
+		OrgRole:             req.OrgRole,
 		InstanceID:          req.InstanceID,
 		AuthTime:            authTime,
 		ExpiresAt:           p.now().Add(p.cfg.CodeTTL),
@@ -198,6 +200,7 @@ func (p *Provider) Token(ctx context.Context, req TokenRequest) (*TokenResponse,
 		Name:          ac.Name,
 		OrgID:         ac.OrgID,
 		OrgSlug:       ac.OrgSlug,
+		OrgRole:       ac.OrgRole,
 		InstanceID:    ac.InstanceID,
 		Nonce:         ac.Nonce,
 		AuthTime:      ac.AuthTime.Unix(),

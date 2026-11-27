@@ -26,6 +26,7 @@ type Client struct {
 	Images        *ImagesResource
 	Moderations   *ModerationsResource
 	Rerank        *RerankResource
+	Decisions     *DecisionsResource
 	Responses     *ResponsesResource
 	Agents        *AgentsResource
 	Datasets      *DatasetsResource
@@ -59,6 +60,7 @@ func NewClient(apiKey string, opts ...Option) *Client {
 	c.Images = &ImagesResource{t: t}
 	c.Moderations = &ModerationsResource{t: t}
 	c.Rerank = &RerankResource{t: t}
+	c.Decisions = &DecisionsResource{t: t}
 	c.Responses = &ResponsesResource{t: t}
 	c.Agents = newAgentsResource(t)
 	c.Datasets = newDatasetsResource(t)

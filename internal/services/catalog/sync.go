@@ -389,6 +389,9 @@ func convertModelToLegacy(provider string, model map[string]interface{}) map[str
 	if apiType, ok := model["api_type"]; ok {
 		legacy["api_type"] = apiType
 	}
+	if unsupported, ok := model["unsupported_parameters"]; ok {
+		legacy["unsupported_parameters"] = unsupported
+	}
 	if releaseDate, ok := model["release_date"]; ok {
 		legacy["release_date"] = releaseDate
 	}

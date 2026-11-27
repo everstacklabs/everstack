@@ -351,7 +351,7 @@ export const FileMentionDropdown = forwardRef<FileMentionDropdownHandle, FileMen
                             }`}
                         >
                             {file.isDir ? (
-                                <Folder className="w-3.5 h-3.5 text-blue-400/70 shrink-0" />
+                                <Folder className="w-3.5 h-3.5 text-info/70 shrink-0" />
                             ) : (
                                 <File className="w-3.5 h-3.5 text-white/30 shrink-0 light:text-black/30" />
                             )}

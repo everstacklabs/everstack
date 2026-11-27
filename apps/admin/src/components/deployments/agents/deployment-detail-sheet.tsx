@@ -111,7 +111,7 @@ print(response.json())`
                                     <Button
                                         variant="muted"
                                         onClick={() => handleStatusChange('paused')}
-                                        className="border border-amber-500/40 text-amber-300 hover:bg-amber-500/10 hover:text-amber-200"
+                                        className="border border-warning-border text-warning hover:bg-warning-surface"
                                     >
                                         Pause
                                     </Button>
@@ -120,7 +120,7 @@ print(response.json())`
                                     <Button
                                         variant="secondary"
                                         onClick={() => handleStatusChange('active')}
-                                        className="border border-green-500/40 bg-green-500/20 text-green-200 hover:bg-green-500/30"
+                                        className="border border-success-border bg-success-surface-strong text-success hover:bg-success-solid/25"
                                     >
                                         Resume
                                     </Button>
@@ -255,7 +255,7 @@ function CopyIconButton({ copied, onCopy, label }: { copied: boolean; onCopy: ()
             title={label}
             className="inline-flex items-center justify-center rounded border border-brand-main-600/40 bg-brand-main-900/60 p-1 text-brand-main-300 hover:text-white hover:border-brand-main-500 transition-colors light:hover:text-brand-main-50"
         >
-            {copied ? <Check className="size-3 text-green-400" /> : <Copy className="size-3" />}
+            {copied ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
         </button>
     )
 }
@@ -289,8 +289,8 @@ function CodeExampleBlock({ code, language }: { code: string; language: UsageSni
 
 function StatusBadge({ status }: { status: string }) {
     const styles: Record<string, string> = {
-        active: 'bg-green-500/20 text-green-300',
-        paused: 'bg-amber-500/20 text-amber-300',
+        active: 'bg-success-surface-strong text-success',
+        paused: 'bg-warning-surface-strong text-warning',
         retired: 'bg-gray-500/20 text-gray-400',
     }
     return (
@@ -302,10 +302,10 @@ function StatusBadge({ status }: { status: string }) {
 
 function InvocationStatusBadge({ status }: { status: string }) {
     const styles: Record<string, string> = {
-        completed: 'bg-green-500/20 text-green-300',
-        running: 'bg-blue-500/20 text-blue-300',
-        failed: 'bg-red-500/20 text-red-300',
-        timeout: 'bg-amber-500/20 text-amber-300',
+        completed: 'bg-success-surface-strong text-success',
+        running: 'bg-info-surface-strong text-info',
+        failed: 'bg-danger-surface-strong text-danger',
+        timeout: 'bg-warning-surface-strong text-warning',
     }
     return (
         <span className={`px-1 py-0.5 rounded text-[10px] font-medium ${styles[status] ?? 'bg-gray-500/20 text-gray-400'}`}>

@@ -18,7 +18,7 @@ interface FunctionsTableProps {
 
 const MethodBadge = ({ method }: { method: string }) => {
     return (
-        <span className={`px-1 py-0.5 rounded text-[10px] mr-1 font-medium whitespace-nowrap ${method === 'POST' ? 'bg-blue-500/20 text-blue-300 light:text-blue-600' : method === 'GET' ? 'bg-green-500/20 text-green-300 light:text-green-600' : method === 'PUT' ? 'bg-yellow-500/20 text-yellow-300 light:text-yellow-700' : method === 'DELETE' ? 'bg-red-500/20 text-red-300 light:text-red-600' : 'bg-gray-500/20 text-gray-400 light:text-gray-600'
+        <span className={`px-1 py-0.5 rounded text-[10px] mr-1 font-medium whitespace-nowrap ${method === 'POST' ? 'bg-info-surface-strong text-info' : method === 'GET' ? 'bg-success-surface-strong text-success' : method === 'PUT' ? 'bg-warning-surface-strong text-warning' : method === 'DELETE' ? 'bg-danger-surface-strong text-danger' : 'bg-gray-500/20 text-gray-400 light:text-gray-600'
             }`}>
             {method}
         </span>
@@ -128,14 +128,14 @@ export function FunctionsTable({ functions, onEdit }: FunctionsTableProps) {
             render: (fn: Function) => {
                 if (fn.mode === ExecutionMode.WEBHOOK && fn.webhook) {
                     return (
-                        <span className='truncate text-sm inline-flex items-center space-x-1 text-brand-main-100' title={fn.webhook.url}>
+                        <span className='truncate text-sm inline-flex items-center space-x-1 text-brand-main-100'>
                             <MethodBadge method={fn.webhook.method} /> {fn.webhook.url}
                         </span>
                     )
                 }
                 if (fn.mode === ExecutionMode.PROXY && fn.proxy) {
                     return (
-                        <span className='truncate inline-flex items-center space-x-1 text-sm text-brand-main-100' title={`${fn.proxy.baseUrl}${fn.proxy.path}`}>
+                        <span className='truncate inline-flex items-center space-x-1 text-sm text-brand-main-100'>
                             <MethodBadge method={fn.proxy.method} /> {fn.proxy.baseUrl}{fn.proxy.path}
                         </span>
                     )
@@ -183,7 +183,7 @@ export function FunctionsTable({ functions, onEdit }: FunctionsTableProps) {
                 <div className='flex items-center gap-2 justify-center'>
                     <button
                         type='button'
-                        className='p-1 rounded hover:bg-blue-500/20 hover:text-blue-400 light:hover:text-blue-600 transition-colors'
+                        className='p-1 rounded hover:bg-info-surface-strong hover:text-info transition-colors'
                         onClick={() => onEdit?.(fn)}
                         title='Edit function'
                     >
@@ -191,7 +191,7 @@ export function FunctionsTable({ functions, onEdit }: FunctionsTableProps) {
                     </button>
                     <button
                         type='button'
-                        className='p-1 rounded hover:bg-red-500/20 hover:text-red-400 light:hover:text-red-600 transition-colors'
+                        className='p-1 rounded hover:bg-danger-surface-strong hover:text-danger transition-colors'
                         onClick={() => {
                             setDeleteConfirmId(fn.id)
                             setDeleteConfirmName(fn.name)

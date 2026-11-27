@@ -1,0 +1,13 @@
+default:
+  name: "Default"
+  description: "Standard Meta gateway settings"
+  settings:
+    timeout: 60s
+    retry_attempts: 2
+
+cost_optimized:
+  name: "Cost Optimized"
+  description: "Lowest-cost Muse models"
+  recommended_models:
+    - muse-ember-1.0
+    - muse-spark-1.3-contributor

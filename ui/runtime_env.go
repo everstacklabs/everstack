@@ -47,36 +47,84 @@ func isAPILikePath(p string) bool {
 	return false
 }
 
-// instanceSessionCookieName is the host-only cookie set by the tenant
-// gateway's cloud-callback handler after a successful relay login.
-// Duplicated here intentionally — `ui` is a low-dep package, and a single
-// const string is a smaller dependency surface than importing the
-// controlplane package just to read the cookie name.
-const instanceSessionCookieName = "es_tenant_session"
-
 type runtimeEnv struct {
 	APIBaseURL       string `json:"VITE_API_BASE_URL"`
 	CloudURL         string `json:"CLOUD_URL,omitempty"`
 	OrganizationSlug string `json:"ORGANIZATION_SLUG,omitempty"`
-	PostHogHost      string `json:"POSTHOG_HOST,omitempty"`
-	PostHogKey       string `json:"POSTHOG_KEY,omitempty"`
+	// OrganizationID and InstanceID identify the managed instance this
+	// console is served for. The SPA groups analytics by them; the
+	// organization id is the same one Cloud groups by.
+	OrganizationID string `json:"ORGANIZATION_ID,omitempty"`
+	InstanceID     string `json:"INSTANCE_ID,omitempty"`
+	PostHogHost    string `json:"POSTHOG_HOST,omitempty"`
+	PostHogKey     string `json:"POSTHOG_KEY,omitempty"`
 }
 
-// requestLooksAuthed is a cheap presence check used to gate the
-// POSTHOG_KEY injection. We do not validate the cookie value here —
-// validation happens in the tenant middleware on actual RPC calls. The
-// goal of this check is narrowly: don't ship the analytics key in
-// responses to genuinely unauthenticated requests (random crawlers,
-// scanners, the `/auth/__version` probe), while still serving it to
-// users who have established a session and are loading the dashboard.
+// authenticatedTenant is the tenant a request is verified for.
+type authenticatedTenant struct {
+	InstanceID       string
+	OrganizationID   string
+	OrganizationSlug string
+}
+
+// resolveAuthenticatedTenant reports whether the request carries a verified
+// principal (set by the session middleware after validating the session
+// cookie, or by API-key auth) and, when the host selects a managed instance,
+// which one.
 //
-// An attacker can trivially spoof the cookie to retrieve the key. That's
-// acceptable because the `phc_` PostHog public key is not a secret by
-// PostHog's design — anyone post-auth has it too. The gating only stops
-// the key from being available to entirely-anonymous probes.
-func requestLooksAuthed(r *http.Request) bool {
-	c, err := r.Cookie(instanceSessionCookieName)
-	return err == nil && c != nil && c.Value != ""
+// The Host header selects the tenant on unauthenticated shell loads (/login
+// is public and still gets the tenant config; the shared gateway resolves
+// the host scope for every HTML route), so gating on the context alone would
+// hand any visitor of a custom domain the owning org's identifiers. A
+// principal for a different tenant than the host's gets nothing.
+//
+// Self-hosted gateways have no host-selected instance: a verified principal
+// is reported with empty identifiers.
+func resolveAuthenticatedTenant(r *http.Request) (authenticatedTenant, bool) {
+	ctx := r.Context()
+	if !contextkeys.HasVerifiedTenantPrincipal(ctx) {
+		return authenticatedTenant{}, false
+	}
+	principal := strings.TrimSpace(contextkeys.GetTenantID(ctx))
+	if tc := tenant.ConfigFromContext(ctx); tc != nil {
+		if principal == strings.TrimSpace(tc.InstanceID) || principal == strings.TrimSpace(tc.OrganizationID) {
+			return authenticatedTenant{
+				InstanceID:       strings.TrimSpace(tc.InstanceID),
+				OrganizationID:   strings.TrimSpace(tc.OrganizationID),
+				OrganizationSlug: strings.TrimSpace(tc.OrgSlug),
+			}, true
+		}
+		return authenticatedTenant{}, false
+	}
+	// The gateway's cookie auth installs the instance id as the tenant and
+	// the verified organization in the scope; a self-hosted-style org
+	// principal matches the organization.
+	if scope, ok := contextkeys.RequestInstanceScopeFromContext(ctx); ok {
+		if principal == strings.TrimSpace(scope.InstanceID) || principal == strings.TrimSpace(scope.OrganizationID) {
+			return authenticatedTenant{
+				InstanceID:       strings.TrimSpace(scope.InstanceID),
+				OrganizationID:   strings.TrimSpace(scope.OrganizationID),
+				OrganizationSlug: strings.TrimSpace(scope.OrganizationSlug),
+			}, true
+		}
+		return authenticatedTenant{}, false
+	}
+	return authenticatedTenant{}, true
+}
+
+// servesManagedInstance reports whether the server resolved this request's
+// host to a managed instance: the tenant config or host scope installed by
+// the tenant and session middleware from a tenant_config lookup. Nothing the
+// client sends (headers, cookies) sets either, and a host that resolves to
+// no instance has neither. Self-hosted gateways have no tenant_config, so
+// this is always false there.
+func servesManagedInstance(r *http.Request) bool {
+	ctx := r.Context()
+	if tc := tenant.ConfigFromContext(ctx); tc != nil && strings.TrimSpace(tc.InstanceID) != "" {
+		return true
+	}
+	scope, ok := contextkeys.RequestInstanceScopeFromContext(ctx)
+	return ok && strings.TrimSpace(scope.InstanceID) != ""
 }
 
 // buildRuntimeEnvScript builds the `<script>window.__env = ...</script>`
@@ -84,10 +132,17 @@ func requestLooksAuthed(r *http.Request) bool {
 // variables at request time so a single SPA bundle can target multiple
 // environments (dev / staging / prod) without rebuild.
 //
-// POSTHOG_KEY is *only* included when the request looks authenticated.
-// Other values (API base URL, cloud URL, PostHog *host*) are public and
-// always included — the SPA bootstrap (login form, AuthGuard, relay
-// redirect) needs them before any auth state exists.
+// The tenant identifiers are *only* included for a verified principal of the
+// tenant being served. The PostHog key goes to that principal and, on a
+// managed instance host, to signed-out visitors (recorded anonymously). Other values (API base URL,
+// cloud URL, PostHog *host*) are public and always included: the SPA
+// bootstrap (login form, AuthGuard, relay redirect) needs them before any
+// auth state exists.
+//
+// Analytics is off unless the operator sets both EVS_POSTHOG_KEY and
+// EVS_POSTHOG_HOST. Our helm chart sets them for managed clusters; a
+// self-hosted or CE gateway never phones home unless its operator opts in.
+// Nothing is baked into the embedded SPA bundle.
 func buildRuntimeEnvScript(r *http.Request) string {
 	scheme := "http"
 	if r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https") {
@@ -102,14 +157,18 @@ func buildRuntimeEnvScript(r *http.Request) string {
 		APIBaseURL: scheme + "://" + host,
 		CloudURL:   os.Getenv("EVS_CLOUD_URL"),
 	}
-	if tc := tenant.ConfigFromContext(r.Context()); tc != nil {
-		env.OrganizationSlug = strings.TrimSpace(tc.OrgSlug)
-	} else if scope, ok := contextkeys.RequestInstanceScopeFromContext(r.Context()); ok {
-		env.OrganizationSlug = strings.TrimSpace(scope.OrganizationSlug)
+	postHogHost := strings.TrimSpace(os.Getenv("EVS_POSTHOG_HOST"))
+	env.PostHogHost = postHogHost
+	t, authenticated := resolveAuthenticatedTenant(r)
+	if authenticated {
+		env.OrganizationSlug = t.OrganizationSlug
+		env.OrganizationID = t.OrganizationID
+		env.InstanceID = t.InstanceID
 	}
-	env.PostHogHost = os.Getenv("EVS_POSTHOG_HOST")
-	if requestLooksAuthed(r) {
-		env.PostHogKey = os.Getenv("EVS_POSTHOG_KEY")
+	// Signed-out visitors of a managed instance are recorded too (anonymous,
+	// with no tenant ids), so the sign-in handoff and bounces are visible.
+	if postHogHost != "" && (authenticated || servesManagedInstance(r)) {
+		env.PostHogKey = strings.TrimSpace(os.Getenv("EVS_POSTHOG_KEY"))
 	}
 
 	payload, err := json.Marshal(env)

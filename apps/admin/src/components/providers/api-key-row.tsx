@@ -50,13 +50,13 @@ export function APIKeyRow({ apiKey, onUpdateWeight, onToggle, onDelete }: APIKey
 
                     {/* Add "from Config" badge */}
                     {isConfigKey && (
-                        <span className="text-xs px-2 py-0.5 rounded bg-blue-600/20 text-blue-400 light:text-blue-600 border border-blue-600/30">
+                        <span className="text-xs px-2 py-0.5 rounded bg-info-surface-strong text-info border border-info-border">
                             Config
                         </span>
                     )}
 
                     {!apiKey.isActive && (
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-600/20 text-yellow-400 light:text-yellow-700 border border-yellow-600/30">
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-warning-surface-strong text-warning border border-warning-border">
                             Inactive
                         </span>
                     )}
@@ -86,7 +86,7 @@ export function APIKeyRow({ apiKey, onUpdateWeight, onToggle, onDelete }: APIKey
                             onClick={handleWeightSave}
                             className="h-7 w-7 p-0"
                         >
-                            <Iconify.Icon icon="heroicons:check" className="size-4 text-green-400 light:text-green-600" />
+                            <Iconify.Icon icon="heroicons:check" className="size-4 text-success" />
                         </Button>
                     </div>
                 ) : (
@@ -120,7 +120,7 @@ export function APIKeyRow({ apiKey, onUpdateWeight, onToggle, onDelete }: APIKey
                 >
                     <Iconify.Icon
                         icon={apiKey.isActive ? "heroicons:eye" : "heroicons:eye-slash"}
-                        className={cn("size-4", apiKey.isActive ? "text-blue-400 light:text-blue-600" : "text-gray-400 light:text-gray-600", isConfigKey && "opacity-50")}
+                        className={cn("size-4", apiKey.isActive ? "text-info" : "text-gray-400 light:text-gray-600", isConfigKey && "opacity-50")}
                     />
                 </Button>
                 <Button
@@ -132,7 +132,7 @@ export function APIKeyRow({ apiKey, onUpdateWeight, onToggle, onDelete }: APIKey
                     title={isConfigKey ? "Config keys cannot be deleted from UI" : "Delete"}
                     disabled={isConfigKey}
                 >
-                    <Iconify.Icon icon="heroicons:trash" className={cn("size-4 text-red-400 light:text-red-600", isConfigKey && "opacity-50")} />
+                    <Iconify.Icon icon="heroicons:trash" className={cn("size-4 text-danger", isConfigKey && "opacity-50")} />
                 </Button>
             </div>
         </div>

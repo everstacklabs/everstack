@@ -91,17 +91,17 @@ function getEventLabel(type: string): string {
 }
 
 const CATEGORY_STYLES: Record<EventCategory, { dot: string; border: string; icon: string }> = {
-    success: { dot: 'bg-emerald-400', border: 'border-emerald-400/40', icon: 'heroicons:check-circle' },
+    success: { dot: 'bg-success-solid', border: 'border-success-border', icon: 'heroicons:check-circle' },
     info: { dot: 'bg-brand-secondary-400', border: 'border-brand-secondary-400/40', icon: 'heroicons:information-circle' },
-    warning: { dot: 'bg-amber-400', border: 'border-amber-400/40', icon: 'heroicons:exclamation-triangle' },
-    error: { dot: 'bg-red-400', border: 'border-red-400/40', icon: 'heroicons:x-circle' },
+    warning: { dot: 'bg-warning-solid', border: 'border-warning-border', icon: 'heroicons:exclamation-triangle' },
+    error: { dot: 'bg-danger-solid', border: 'border-danger-border', icon: 'heroicons:x-circle' },
 }
 
 const CATEGORY_TEXT: Record<EventCategory, string> = {
-    success: 'text-emerald-300 light:text-emerald-600',
+    success: 'text-success',
     info: 'text-brand-secondary-300',
-    warning: 'text-amber-300 light:text-amber-700',
-    error: 'text-red-300 light:text-red-600',
+    warning: 'text-warning',
+    error: 'text-danger',
 }
 
 function getCategory(type: string): EventCategory {
@@ -202,7 +202,10 @@ function useSandboxEventsStream(sandboxId: string | undefined) {
 
         ;(async () => {
             try {
-                const response = await fetch(url, { signal: controller.signal })
+                const response = await fetch(url, {
+                    signal: controller.signal,
+                    credentials: 'include',
+                })
                 if (!response.ok || !response.body) {
                     streamingRef.current = false
                     setIsStreaming(false)
@@ -295,7 +298,7 @@ function useSandboxEvents(sandboxId: string | undefined) {
 
         setIsLoading(true)
         const baseUrl = getApiBaseUrl()
-        fetch(`${baseUrl}/v1/sandbox/${sandboxId}/events`)
+        fetch(`${baseUrl}/v1/sandbox/${sandboxId}/events`, { credentials: 'include' })
             .then((res) => {
                 if (!res.ok) throw new Error(`${res.status}`)
                 return res.json()
@@ -570,7 +573,7 @@ export function EventsTab() {
                 {isStreaming ? (
                     <button
                         onClick={stop}
-                        className="flex items-center gap-1 text-xs bg-red-500/20 text-red-400 light:text-red-600 border border-red-500/30 rounded px-2 py-1 hover:bg-red-500/30"
+                        className="flex items-center gap-1 text-xs bg-danger-surface-strong text-danger border border-danger-border rounded px-2 py-1 hover:bg-danger-solid/25"
                     >
                         <Iconify.Icon icon="heroicons:stop-solid" className="size-3" />
                         Stop

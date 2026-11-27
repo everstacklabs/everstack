@@ -13,6 +13,17 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-bg": "var(--popover)",
           "--normal-text": "var(--sidebar-primary)",
           "--normal-border": "var(--border)",
+          // richColors error/warning toasts: Sonner's defaults are saturated
+          // reds and yellows, so route them through the status tokens. The
+          // tint is mixed into the popover colour because toasts must be opaque.
+          "--error-bg":
+            "color-mix(in oklab, var(--color-danger-solid) 12%, var(--popover))",
+          "--error-border": "var(--color-danger-border)",
+          "--error-text": "var(--color-danger)",
+          "--warning-bg":
+            "color-mix(in oklab, var(--color-warning-solid) 10%, var(--popover))",
+          "--warning-border": "var(--color-warning-border)",
+          "--warning-text": "var(--color-warning)",
         } as ToasterProps["style"]
       }
       {...props}

@@ -177,7 +177,8 @@ export const TOOL_CATALOG: ToolCategoryDef[] = [
       {
         name: 'call_external_agent',
         label: 'Call External Agent',
-        description: 'Call a remote A2A agent (Google ADK or any A2A server) and use its response',
+        description:
+          'Start a task on a saved remote agent (Gateway, A2A). The agent can then check its progress or cancel it.',
       },
     ],
   },

@@ -139,7 +139,7 @@ export function OpenAIStartSessionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-100 light:text-amber-800">
+        <div className="rounded-md border border-warning-border bg-warning-surface px-3 py-2 text-xs text-warning">
           OpenAI retains session state in the United States. Self-hosted compute
           does not enable Zero Data Retention.
         </div>
@@ -147,7 +147,7 @@ export function OpenAIStartSessionDialog({
         {(capabilities.error || connections.error) && (
           <div
             role="alert"
-            className="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300 light:text-red-700"
+            className="rounded-md border border-danger-border bg-danger-surface p-3 text-sm text-danger"
           >
             {errorText(capabilities.error ?? connections.error)}
           </div>
@@ -249,7 +249,7 @@ export function OpenAIStartSessionDialog({
                   </Button>
                 )}
               {currentConnection?.last_error && (
-                <p className="text-xs text-red-400">
+                <p className="text-xs text-danger">
                   {currentConnection.last_error}
                 </p>
               )}
@@ -318,7 +318,7 @@ export function OpenAIStartSessionDialog({
             {create.error && (
               <p
                 role="alert"
-                className="text-sm text-red-400 light:text-red-700"
+                className="text-sm text-danger"
               >
                 {errorText(create.error)}{' '}
                 {intent
@@ -443,7 +443,7 @@ export function OpenAIConnectionForm({
         </div>
       ))}
       {(save.error || remove.error) && (
-        <p role="alert" className="text-sm text-red-400">
+        <p role="alert" className="text-sm text-danger">
           {errorText(save.error ?? remove.error)}
         </p>
       )}
@@ -480,7 +480,7 @@ export function OpenAIConnectionForm({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-500/90 text-white hover:bg-red-500"
+              className="bg-danger-solid/90 text-white hover:bg-danger-solid"
               onClick={(event) => {
                 event.preventDefault()
                 remove.mutate()

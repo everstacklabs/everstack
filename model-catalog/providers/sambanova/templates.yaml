@@ -1,0 +1,13 @@
+default:
+  name: "Default"
+  description: "Standard SambaNova gateway settings"
+  settings:
+    timeout: 60s
+    retry_attempts: 2
+
+cost_optimized:
+  name: "Cost Optimized"
+  description: "Low-cost models on SambaNova Cloud"
+  recommended_models:
+    - gpt-oss-120b
+    - MiniMax-M3.1-Flash

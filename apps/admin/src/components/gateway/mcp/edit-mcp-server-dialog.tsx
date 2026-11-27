@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { ui } from '@everstack/ui'
 import { toast } from '@everstack/ui/components'
 import { useUpdateMcpServer } from '@/hooks/gateway/use-mcp'
 import type { McpServer, McpTransportType, McpAuthType } from '@/server/mcp'
+import { isCloudManaged } from '@/lib/cloud-mode'
 
 const {
     Sheet, SheetContent, SheetHeader, SheetTitle, SheetBody,
@@ -15,7 +16,7 @@ const brandSelectTriggerClass = 'w-full bg-brand-main-900/60 border-brand-main-6
 const brandSelectContentClass = 'bg-brand-main-900 border-brand-main-600 text-zinc-200 light:text-zinc-800'
 const brandInputClass = 'bg-brand-main-900 border-brand-main-600'
 
-const TRANSPORT_OPTIONS: { value: McpTransportType; label: string }[] = [
+const TRANSPORT_OPTIONS: { value: McpTransportType; label: string; disabled?: boolean }[] = [
     { value: 'MCP_TRANSPORT_TYPE_SSE', label: 'SSE' },
     { value: 'MCP_TRANSPORT_TYPE_STREAMABLE_HTTP', label: 'Streamable HTTP' },
     { value: 'MCP_TRANSPORT_TYPE_STDIO', label: 'Stdio (subprocess)' },
@@ -48,6 +49,19 @@ export function EditMcpServerDialog({ server, open, onOpenChange }: EditMcpServe
 
     const updateMutation = useUpdateMcpServer()
     const isStdio = transportType === 'MCP_TRANSPORT_TYPE_STDIO'
+    // Managed gateways refuse stdio servers. A stdio server registered before
+    // that rule keeps its transport visible but locked: saving other fields
+    // leaves the transport untouched, and the only change offered is moving
+    // it to SSE or Streamable HTTP.
+    const managedCloud = useMemo(() => isCloudManaged(), [])
+    const stdioLocked = managedCloud && isStdio
+    const transportOptions = useMemo(() => {
+        if (!managedCloud) return TRANSPORT_OPTIONS
+        return TRANSPORT_OPTIONS.flatMap((opt) => {
+            if (opt.value !== 'MCP_TRANSPORT_TYPE_STDIO') return [opt]
+            return server?.transportType === 'MCP_TRANSPORT_TYPE_STDIO' ? [{ ...opt, disabled: true }] : []
+        })
+    }, [managedCloud, server?.transportType])
     const isOAuth = authType === 'MCP_AUTH_TYPE_OAUTH2'
 
     // Populate form when server changes
@@ -81,12 +95,16 @@ export function EditMcpServerDialog({ server, open, onOpenChange }: EditMcpServe
             await updateMutation.mutateAsync({
                 id: server.id,
                 name: name.trim(),
-                url: isStdio ? '' : url.trim(),
-                transportType,
+                // A locked stdio server sends no transport, URL or stdio
+                // config, so the gateway keeps them as they are.
+                ...(stdioLocked ? {} : {
+                    url: isStdio ? '' : url.trim(),
+                    transportType,
+                }),
                 authType,
                 ...(authConfig ? { authConfig } : {}),
                 enabled,
-                stdioConfig: isStdio ? {
+                stdioConfig: isStdio && !stdioLocked ? {
                     command: stdioCommand.trim(),
                     args: stdioArgs.trim() ? stdioArgs.trim().split(/\s+/) : undefined,
                     workingDir: stdioWorkDir.trim() || undefined,
@@ -127,14 +145,22 @@ export function EditMcpServerDialog({ server, open, onOpenChange }: EditMcpServe
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className={brandSelectContentClass}>
-                                    {TRANSPORT_OPTIONS.map((opt) => (
-                                        <SelectItem key={opt.value} value={opt.value}>
+                                    {transportOptions.map((opt) => (
+                                        <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
                                             {opt.label}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
+
+                        {stdioLocked && (
+                            <div className="rounded-md bg-brand-main-800/50 border border-brand-main-600 p-3">
+                                <p className="text-sm text-brand-main-200">
+                                    Stdio (subprocess) servers are only available on self-hosted gateways, so this server does not run here. Its command is shown read-only. To use it, switch the transport to SSE or Streamable HTTP and enter the URL of a hosted MCP server.
+                                </p>
+                            </div>
+                        )}
 
                         {isStdio ? (
                             <>
@@ -145,7 +171,9 @@ export function EditMcpServerDialog({ server, open, onOpenChange }: EditMcpServe
                                         placeholder="npx"
                                         value={stdioCommand}
                                         onChange={(e) => setStdioCommand(e.target.value)}
-                                        required
+                                        readOnly={stdioLocked}
+                                        disabled={stdioLocked}
+                                        required={!stdioLocked}
                                         className={brandInputClass}
                                     />
                                 </div>
@@ -156,6 +184,8 @@ export function EditMcpServerDialog({ server, open, onOpenChange }: EditMcpServe
                                         placeholder="-y @modelcontextprotocol/server-filesystem /path"
                                         value={stdioArgs}
                                         onChange={(e) => setStdioArgs(e.target.value)}
+                                        readOnly={stdioLocked}
+                                        disabled={stdioLocked}
                                         className={brandInputClass}
                                     />
                                     <p className="text-xs text-brand-main-200">Space-separated command arguments</p>
@@ -167,6 +197,8 @@ export function EditMcpServerDialog({ server, open, onOpenChange }: EditMcpServe
                                         placeholder="/opt/mcp"
                                         value={stdioWorkDir}
                                         onChange={(e) => setStdioWorkDir(e.target.value)}
+                                        readOnly={stdioLocked}
+                                        disabled={stdioLocked}
                                         className={brandInputClass}
                                     />
                                 </div>

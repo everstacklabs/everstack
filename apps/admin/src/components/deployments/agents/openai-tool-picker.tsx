@@ -69,7 +69,7 @@ export function OpenAIToolPicker({
         <p role="status">Loading tools…</p>
       )}
       {(functions.error || mcp.error) && (
-        <p role="alert" className="text-red-400 light:text-red-700">
+        <p role="alert" className="text-danger">
           Could not load all tools. Close and reopen to retry, or start without
           tools.
         </p>

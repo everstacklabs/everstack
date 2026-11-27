@@ -31,7 +31,7 @@ func TestPidSet(t *testing.T) {
 // (1) a fcagent and the VM it forks share a fingerprint (same pod), and
 // (2) dev and prod fingerprints DIFFER (different pods).
 func TestParseCgroupOwner(t *testing.T) {
-	// Real cgroup-v2 shapes from the node (vps-b5be49f6).
+	// Real cgroup-v2 shapes from a node.
 	devAgent := "0::/kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod8e09f4cb_416c_46fe_b149_ec936cc238da.slice/cri-containerd-aaaa.scope\n"
 	// A firecracker VM forked by the dev agent inherits the same cgroup.
 	devVM := "0::/kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod8e09f4cb_416c_46fe_b149_ec936cc238da.slice/cri-containerd-aaaa.scope\n"

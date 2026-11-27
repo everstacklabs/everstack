@@ -532,6 +532,26 @@ func (l *Loop) Run(ctx context.Context, state *LoopState, input *LoopInput) (*Lo
 			break
 		}
 
+		// Stop at the iteration boundary when the instance was paused while
+		// this run was in flight: no further model or tool spend.
+		if tenantID := loopTenantID(turnCtx, input); !tenantActive(turnCtx, tenantID) {
+			state.FinishReason = FinishReasonInstancePaused
+			state.Done = true
+			if state.LastAssistantText == "" {
+				state.LastAssistantText = instancePausedMessage
+			}
+			logger.WithFields("session_id", input.SessionID, "tenant_id", tenantID).
+				Info("loop: run stopped; instance is paused")
+			l.emitter.Emit(Event{
+				Type:       EventTermination,
+				SessionID:  input.SessionID,
+				TurnNumber: state.TurnNumber,
+				Timestamp:  time.Now(),
+				Reason:     FinishReasonInstancePaused,
+			})
+			break
+		}
+
 		// Check max iterations (typed max_steps uses a distinct finish reason).
 		if state.IterationCount >= l.config.MaxIterations {
 			terminationReason := "max_iterations"

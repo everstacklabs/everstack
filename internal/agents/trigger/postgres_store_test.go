@@ -2,6 +2,8 @@ package trigger
 
 import (
 	"context"
+	"errors"
+	"regexp"
 	"testing"
 	"time"
 
@@ -56,5 +58,67 @@ func TestPostgresStoreListTriggersHandlesNullableColumns(t *testing.T) {
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+// Trigger executions are listed only for the tenant that owns the trigger.
+func TestListExecutionsFiltersByTenant(t *testing.T) {
+	rawDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rawDB.Close()
+	store := NewPostgresStore(sqlx.NewDb(rawDB, "sqlmock"))
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(*) FROM agent_trigger_executions WHERE trigger_id = $1 AND tenant_id = $2")).
+		WithArgs("trg-1", "tenant-a").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+	mock.ExpectQuery(regexp.QuoteMeta("FROM agent_trigger_executions WHERE trigger_id = $1 AND tenant_id = $2")).
+		WithArgs("trg-1", "tenant-a", 50, 0).WillReturnRows(sqlmock.NewRows([]string{"id"}))
+	if _, _, err := store.ListExecutions(context.Background(), "trg-1", "tenant-a", 0, 0); err != nil {
+		t.Fatalf("ListExecutions: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestListEventTriggersFiltersBySourceTenant(t *testing.T) {
+	rawDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rawDB.Close()
+	store := NewPostgresStore(sqlx.NewDb(rawDB, "sqlmock"))
+
+	query := regexp.QuoteMeta(`SELECT * FROM agent_triggers
+		WHERE trigger_type = 'event' AND enabled = TRUE AND circuit_state != 'open'
+		AND event_source_agent_id = $1::UUID AND event_type = $2 AND tenant_id = $3`)
+	mock.ExpectQuery(query).
+		WithArgs("agent-1", "session.end", "tenant-a").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
+	if _, err := store.ListEventTriggers(context.Background(), "agent-1", "session.end", "tenant-a"); err != nil {
+		t.Fatalf("ListEventTriggers: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDeleteTriggerReturnsNotFoundForAnotherTenant(t *testing.T) {
+	rawDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rawDB.Close()
+	store := NewPostgresStore(sqlx.NewDb(rawDB, "sqlmock"))
+
+	mock.ExpectExec(regexp.QuoteMeta(`DELETE FROM agent_triggers WHERE id = $1 AND tenant_id = $2`)).
+		WithArgs("trigger-1", "tenant-b").
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	if err := store.DeleteTrigger(context.Background(), "trigger-1", "tenant-b"); !errors.Is(err, ErrTriggerNotFound) {
+		t.Fatalf("DeleteTrigger error = %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -44,10 +44,11 @@ const (
 	// KindRootfs is the disk image / overlay tarball. Largest stream
 	// (GB-range typically).
 	KindRootfs Kind = "rootfs.img"
-	// KindWorkspace is the gzipped /workspace workspace tarball uploaded
-	// when a sleeping sandbox is ARCHIVED: the local tar is moved to
-	// object storage and deleted from host disk. Restore-from-archived
-	// downloads this stream back before the normal revive restore.
+	// KindWorkspace is the LEGACY fixed key for the /workspace tarball,
+	// written by the archive path before workspace generations existed.
+	// New tarballs live under WorkspacePrefix (see workspace.go); this
+	// key is still read for old archived rows and deleted on prune and
+	// terminate.
 	KindWorkspace Kind = "workspace.tar.gz"
 )
 
@@ -56,13 +57,13 @@ const (
 // the restore path fetches: if no manifest exists, there's nothing to
 // restore. Manifests are also what the GC walks.
 type Manifest struct {
-	SandboxID  string         `json:"sandbox_id"`
-	TenantID string         `json:"tenant_id"`
-	AgentID  string         `json:"agent_id,omitempty"`
-	Backend  string         `json:"backend"`
-	TakenAt  time.Time      `json:"taken_at"`
-	Trigger  string         `json:"trigger,omitempty"` // "sleep", "periodic", "shutdown"
-	Streams  []StreamRecord `json:"streams"`
+	SandboxID string         `json:"sandbox_id"`
+	TenantID  string         `json:"tenant_id"`
+	AgentID   string         `json:"agent_id,omitempty"`
+	Backend   string         `json:"backend"`
+	TakenAt   time.Time      `json:"taken_at"`
+	Trigger   string         `json:"trigger,omitempty"` // "sleep", "periodic", "shutdown"
+	Streams   []StreamRecord `json:"streams"`
 	// Network captures the guest-visible network identity at snapshot
 	// time so a restore on a different host can recreate the same MAC
 	// and iface_id before load_snapshot. Nil when the sandbox was in
@@ -85,6 +86,10 @@ type NetworkSpec struct {
 	GuestIP    string   `json:"guest_ip,omitempty"`
 	HostIP     string   `json:"host_ip,omitempty"`
 	MTU        int      `json:"mtu,omitempty"`
+	// DNSServers is legacy and ignored on restore. Older manifests hold
+	// the guest's resolver here (its old TAP host IP), which must never
+	// be used as a DNS upstream. Kept so those manifests still decode;
+	// no longer written.
 	DNSServers []string `json:"dns_servers,omitempty"`
 }
 
@@ -163,13 +168,16 @@ func (Disabled) ListByTenant(context.Context, string) ([]storage.BucketObject, e
 type ObjectStoreBacked struct {
 	store  storage.ObjectStore
 	bucket string
+	// workspacePartSize overrides the multipart part size for workspace
+	// uploads (tests only); zero means defaultWorkspacePartSize.
+	workspacePartSize int64
 }
 
 // NewFromObjectStore returns a Store that writes snapshots into the
 // given bucket via the supplied ObjectStore. Bucket may be empty if
 // the underlying store already has a default configured.
 func NewFromObjectStore(store storage.ObjectStore, bucket string) *ObjectStoreBacked {
-	return &ObjectStoreBacked{store: store, bucket: bucket}
+	return &ObjectStoreBacked{store: store, bucket: bucket, workspacePartSize: defaultWorkspacePartSize}
 }
 
 func sandboxPrefix(tenantID, sandboxID string) string {
@@ -244,10 +252,21 @@ func (s *ObjectStoreBacked) GetManifest(ctx context.Context, tenantID, sandboxID
 }
 
 func (s *ObjectStoreBacked) GetStream(ctx context.Context, tenantID, sandboxID string, kind Kind) (io.ReadCloser, error) {
-	// We synthesise a streaming reader from a presigned URL so we
-	// don't buffer multi-GB rootfs in memory. The ObjectStore
-	// interface only exposes presigned GET today; ranged reads or a
-	// direct GetObject would be a future enhancement.
+	// Prefer a direct SDK read: it streams without buffering and never
+	// materialises a presigned URL that could end up in an error string
+	// or a log line.
+	if blob, err := storage.RequireBlobPlane(s.store); err == nil {
+		obj, err := blob.Get(ctx, s.bucket, key(tenantID, sandboxID, kind))
+		if err != nil {
+			if storage.IsCode(err, storage.ErrorNotFound) {
+				return nil, ErrSnapshotMissing
+			}
+			return nil, fmt.Errorf("snapshot: get %s/%s: %w", sandboxID, kind, err)
+		}
+		return obj.Body, nil
+	}
+	// Legacy ObjectStore without direct reads: presigned GET. The URL is a
+	// bearer credential, so it is stripped from any transport error.
 	signedURL, err := s.store.GetPresignedURL(ctx, s.bucket, key(tenantID, sandboxID, kind), 10*time.Minute)
 	if err != nil {
 		return nil, fmt.Errorf("snapshot: presign %s/%s: %w", sandboxID, kind, err)
@@ -268,19 +287,35 @@ func (s *ObjectStoreBacked) GetStream(ctx context.Context, tenantID, sandboxID s
 }
 
 func (s *ObjectStoreBacked) Delete(ctx context.Context, tenantID, sandboxID string) error {
-	if tenantID == "" || sandboxID == "" {
-		return errors.New("snapshot: tenantID and sandboxID required")
+	if err := validateOwner(tenantID, sandboxID); err != nil {
+		return err
 	}
-	// Best-effort across known kinds + manifest.
-	keys := []string{
+	// Everything under the sandbox prefix: VM snapshot streams, the
+	// manifest, and every workspace tarball generation.
+	var firstErr error
+	seen := map[string]bool{}
+	if objects, err := s.store.List(ctx, s.bucket, sandboxPrefix(tenantID, sandboxID)+"/"); err != nil {
+		firstErr = fmt.Errorf("snapshot: list sandbox objects: %w", err)
+	} else {
+		for _, obj := range objects {
+			seen[obj.Key] = true
+			if err := s.store.Delete(ctx, s.bucket, obj.Key); err != nil && firstErr == nil {
+				firstErr = err
+			}
+		}
+	}
+	// Known keys too, in case the listing failed or lagged.
+	for _, k := range []string{
 		manifestKey(tenantID, sandboxID),
 		key(tenantID, sandboxID, KindState),
 		key(tenantID, sandboxID, KindMemory),
 		key(tenantID, sandboxID, KindRootfs),
-	}
-	var firstErr error
-	for _, k := range keys {
-		if err := s.store.Delete(ctx, s.bucket, k); err != nil && firstErr == nil {
+		key(tenantID, sandboxID, KindWorkspace),
+	} {
+		if seen[k] {
+			continue
+		}
+		if err := s.store.Delete(ctx, s.bucket, k); err != nil && !storage.IsCode(err, storage.ErrorNotFound) && firstErr == nil {
 			firstErr = err
 		}
 	}

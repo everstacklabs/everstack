@@ -15,7 +15,7 @@ function formatDate(ts?: string | null): string {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-    enabled: 'bg-green-500/20 text-green-400 light:text-green-600 border-green-500/30',
+    enabled: 'bg-success-surface-strong text-success border-success-border',
     disabled: 'bg-gray-500/20 text-gray-400 light:text-gray-600 border-gray-500/30',
 }
 
@@ -125,7 +125,7 @@ export function CronsTab() {
                         <Loader loaderText="Loading crons..." />
                     </div>
                 ) : error ? (
-                    <div className="flex items-center justify-center h-full text-red-400 light:text-red-600 text-sm">
+                    <div className="flex items-center justify-center h-full text-danger text-sm">
                         Error loading crons: {error.message}
                     </div>
                 ) : crons.length === 0 ? (
@@ -164,7 +164,7 @@ export function CronsTab() {
                                     >
                                         <td className="py-2.5 px-3 text-white/80 light:text-black/80 font-medium">{cron.name}</td>
                                         <td className="py-2.5 px-3 font-mono text-xs text-white/60 light:text-black/60">{cron.schedule}</td>
-                                        <td className="py-2.5 px-3 font-mono text-xs text-white/50 light:text-black/50 max-w-[200px] truncate" title={cron.command}>
+                                        <td className="py-2.5 px-3 font-mono text-xs text-white/50 light:text-black/50 max-w-[200px] truncate">
                                             {cron.command}
                                         </td>
                                         <td className="py-2.5 px-3">
@@ -175,7 +175,7 @@ export function CronsTab() {
                                         <td className="py-2.5 px-3 text-white/50 light:text-black/50 text-xs">
                                             {cron.runCount}
                                             {cron.errorCount > 0 && (
-                                                <span className="text-red-400 light:text-red-600 ml-1">({cron.errorCount} err)</span>
+                                                <span className="text-danger ml-1">({cron.errorCount} err)</span>
                                             )}
                                         </td>
                                         <td className="py-2.5 px-3 text-white/50 light:text-black/50 text-xs">{formatDate(cron.lastRunAt)}</td>
@@ -196,7 +196,7 @@ export function CronsTab() {
                                                 <button
                                                     onClick={() => handleDelete(String(cron.id), cron.name)}
                                                     disabled={deleteMutation.isPending}
-                                                    className="p-1 rounded text-red-400 light:text-red-600 hover:text-red-300 light:hover:text-red-600 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                                    className="p-1 rounded text-danger hover:bg-danger-surface transition-colors disabled:opacity-50"
                                                     title="Delete"
                                                 >
                                                     <Iconify.Icon icon="heroicons:trash" className="size-4" />

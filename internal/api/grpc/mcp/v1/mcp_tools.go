@@ -150,7 +150,7 @@ func (s *Server) CallTool(ctx context.Context, req *connect.Request[mcppb.CallTo
 
 	if req.Msg.ServerId == "" {
 		// Auto-resolve server from tool name
-		serverID, ok := s.registry.FindServerForTool(req.Msg.ToolName)
+		serverID, ok := s.registry.FindServerForToolForTenant(tenantID, req.Msg.ToolName)
 		if !ok {
 			serverID, err = s.resolveServerIDForToolFromDB(ctx, tenantID, req.Msg.ToolName)
 			if err != nil {
@@ -170,7 +170,7 @@ func (s *Server) CallTool(ctx context.Context, req *connect.Request[mcppb.CallTo
 	}
 
 	start := time.Now()
-	result, err := s.registry.CallTool(ctx, req.Msg.ServerId, req.Msg.ToolName, args)
+	result, err := s.registry.CallToolForTenant(ctx, tenantID, req.Msg.ServerId, req.Msg.ToolName, args)
 	latencyMs := time.Since(start).Milliseconds()
 
 	// Build tool call record

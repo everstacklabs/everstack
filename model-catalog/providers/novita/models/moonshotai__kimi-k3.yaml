@@ -1,0 +1,37 @@
+# Verified 2026-11-24.
+# Source: https://api.novita.ai/openai/v1/models
+name: "moonshotai/kimi-k3"
+display_name: "Kimi K3 (Novita)"
+family: "kimi"
+status: "stable"
+release_date: "2026-07-16"
+
+cost:
+  input_per_1k: 0.003
+  output_per_1k: 0.015
+  cache_read_per_1k: 0.0003
+
+limits:
+  max_tokens: 1048576
+  max_completion_tokens: 1048576
+
+capabilities:
+  - chat
+  - function_calling
+  - reasoning
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+notes: "Multimodal Kimi model with 1M context and toggleable max-effort thinking for long-horizon agent work"
+
+structured_output: true
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 1048576
+    has_max_value: true
+added_in_version: "2.11.0"

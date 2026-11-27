@@ -1,0 +1,28 @@
+{
+  "name": "everstack-sdk-tests-node",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Smoke tests for the @everstack/node SDK against a live gateway",
+  "scripts": {
+    "test": "tsx src/run-all.ts",
+    "test:connectivity": "tsx src/01-connectivity.ts",
+    "test:chat": "tsx src/02-chat.ts",
+    "test:stream": "tsx src/03-streaming.ts",
+    "test:transport": "tsx src/04-transport-compare.ts",
+    "raw": "tsx src/raw-fetch.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@everstack/node": "file:../../../packages/sdks/everstack-node/everstack-node-0.2.2.tgz",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

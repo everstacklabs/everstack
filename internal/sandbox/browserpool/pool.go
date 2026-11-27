@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -226,13 +227,22 @@ func (p *Pool) ensureBrowser(
 			}
 			return cloneLease(call.lease), call.err
 		}
-		if limits.MaxConcurrent >= 0 && p.tenantAllocationCountLocked(tenantID) >= limits.MaxConcurrent {
-			p.mu.Unlock()
-			return nil, fmt.Errorf(
-				"browserpool: tenant %s reached concurrent browser limit %d",
-				tenantID,
-				limits.MaxConcurrent,
-			)
+		if limits.MaxConcurrent >= 0 && len(limits.ShadowScopeTenantIDs) > 0 {
+			if orgUsed := p.tenantAllocationCountLocked(tenantID, limits.ShadowScopeTenantIDs); orgUsed >= limits.MaxConcurrent {
+				logger.WithFields("tenant", tenantID, "used", orgUsed, "limit", limits.MaxConcurrent).
+					Info("browser concurrency shadow: organization-wide count would refuse this browser (not enforced)")
+			}
+		}
+		if limits.MaxConcurrent >= 0 {
+			if used := p.tenantAllocationCountLocked(tenantID, limits.ScopeTenantIDs); used >= limits.MaxConcurrent {
+				p.mu.Unlock()
+				return nil, fmt.Errorf(
+					"%w: your plan includes %d and you have %d running. Close a browser session or upgrade your plan: https://everstack.ai/pricing",
+					ErrConcurrentBrowserLimit,
+					limits.MaxConcurrent,
+					used,
+				)
+			}
 		}
 
 		call := &ensureCall{done: make(chan struct{}), tenantID: tenantID}
@@ -777,15 +787,30 @@ func (p *Pool) resolveTenantLimits(ctx context.Context, tenantID string) (Tenant
 	return limits, nil
 }
 
-func (p *Pool) tenantAllocationCountLocked(tenantID string) int {
+// tenantAllocationCountLocked counts live and in-flight leases held by
+// tenantID or, when scope is set, by any tenant id in scope (one
+// organization's ids). The count is per replica: leases live in this
+// process's memory.
+func (p *Pool) tenantAllocationCountLocked(tenantID string, scope []string) int {
+	counts := func(owner string) bool {
+		if len(scope) == 0 {
+			return owner == tenantID
+		}
+		for _, id := range scope {
+			if strings.EqualFold(id, owner) {
+				return true
+			}
+		}
+		return owner == tenantID
+	}
 	count := 0
 	for _, lease := range p.leases {
-		if lease != nil && lease.TenantID == tenantID {
+		if lease != nil && counts(lease.TenantID) {
 			count++
 		}
 	}
 	for _, ensure := range p.ensures {
-		if ensure != nil && ensure.tenantID == tenantID {
+		if ensure != nil && counts(ensure.tenantID) {
 			count++
 		}
 	}

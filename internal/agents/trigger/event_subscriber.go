@@ -77,9 +77,13 @@ func (es *EventSubscriber) handleEvent(ctx context.Context, event database.Event
 	if !ok || agentID == "" {
 		return nil
 	}
+	tenantID, ok := eventData["tenant_id"].(string)
+	if !ok || tenantID == "" {
+		return nil
+	}
 
 	// Find matching triggers
-	triggers, err := es.store.ListEventTriggers(ctx, agentID, eventType)
+	triggers, err := es.store.ListEventTriggers(ctx, agentID, eventType, tenantID)
 	if err != nil {
 		logger.WithFields("agent_id", agentID, "event_type", eventType, "error", err.Error()).
 			Warn("trigger_event_subscriber: failed to list event triggers")

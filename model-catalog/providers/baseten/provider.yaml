@@ -1,0 +1,39 @@
+name: "baseten"
+display_name: "Baseten"
+base_url: "https://inference.baseten.co/v1"
+api_version: "2024-01-01"
+
+provider_type: "meta"
+supports_model_discovery: false
+
+auth:
+  type: "api_key"
+  header_name: "Authorization"
+  header_format: "Bearer {api_key}"
+  env_var: "BASETEN_API_KEY"
+
+rate_limits:
+  requests_per_minute: 1200
+  tokens_per_minute: 240000
+  concurrent_requests: 30
+
+capabilities:
+  chat: true
+  completions: false
+  embeddings: false
+  function_calling: true
+  vision: false
+  streaming: true
+  fine_tuning: false
+  assistants: false
+
+model_families:
+  deepseek:
+    description: "DeepSeek V4 family on Baseten Model APIs"
+    capabilities: ["chat", "function_calling", "reasoning"]
+  glm:
+    description: "GLM family on Baseten Model APIs, including Fast variants"
+    capabilities: ["chat", "function_calling", "reasoning"]
+  kimi:
+    description: "Kimi family on Baseten Model APIs"
+    capabilities: ["chat", "function_calling", "reasoning"]

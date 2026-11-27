@@ -21,8 +21,8 @@ func TestBrowserRuntimeCommercialContract(t *testing.T) {
 	if pricing == nil {
 		t.Fatal("browser runtime pricing is missing")
 	}
-	if pricing.BrowserHour != 0.01 {
-		t.Fatalf("browser hour = %v, want 0.01", pricing.BrowserHour)
+	if pricing.BrowserHour != 0.05 {
+		t.Fatalf("browser hour = %v, want 0.05", pricing.BrowserHour)
 	}
 	if pricing.MinimumSessionSeconds != 60 {
 		t.Fatalf("minimum session = %d, want 60", pricing.MinimumSessionSeconds)

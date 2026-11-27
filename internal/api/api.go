@@ -23,6 +23,7 @@ import (
 	grpcserver "github.com/everstacklabs/everstack/internal/api/grpc/server"
 	"github.com/everstacklabs/everstack/internal/api/grpc/server/middleware"
 	http_util "github.com/everstacklabs/everstack/internal/api/http"
+	"github.com/everstacklabs/everstack/internal/api/http/anthropic"
 	"github.com/everstacklabs/everstack/internal/api/http/handlers"
 	httpmw "github.com/everstacklabs/everstack/internal/api/http/middleware"
 	http_mw "github.com/everstacklabs/everstack/internal/api/http/middleware/interceptors"
@@ -31,10 +32,12 @@ import (
 	"github.com/everstacklabs/everstack/internal/cqrs"
 	rtconfig "github.com/everstacklabs/everstack/internal/domain/runtime_config"
 	"github.com/everstacklabs/everstack/internal/enterprise"
+	apikeylib "github.com/everstacklabs/everstack/internal/lib/apikey"
 	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/everstacklabs/everstack/internal/lib/handlers/gateway/fastpath"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/everstacklabs/everstack/internal/lib/mferrors"
+	"github.com/everstacklabs/everstack/pkg/grpc/everstack/gateway/v1/gatewayconnect"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 )
@@ -51,6 +54,7 @@ type API struct {
 	grpcGatewayMux  *runtime.ServeMux
 	grpcEndpoint    string
 	grpcDialOpts    []grpc.DialOption
+	grpcDirectConn  grpc.ClientConnInterface
 	serviceRegistry *registry.Registry
 	// baseCtx carries process-level context (with CQRS system) for injecting into requests
 	baseCtx context.Context
@@ -117,9 +121,14 @@ func NewAPI(
 		api.grpcGatewayMux = grpcserver.GatewayMux()
 		api.grpcEndpoint = grpcserver.GatewayEndpoint()
 		api.grpcDialOpts = grpcserver.GatewayDialOpts()
+		api.grpcDirectConn = grpcserver.GatewayDirectConn()
 		// Mount the gateway under /v1; streaming is controlled by request body and config only.
 		cfg := apiConfigFromCtx(ctx)
-		handler := middleware.TraceContextHTTPHandler(gw)
+		// SpendLimitStatus sits directly on the grpc-gateway mux, inside the
+		// OpenAI and SSE wrappers, so the Cloud spend limit refusal reaches
+		// every /v1 and /openai/v1 caller as 402, not the 429 its gRPC code
+		// maps to (OpenAI SDKs retry 429; the limit resets at 00:00 UTC).
+		handler := middleware.TraceContextHTTPHandler(httpmw.SpendLimitStatus(gw))
 
 		// Apply OpenAI compatibility transformation FIRST before grpc-gateway processes the request
 		// This converts OpenAI format (content as string) to proto format (content as array of ContentPart)
@@ -260,17 +269,32 @@ func NewAPI(
 		// Ensure the JSON shim targets the wrapped/validated gateway handler
 		api.grpcGateway = handler
 
-		api.RegisterHandlerPrefixes(handler, "/v1")
-		// Fully OpenAI-wire-compatible surface (request + response + Bearer auth)
-		// for OpenAI SDK / LiteLLM clients such as ADK agents. Reuses the same
+		// /v1 is the documented OpenAI-compatible base URL: an OpenAI SDK
+		// sending its key as Bearer gets OpenAI-shaped answers on the OpenAI
+		// verbs, native x-evs-api-key callers keep proto-JSON. See
+		// withV1OpenAICompat.
+		api.mountMessages(handler)
+		api.RegisterHandlerPrefixes(grpcserver.StripClientGatewayIdentity(withV1OpenAICompat(handler)), "/v1")
+		// /openai/v1 is the older alias of the same OpenAI-compatible surface,
+		// still served for clients configured against it. Reuses the same
 		// authed + metered /v1 chain; see withOpenAIRoundTrip.
-		api.RegisterHandlerPrefixes(withOpenAIRoundTrip(handler), "/openai/v1")
+		api.RegisterHandlerPrefixes(grpcserver.StripClientGatewayIdentity(withOpenAIRoundTrip(handler)), "/openai/v1")
 	} else {
 		logger.WithError(gwErr).Warn("grpc-gateway initialization failed; continuing without REST gateway")
 	}
 	// Serve OpenAPI JSONs under /openapi
 	api.RegisterHandlerOnPrefix("/openapi", http.StripPrefix("/openapi", http.FileServer(http.Dir("openapi"))))
 	return api, nil
+}
+
+// mountMessages registers exact paths before the /v1 prefix. The translator
+// invokes the same OpenAI wire adapter and authenticated chain once, in process.
+func (a *API) mountMessages(inner http.Handler) {
+	// Same edge rule as /v1: a client-supplied copy of the forwarded gateway
+	// identity never reaches the authenticated chain.
+	handler := grpcserver.StripClientGatewayIdentity(anthropic.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { serveOpenAICompat(w, r, inner) })))
+	a.router.Handle("/v1/messages", handler)
+	a.router.Handle("/v1/messages/count_tokens", handler)
 }
 
 // apiConfigFromCtx retrieves the validated gateway config from context if stored by the caller.
@@ -300,9 +324,18 @@ func (a *API) RegisterService(ctx context.Context, srv grpcserver.Server) error 
 	a.registerConnectServer(srv.(grpcserver.ConnectServer))
 
 	// If the service also exposes grpc-gateway handlers and the mux exists, register them now.
-	if registrable, ok := any(srv).(grpcserver.GatewayRegistrable); ok && a.grpcGatewayMux != nil {
-		if err := registrable.RegisterGateway(ctx, a.grpcGatewayMux, a.grpcEndpoint, a.grpcDialOpts); err != nil {
-			return err
+	// A service registered here replaces any handlers already registered for
+	// the same routes (grpc-gateway matches the latest registration first), so
+	// it must use the same transport NewGRPCJSONGateway chose for it.
+	if a.grpcGatewayMux != nil {
+		if direct, ok := any(srv).(grpcserver.GatewayClientRegistrable); ok && a.grpcDirectConn != nil {
+			if err := direct.RegisterGatewayClient(ctx, a.grpcGatewayMux, a.grpcDirectConn); err != nil {
+				return err
+			}
+		} else if registrable, ok := any(srv).(grpcserver.GatewayRegistrable); ok {
+			if err := registrable.RegisterGateway(ctx, a.grpcGatewayMux, a.grpcEndpoint, a.grpcDialOpts); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -379,7 +412,7 @@ func (a *API) registerConnectServer(service grpcserver.ConnectServer) {
 	// Wrap the handler with response wrapper to add correlation IDs
 	wrappedHandler := middleware.NewResponseWrapper(http_mw.CORSInterceptor(innerHandler))
 
-	a.RegisterHandlerPrefixes(wrappedHandler, prefix)
+	a.RegisterHandlerPrefixes(grpcserver.StripClientGatewayIdentity(wrappedHandler), prefix)
 }
 
 // SetRegistry allows wiring a service registry for dynamic interceptor selection.
@@ -485,13 +518,14 @@ func (a *API) healthHandler() http.Handler {
 	handler.HandleFunc("/health/dependencies", a.handleDependencyHealth)
 	// handler.Handle("/metrics", metricsExporter())
 
-	// Add rate limit monitoring endpoints
-	handler.HandleFunc("/ratelimit/status", handlers.RateLimitStatusHandler)
-	handler.HandleFunc("/ratelimit/subscribe", handlers.RateLimitSubscribeHandler)
-
-	// Add provider health endpoints
-	handler.HandleFunc("/health/providers", handlers.ProviderHealthHandler)
-	handler.HandleFunc("/health/providers/", handlers.ProviderHealthByNameHandler)
+	// Rate limit and provider health state is process-wide: on a shared
+	// gateway it mixes every tenant's key ids, quotas and raw upstream error
+	// text. These are operator views, so they need a signed-in organization
+	// owner or admin. The liveness and readiness endpoints above stay open.
+	handler.HandleFunc("/ratelimit/status", requireOrgAdmin(handlers.RateLimitStatusHandler))
+	handler.HandleFunc("/ratelimit/subscribe", requireOrgAdmin(handlers.RateLimitSubscribeHandler))
+	handler.HandleFunc("/health/providers", requireOrgAdmin(handlers.ProviderHealthHandler))
+	handler.HandleFunc("/health/providers/", requireOrgAdmin(handlers.ProviderHealthByNameHandler))
 
 	return handler
 }
@@ -586,39 +620,24 @@ func jsonCompatForConnectPaths(next http.Handler, gw http.Handler) http.Handler 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ct := strings.ToLower(r.Header.Get("Content-Type"))
 		if strings.HasPrefix(ct, "application/json") {
-			p := r.URL.Path
-			if strings.HasPrefix(p, "/everstack.gateway.v1.GatewayService/") {
-				// Defense-in-depth: enforce API key requirement and reject Authorization Bearer here too
-				// if auth := r.Header.Get(common.Authorization); auth != "" && strings.HasPrefix(auth, "Bearer ") {
-				// 	w.Header().Set("Content-Type", "application/json")
-				// 	w.WriteHeader(http.StatusUnauthorized)
-				// 	_, _ = w.Write([]byte(`{"error":{"code":401,"message":"Invalid authorization token; use x-mf-api-key"}}`))
-				// 	return
-				// }
-				// if r.Header.Get(common.EverstackApiKey) == "" {
-				// 	w.Header().Set("Content-Type", "application/json")
-				// 	w.WriteHeader(http.StatusUnauthorized)
-				// 	_, _ = w.Write([]byte(`{"error":{"code":401,"message":"API key is required"}}`))
-				// 	return
-				// }
-				var mapped string
-				switch {
-				case strings.HasSuffix(p, "/ChatCompletion"):
-					mapped = "/v1/chat/completions"
-					// Transform chat request: convert OpenAI format to proto format
-					r = transformChatCompletionRequest(r)
-				case strings.HasSuffix(p, "/Embeddings"):
-					mapped = "/v1/embeddings"
-					// Transform embeddings request: extract text from messages if input is empty
-					r = transformEmbeddingsRequest(r)
-				}
-				if mapped != "" {
-					// Clone the request and rewrite the path
-					r2 := r.Clone(r.Context())
-					r2.URL.Path = mapped
-					gw.ServeHTTP(w, r2)
+			var mapped string
+			switch r.URL.Path {
+			case gatewayconnect.GatewayServiceChatCompletionProcedure:
+				mapped = "/v1/chat/completions"
+				var reject string
+				if r, reject = transformChatCompletionRequestChecked(r); reject != "" {
+					writeInvalidArgument(w, reject)
 					return
 				}
+			case gatewayconnect.GatewayServiceEmbeddingsProcedure:
+				mapped = "/v1/embeddings"
+				r = transformEmbeddingsRequest(r)
+			}
+			if mapped != "" {
+				r2 := r.Clone(r.Context())
+				r2.URL.Path = mapped
+				gw.ServeHTTP(w, r2)
+				return
 			}
 		}
 		next.ServeHTTP(w, r)
@@ -633,13 +652,50 @@ func withOpenAICompatTransform(next http.Handler) http.Handler {
 		if r.Method == http.MethodPost && strings.HasPrefix(strings.ToLower(r.Header.Get("Content-Type")), "application/json") {
 			switch r.URL.Path {
 			case "/v1/chat/completions":
-				r = transformChatCompletionRequest(r)
+				var reject string
+				if r, reject = transformChatCompletionRequestChecked(r); reject != "" {
+					writeInvalidArgument(w, reject)
+					return
+				}
 			case "/v1/embeddings":
 				r = transformEmbeddingsRequest(r)
+			case "/v1/responses":
+				r = transformResponsesRequest(r)
 			}
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// openAIStreamDefaultKey marks a chat request that arrived on the
+// OpenAI-compatible surface without a `stream` field.
+type openAIStreamDefaultKey struct{}
+
+// withOpenAIStreamDefault records that the request omitted `stream` on the
+// OpenAI-compatible surface, where that means a non-streaming call.
+func withOpenAIStreamDefault(ctx context.Context) context.Context {
+	return context.WithValue(ctx, openAIStreamDefaultKey{}, true)
+}
+
+// chatRequestOffersTools reports whether a decoded chat request gives the
+// model tools to call. Anything other than an absent, null or empty `tools`
+// counts, so a malformed value leaves the request's routing as it was.
+func chatRequestOffersTools(body map[string]interface{}) bool {
+	switch tools := body["tools"].(type) {
+	case nil:
+		return false
+	case []interface{}:
+		return len(tools) > 0
+	default:
+		return true
+	}
+}
+
+// openAIStreamDefault reports whether transformChatCompletionRequest should
+// write the OpenAI default (`stream: false`) into the request it forwards.
+func openAIStreamDefault(ctx context.Context) bool {
+	v, _ := ctx.Value(openAIStreamDefaultKey{}).(bool)
+	return v
 }
 
 // bufferingResponseWriter captures a downstream response so it can be rewritten
@@ -657,6 +713,12 @@ func (w *bufferingResponseWriter) Header() http.Header {
 	return w.header
 }
 func (w *bufferingResponseWriter) WriteHeader(s int) { w.status = s }
+
+// Flush is a no-op: everything is sent at once after conversion. The
+// grpc-gateway refuses to forward a server stream (CreateResponse) to a
+// writer that cannot flush ("unexpected type of web server", 500), so a
+// unary OpenAI Responses call needs one.
+func (w *bufferingResponseWriter) Flush() {}
 func (w *bufferingResponseWriter) Write(b []byte) (int, error) {
 	if w.status == 0 {
 		w.status = http.StatusOK
@@ -664,32 +726,150 @@ func (w *bufferingResponseWriter) Write(b []byte) (int, error) {
 	return w.buf.Write(b)
 }
 
+// serveOpenAIModels answers a model listing in the OpenAI `{"object":"list",
+// "data":[...]}` shape by delegating to the gateway's own /v1/gateway/models
+// handler and reshaping its response.
+//
+// The listing is the tenant's enabled models, which is what OpenAI semantics
+// require: `client.models.list()` must return what the caller can actually
+// invoke. It is deliberately not the upstream model catalog
+// (catalog.everstack.ai, the signed metadata bundle instances sync from):
+// serving that here would offer thousands of models the tenant has not enabled
+// and fail on the first call to any of them.
+//
+// r must already have its path rewritten for the inner handler.
+func serveOpenAIModels(w http.ResponseWriter, r *http.Request, next http.Handler) {
+	r.URL.Path = "/v1/gateway/models"
+	rec := &bufferingResponseWriter{}
+	next.ServeHTTP(rec, r)
+	body, status := rec.buf.Bytes(), rec.status
+	if status == 0 {
+		status = http.StatusOK
+	}
+	if status == http.StatusOK {
+		if conv, ok := gatewayModelsToOpenAI(body); ok {
+			body = conv
+		}
+	} else if conv, mapped, ok := protoErrorToOpenAI(body, status); ok {
+		body, status = conv, mapped
+	}
+	writeOpenAIBuffered(w, rec.Header(), status, body)
+}
+
+// openAIBearerAPIKey returns the API key an OpenAI-style client carries in
+// `Authorization: Bearer <key>`, or "" when the header is absent or carries
+// anything other than a key this platform issued.
+//
+// It is an allowlist on the issued-key prefixes (apikeylib.HasIssuedKeyPrefix)
+// rather than "any bearer": Authorization is also how a device-auth JWT and a
+// session token arrive, and those must keep falling through to the API-key
+// interceptor's rejection instead of being probed against the key store as if
+// they were keys.
+func openAIBearerAPIKey(h http.Header) string {
+	a := strings.TrimSpace(h.Get(common.Authorization))
+	if !strings.HasPrefix(a, "Bearer ") {
+		return ""
+	}
+	token := strings.TrimSpace(strings.TrimPrefix(a, "Bearer "))
+	if !apikeylib.HasIssuedKeyPrefix(token) {
+		return ""
+	}
+	return token
+}
+
+// hasBearerAuth reports whether the request carries a non-empty
+// Authorization: Bearer credential of any kind.
+func hasBearerAuth(h http.Header) bool {
+	a := strings.TrimSpace(h.Get(common.Authorization))
+	return strings.HasPrefix(a, "Bearer ") && strings.TrimSpace(strings.TrimPrefix(a, "Bearer ")) != ""
+}
+
+// isV1OpenAIPath reports whether a /v1 request is one of the OpenAI verbs an
+// OpenAI SDK sends when its base URL is https://<instance>/v1. Only these take
+// a Bearer key on /v1: the rest of the prefix (OTLP receivers, deploy invoke,
+// native REST) has its own auth contract and is left alone.
+func isV1OpenAIPath(r *http.Request) bool {
+	p := r.URL.Path
+	switch {
+	case p == "/v1/chat/completions" && r.Method == http.MethodPost,
+		p == "/v1/embeddings" && r.Method == http.MethodPost,
+		p == "/v1/models" && r.Method == http.MethodGet,
+		p == "/v1/responses", strings.HasPrefix(p, "/v1/responses/"):
+		return true
+	case r.Method == http.MethodPost && (p == "/v1/images/generations" ||
+		p == "/v1/moderations" ||
+		p == "/v1/rerank"):
+		// JSON-bodied inference routes. Their answers pass through
+		// serveOpenAICompat unreshaped (errors still become the OpenAI
+		// envelope). Image edits and variations (multipart in OpenAI) and the
+		// audio routes (multipart uploads, binary speech) are not listed: the
+		// native routes cannot serve an OpenAI SDK's request or response.
+		return true
+	}
+	return false
+}
+
+// withV1OpenAICompat makes the documented base URL, https://<instance>/v1,
+// work with an unmodified OpenAI SDK.
+//
+// An SDK can only send its key as `Authorization: Bearer`, and it parses the
+// OpenAI response envelope. /v1 rejected the first and answered in proto-JSON
+// (grpc-gateway `{"result":...}` frames), so the SDK failed at both ends. When
+// an OpenAI verb on /v1 arrives with an issued key as its bearer, this serves
+// it exactly as /openai/v1 does: the key moves onto the api-key header, the
+// Authorization header is dropped (the grpc-gateway forwards it as metadata,
+// and the Connect interceptor still refuses any bearer), and the response is
+// reshaped by serveOpenAICompat.
+//
+// The key is not trusted here. It goes through the unchanged API-key
+// interceptor (hash, bloom filter, revocation, deleted-instance check), so
+// this widens how a credential is carried, never what it grants. An explicit
+// x-evs-api-key (or a legacy alias) wins over the bearer, which is then
+// dropped unread. A bearer that is not an issued key (device-auth JWT,
+// session token) and comes without an explicit header is passed through
+// untouched and still gets the interceptor's 401.
+//
+// Native callers that send x-evs-api-key without a bearer keep the proto-JSON
+// response they have always had: the reshaping keys off the bearer, which /v1
+// rejected outright until now, so no working caller changes behaviour.
+//
+// GET /v1/models is served regardless of credential shape: the grpc-gateway
+// has no route for it, so it used to 404 even for an authenticated caller.
+func withV1OpenAICompat(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isV1OpenAIPath(r) {
+			explicit := common.GetHTTPHeader(r.Header, common.EverstackApiKey, common.LegacyMFApiKey, common.LegacyEverstackApiKey) != ""
+			key := openAIBearerAPIKey(r.Header)
+			// An OpenAI SDK always sends a bearer. With an explicit api-key
+			// header that bearer is the SDK's placeholder (createOpenAIConfig
+			// sends apiKey "everstack" plus x-evs-api-key) and is dropped
+			// unread; the header is the credential either way.
+			if key != "" || (explicit && hasBearerAuth(r.Header)) {
+				r2 := r.Clone(r.Context())
+				if !explicit {
+					r2.Header.Set(common.EverstackApiKey, key)
+				}
+				r2.Header.Del(common.Authorization)
+				serveOpenAICompat(w, r2, next)
+				return
+			}
+		}
+		if r.URL.Path == "/v1/models" && r.Method == http.MethodGet {
+			serveOpenAIModels(w, r.Clone(r.Context()), next)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // withOpenAIRoundTrip exposes a fully OpenAI-wire-compatible surface under
-// /openai/v1/*. The gateway's /v1/chat/completions accepts OpenAI-format requests
-// (via withOpenAICompatTransform) but returns proto-JSON, and it authenticates
-// with x-mf-api-key while rejecting Authorization: Bearer — so a standard OpenAI
-// client (e.g. an ADK agent via LiteLLM) cannot talk to it directly. This wrapper
-// bridges that gap WITHOUT touching the existing /v1 surface (zero blast radius on
-// proto-JSON consumers): it translates Bearer -> x-mf-api-key, rewrites the path to
-// /v1/* so the request flows through the same authed + metered chain, then converts
-// the proto-JSON response back to OpenAI JSON.
-//
-// Covered routes:
-//   - POST /openai/v1/chat/completions — unary and SSE streaming. Streaming
-//     rides the /v1 SSE middleware with X-SSE-Format: openai; when the
-//     instance has SSE disabled the response degrades to a single
-//     chat.completion JSON body (see sseSniffWriter).
-//   - GET  /openai/v1/models — rewritten to /v1/gateway/models and reshaped
-//     into the OpenAI model list.
-//   - POST /openai/v1/embeddings — stream-envelope unwrap (the inner frame is
-//     already OpenAI-shaped).
-//
-// Error bodies on all buffered paths are rewritten into the OpenAI error
-// envelope with a gRPC-code-derived HTTP status.
+// /openai/v1/*, kept as an alias of the OpenAI verbs on /v1 for clients
+// configured before /v1 accepted a Bearer key. It translates any Bearer onto
+// the api-key header, rewrites the path to /v1/* so the request flows through
+// the same authed + metered chain, and reshapes the response (see
+// serveOpenAICompat).
 func withOpenAIRoundTrip(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		inner := strings.TrimPrefix(r.URL.Path, "/openai")
-
 		// OpenAI clients authenticate with Authorization: Bearer <key>; the
 		// gateway expects the api-key header and rejects Bearer. Map it across
 		// (the key is still validated downstream). Only when no api-key header
@@ -704,91 +884,140 @@ func withOpenAIRoundTrip(next http.Handler) http.Handler {
 		r.Header.Del("Authorization")
 
 		r2 := r.Clone(r.Context())
-		r2.URL.Path = inner
+		r2.URL.Path = strings.TrimPrefix(r.URL.Path, "/openai")
+		serveOpenAICompat(w, r2, next)
+	})
+}
 
-		// GET /openai/v1/models -> /v1/gateway/models, reshaped.
-		if inner == "/v1/models" && r.Method == http.MethodGet {
-			r2.URL.Path = "/v1/gateway/models"
-			rec := &bufferingResponseWriter{}
-			next.ServeHTTP(rec, r2)
-			body, status := rec.buf.Bytes(), rec.status
-			if status == 0 {
-				status = http.StatusOK
-			}
-			if status == http.StatusOK {
-				if conv, ok := gatewayModelsToOpenAI(body); ok {
-					body = conv
+// serveOpenAICompat runs an OpenAI-shaped request through the native /v1 chain
+// and converts the proto-JSON answer back to OpenAI JSON. r2 is owned by this
+// call, already carries its credential on the api-key header, and has its
+// path set to the native /v1 route.
+//
+// Covered routes:
+//   - POST /v1/chat/completions: unary and SSE streaming. Streaming rides the
+//     /v1 SSE middleware with X-SSE-Format: openai; when the instance has SSE
+//     disabled the response degrades to a single chat.completion JSON body
+//     (see sseSniffWriter).
+//   - GET  /v1/models: rewritten to /v1/gateway/models and reshaped into the
+//     OpenAI model list.
+//   - POST /v1/embeddings: stream-envelope unwrap (the inner frame is already
+//     OpenAI-shaped).
+//   - POST /v1/responses: unary and SSE streaming. Streaming rides the /v1
+//     SSE middleware with X-SSE-Format: openai-responses, which reframes the
+//     CreateResponse server stream into OpenAI Responses events
+//     (response.created ... response.completed) as each frame arrives. The
+//     unary answer, and a stream on an instance with SSE disabled, is the
+//     final response object.
+//
+// Error bodies on all buffered paths are rewritten into the OpenAI error
+// envelope with a gRPC-code-derived HTTP status.
+func serveOpenAICompat(w http.ResponseWriter, r2 *http.Request, next http.Handler) {
+	inner := r2.URL.Path
+
+	// GET /v1/models -> /v1/gateway/models, reshaped.
+	if inner == "/v1/models" && r2.Method == http.MethodGet {
+		serveOpenAIModels(w, r2, next)
+		return
+	}
+
+	isChat := inner == "/v1/chat/completions"
+	isEmbeddings := inner == "/v1/embeddings"
+	isResponses := inner == "/v1/responses" && r2.Method == http.MethodPost
+
+	// Read the body once to learn whether the caller wants a stream.
+	streamWanted := false
+	if (isChat || isResponses) && r2.Body != nil {
+		if b, err := io.ReadAll(r2.Body); err == nil {
+			_ = r2.Body.Close()
+			var m map[string]interface{}
+			if json.Unmarshal(b, &m) == nil {
+				if s, ok := m["stream"].(bool); ok && s {
+					streamWanted = true
 				}
+				// OpenAI defines an absent (or null) `stream` as false. The
+				// native handler instead falls back to the instance's
+				// streaming default, which turns this buffered request into a
+				// streamed upstream call that is then re-aggregated frame by
+				// frame. Pin the OpenAI meaning so the upstream call is unary.
+				//
+				// Not for a request that offers tools. The handler's unary
+				// branch runs the server-side tool loop on any tool call the
+				// model makes, including calls to tools the client declared
+				// and means to run itself; routing those requests there would
+				// change what they get back and how many upstream calls they
+				// cost. They keep the instance default until that loop only
+				// claims tools the gateway owns.
+				if v, present := m["stream"]; isChat && (!present || v == nil) && !chatRequestOffersTools(m) {
+					r2 = r2.WithContext(withOpenAIStreamDefault(r2.Context()))
+				}
+			}
+			r2.Body = io.NopCloser(bytes.NewReader(b))
+			r2.ContentLength = int64(len(b))
+		}
+	}
+
+	if streamWanted {
+		// Let the /v1 SSE middleware do the streaming; it reframes the
+		// grpc-gateway delta frames into OpenAI chat.completion.chunk
+		// events when the format is "openai" and closes with [DONE].
+		// No Accept override: the middleware engages on stream:true +
+		// this header and sets Accept downstream itself, so when SSE is
+		// disabled the chain stays on plain NDJSON and the sniff writer
+		// degrades to a single JSON body.
+		r2.Header.Set("X-SSE-Format", "openai")
+		sniff := &sseSniffWriter{w: w}
+		if isResponses {
+			// Same path for the Responses API, in its own event format
+			// (the chat chunk format cannot carry a response object).
+			r2.Header.Set("X-SSE-Format", httpmw.SSEFormatOpenAIResponses)
+			sniff.convert = protoResponseStreamToOpenAI
+			sniff.convertErr = protoResponseStreamErrorToOpenAI
+		}
+		next.ServeHTTP(sniff, r2)
+		sniff.finishBuffered()
+		return
+	}
+	if isResponses {
+		// A unary request must come back as NDJSON frames to be reshaped,
+		// whatever SSE format the instance defaults to.
+		r2.Header.Set("X-SSE-Format", "proto")
+	}
+
+	rec := &bufferingResponseWriter{}
+	next.ServeHTTP(rec, r2)
+
+	body := rec.buf.Bytes()
+	status := rec.status
+	if status == 0 {
+		status = http.StatusOK
+	}
+	if status == http.StatusOK {
+		switch {
+		case isChat:
+			if conv, ok := protoChatCompletionToOpenAI(body); ok {
+				body = conv
+			} else if conv, mapped, ok := protoErrorToOpenAI(body, status); ok {
+				// Some error paths report 200 with an error body.
+				body, status = conv, mapped
+			}
+		case isResponses:
+			if conv, ok := protoResponseStreamToOpenAI(body); ok {
+				body = conv
+			} else if conv, mapped, ok := protoResponseStreamErrorToOpenAI(body, status); ok {
+				body, status = conv, mapped
+			}
+		case isEmbeddings:
+			if conv, ok := protoEmbeddingsToOpenAI(body); ok {
+				body = conv
 			} else if conv, mapped, ok := protoErrorToOpenAI(body, status); ok {
 				body, status = conv, mapped
 			}
-			writeOpenAIBuffered(w, rec.Header(), status, body)
-			return
 		}
-
-		isChat := inner == "/v1/chat/completions"
-		isEmbeddings := inner == "/v1/embeddings"
-
-		// Read the body once to learn whether the caller wants a stream.
-		streamWanted := false
-		if isChat && r2.Body != nil {
-			if b, err := io.ReadAll(r2.Body); err == nil {
-				_ = r2.Body.Close()
-				var m map[string]interface{}
-				if json.Unmarshal(b, &m) == nil {
-					if s, ok := m["stream"].(bool); ok && s {
-						streamWanted = true
-					}
-				}
-				r2.Body = io.NopCloser(bytes.NewReader(b))
-				r2.ContentLength = int64(len(b))
-			}
-		}
-
-		if streamWanted {
-			// Let the /v1 SSE middleware do the streaming; it reframes the
-			// grpc-gateway delta frames into OpenAI chat.completion.chunk
-			// events when the format is "openai" and closes with [DONE].
-			// No Accept override: the middleware engages on stream:true +
-			// this header and sets Accept downstream itself, so when SSE is
-			// disabled the chain stays on plain NDJSON and the sniff writer
-			// degrades to a single JSON body.
-			r2.Header.Set("X-SSE-Format", "openai")
-			sniff := &sseSniffWriter{w: w}
-			next.ServeHTTP(sniff, r2)
-			sniff.finishBuffered()
-			return
-		}
-
-		rec := &bufferingResponseWriter{}
-		next.ServeHTTP(rec, r2)
-
-		body := rec.buf.Bytes()
-		status := rec.status
-		if status == 0 {
-			status = http.StatusOK
-		}
-		if status == http.StatusOK {
-			switch {
-			case isChat:
-				if conv, ok := protoChatCompletionToOpenAI(body); ok {
-					body = conv
-				} else if conv, mapped, ok := protoErrorToOpenAI(body, status); ok {
-					// Some error paths report 200 with an error body.
-					body, status = conv, mapped
-				}
-			case isEmbeddings:
-				if conv, ok := protoEmbeddingsToOpenAI(body); ok {
-					body = conv
-				} else if conv, mapped, ok := protoErrorToOpenAI(body, status); ok {
-					body, status = conv, mapped
-				}
-			}
-		} else if conv, mapped, ok := protoErrorToOpenAI(body, status); ok {
-			body, status = conv, mapped
-		}
-		writeOpenAIBuffered(w, rec.Header(), status, body)
-	})
+	} else if conv, mapped, ok := protoErrorToOpenAI(body, status); ok {
+		body, status = conv, mapped
+	}
+	writeOpenAIBuffered(w, rec.Header(), status, body)
 }
 
 // writeOpenAIBuffered sends a converted buffered response, dropping the stale
@@ -817,13 +1046,15 @@ func protoChatCompletionToOpenAI(body []byte) ([]byte, bool) {
 	// choice index to reconstruct the full message.
 	type frameChoice struct {
 		Message struct {
-			Content []struct {
+			ToolCalls []map[string]interface{} `json:"tool_calls"`
+			Content   []struct {
 				Text              string `json:"text"`
 				ProviderJSON      string `json:"provider_json"`
 				ProviderJSONCamel string `json:"providerJson"`
 			} `json:"content"`
 		} `json:"message"`
 		FinishReason string `json:"finish_reason"`
+		Index        int    `json:"index"`
 	}
 	type frame struct {
 		ID      string          `json:"id"`
@@ -834,6 +1065,7 @@ func protoChatCompletionToOpenAI(body []byte) ([]byte, bool) {
 	}
 
 	texts := map[int]*strings.Builder{}
+	toolCalls := map[int][]map[string]interface{}{}
 	providerContent := map[int][]interface{}{}
 	finish := map[int]string{}
 	var id, model string
@@ -870,7 +1102,20 @@ func protoChatCompletionToOpenAI(body []byte) ([]byte, bool) {
 		if len(f.Usage) > 0 {
 			usage = f.Usage
 		}
-		for i, c := range f.Choices {
+		for _, c := range f.Choices {
+			i := c.Index
+			for _, call := range c.Message.ToolCalls {
+				call["type"] = "function"
+				f, _ := call["function"].(map[string]interface{})
+				if f == nil {
+					f = map[string]interface{}{}
+					call["function"] = f
+				}
+				if _, ok := f["arguments"]; !ok {
+					f["arguments"] = ""
+				}
+				toolCalls[i] = append(toolCalls[i], call)
+			}
 			if texts[i] == nil {
 				texts[i] = &strings.Builder{}
 			}
@@ -911,6 +1156,15 @@ func protoChatCompletionToOpenAI(body []byte) ([]byte, bool) {
 		message := map[string]interface{}{
 			"role":    "assistant",
 			"content": texts[i].String(),
+		}
+		if len(toolCalls[i]) > 0 {
+			message["tool_calls"] = toolCalls[i]
+			if texts[i].Len() == 0 {
+				message["content"] = nil
+			}
+			if fr == "stop" || fr == "function_call" {
+				fr = "tool_calls"
+			}
 		}
 		if len(providerContent[i]) > 0 {
 			// Everstack extension: clients replay this opaque provider-native
@@ -1016,8 +1270,36 @@ func parseCreatedUnix(raw json.RawMessage) int64 {
 // to the proto format expected by grpc-gateway. The main transformation is converting
 // messages.content from a simple string to an array of ContentPart objects.
 func transformChatCompletionRequest(r *http.Request) *http.Request {
+	r, _ = transformChatCompletionRequestChecked(r)
+	return r
+}
+
+// writeInvalidArgument answers in the grpc-gateway error shape (gRPC code 3,
+// HTTP 400), which serveOpenAICompat reshapes into the OpenAI error envelope.
+func writeInvalidArgument(w http.ResponseWriter, message string) {
+	body, _ := json.Marshal(map[string]interface{}{"code": 3, "message": message, "details": []interface{}{}})
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusBadRequest)
+	_, _ = w.Write(body)
+}
+
+// chatRequestRejection reports why a decoded OpenAI chat request cannot be
+// served faithfully, or "" when it can. The gateway returns exactly one
+// choice per request (no adapter forwards n), so n > 1 is refused instead of
+// silently answering with a single choice.
+func chatRequestRejection(reqData map[string]interface{}) string {
+	if n, ok := reqData["n"].(float64); ok && n > 1 {
+		return "n > 1 is not supported: the gateway returns one choice per request; send separate requests instead"
+	}
+	return ""
+}
+
+// transformChatCompletionRequestChecked is transformChatCompletionRequest
+// plus a rejection message ("" when the request is acceptable). On a
+// rejection the request body is restored unchanged.
+func transformChatCompletionRequestChecked(r *http.Request) (*http.Request, string) {
 	if r.Body == nil {
-		return r
+		return r, ""
 	}
 
 	// Read the body
@@ -1026,7 +1308,7 @@ func transformChatCompletionRequest(r *http.Request) *http.Request {
 	if err != nil {
 		// Restore original body and return
 		r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-		return r
+		return r, ""
 	}
 
 	// Parse JSON
@@ -1034,10 +1316,20 @@ func transformChatCompletionRequest(r *http.Request) *http.Request {
 	if err := json.Unmarshal(bodyBytes, &reqData); err != nil {
 		// Not valid JSON, restore and return
 		r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-		return r
+		return r, ""
+	}
+	if reject := chatRequestRejection(reqData); reject != "" {
+		r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		return r, reject
 	}
 
 	modified := false
+	// n of 1 is the only count the gateway serves, and newer OpenAI models
+	// reject an explicit n even when it is 1, so it is dropped here.
+	if _, ok := reqData["n"]; ok {
+		delete(reqData, "n")
+		modified = true
+	}
 
 	// Transform messages: convert string content to array of ContentPart objects
 	if messages, ok := reqData["messages"].([]interface{}); ok {
@@ -1084,6 +1376,13 @@ func transformChatCompletionRequest(r *http.Request) *http.Request {
 				// Content is already an array, ensure each part has the right format
 				for j, part := range contentArr {
 					if partMap, ok := part.(map[string]interface{}); ok {
+						if image, ok := partMap["image_url"].(map[string]interface{}); ok {
+							partMap["image_url"] = image["url"]
+							if detail, ok := image["detail"].(string); ok && detail != "" {
+								partMap["image_detail"] = detail
+							}
+							modified = true
+						}
 						// If it's a simple text part with just "text" key, normalize it
 						if _, hasType := partMap["type"]; !hasType {
 							if text, hasText := partMap["text"].(string); hasText {
@@ -1111,6 +1410,22 @@ func transformChatCompletionRequest(r *http.Request) *http.Request {
 		modified = true
 	}
 
+	if tc, ok := reqData["tool_choice"].(map[string]interface{}); ok {
+		if tc["type"] == "function" {
+			reqData["tool_choice"] = map[string]interface{}{"specific_tool": tc}
+			modified = true
+		}
+	}
+	if user, ok := reqData["user"].(string); ok {
+		metadata, _ := reqData["metadata"].(map[string]interface{})
+		if metadata == nil {
+			metadata = map[string]interface{}{}
+		}
+		metadata["user"] = user
+		reqData["metadata"] = metadata
+		delete(reqData, "user")
+		modified = true
+	}
 	// The protobuf request groups sampling controls under "sampling", while the
 	// OpenAI-compatible surface keeps them at the top level. Move every
 	// supported field by key presence rather than value so explicit zeroes such
@@ -1127,6 +1442,12 @@ func transformChatCompletionRequest(r *http.Request) *http.Request {
 		"reasoning_effort",
 		"reasoning_budget_tokens",
 		"reasoning_enabled",
+		"top_k",
+		"seed",
+		"verbosity",
+		"logprobs",
+		"top_logprobs",
+		"logit_bias",
 	} {
 		value, exists := reqData[key]
 		if !exists {
@@ -1148,6 +1469,16 @@ func transformChatCompletionRequest(r *http.Request) *http.Request {
 		reqData["sampling"] = sampling
 	}
 
+	// On the OpenAI-compatible surface an absent `stream` means false. Make
+	// that explicit: the proto field is optional and the handler would
+	// otherwise apply the instance streaming default to the upstream call.
+	if openAIStreamDefault(r.Context()) {
+		if v, present := reqData["stream"]; !present || v == nil {
+			reqData["stream"] = false
+			modified = true
+		}
+	}
+
 	if modified {
 		// Re-serialize
 		newBody, err := json.Marshal(reqData)
@@ -1159,13 +1490,121 @@ func transformChatCompletionRequest(r *http.Request) *http.Request {
 	// Restore body with possibly modified content
 	r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	r.ContentLength = int64(len(bodyBytes))
-	return r
+	return r, ""
 }
 
 // mapRoleToProtoEnum converts OpenAI role strings to proto enum format
+// transformResponsesRequest accepts the OpenAI Responses request shapes that
+// proto-JSON cannot express, so an unmodified OpenAI SDK can call
+// POST /v1/responses:
+//
+//   - input as a string: one user message;
+//   - an input message without a type (the SDKs' "easy" message
+//     {"role": "user", "content": "..."}): type "message";
+//   - an OpenAI role name (user, assistant, system, developer; developer is a
+//     system message): its proto enum name;
+//   - content as a string: one text part;
+//   - input_text and output_text parts: text parts.
+//
+// Anything already in proto shape, and every other input item, is left as
+// it is. instructions is a plain string field and needs nothing.
+func transformResponsesRequest(r *http.Request) *http.Request {
+	if r.Body == nil {
+		return r
+	}
+	bodyBytes, err := io.ReadAll(r.Body)
+	r.Body.Close()
+	restore := func(b []byte) *http.Request {
+		r.Body = io.NopCloser(bytes.NewReader(b))
+		r.ContentLength = int64(len(b))
+		return r
+	}
+	if err != nil {
+		return restore(bodyBytes)
+	}
+	var reqData map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &reqData); err != nil {
+		return restore(bodyBytes)
+	}
+	modified := false
+	switch input := reqData["input"].(type) {
+	case string:
+		reqData["input"] = []interface{}{map[string]interface{}{
+			"type":    "message",
+			"role":    "ROLE_USER",
+			"content": []interface{}{map[string]interface{}{"type": "text", "text": input}},
+		}}
+		modified = true
+	case []interface{}:
+		for _, raw := range input {
+			if item, ok := raw.(map[string]interface{}); ok && normalizeResponsesInputItem(item) {
+				modified = true
+			}
+		}
+	}
+	if !modified {
+		return restore(bodyBytes)
+	}
+	out, err := json.Marshal(reqData)
+	if err != nil {
+		return restore(bodyBytes)
+	}
+	return restore(out)
+}
+
+// normalizeResponsesInputItem rewrites one OpenAI input message in place
+// into the proto shape and reports whether it changed anything.
+func normalizeResponsesInputItem(item map[string]interface{}) bool {
+	typ, hasType := item["type"].(string)
+	role, hasRole := item["role"].(string)
+	if !hasType && !hasRole {
+		return false
+	}
+	if hasType && typ != "message" {
+		return false
+	}
+	changed := false
+	if !hasType {
+		item["type"] = "message"
+		changed = true
+	}
+	if hasRole {
+		mapped := mapRoleToProtoEnum(role)
+		if strings.EqualFold(role, "developer") {
+			mapped = "ROLE_SYSTEM"
+		}
+		if mapped != role {
+			item["role"] = mapped
+			changed = true
+		}
+	}
+	switch content := item["content"].(type) {
+	case string:
+		item["content"] = []interface{}{map[string]interface{}{"type": "text", "text": content}}
+		changed = true
+	case []interface{}:
+		for i, raw := range content {
+			part, ok := raw.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			switch part["type"] {
+			case "input_text", "output_text":
+				text, _ := part["text"].(string)
+				content[i] = map[string]interface{}{"type": "text", "text": text}
+				changed = true
+			}
+		}
+	}
+	return changed
+}
+
 func mapRoleToProtoEnum(role string) string {
 	switch strings.ToLower(role) {
-	case "system":
+	case "system", "developer":
+		// developer is OpenAI's successor to system ("with o1 models and
+		// newer, developer messages replace the previous system messages"),
+		// so it carries system-level priority to every provider.
 		return "ROLE_SYSTEM"
 	case "user":
 		return "ROLE_USER"
@@ -1330,3 +1769,16 @@ func writeSpendLimitError(w http.ResponseWriter, reason string) {
 // 	}
 // 	return exporter
 // }
+
+// requireOrgAdmin admits only a verified organization owner or admin.
+func requireOrgAdmin(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !contextkeys.IsVerifiedOrgAdmin(r.Context()) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"error":"authentication required"}`))
+			return
+		}
+		next(w, r)
+	}
+}

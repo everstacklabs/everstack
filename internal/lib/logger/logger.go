@@ -3,6 +3,7 @@ package logger
 import (
 	"fmt"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -39,10 +40,73 @@ const (
 	EventWorkflowExecutionDone = "workflow.execution.done"
 )
 
+// Entry collects the fields of one log line and emits it.
+//
+// Fields are kept as a chain of small nodes and only turned into a logrus
+// entry when a line is written. logrus copies an entry's whole field map on
+// every WithField, so the usual chain (category, event, payload, a handful of
+// fields, the caller) used to build and discard six or more maps per line, and
+// did so even for a line the level then dropped. A chat request logs about a
+// dozen lines; at warn level, where none of them are written, building their
+// fields was still 4% of the gateway's CPU and 10% of what it allocated.
+//
+// Like the entry it replaces, an Entry is mutated by its With* methods and is
+// not safe for concurrent use.
 type Entry struct {
-	*logrus.Entry
+	lg        *logrus.Logger
+	base      *logrus.Entry // fields already applied by an earlier line; nil until one is written
+	pending   *fieldNode    // fields added since, newest first
 	isOnError bool
 	err       error
+}
+
+// fieldNode is one pending field. The chain is persistent (a node is never
+// changed once linked), so adding a field is a single pointer store.
+type fieldNode struct {
+	key   string
+	value interface{}
+	prev  *fieldNode
+	count int // nodes in the chain ending at this one
+}
+
+// maxPendingFields bounds the chain on an entry that keeps getting fields
+// without writing a line, as the field map it replaces was bounded by its keys.
+const maxPendingFields = 32
+
+func (e *Entry) push(key string, value interface{}) {
+	count := 1
+	if e.pending != nil {
+		count = e.pending.count + 1
+	}
+	e.pending = &fieldNode{key: key, value: value, prev: e.pending, count: count}
+	if count > maxPendingFields {
+		e.entry()
+	}
+}
+
+// entry returns the logrus entry carrying every field added so far.
+func (e *Entry) entry() *logrus.Entry {
+	base := e.base
+	if base == nil {
+		lg := e.lg
+		if lg == nil {
+			lg = (*logrus.Logger)(log)
+		}
+		base = logrus.NewEntry(lg)
+	}
+	if e.pending != nil {
+		fields := make(logrus.Fields, e.pending.count)
+		for n := e.pending; n != nil; n = n.prev {
+			// Newest first: a key set twice keeps its latest value.
+			if _, set := fields[n.key]; !set {
+				fields[n.key] = n.value
+			}
+		}
+		base = base.WithFields(fields)
+		e.pending = nil
+	}
+	e.base = base
+	return base
 }
 
 var idKey = "logID"
@@ -54,9 +118,7 @@ func SetIDKey(key string) {
 
 // Deprecated: Log creates a new entry with an id
 func Log(id string) *Entry {
-	entry := (*logrus.Logger)(log).WithField(idKey, id)
-	entry.Logger = (*logrus.Logger)(log)
-	return &Entry{Entry: entry}
+	return New().WithField(idKey, id)
 }
 
 // Deprecated: LogWithFields creates a new entry with an id and the given fields
@@ -67,7 +129,7 @@ func LogWithFields(id string, fields ...interface{}) *Entry {
 
 // New instantiates a new entry
 func New() *Entry {
-	return &Entry{Entry: logrus.NewEntry((*logrus.Logger)(log))}
+	return &Entry{lg: (*logrus.Logger)(log)}
 }
 
 func OnError(err error) *Entry {
@@ -120,304 +182,334 @@ func (e *Entry) OnError(err error) *Entry {
 	return e
 }
 
-// SetFields sets the given fields on the entry. It panics if length of fields is odd
+// SetFields sets the given key, value pairs on the entry. An odd number of
+// arguments records the count under "oddFields" instead.
 func (e *Entry) SetFields(fields ...interface{}) *Entry {
-	logFields := toFields(fields...)
-	return e.WithFields(logFields)
+	if len(fields)%2 != 0 {
+		e.push("oddFields", len(fields))
+		return e
+	}
+	for i := 0; i < len(fields); i += 2 {
+		e.push(fields[i].(string), fields[i+1])
+	}
+	return e
 }
 
 func (e *Entry) WithField(key string, value interface{}) *Entry {
-	e.Entry = e.Entry.WithField(key, value)
+	e.push(key, value)
 	return e
 }
 
 func (e *Entry) WithFields(fields logrus.Fields) *Entry {
-	e.Entry = e.Entry.WithFields(fields)
+	for key, value := range fields {
+		e.push(key, value)
+	}
 	return e
 }
 
 func (e *Entry) WithError(err error) *Entry {
-	e.Entry = e.Entry.WithError(err)
+	e.push(logrus.ErrorKey, err)
 	return e
 }
 
 func (e *Entry) WithTime(t time.Time) *Entry {
-	e.Entry = e.Entry.WithTime(t)
+	e.base = e.entry().WithTime(t)
 	return e
-}
-
-func toFields(fields ...interface{}) logrus.Fields {
-	if len(fields)%2 != 0 {
-		return logrus.Fields{"oddFields": len(fields)}
-	}
-	logFields := make(logrus.Fields, len(fields)%2)
-	for i := 0; i < len(fields); i = i + 2 {
-		key := fields[i].(string)
-		logFields[key] = fields[i+1]
-	}
-	return logFields
 }
 
 func Debug(args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Debug(args...) })
+	e.log(logrus.DebugLevel, func(le *logrus.Entry) { le.Debug(args...) })
 }
 
 func (e *Entry) Debug(args ...interface{}) {
-	e.log(func() { e.Entry.Debug(args...) })
+	e.log(logrus.DebugLevel, func(le *logrus.Entry) { le.Debug(args...) })
 }
 
 func Debugln(args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Debugln(args...) })
+	e.log(logrus.DebugLevel, func(le *logrus.Entry) { le.Debugln(args...) })
 }
 
 func (e *Entry) Debugln(args ...interface{}) {
-	e.log(func() { e.Entry.Debugln(args...) })
+	e.log(logrus.DebugLevel, func(le *logrus.Entry) { le.Debugln(args...) })
 }
 
 func Debugf(format string, args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Debugf(format, args...) })
+	e.log(logrus.DebugLevel, func(le *logrus.Entry) { le.Debugf(format, args...) })
 }
 
 func (e *Entry) Debugf(format string, args ...interface{}) {
-	e.log(func() { e.Entry.Debugf(format, args...) })
+	e.log(logrus.DebugLevel, func(le *logrus.Entry) { le.Debugf(format, args...) })
 }
 
 func Info(args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Info(args...) })
+	e.log(logrus.InfoLevel, func(le *logrus.Entry) { le.Info(args...) })
 }
 
 func (e *Entry) Info(args ...interface{}) {
-	e.log(func() { e.Entry.Info(args...) })
+	e.log(logrus.InfoLevel, func(le *logrus.Entry) { le.Info(args...) })
 }
 
 func Infoln(args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Infoln(args...) })
+	e.log(logrus.InfoLevel, func(le *logrus.Entry) { le.Infoln(args...) })
 }
 
 func (e *Entry) Infoln(args ...interface{}) {
-	e.log(func() { e.Entry.Infoln(args...) })
+	e.log(logrus.InfoLevel, func(le *logrus.Entry) { le.Infoln(args...) })
 }
 
 func Infof(format string, args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Infof(format, args...) })
+	e.log(logrus.InfoLevel, func(le *logrus.Entry) { le.Infof(format, args...) })
 }
 
 func (e *Entry) Infof(format string, args ...interface{}) {
-	e.log(func() { e.Entry.Infof(format, args...) })
+	e.log(logrus.InfoLevel, func(le *logrus.Entry) { le.Infof(format, args...) })
 }
 
 func Trace(args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Trace(args...) })
+	e.log(logrus.TraceLevel, func(le *logrus.Entry) { le.Trace(args...) })
 }
 
 func (e *Entry) Trace(args ...interface{}) {
-	e.log(func() { e.Entry.Trace(args...) })
+	e.log(logrus.TraceLevel, func(le *logrus.Entry) { le.Trace(args...) })
 }
 
 func Traceln(args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Traceln(args...) })
+	e.log(logrus.TraceLevel, func(le *logrus.Entry) { le.Traceln(args...) })
 }
 
 func (e *Entry) Traceln(args ...interface{}) {
-	e.log(func() { e.Entry.Traceln(args...) })
+	e.log(logrus.TraceLevel, func(le *logrus.Entry) { le.Traceln(args...) })
 }
 
 func Tracef(format string, args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Tracef(format, args...) })
+	e.log(logrus.TraceLevel, func(le *logrus.Entry) { le.Tracef(format, args...) })
 }
 
 func (e *Entry) Tracef(format string, args ...interface{}) {
-	e.log(func() { e.Entry.Tracef(format, args...) })
+	e.log(logrus.TraceLevel, func(le *logrus.Entry) { le.Tracef(format, args...) })
 }
 
 func Warn(args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Warn(args...) })
+	e.log(logrus.WarnLevel, func(le *logrus.Entry) { le.Warn(args...) })
 }
 
 func (e *Entry) Warn(args ...interface{}) {
-	e.log(func() { e.Entry.Warn(args...) })
+	e.log(logrus.WarnLevel, func(le *logrus.Entry) { le.Warn(args...) })
 }
 
 func Warnln(args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Warnln(args...) })
+	e.log(logrus.WarnLevel, func(le *logrus.Entry) { le.Warnln(args...) })
 }
 
 func (e *Entry) Warnln(args ...interface{}) {
-	e.log(func() { e.Entry.Warnln(args...) })
+	e.log(logrus.WarnLevel, func(le *logrus.Entry) { le.Warnln(args...) })
 }
 
 func Warnf(format string, args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Warnf(format, args...) })
+	e.log(logrus.WarnLevel, func(le *logrus.Entry) { le.Warnf(format, args...) })
 }
 
 func (e *Entry) Warnf(format string, args ...interface{}) {
-	e.log(func() { e.Entry.Warnf(format, args...) })
+	e.log(logrus.WarnLevel, func(le *logrus.Entry) { le.Warnf(format, args...) })
 }
 
 func Warning(args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Warning(args...) })
+	e.log(logrus.WarnLevel, func(le *logrus.Entry) { le.Warning(args...) })
 }
 
 func (e *Entry) Warning(args ...interface{}) {
-	e.log(func() { e.Entry.Warning(args...) })
+	e.log(logrus.WarnLevel, func(le *logrus.Entry) { le.Warning(args...) })
 }
 
 func Warningln(args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Warningln(args...) })
+	e.log(logrus.WarnLevel, func(le *logrus.Entry) { le.Warningln(args...) })
 }
 
 func (e *Entry) Warningln(args ...interface{}) {
-	e.log(func() { e.Entry.Warningln(args...) })
+	e.log(logrus.WarnLevel, func(le *logrus.Entry) { le.Warningln(args...) })
 }
 
 func Warningf(format string, args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Warningf(format, args...) })
+	e.log(logrus.WarnLevel, func(le *logrus.Entry) { le.Warningf(format, args...) })
 }
 
 func (e *Entry) Warningf(format string, args ...interface{}) {
-	e.log(func() { e.Entry.Warningf(format, args...) })
+	e.log(logrus.WarnLevel, func(le *logrus.Entry) { le.Warningf(format, args...) })
 }
 
 func Error(args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Error(args...) })
+	e.log(logrus.ErrorLevel, func(le *logrus.Entry) { le.Error(args...) })
 }
 
 func (e *Entry) Error(args ...interface{}) {
-	e.log(func() { e.Entry.Error(args...) })
+	e.log(logrus.ErrorLevel, func(le *logrus.Entry) { le.Error(args...) })
 }
 
 func Errorln(args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Errorln(args...) })
+	e.log(logrus.ErrorLevel, func(le *logrus.Entry) { le.Errorln(args...) })
 }
 
 func (e *Entry) Errorln(args ...interface{}) {
-	e.log(func() { e.Entry.Errorln(args...) })
+	e.log(logrus.ErrorLevel, func(le *logrus.Entry) { le.Errorln(args...) })
 }
 
 func Errorf(format string, args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Errorf(format, args...) })
+	e.log(logrus.ErrorLevel, func(le *logrus.Entry) { le.Errorf(format, args...) })
 }
 
 func (e *Entry) Errorf(format string, args ...interface{}) {
-	e.log(func() { e.Entry.Errorf(format, args...) })
+	e.log(logrus.ErrorLevel, func(le *logrus.Entry) { le.Errorf(format, args...) })
 }
 
 func Fatal(args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Fatal(args...) })
+	e.log(logrus.FatalLevel, func(le *logrus.Entry) { le.Fatal(args...) })
 }
 
 func (e *Entry) Fatal(args ...interface{}) {
-	e.log(func() { e.Entry.Fatal(args...) })
+	e.log(logrus.FatalLevel, func(le *logrus.Entry) { le.Fatal(args...) })
 }
 
 func Fatalln(args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Fatalln(args...) })
+	e.log(logrus.FatalLevel, func(le *logrus.Entry) { le.Fatalln(args...) })
 }
 
 func (e *Entry) Fatalln(args ...interface{}) {
-	e.log(func() { e.Entry.Fatalln(args...) })
+	e.log(logrus.FatalLevel, func(le *logrus.Entry) { le.Fatalln(args...) })
 }
 
 func Fatalf(format string, args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Fatalf(format, args...) })
+	e.log(logrus.FatalLevel, func(le *logrus.Entry) { le.Fatalf(format, args...) })
 }
 
 func (e *Entry) Fatalf(format string, args ...interface{}) {
-	e.log(func() { e.Entry.Fatalf(format, args...) })
+	e.log(logrus.FatalLevel, func(le *logrus.Entry) { le.Fatalf(format, args...) })
 }
 
 func Panic(args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Panic(args...) })
+	e.log(logrus.PanicLevel, func(le *logrus.Entry) { le.Panic(args...) })
 }
 
 func (e *Entry) Panic(args ...interface{}) {
-	e.log(func() { e.Entry.Panic(args...) })
+	e.log(logrus.PanicLevel, func(le *logrus.Entry) { le.Panic(args...) })
 }
 
 func Panicln(args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Panicln(args...) })
+	e.log(logrus.PanicLevel, func(le *logrus.Entry) { le.Panicln(args...) })
 }
 
 func (e *Entry) Panicln(args ...interface{}) {
-	e.log(func() { e.Entry.Panic(args...) })
+	e.log(logrus.PanicLevel, func(le *logrus.Entry) { le.Panic(args...) })
 }
 
 func Panicf(format string, args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Panicf(format, args...) })
+	e.log(logrus.PanicLevel, func(le *logrus.Entry) { le.Panicf(format, args...) })
 }
 
 func (e *Entry) Panicf(format string, args ...interface{}) {
-	e.log(func() { e.Entry.Panicf(format, args...) })
+	e.log(logrus.PanicLevel, func(le *logrus.Entry) { le.Panicf(format, args...) })
 }
 
 func (e *Entry) Log(level logrus.Level, args ...interface{}) {
-	e.log(func() { e.Entry.Log(level, args...) })
+	e.log(level, func(le *logrus.Entry) { le.Log(level, args...) })
 }
 
 func Logf(level logrus.Level, format string, args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Logf(level, format, args...) })
+	e.log(level, func(le *logrus.Entry) { le.Logf(level, format, args...) })
 }
 
 func (e *Entry) Logf(level logrus.Level, format string, args ...interface{}) {
-	e.log(func() { e.Entry.Logf(level, format, args...) })
+	e.log(level, func(le *logrus.Entry) { le.Logf(level, format, args...) })
 }
 
 func Logln(level logrus.Level, args ...interface{}) {
 	e := New()
-	e.log(func() { e.Entry.Logln(level, args...) })
+	e.log(level, func(le *logrus.Entry) { le.Logln(level, args...) })
 }
 
 func (e *Entry) Logln(level logrus.Level, args ...interface{}) {
-	e.log(func() { e.Entry.Logln(level, args...) })
+	e.log(level, func(le *logrus.Entry) { le.Logln(level, args...) })
 }
 
-func (e *Entry) log(logFn func()) {
-	e = e.checkOnError()
-	if e == nil {
+// IsLevelEnabled reports whether a line at level would be logged. Use it to
+// skip building an expensive field or payload for a line the level filters
+// out; the logging calls themselves already cost little when suppressed.
+func IsLevelEnabled(level logrus.Level) bool {
+	return (*logrus.Logger)(log).IsLevelEnabled(level)
+}
+
+// log emits the entry at level through logFn, after attaching the caller.
+//
+// An entry below the logger's level is dropped by logrus before any formatter
+// or hook sees it, so it is dropped here first, before the caller is looked up
+// or a single field map is built. Fatal and Panic always go through, because
+// logrus exits or panics for them whether or not the level is enabled.
+func (e *Entry) log(level logrus.Level, logFn func(*logrus.Entry)) {
+	lg := e.lg
+	if lg == nil {
+		lg = (*logrus.Logger)(log)
+	}
+	if level > logrus.FatalLevel && !lg.IsLevelEnabled(level) {
 		return
 	}
-	addCaller(e)
-	logFn()
+	if e.isOnError {
+		if e.err == nil {
+			return
+		}
+		e.push(logrus.ErrorKey, e.err)
+	}
+	if caller, ok := callerOf(3); ok {
+		e.push("caller", caller)
+	}
+	logFn(e.entry())
 }
 
-func (e *Entry) checkOnError() *Entry {
-	if !e.isOnError {
-		return e
-	}
-	if e.err != nil {
-		return e.WithError(e.err)
-	}
-	return nil
-}
+// callerCache maps a call site's program counter to its "file:line" string.
+// Finding the caller is one stack walk either way; resolving it to a file and
+// line and formatting the string is the expensive part, and a process only has
+// as many distinct log call sites as it has log statements.
+var callerCache sync.Map // uintptr -> string
 
-func addCaller(e *Entry) {
-	_, file, no, ok := runtime.Caller(3)
-	if ok {
-		e.WithField("caller", fmt.Sprintf("%s:%d", file, no))
+// callerOf returns "file:line" for the frame runtime.Caller(skip) would report
+// if it were called here: 0 is callerOf itself, 1 its caller, and so on.
+func callerOf(skip int) (string, bool) {
+	var pc [1]uintptr
+	// Callers counts itself as frame 0, so callerOf is frame 1.
+	if runtime.Callers(skip+1, pc[:]) < 1 {
+		return "", false
 	}
+	if cached, ok := callerCache.Load(pc[0]); ok {
+		return cached.(string), true
+	}
+	frame, _ := runtime.CallersFrames(pc[:]).Next()
+	if frame.PC == 0 {
+		return "", false
+	}
+	caller := fmt.Sprintf("%s:%d", frame.File, frame.Line)
+	callerCache.Store(pc[0], caller)
+	return caller, true
 }

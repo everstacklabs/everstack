@@ -27,7 +27,7 @@ export function SpanTypeSummaryCard({ span, category }: { span: Span; category: 
         {fields.map((f) => (
           <Fragment key={f.label}>
             <dt className="text-xs text-zinc-500">{f.label}</dt>
-            <dd className="truncate text-xs text-zinc-300 light:text-zinc-800" title={f.value}>
+            <dd className="truncate text-xs text-zinc-300 light:text-zinc-800">
               {f.value}
             </dd>
           </Fragment>

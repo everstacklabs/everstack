@@ -8,13 +8,13 @@ import (
 
 func TestKeyLayout(t *testing.T) {
 	tests := []struct {
-		name      string
-		tenant    string
-		sandbox   string
-		kind      Kind
-		wantKey   string
-		wantPfx   string
-		wantMani  string
+		name     string
+		tenant   string
+		sandbox  string
+		kind     Kind
+		wantKey  string
+		wantPfx  string
+		wantMani string
 	}{
 		{
 			name:     "happy path",

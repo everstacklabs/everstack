@@ -28,10 +28,15 @@ type ContentPart struct {
 	// ProviderJSON preserves a provider-native content chunk for replay while
 	// normalized consumers continue to use Type/Text for display.
 	ProviderJSON *json.RawMessage `json:"provider_json,omitempty"`
+	// ImageDetail is OpenAI's image_url.detail ("auto", "low", "high", ...)
+	// for an image_url part. Empty means the provider default.
+	ImageDetail string `json:"image_detail,omitempty"`
 }
 
 // ToolCall represents a tool call from the model.
 type ToolCall struct {
+	// Index correlates upstream argument fragments. Nil marks a complete call.
+	Index    *int             `json:"index,omitempty"`
 	ID       string           `json:"id"`
 	Type     string           `json:"type"` // "function"
 	Function ToolCallFunction `json:"function"`
@@ -49,6 +54,9 @@ type Message struct {
 	Content    []ContentPart `json:"content"`
 	ToolCalls  []ToolCall    `json:"tool_calls,omitempty"`   // Tool calls from assistant
 	ToolCallID string        `json:"tool_call_id,omitempty"` // For tool response messages
+	// Name is the optional participant name OpenAI accepts on system, user
+	// and assistant messages.
+	Name string `json:"name,omitempty"`
 }
 
 // SamplingParams configures how models should sample tokens.
@@ -73,6 +81,12 @@ type SamplingParams struct {
 	Seed *int64 `json:"seed,omitempty"`
 	// Verbosity is GPT-5's output-length hint: "low", "medium" or "high".
 	Verbosity string `json:"verbosity,omitempty"`
+	// Logprobs asks for output token log probabilities; TopLogprobs is how
+	// many alternatives per position (OpenAI requires Logprobs with it).
+	Logprobs    *bool `json:"logprobs,omitempty"`
+	TopLogprobs *int  `json:"top_logprobs,omitempty"`
+	// LogitBias maps a token ID (as a string) to a bias in [-100, 100].
+	LogitBias map[string]float64 `json:"logit_bias,omitempty"`
 }
 
 // TokenDetails provides detailed breakdown of token usage.
@@ -168,18 +182,46 @@ type ToolFunctionDef struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description,omitempty"`
 	Parameters  map[string]interface{} `json:"parameters,omitempty"` // JSON Schema
+	// Strict asks the provider for exact schema adherence on calls to this
+	// function (OpenAI function.strict). Nil means the provider default.
+	Strict *bool `json:"strict,omitempty"`
 }
 
 // ChatCompletionRequest is the normalized chat request shape across providers.
 type ChatCompletionRequest struct {
-	Model           string                 `json:"model"`
-	Messages        []Message              `json:"messages"`
-	Tools           []ToolDefinition       `json:"tools,omitempty"`       // Available tools
-	ToolChoice      interface{}            `json:"tool_choice,omitempty"` // "auto", "none", or specific tool
-	Sampling        SamplingParams         `json:"sampling,omitempty"`
-	Stream          bool                   `json:"stream,omitempty"`
-	Metadata        map[string]interface{} `json:"metadata,omitempty"`
-	UseResponsesAPI bool                   `json:"-"` // When true, provider uses /v1/responses instead of /v1/chat/completions
+	ParallelToolCalls *bool                  `json:"parallel_tool_calls,omitempty"`
+	Model             string                 `json:"model"`
+	Messages          []Message              `json:"messages"`
+	Tools             []ToolDefinition       `json:"tools,omitempty"`       // Available tools
+	ToolChoice        interface{}            `json:"tool_choice,omitempty"` // "auto", "none", or specific tool
+	Sampling          SamplingParams         `json:"sampling,omitempty"`
+	Stream            bool                   `json:"stream,omitempty"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	UseResponsesAPI   bool                   `json:"-"` // When true, provider uses /v1/responses instead of /v1/chat/completions
+	// ResponseFormat requests structured output (JSON mode or a JSON
+	// schema). Nil means plain text. Adapters that support structured output
+	// translate it into their native shape; OpenAI and Azure OpenAI send it
+	// as response_format.
+	ResponseFormat *ChatResponseFormat `json:"response_format,omitempty"`
+	// ServiceTier is the provider processing tier (OpenAI service_tier).
+	ServiceTier string `json:"service_tier,omitempty"`
+}
+
+// ChatResponseFormat is the chat completion structured output request.
+// Type is "text", "json_object" or "json_schema"; JSONSchema is set only for
+// "json_schema".
+type ChatResponseFormat struct {
+	Type       string          `json:"type"`
+	JSONSchema *ChatJSONSchema `json:"json_schema,omitempty"`
+}
+
+// ChatJSONSchema is the schema a "json_schema" response format constrains
+// the output to.
+type ChatJSONSchema struct {
+	Name        string                 `json:"name"`
+	Description string                 `json:"description,omitempty"`
+	Schema      map[string]interface{} `json:"schema,omitempty"`
+	Strict      *bool                  `json:"strict,omitempty"`
 }
 
 // ChatCompletionResponse is the normalized non-streaming response shape.
@@ -541,10 +583,18 @@ type RerankResponse struct {
 
 // ResponseInput represents input for the Responses API.
 type ResponseInput struct {
-	Type    string        `json:"type"` // "message", "item_reference"
+	Type    string        `json:"type"` // "message", "item_reference", "function_call", "function_call_output"
 	Role    MessageRole   `json:"role,omitempty"`
 	Content []ContentPart `json:"content,omitempty"`
 	ItemID  string        `json:"item_id,omitempty"`
+	// CallID is the tool call a function_call or function_call_output item
+	// belongs to.
+	CallID string `json:"call_id,omitempty"`
+	// Output is a function_call_output item's result.
+	Output string `json:"output,omitempty"`
+	// Name and Arguments are a function_call item's function.
+	Name      string `json:"name,omitempty"`
+	Arguments string `json:"arguments,omitempty"`
 }
 
 // BuiltInToolConfig represents configuration for built-in tools.
@@ -665,6 +715,7 @@ type CreateResponseRequest struct {
 	TopPConfigured        bool                `json:"-"`
 	Truncation            *TruncationStrategy `json:"truncation,omitempty"`
 	Store                 bool                `json:"store,omitempty"`
+	StoreConfigured       bool                `json:"-"`
 	PreviousResponseID    string              `json:"previous_response_id,omitempty"`
 	Stream                bool                `json:"stream,omitempty"`
 	Metadata              map[string]string   `json:"metadata,omitempty"`

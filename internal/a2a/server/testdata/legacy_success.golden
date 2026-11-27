@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":7,"result":{"id":"<id>","contextId":"<id>","status":{"state":"completed","message":{"role":"agent","parts":[{"kind":"text","text":"echo:hello world"}],"messageId":"<id>","kind":"message"}},"artifacts":[{"artifactId":"<id>","name":"response","parts":[{"kind":"text","text":"echo:hello world"}]}],"kind":"task"}}

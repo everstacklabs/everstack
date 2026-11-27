@@ -1,0 +1,14 @@
+# Secret scanning for this repository: the default gitleaks rules, plus
+# documentation placeholders that are obviously not secrets.
+#
+# Individual reviewed test fixtures are listed by fingerprint in
+# .gitleaksignore instead, so each exception names one file and line.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Documentation placeholders such as YOUR_API_KEY or evs_your_api_key_here"
+# Letters and underscores only, one case, short: a real token has digits or
+# mixed case and is longer.
+regexes = ['''^(?:YOUR_[A-Z_]{1,40}|(?:[a-z]{2,10}_)?your_[a-z_]{1,40})$''']

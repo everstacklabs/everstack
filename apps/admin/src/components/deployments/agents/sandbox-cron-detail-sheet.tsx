@@ -103,7 +103,7 @@ export function SandboxCronDetailSheet({
           <SheetTitle className="flex items-center gap-2">
             {cron.name}
             <span
-              className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${cron.enabled ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25' : 'bg-brand-main-500/30 text-brand-main-200 border border-brand-main-500/25'}`}
+              className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${cron.enabled ? 'bg-success-surface-strong text-success border border-success-border' : 'bg-brand-main-500/30 text-brand-main-200 border border-brand-main-500/25'}`}
             >
               {cron.enabled ? 'Enabled' : 'Disabled'}
             </span>
@@ -325,7 +325,7 @@ export function SandboxCronDetailSheet({
                       <div className="text-[10px] uppercase tracking-wide text-white/40 light:text-black/40">
                         Last Error
                       </div>
-                      <div className="whitespace-pre-wrap break-all rounded border border-red-500/25 bg-red-500/5 p-3 text-xs text-red-200">
+                      <div className="whitespace-pre-wrap break-all rounded border border-danger-border bg-danger-surface/60 p-3 text-xs text-danger">
                         {cron.lastError}
                       </div>
                     </div>
@@ -384,7 +384,7 @@ export function SandboxCronDetailSheet({
                     >
                       <div className="flex items-center justify-between gap-3">
                         <span
-                          className={`rounded px-2 py-0.5 text-[10px] font-medium ${execution.status === 'completed' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25' : 'bg-red-500/15 text-red-400 border border-red-500/25'}`}
+                          className={`rounded px-2 py-0.5 text-[10px] font-medium ${execution.status === 'completed' ? 'bg-success-surface-strong text-success border border-success-border' : 'bg-danger-surface-strong text-danger border border-danger-border'}`}
                         >
                           {execution.status}
                         </span>
@@ -396,7 +396,7 @@ export function SandboxCronDetailSheet({
                         Duration: {execution.durationMs}ms
                       </div>
                       {execution.error && (
-                        <div className="mt-2 whitespace-pre-wrap break-all rounded border border-red-500/25 bg-red-500/5 px-2 py-1.5 text-xs text-red-200">
+                        <div className="mt-2 whitespace-pre-wrap break-all rounded border border-danger-border bg-danger-surface/60 px-2 py-1.5 text-xs text-danger">
                           {execution.error}
                         </div>
                       )}

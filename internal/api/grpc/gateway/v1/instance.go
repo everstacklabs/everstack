@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -54,6 +55,13 @@ func (s *Server) ActivateGatewayInstance(ctx context.Context, req *connect.Reque
 		return nil, connect.NewError(connect.CodeInvalidArgument, errMissingField("activation_token"))
 	}
 
+	// Authorize before any upstream call: this procedure is reachable
+	// without login (policy bypass) so first activation works, which makes
+	// the handler the only gate against rebinding an activated gateway.
+	if err := s.authorizeActivation(ctx, req.Msg.GetInstanceId()); err != nil {
+		return nil, err
+	}
+
 	instanceMgr := enterprise.InstanceManagerFromContext(s.ctx)
 
 	// Get license service URL from server context
@@ -61,17 +69,6 @@ func (s *Server) ActivateGatewayInstance(ctx context.Context, req *connect.Reque
 	if !ok || licenseServiceURL == "" {
 		logger.Error("license service URL not available in context")
 		return nil, connect.NewError(connect.CodeInternal, errInternal("license service URL not configured"))
-	}
-
-	// Check if already activated (skip this check if instance_id is provided for upgrade)
-	isUpgrade := req.Msg.GetInstanceId() != ""
-	if !isUpgrade {
-		isActivated, err := instanceMgr.IsActivated(ctx)
-		if err != nil {
-			logger.WithError(err).Error("failed to check activation status")
-		} else if isActivated {
-			return nil, connect.NewError(connect.CodeAlreadyExists, errAlreadyActivated())
-		}
 	}
 
 	// Call License Service to activate
@@ -221,14 +218,101 @@ func (s *Server) ActivateGatewayInstance(ctx context.Context, req *connect.Reque
 	return connect.NewResponse(resp), nil
 }
 
+// authorizeActivation decides whether this caller may (re)bind the gateway's
+// license credentials.
+//
+//   - Managed gateways: the control plane owns activation. The procedure is
+//     never available there; an anonymous caller learns nothing beyond
+//     Unauthenticated.
+//   - Self-hosted, not activated: first activation stays anonymous (the
+//     operator has no account to log in with yet on some installs). The
+//     request may name no instance or this gateway's own local instance id.
+//   - Anything that would REPLACE existing credentials (already activated,
+//     a foreign instance id, or an activation state we cannot read) requires
+//     an authenticated owner/admin of this gateway, and an activated gateway
+//     can only be re-activated under its own instance id.
+//
+// Before this check, passing any instance_id skipped the already-activated
+// guard, so an anonymous caller with their own unused activation token could
+// replace a victim gateway's refresh token and signing key (EVS-324 item 9).
+func (s *Server) authorizeActivation(ctx context.Context, requestedInstanceID string) error {
+	requestedInstanceID = strings.TrimSpace(requestedInstanceID)
+
+	if _, managed := s.isManagedInstance(ctx); managed {
+		if err := requireGatewayAdmin(ctx); err != nil {
+			return err
+		}
+		return connect.NewError(connect.CodeFailedPrecondition, errors.New("managed instances are activated by the control plane"))
+	}
+
+	instanceMgr := enterprise.InstanceManagerFromContext(s.ctx)
+	activated, statusErr := instanceMgr.IsActivated(ctx)
+	if statusErr != nil {
+		logger.WithError(statusErr).Error("activation: failed to check activation status")
+	}
+	if statusErr == nil && !activated {
+		if requestedInstanceID == "" {
+			return nil
+		}
+		if localID, err := instanceMgr.GetLocalInstanceId(ctx); err == nil && localID != "" && localID == requestedInstanceID {
+			return nil
+		}
+	}
+	if statusErr == nil && activated && requestedInstanceID == "" {
+		return connect.NewError(connect.CodeAlreadyExists, errAlreadyActivated())
+	}
+
+	if err := requireGatewayAdmin(ctx); err != nil {
+		return err
+	}
+	if statusErr != nil {
+		return connect.NewError(connect.CodeUnavailable, errors.New("could not verify activation state"))
+	}
+	if activated {
+		info, err := instanceMgr.GetActiveInstance(ctx)
+		if err != nil || info == nil || info.InstanceID == "" {
+			return connect.NewError(connect.CodeUnavailable, errors.New("could not read the active instance"))
+		}
+		if info.InstanceID != requestedInstanceID {
+			return connect.NewError(connect.CodePermissionDenied, errors.New("instance_id does not match this gateway"))
+		}
+	}
+	return nil
+}
+
+// requireGatewayAdmin returns Unauthenticated when the caller has no verified
+// principal and PermissionDenied when the principal is not an owner/admin.
+func requireGatewayAdmin(ctx context.Context) error {
+	if !callerAuthenticated(ctx) {
+		return connect.NewError(connect.CodeUnauthenticated, errors.New("authentication required"))
+	}
+	if !contextkeys.IsVerifiedOrgAdmin(ctx) {
+		return connect.NewError(connect.CodePermissionDenied, errors.New("owner or admin role required"))
+	}
+	return nil
+}
+
+// callerAuthenticated reports whether authentication middleware verified the
+// caller (session or API key). The status procedures are reachable before
+// login, so this is what separates the redacted answer from the full one.
+func callerAuthenticated(ctx context.Context) bool {
+	return contextkeys.HasVerifiedTenantPrincipal(ctx)
+}
+
 // GetGatewayInstanceStatus returns the current activation status
 func (s *Server) GetGatewayInstanceStatus(ctx context.Context, req *connect.Request[gatewaypb.GetGatewayInstanceStatusRequest]) (*connect.Response[gatewaypb.GetGatewayInstanceStatusResponse], error) {
 	logger := logger.WithFields("procedure", "GetGatewayInstanceStatus")
 
 	if tc, managed := s.isManagedInstance(ctx); managed {
-		instanceID := os.Getenv("EVS_INSTANCE_ID")
-		if tc != nil {
-			instanceID = tc.InstanceID
+		// Pre-auth callers learn only that this is an active managed
+		// instance. The instance id is tenant identity and is disclosed
+		// only to an authenticated principal (EVS-309).
+		instanceID := ""
+		if contextkeys.IsTenantAuthenticated(ctx) {
+			instanceID = os.Getenv("EVS_INSTANCE_ID")
+			if tc != nil {
+				instanceID = tc.InstanceID
+			}
 		}
 		return connect.NewResponse(&gatewaypb.GetGatewayInstanceStatusResponse{
 			Status: "active", Activated: true, InstanceId: instanceID,
@@ -245,9 +329,15 @@ func (s *Server) GetGatewayInstanceStatus(ctx context.Context, req *connect.Requ
 	}
 
 	if !isActivated {
-		localInstanceId, err := instanceMgr.GetLocalInstanceId(ctx)
-		if err != nil {
-			logger.WithError(err).Warn("failed to get local instance ID")
+		// The local instance id is disclosed to authenticated callers only;
+		// nothing before login needs it.
+		localInstanceId := ""
+		if callerAuthenticated(ctx) {
+			var err error
+			localInstanceId, err = instanceMgr.GetLocalInstanceId(ctx)
+			if err != nil {
+				logger.WithError(err).Warn("failed to get local instance ID")
+			}
 		}
 		return connect.NewResponse(&gatewaypb.GetGatewayInstanceStatusResponse{
 			Status: "inactive", Activated: false, InstanceId: localInstanceId,
@@ -259,6 +349,16 @@ func (s *Server) GetGatewayInstanceStatus(ctx context.Context, req *connect.Requ
 	if err != nil {
 		logger.WithError(err).Error("failed to get instance info")
 		return nil, connect.NewError(connect.CodeInternal, errInternal("failed to get instance info"))
+	}
+
+	if !callerAuthenticated(ctx) {
+		// Pre-login callers learn only that the gateway is activated. The
+		// instance id and license state (tenant, plan, limits) are for an
+		// authenticated principal (EVS-324 item 11).
+		return connect.NewResponse(&gatewaypb.GetGatewayInstanceStatusResponse{
+			Status: "active", Activated: true,
+			ActivatedAt: timestamppb.New(info.ActivatedAt), Message: "Gateway is activated",
+		}), nil
 	}
 
 	var licenseState licv1.LicenseState
@@ -349,6 +449,11 @@ func (s *Server) GetTrialStatus(ctx context.Context, req *connect.Request[gatewa
 	if v, ok := status["days_remaining"].(int); ok {
 		resp.DaysRemaining = int32(v)
 	}
+	if !callerAuthenticated(ctx) {
+		// Pre-login callers get the trial window only: no install
+		// fingerprint and no usage counters (EVS-324 item 11).
+		return connect.NewResponse(resp), nil
+	}
 	if v, ok := status["daily_used"].(int); ok {
 		resp.DailyUsed = int32(v)
 	}
@@ -384,8 +489,31 @@ func (g *GrpcServer) GetTrialStatus(ctx context.Context, req *gatewaypb.GetTrial
 // GetLicenseMonitorStatus returns the Gateway's internal license and usage state
 func (s *Server) GetLicenseMonitorStatus(ctx context.Context, req *connect.Request[gatewaypb.GetLicenseMonitorStatusRequest]) (*connect.Response[gatewaypb.GetLicenseMonitorStatusResponse], error) {
 	if tc, managed := s.isManagedInstance(ctx); managed {
-		tenantID := contextkeys.GetTenantID(ctx)
-		instanceID := ""
+		return connect.NewResponse(s.managedLicenseMonitorResponse(ctx, tc)), nil
+	}
+
+	monitor := enterprise.LicenseMonitorFromContext(s.ctx)
+	resp := buildLicenseMonitorResponse(monitor)
+	if !callerAuthenticated(ctx) {
+		redactLicenseMonitorResponse(resp)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+// managedLicenseMonitorResponse is the answer a managed gateway gives about
+// the caller's own tenant. It never reads the process-wide monitor, which on
+// a shared gateway aggregates every tenant.
+func (s *Server) managedLicenseMonitorResponse(ctx context.Context, tc *tenant.Config) *gatewaypb.GetLicenseMonitorStatusResponse {
+	// Tenant/instance ids and the sandbox billing entitlement are only
+	// disclosed to an authenticated principal. A hostname-selected
+	// RequestInstanceScope or an injected tenant config is routing
+	// evidence, not identity: this RPC is reachable pre-auth, so
+	// echoing either would let a Host sweep enumerate every tenant's
+	// ids and paid-sandbox flag (EVS-309).
+	tenantID := ""
+	instanceID := ""
+	if contextkeys.IsTenantAuthenticated(ctx) {
+		tenantID = contextkeys.GetTenantID(ctx)
 		if requestInstance, ok := contextkeys.RequestInstanceScopeFromContext(ctx); ok {
 			tenantID = requestInstance.OrganizationID
 			instanceID = requestInstance.InstanceID
@@ -394,19 +522,31 @@ func (s *Server) GetLicenseMonitorStatus(ctx context.Context, req *connect.Reque
 			tenantID = tc.OrganizationID
 			instanceID = tc.InstanceID
 		}
-		return connect.NewResponse(&gatewaypb.GetLicenseMonitorStatusResponse{
-			License: &gatewaypb.LicenseInfo{
-				Active: true, Tier: "cloud", Status: "active", IsPaid: true,
-				TenantId:              tenantID,
-				InstanceId:            instanceID,
-				SandboxBillingEnabled: s.managedSandboxBillingEnabled(ctx, tenantID),
-			},
-			Gateway: &gatewaypb.GatewayStatus{Locked: false},
-		}), nil
 	}
+	return &gatewaypb.GetLicenseMonitorStatusResponse{
+		License: &gatewaypb.LicenseInfo{
+			Active: true, Tier: "cloud", Status: "active", IsPaid: true,
+			TenantId:              tenantID,
+			InstanceId:            instanceID,
+			SandboxBillingEnabled: s.managedSandboxBillingEnabled(ctx, tenantID),
+		},
+		Gateway: &gatewaypb.GatewayStatus{Locked: false},
+	}
+}
 
-	monitor := enterprise.LicenseMonitorFromContext(s.ctx)
-	return connect.NewResponse(buildLicenseMonitorResponse(monitor)), nil
+// redactLicenseMonitorResponse strips everything a pre-login caller has no
+// use for. The login screen and root layout need the plan tier, lock state,
+// edition and feature catalog; usage, cost, cache stats, tenant/instance ids,
+// usage limits and billing flags are for an authenticated principal
+// (EVS-324 item 11).
+func redactLicenseMonitorResponse(resp *gatewaypb.GetLicenseMonitorStatusResponse) {
+	resp.Usage = nil
+	if resp.License != nil {
+		resp.License.TenantId = ""
+		resp.License.InstanceId = ""
+		resp.License.UsageLimits = nil
+		resp.License.SandboxBillingEnabled = false
+	}
 }
 
 func (s *Server) managedSandboxBillingEnabled(ctx context.Context, tenantID string) bool {
@@ -447,7 +587,23 @@ func (g *GrpcServer) GetLicenseMonitorStatus(ctx context.Context, req *gatewaypb
 }
 
 // RefreshLicenseMonitor forces a refresh of the license state and returns updated status
+//
+// It triggers an upstream call to the license service, so it is never
+// anonymous (EVS-324 item 11). On a managed gateway there is nothing of the
+// caller's to refresh: the process-wide monitor belongs to the shared
+// gateway, so the caller gets the same tenant-scoped answer as
+// GetLicenseMonitorStatus and no refresh is triggered.
 func (s *Server) RefreshLicenseMonitor(ctx context.Context, req *connect.Request[gatewaypb.RefreshLicenseMonitorRequest]) (*connect.Response[gatewaypb.RefreshLicenseMonitorResponse], error) {
+	if !callerAuthenticated(ctx) {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("authentication required"))
+	}
+	if tc, managed := s.isManagedInstance(ctx); managed {
+		status := s.managedLicenseMonitorResponse(ctx, tc)
+		return connect.NewResponse(&gatewaypb.RefreshLicenseMonitorResponse{
+			License: status.License, Gateway: status.Gateway,
+		}), nil
+	}
+
 	enterprise.LicenseEnforcerFromContext(s.ctx).RefreshNow()
 
 	monitor := enterprise.LicenseMonitorFromContext(s.ctx)

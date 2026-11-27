@@ -49,6 +49,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -86,7 +88,8 @@ type Server struct {
 	memoryEmbedder           memory.EmbedderInterface // Embedding generator for memory (may be nil)
 	memoryEmbeddingModel     string                   // Configured embedding model name
 	memoryEmbeddingDimension int                      // Configured embedding dimension
-	interopStore             *interop.Store           // Interop control plane (saved A2A remotes, etc.; may be nil)
+	externalRuns             *interop.RunService
+	interopStore             *interop.Store // Interop control plane (saved A2A remotes, etc.; may be nil)
 
 	portExposureBaseDomain string               // Base domain for sandbox port URLs (e.g., "sandbox.run")
 	portExposureTLSEnabled bool                 // Whether port exposure proxy uses TLS
@@ -138,8 +141,12 @@ type Server struct {
 	projectRuntime agentprojectruntime.Runner
 
 	// Agent trigger store and executor (may be nil if not configured)
-	triggerStore    agenttrigger.Store
-	triggerExecutor *agenttrigger.Executor
+	triggerStore         agenttrigger.Store
+	triggerExecutor      *agenttrigger.Executor
+	runCronNow           func(context.Context, int64, string) error
+	steerSession         func(string, string, agentrt.SteerMessage) error
+	submitReview         func(context.Context, string, string, agentrt.ApprovalDecision) error
+	requireChannelConfig func(context.Context, string, string) error
 
 	// Branch store for persisting full conversation traces (may be nil)
 	branchStore *agentrt.BranchStore
@@ -149,7 +156,8 @@ type Server struct {
 	codeContextMgr *sandbox.CodeContextManager
 
 	// Trooper manager (may be nil if trooper feature is disabled)
-	trooperMgr *trooper.Manager
+	trooperMgr       *trooper.Manager
+	provisionTrooper func(context.Context, trooper.ProvisionConfig) (string, error)
 
 	// Phase 5: Cross-agent message bus (may be nil if not configured)
 	messageBus *agentrt.AgentMessageBus
@@ -183,19 +191,15 @@ type Server struct {
 	// gateway has restarted since the tenant's servers were last registered.
 	mcpHydrator McpRegistryHydrator
 
-	// Cached single-tenant fallback decision. resolveTenantID consults this
-	// when the auth context lacks a tenant id; the fallback only fires when
-	// there is exactly one organization in the database. See agents.go for
-	// the full rationale — this is the cross-tenant leak guard.
-	singleTenantCache atomic.Pointer[singleTenantCacheEntry]
+	// Multiple organizations disable the fallback. Positive single-tenant
+	// results are cached briefly, while an empty database remains retryable.
+	singleTenantFallbackDisabled atomic.Bool
+	singleTenantFallbackCached   atomic.Pointer[singleTenantFallbackResult]
 }
 
-// singleTenantCacheEntry is the cached result of "is this instance a
-// single-tenant deployment, and if so, which org id is it". `ok=false`
-// means there are zero or multiple orgs and the fallback must not fire.
-type singleTenantCacheEntry struct {
-	tenantID string
-	ok       bool
+type singleTenantFallbackResult struct {
+	tenantID  string
+	expiresAt time.Time
 }
 
 // GrpcServer wraps Server for classic gRPC compatibility.
@@ -327,6 +331,9 @@ func (s *Server) SetMemoryBackend(store memory.VectorStore, embedder memory.Embe
 // call_external_agent tool to resolve saved remote agents by name.
 func (s *Server) SetInteropStore(store *interop.Store) {
 	s.interopStore = store
+	if store != nil {
+		s.externalRuns = interop.NewRunService(store)
+	}
 }
 
 // SetMemoryConfig sets the embedding model and dimension for memory tools.
@@ -494,12 +501,13 @@ func (s *Server) RegisterConnectServer(opts ...connect.HandlerOption) (string, h
 	// before the handler runs. This is the ConnectRPC-native counterpart of the
 	// RequireSandboxOwnership HTTP middleware (used only for the non-RPC
 	// streaming/multipart routes).
-	// Ownership check first, then whatever the caller supplied. connect
-	// accumulates interceptors across options, so ordering is preserved and the
-	// caller's other handler options pass through untouched.
-	all := append([]connect.HandlerOption{
-		connect.WithInterceptors(s.sandboxOwnershipInterceptor()),
-	}, opts...)
+	// The caller's options come first so their authentication interceptors
+	// (API keys among them) have put the caller's tenant in the context before
+	// the ownership check reads it. connect runs the first interceptor
+	// outermost, so installing the ownership check first made it run before
+	// authentication, and every API-key call addressing one sandbox failed.
+	all := append(append([]connect.HandlerOption{}, opts...),
+		connect.WithInterceptors(s.sandboxOwnershipInterceptor()))
 	return agentsconnect.NewAgentsServiceHandler(
 		s,
 		connect.WithHandlerOptions(all...),
@@ -629,125 +637,175 @@ func (s *Server) RegisterGateway(_ context.Context, mux *gwruntime.ServeMux, _ s
 
 // GrpcServer wrapper methods for classic gRPC
 
+func connectToGRPCStatus(err error) error {
+	var connectErr *connect.Error
+	if !errors.As(err, &connectErr) {
+		return err
+	}
+	return status.Error(codes.Code(connectErr.Code()), connectErr.Message())
+}
+
 func (g *GrpcServer) CreateAgent(ctx context.Context, req *agentspb.CreateAgentRequest) (*agentspb.CreateAgentResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.CreateAgentRequest]{Msg: req}
 	resp, err := g.base.CreateAgent(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) GetAgent(ctx context.Context, req *agentspb.GetAgentRequest) (*agentspb.GetAgentResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.GetAgentRequest]{Msg: req}
 	resp, err := g.base.GetAgent(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListAgents(ctx context.Context, req *agentspb.ListAgentsRequest) (*agentspb.ListAgentsResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListAgentsRequest]{Msg: req}
 	resp, err := g.base.ListAgents(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) UpdateAgent(ctx context.Context, req *agentspb.UpdateAgentRequest) (*agentspb.UpdateAgentResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.UpdateAgentRequest]{Msg: req}
 	resp, err := g.base.UpdateAgent(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) DeleteAgent(ctx context.Context, req *agentspb.DeleteAgentRequest) (*agentspb.DeleteAgentResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.DeleteAgentRequest]{Msg: req}
 	resp, err := g.base.DeleteAgent(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ImportAgentFromOpencode(ctx context.Context, req *agentspb.ImportAgentFromOpencodeRequest) (*agentspb.ImportAgentFromOpencodeResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ImportAgentFromOpencodeRequest]{Msg: req}
 	resp, err := g.base.ImportAgentFromOpencode(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ExportAgentToOpencode(ctx context.Context, req *agentspb.ExportAgentToOpencodeRequest) (*agentspb.ExportAgentToOpencodeResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ExportAgentToOpencodeRequest]{Msg: req}
 	resp, err := g.base.ExportAgentToOpencode(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) CreateSession(ctx context.Context, req *agentspb.CreateSessionRequest) (*agentspb.CreateSessionResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.CreateSessionRequest]{Msg: req}
 	resp, err := g.base.CreateSession(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) GetSession(ctx context.Context, req *agentspb.GetSessionRequest) (*agentspb.GetSessionResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.GetSessionRequest]{Msg: req}
 	resp, err := g.base.GetSession(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListSessions(ctx context.Context, req *agentspb.ListSessionsRequest) (*agentspb.ListSessionsResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListSessionsRequest]{Msg: req}
 	resp, err := g.base.ListSessions(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) RunTurn(ctx context.Context, req *agentspb.RunTurnRequest) (*agentspb.RunTurnResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.RunTurnRequest]{Msg: req}
 	resp, err := g.base.RunTurn(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) CancelSession(ctx context.Context, req *agentspb.CancelSessionRequest) (*agentspb.CancelSessionResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.CancelSessionRequest]{Msg: req}
 	resp, err := g.base.CancelSession(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) CompleteSession(ctx context.Context, req *agentspb.CompleteSessionRequest) (*agentspb.CompleteSessionResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.CompleteSessionRequest]{Msg: req}
 	resp, err := g.base.CompleteSession(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 // RunTurnStream wraps the Connect streaming handler for classic gRPC.
 func (g *GrpcServer) RunTurnStream(req *agentspb.RunTurnStreamRequest, stream grpc.ServerStreamingServer[agentspb.AgentEvent]) error {
+	if err := g.base.checkSandboxOwnership(stream.Context(), req); err != nil {
+		return connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.RunTurnStreamRequest]{Msg: req}
 	adapter := &grpcAgentEventStreamAdapter{stream: stream}
 	return g.base.runTurnStreamInternal(stream.Context(), cReq, adapter)
@@ -755,40 +813,52 @@ func (g *GrpcServer) RunTurnStream(req *agentspb.RunTurnStreamRequest, stream gr
 
 // SteerSession wraps the Connect handler for classic gRPC.
 func (g *GrpcServer) SteerSession(ctx context.Context, req *agentspb.SteerSessionRequest) (*agentspb.SteerSessionResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.SteerSessionRequest]{Msg: req}
 	resp, err := g.base.SteerSession(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 // SubmitReview wraps the Connect handler for classic gRPC.
 func (g *GrpcServer) SubmitReview(ctx context.Context, req *agentspb.SubmitReviewRequest) (*agentspb.SubmitReviewResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.SubmitReviewRequest]{Msg: req}
 	resp, err := g.base.SubmitReview(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 // GetReview wraps the Connect handler for classic gRPC.
 func (g *GrpcServer) GetReview(ctx context.Context, req *agentspb.GetReviewRequest) (*agentspb.GetReviewResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.GetReviewRequest]{Msg: req}
 	resp, err := g.base.GetReview(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 // ListReviews wraps the Connect handler for classic gRPC.
 func (g *GrpcServer) ListReviews(ctx context.Context, req *agentspb.ListReviewsRequest) (*agentspb.ListReviewsResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListReviewsRequest]{Msg: req}
 	resp, err := g.base.ListReviews(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
@@ -796,55 +866,73 @@ func (g *GrpcServer) ListReviews(ctx context.Context, req *agentspb.ListReviewsR
 // Sandbox GrpcServer wrappers
 
 func (g *GrpcServer) GetSandboxOverview(ctx context.Context, req *agentspb.GetSandboxOverviewRequest) (*agentspb.GetSandboxOverviewResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.GetSandboxOverviewRequest]{Msg: req}
 	resp, err := g.base.GetSandboxOverview(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListSandboxInstances(ctx context.Context, req *agentspb.ListSandboxInstancesRequest) (*agentspb.ListSandboxInstancesResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListSandboxInstancesRequest]{Msg: req}
 	resp, err := g.base.ListSandboxInstances(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) GetSandboxInstance(ctx context.Context, req *agentspb.GetSandboxInstanceRequest) (*agentspb.GetSandboxInstanceResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.GetSandboxInstanceRequest]{Msg: req}
 	resp, err := g.base.GetSandboxInstance(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) DestroySandbox(ctx context.Context, req *agentspb.DestroySandboxRequest) (*agentspb.DestroySandboxResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.DestroySandboxRequest]{Msg: req}
 	resp, err := g.base.DestroySandbox(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListSandboxExecutions(ctx context.Context, req *agentspb.ListSandboxExecutionsRequest) (*agentspb.ListSandboxExecutionsResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListSandboxExecutionsRequest]{Msg: req}
 	resp, err := g.base.ListSandboxExecutions(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) GetSandboxStats(ctx context.Context, req *agentspb.GetSandboxStatsRequest) (*agentspb.GetSandboxStatsResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.GetSandboxStatsRequest]{Msg: req}
 	resp, err := g.base.GetSandboxStats(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
@@ -852,19 +940,25 @@ func (g *GrpcServer) GetSandboxStats(ctx context.Context, req *agentspb.GetSandb
 // Spawn Tree GrpcServer wrappers
 
 func (g *GrpcServer) GetSpawnTree(ctx context.Context, req *agentspb.GetSpawnTreeRequest) (*agentspb.GetSpawnTreeResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.GetSpawnTreeRequest]{Msg: req}
 	resp, err := g.base.GetSpawnTree(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListSpawnNodes(ctx context.Context, req *agentspb.ListSpawnNodesRequest) (*agentspb.ListSpawnNodesResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListSpawnNodesRequest]{Msg: req}
 	resp, err := g.base.ListSpawnNodes(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
@@ -872,46 +966,61 @@ func (g *GrpcServer) ListSpawnNodes(ctx context.Context, req *agentspb.ListSpawn
 // Sandbox + Memory GrpcServer wrappers (delegates to ConnectRPC methods on Server)
 
 func (g *GrpcServer) CreateSandbox(ctx context.Context, req *agentspb.CreateSandboxRequest) (*agentspb.CreateSandboxResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.CreateSandboxRequest]{Msg: req}
 	resp, err := g.base.CreateSandbox(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) RecreateSandbox(ctx context.Context, req *agentspb.RecreateSandboxRequest) (*agentspb.CreateSandboxResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.RecreateSandboxRequest]{Msg: req}
 	resp, err := g.base.RecreateSandbox(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListSandboxTemplates(ctx context.Context, req *agentspb.ListSandboxTemplatesRequest) (*agentspb.ListSandboxTemplatesResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListSandboxTemplatesRequest]{Msg: req}
 	resp, err := g.base.ListSandboxTemplates(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) GetSandboxTemplate(ctx context.Context, req *agentspb.GetSandboxTemplateRequest) (*agentspb.GetSandboxTemplateResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.GetSandboxTemplateRequest]{Msg: req}
 	resp, err := g.base.GetSandboxTemplate(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) SetupMemory(ctx context.Context, req *agentspb.SetupMemoryRequest) (*agentspb.SetupMemoryResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.SetupMemoryRequest]{Msg: req}
 	resp, err := g.base.SetupMemory(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
@@ -919,10 +1028,13 @@ func (g *GrpcServer) SetupMemory(ctx context.Context, req *agentspb.SetupMemoryR
 // Sandbox Events GrpcServer wrappers
 
 func (g *GrpcServer) ListSandboxEvents(ctx context.Context, req *agentspb.ListSandboxEventsRequest) (*agentspb.ListSandboxEventsResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListSandboxEventsRequest]{Msg: req}
 	resp, err := g.base.ListSandboxEvents(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
@@ -930,37 +1042,49 @@ func (g *GrpcServer) ListSandboxEvents(ctx context.Context, req *agentspb.ListSa
 // Port Exposure GrpcServer wrappers
 
 func (g *GrpcServer) ExposePort(ctx context.Context, req *agentspb.ExposePortRequest) (*agentspb.ExposePortResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ExposePortRequest]{Msg: req}
 	resp, err := g.base.ExposePort(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) UnexposePort(ctx context.Context, req *agentspb.UnexposePortRequest) (*agentspb.UnexposePortResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.UnexposePortRequest]{Msg: req}
 	resp, err := g.base.UnexposePort(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListExposedPorts(ctx context.Context, req *agentspb.ListExposedPortsRequest) (*agentspb.ListExposedPortsResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListExposedPortsRequest]{Msg: req}
 	resp, err := g.base.ListExposedPorts(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) DetectListeningPorts(ctx context.Context, req *agentspb.DetectListeningPortsRequest) (*agentspb.DetectListeningPortsResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.DetectListeningPortsRequest]{Msg: req}
 	resp, err := g.base.DetectListeningPorts(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
@@ -968,37 +1092,49 @@ func (g *GrpcServer) DetectListeningPorts(ctx context.Context, req *agentspb.Det
 // Cron GrpcServer wrappers
 
 func (g *GrpcServer) CreateCron(ctx context.Context, req *agentspb.CreateCronRequest) (*agentspb.CreateCronResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.CreateCronRequest]{Msg: req}
 	resp, err := g.base.CreateCron(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) UpdateCron(ctx context.Context, req *agentspb.UpdateCronRequest) (*agentspb.UpdateCronResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.UpdateCronRequest]{Msg: req}
 	resp, err := g.base.UpdateCron(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) DeleteCron(ctx context.Context, req *agentspb.DeleteCronRequest) (*agentspb.DeleteCronResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.DeleteCronRequest]{Msg: req}
 	resp, err := g.base.DeleteCron(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListCrons(ctx context.Context, req *agentspb.ListCronsRequest) (*agentspb.ListCronsResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListCronsRequest]{Msg: req}
 	resp, err := g.base.ListCrons(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
@@ -1006,28 +1142,37 @@ func (g *GrpcServer) ListCrons(ctx context.Context, req *agentspb.ListCronsReque
 // Webhook GrpcServer wrappers
 
 func (g *GrpcServer) CreateWebhook(ctx context.Context, req *agentspb.CreateWebhookRequest) (*agentspb.CreateWebhookResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.CreateWebhookRequest]{Msg: req}
 	resp, err := g.base.CreateWebhook(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) DeleteWebhook(ctx context.Context, req *agentspb.DeleteWebhookRequest) (*agentspb.DeleteWebhookResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.DeleteWebhookRequest]{Msg: req}
 	resp, err := g.base.DeleteWebhook(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListWebhooks(ctx context.Context, req *agentspb.ListWebhooksRequest) (*agentspb.ListWebhooksResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListWebhooksRequest]{Msg: req}
 	resp, err := g.base.ListWebhooks(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
@@ -1035,10 +1180,13 @@ func (g *GrpcServer) ListWebhooks(ctx context.Context, req *agentspb.ListWebhook
 // Triggers GrpcServer wrapper
 
 func (g *GrpcServer) ListTriggers(ctx context.Context, req *agentspb.ListTriggersRequest) (*agentspb.ListTriggersResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListTriggersRequest]{Msg: req}
 	resp, err := g.base.ListTriggers(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
@@ -1127,46 +1275,61 @@ func (a *connectAgentEventStreamAdapter) Send(msg *agentspb.AgentEvent, _ map[st
 // GitHub GrpcServer wrappers
 
 func (g *GrpcServer) ListGitHubInstallations(ctx context.Context, req *agentspb.ListGitHubInstallationsRequest) (*agentspb.ListGitHubInstallationsResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListGitHubInstallationsRequest]{Msg: req}
 	resp, err := g.base.ListGitHubInstallations(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) RemoveGitHubInstallation(ctx context.Context, req *agentspb.RemoveGitHubInstallationRequest) (*agentspb.RemoveGitHubInstallationResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.RemoveGitHubInstallationRequest]{Msg: req}
 	resp, err := g.base.RemoveGitHubInstallation(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) LinkGitHubInstallation(ctx context.Context, req *agentspb.LinkGitHubInstallationRequest) (*agentspb.LinkGitHubInstallationResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.LinkGitHubInstallationRequest]{Msg: req}
 	resp, err := g.base.LinkGitHubInstallation(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListGitHubRepositories(ctx context.Context, req *agentspb.ListGitHubRepositoriesRequest) (*agentspb.ListGitHubRepositoriesResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListGitHubRepositoriesRequest]{Msg: req}
 	resp, err := g.base.ListGitHubRepositories(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListGitHubBranches(ctx context.Context, req *agentspb.ListGitHubBranchesRequest) (*agentspb.ListGitHubBranchesResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListGitHubBranchesRequest]{Msg: req}
 	resp, err := g.base.ListGitHubBranches(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
@@ -1174,28 +1337,49 @@ func (g *GrpcServer) ListGitHubBranches(ctx context.Context, req *agentspb.ListG
 // Sandbox Lifecycle GrpcServer wrappers
 
 func (g *GrpcServer) StopSandbox(ctx context.Context, req *agentspb.StopSandboxRequest) (*agentspb.StopSandboxResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.StopSandboxRequest]{Msg: req}
 	resp, err := g.base.StopSandbox(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ReviveSandbox(ctx context.Context, req *agentspb.ReviveSandboxRequest) (*agentspb.ReviveSandboxResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ReviveSandboxRequest]{Msg: req}
 	resp, err := g.base.ReviveSandbox(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) TerminateSandbox(ctx context.Context, req *agentspb.TerminateSandboxRequest) (*agentspb.TerminateSandboxResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.TerminateSandboxRequest]{Msg: req}
 	resp, err := g.base.TerminateSandbox(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
+	}
+	return resp.Msg, nil
+}
+
+func (g *GrpcServer) UpdateSandboxAutoIntervals(ctx context.Context, req *agentspb.UpdateSandboxAutoIntervalsRequest) (*agentspb.UpdateSandboxAutoIntervalsResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
+	cReq := &connect.Request[agentspb.UpdateSandboxAutoIntervalsRequest]{Msg: req}
+	resp, err := g.base.UpdateSandboxAutoIntervals(ctx, cReq)
+	if err != nil {
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
@@ -1203,199 +1387,265 @@ func (g *GrpcServer) TerminateSandbox(ctx context.Context, req *agentspb.Termina
 // SSH GrpcServer wrappers
 
 func (g *GrpcServer) AddSSHKey(ctx context.Context, req *agentspb.AddSSHKeyRequest) (*agentspb.AddSSHKeyResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.AddSSHKeyRequest]{Msg: req}
 	resp, err := g.base.AddSSHKey(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListSSHKeys(ctx context.Context, req *agentspb.ListSSHKeysRequest) (*agentspb.ListSSHKeysResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListSSHKeysRequest]{Msg: req}
 	resp, err := g.base.ListSSHKeys(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) DeleteSSHKey(ctx context.Context, req *agentspb.DeleteSSHKeyRequest) (*agentspb.DeleteSSHKeyResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.DeleteSSHKeyRequest]{Msg: req}
 	resp, err := g.base.DeleteSSHKey(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) GrantSandboxSSHAccess(ctx context.Context, req *agentspb.GrantSandboxSSHAccessRequest) (*agentspb.GrantSandboxSSHAccessResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.GrantSandboxSSHAccessRequest]{Msg: req}
 	resp, err := g.base.GrantSandboxSSHAccess(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) RevokeSandboxSSHAccess(ctx context.Context, req *agentspb.RevokeSandboxSSHAccessRequest) (*agentspb.RevokeSandboxSSHAccessResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.RevokeSandboxSSHAccessRequest]{Msg: req}
 	resp, err := g.base.RevokeSandboxSSHAccess(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) GetSandboxSSHInfo(ctx context.Context, req *agentspb.GetSandboxSSHInfoRequest) (*agentspb.GetSandboxSSHInfoResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.GetSandboxSSHInfoRequest]{Msg: req}
 	resp, err := g.base.GetSandboxSSHInfo(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) CreateSandboxSSHToken(ctx context.Context, req *agentspb.CreateSandboxSSHTokenRequest) (*agentspb.CreateSandboxSSHTokenResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.CreateSandboxSSHTokenRequest]{Msg: req}
 	resp, err := g.base.CreateSandboxSSHToken(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListSandboxSSHTokens(ctx context.Context, req *agentspb.ListSandboxSSHTokensRequest) (*agentspb.ListSandboxSSHTokensResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListSandboxSSHTokensRequest]{Msg: req}
 	resp, err := g.base.ListSandboxSSHTokens(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) RevokeSandboxSSHToken(ctx context.Context, req *agentspb.RevokeSandboxSSHTokenRequest) (*agentspb.RevokeSandboxSSHTokenResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.RevokeSandboxSSHTokenRequest]{Msg: req}
 	resp, err := g.base.RevokeSandboxSSHToken(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) GetSandboxPreviewUrl(ctx context.Context, req *agentspb.GetSandboxPreviewUrlRequest) (*agentspb.GetSandboxPreviewUrlResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.GetSandboxPreviewUrlRequest]{Msg: req}
 	resp, err := g.base.GetSandboxPreviewUrl(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ResizeSandbox(ctx context.Context, req *agentspb.ResizeSandboxRequest) (*agentspb.ResizeSandboxResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ResizeSandboxRequest]{Msg: req}
 	resp, err := g.base.ResizeSandbox(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListSandboxVolumes(ctx context.Context, req *agentspb.ListSandboxVolumesRequest) (*agentspb.ListSandboxVolumesResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListSandboxVolumesRequest]{Msg: req}
 	resp, err := g.base.ListSandboxVolumes(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) CreateSandboxVolume(ctx context.Context, req *agentspb.CreateSandboxVolumeRequest) (*agentspb.CreateSandboxVolumeResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.CreateSandboxVolumeRequest]{Msg: req}
 	resp, err := g.base.CreateSandboxVolume(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) DeleteSandboxVolume(ctx context.Context, req *agentspb.DeleteSandboxVolumeRequest) (*agentspb.DeleteSandboxVolumeResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.DeleteSandboxVolumeRequest]{Msg: req}
 	resp, err := g.base.DeleteSandboxVolume(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ContentSearch(ctx context.Context, req *agentspb.ContentSearchRequest) (*agentspb.ContentSearchResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ContentSearchRequest]{Msg: req}
 	resp, err := g.base.ContentSearch(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) GlobalReplace(ctx context.Context, req *agentspb.GlobalReplaceRequest) (*agentspb.GlobalReplaceResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.GlobalReplaceRequest]{Msg: req}
 	resp, err := g.base.GlobalReplace(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) SandboxLSP(ctx context.Context, req *agentspb.SandboxLSPRequest) (*agentspb.SandboxLSPResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.SandboxLSPRequest]{Msg: req}
 	resp, err := g.base.SandboxLSP(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) SandboxLSPInfo(ctx context.Context, req *agentspb.SandboxLSPInfoRequest) (*agentspb.SandboxLSPInfoResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.SandboxLSPInfoRequest]{Msg: req}
 	resp, err := g.base.SandboxLSPInfo(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) SandboxMetricsHistory(ctx context.Context, req *agentspb.SandboxMetricsHistoryRequest) (*agentspb.SandboxMetricsHistoryResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.SandboxMetricsHistoryRequest]{Msg: req}
 	resp, err := g.base.SandboxMetricsHistory(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) SandboxMetricsBatch(ctx context.Context, req *agentspb.SandboxMetricsBatchRequest) (*agentspb.SandboxMetricsBatchResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.SandboxMetricsBatchRequest]{Msg: req}
 	resp, err := g.base.SandboxMetricsBatch(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ComputerUse(ctx context.Context, req *agentspb.ComputerUseRequest) (*agentspb.ComputerUseResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ComputerUseRequest]{Msg: req}
 	resp, err := g.base.ComputerUse(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ComputerUseInfo(ctx context.Context, req *agentspb.ComputerUseInfoRequest) (*agentspb.ComputerUseInfoResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ComputerUseInfoRequest]{Msg: req}
 	resp, err := g.base.ComputerUseInfo(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
@@ -1403,46 +1653,61 @@ func (g *GrpcServer) ComputerUseInfo(ctx context.Context, req *agentspb.Computer
 // Agent Memory GrpcServer wrappers
 
 func (g *GrpcServer) ListAgentMemories(ctx context.Context, req *agentspb.ListAgentMemoriesRequest) (*agentspb.ListAgentMemoriesResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListAgentMemoriesRequest]{Msg: req}
 	resp, err := g.base.ListAgentMemories(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) CreateAgentMemory(ctx context.Context, req *agentspb.CreateAgentMemoryRequest) (*agentspb.CreateAgentMemoryResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.CreateAgentMemoryRequest]{Msg: req}
 	resp, err := g.base.CreateAgentMemory(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) UpdateAgentMemory(ctx context.Context, req *agentspb.UpdateAgentMemoryRequest) (*agentspb.UpdateAgentMemoryResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.UpdateAgentMemoryRequest]{Msg: req}
 	resp, err := g.base.UpdateAgentMemory(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) DeactivateAgentMemory(ctx context.Context, req *agentspb.DeactivateAgentMemoryRequest) (*agentspb.DeactivateAgentMemoryResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.DeactivateAgentMemoryRequest]{Msg: req}
 	resp, err := g.base.DeactivateAgentMemory(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) DeleteAgentMemory(ctx context.Context, req *agentspb.DeleteAgentMemoryRequest) (*agentspb.DeleteAgentMemoryResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.DeleteAgentMemoryRequest]{Msg: req}
 	resp, err := g.base.DeleteAgentMemory(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
@@ -1450,73 +1715,97 @@ func (g *GrpcServer) DeleteAgentMemory(ctx context.Context, req *agentspb.Delete
 // Deployment GrpcServer wrappers
 
 func (g *GrpcServer) DeployAgent(ctx context.Context, req *agentspb.DeployAgentRequest) (*agentspb.DeployAgentResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.DeployAgentRequest]{Msg: req}
 	resp, err := g.base.DeployAgent(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListDeployments(ctx context.Context, req *agentspb.ListDeploymentsRequest) (*agentspb.ListDeploymentsResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListDeploymentsRequest]{Msg: req}
 	resp, err := g.base.ListDeployments(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) GetDeployment(ctx context.Context, req *agentspb.GetDeploymentRequest) (*agentspb.GetDeploymentResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.GetDeploymentRequest]{Msg: req}
 	resp, err := g.base.GetDeployment(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) UpdateDeployment(ctx context.Context, req *agentspb.UpdateDeploymentRequest) (*agentspb.UpdateDeploymentResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.UpdateDeploymentRequest]{Msg: req}
 	resp, err := g.base.UpdateDeployment(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) CreateDeploymentKey(ctx context.Context, req *agentspb.CreateDeploymentKeyRequest) (*agentspb.CreateDeploymentKeyResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.CreateDeploymentKeyRequest]{Msg: req}
 	resp, err := g.base.CreateDeploymentKey(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListDeploymentKeys(ctx context.Context, req *agentspb.ListDeploymentKeysRequest) (*agentspb.ListDeploymentKeysResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListDeploymentKeysRequest]{Msg: req}
 	resp, err := g.base.ListDeploymentKeys(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) RevokeDeploymentKey(ctx context.Context, req *agentspb.RevokeDeploymentKeyRequest) (*agentspb.RevokeDeploymentKeyResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.RevokeDeploymentKeyRequest]{Msg: req}
 	resp, err := g.base.RevokeDeploymentKey(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListDeploymentInvocations(ctx context.Context, req *agentspb.ListDeploymentInvocationsRequest) (*agentspb.ListDeploymentInvocationsResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListDeploymentInvocationsRequest]{Msg: req}
 	resp, err := g.base.ListDeploymentInvocations(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
@@ -1524,64 +1813,85 @@ func (g *GrpcServer) ListDeploymentInvocations(ctx context.Context, req *agentsp
 // Trigger GrpcServer wrappers
 
 func (g *GrpcServer) CreateAgentTrigger(ctx context.Context, req *agentspb.CreateAgentTriggerRequest) (*agentspb.CreateAgentTriggerResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.CreateAgentTriggerRequest]{Msg: req}
 	resp, err := g.base.CreateAgentTrigger(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListAgentTriggers(ctx context.Context, req *agentspb.ListAgentTriggersRequest) (*agentspb.ListAgentTriggersResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListAgentTriggersRequest]{Msg: req}
 	resp, err := g.base.ListAgentTriggers(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) GetAgentTrigger(ctx context.Context, req *agentspb.GetAgentTriggerRequest) (*agentspb.GetAgentTriggerResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.GetAgentTriggerRequest]{Msg: req}
 	resp, err := g.base.GetAgentTrigger(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) UpdateAgentTrigger(ctx context.Context, req *agentspb.UpdateAgentTriggerRequest) (*agentspb.UpdateAgentTriggerResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.UpdateAgentTriggerRequest]{Msg: req}
 	resp, err := g.base.UpdateAgentTrigger(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) DeleteAgentTrigger(ctx context.Context, req *agentspb.DeleteAgentTriggerRequest) (*agentspb.DeleteAgentTriggerResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.DeleteAgentTriggerRequest]{Msg: req}
 	resp, err := g.base.DeleteAgentTrigger(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) TestAgentTrigger(ctx context.Context, req *agentspb.TestAgentTriggerRequest) (*agentspb.TestAgentTriggerResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.TestAgentTriggerRequest]{Msg: req}
 	resp, err := g.base.TestAgentTrigger(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListAgentTriggerExecutions(ctx context.Context, req *agentspb.ListAgentTriggerExecutionsRequest) (*agentspb.ListAgentTriggerExecutionsResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	cReq := &connect.Request[agentspb.ListAgentTriggerExecutionsRequest]{Msg: req}
 	resp, err := g.base.ListAgentTriggerExecutions(ctx, cReq)
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
@@ -1589,113 +1899,155 @@ func (g *GrpcServer) ListAgentTriggerExecutions(ctx context.Context, req *agents
 // ─── Trooper GrpcServer wrappers ──────────────────────────────────────────
 
 func (g *GrpcServer) CreateTrooper(ctx context.Context, req *agentspb.CreateTrooperRequest) (*agentspb.CreateTrooperResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	resp, err := g.base.CreateTrooper(ctx, &connect.Request[agentspb.CreateTrooperRequest]{Msg: req})
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) GetTrooper(ctx context.Context, req *agentspb.GetTrooperRequest) (*agentspb.GetTrooperResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	resp, err := g.base.GetTrooper(ctx, &connect.Request[agentspb.GetTrooperRequest]{Msg: req})
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListTroopers(ctx context.Context, req *agentspb.ListTroopersRequest) (*agentspb.ListTroopersResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	resp, err := g.base.ListTroopers(ctx, &connect.Request[agentspb.ListTroopersRequest]{Msg: req})
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) UpdateTrooper(ctx context.Context, req *agentspb.UpdateTrooperRequest) (*agentspb.UpdateTrooperResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	resp, err := g.base.UpdateTrooper(ctx, &connect.Request[agentspb.UpdateTrooperRequest]{Msg: req})
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) DeleteTrooper(ctx context.Context, req *agentspb.DeleteTrooperRequest) (*agentspb.DeleteTrooperResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	resp, err := g.base.DeleteTrooper(ctx, &connect.Request[agentspb.DeleteTrooperRequest]{Msg: req})
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ProvisionTrooper(ctx context.Context, req *agentspb.ProvisionTrooperRequest) (*agentspb.ProvisionTrooperResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	resp, err := g.base.ProvisionTrooper(ctx, &connect.Request[agentspb.ProvisionTrooperRequest]{Msg: req})
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) SleepTrooper(ctx context.Context, req *agentspb.SleepTrooperRequest) (*agentspb.SleepTrooperResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	resp, err := g.base.SleepTrooper(ctx, &connect.Request[agentspb.SleepTrooperRequest]{Msg: req})
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) WakeTrooper(ctx context.Context, req *agentspb.WakeTrooperRequest) (*agentspb.WakeTrooperResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	resp, err := g.base.WakeTrooper(ctx, &connect.Request[agentspb.WakeTrooperRequest]{Msg: req})
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) CreateTrooperLink(ctx context.Context, req *agentspb.CreateTrooperLinkRequest) (*agentspb.CreateTrooperLinkResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	resp, err := g.base.CreateTrooperLink(ctx, &connect.Request[agentspb.CreateTrooperLinkRequest]{Msg: req})
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListTrooperLinks(ctx context.Context, req *agentspb.ListTrooperLinksRequest) (*agentspb.ListTrooperLinksResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	resp, err := g.base.ListTrooperLinks(ctx, &connect.Request[agentspb.ListTrooperLinksRequest]{Msg: req})
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) DeleteTrooperLink(ctx context.Context, req *agentspb.DeleteTrooperLinkRequest) (*agentspb.DeleteTrooperLinkResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	resp, err := g.base.DeleteTrooperLink(ctx, &connect.Request[agentspb.DeleteTrooperLinkRequest]{Msg: req})
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) BindChannelToTrooper(ctx context.Context, req *agentspb.BindChannelToTrooperRequest) (*agentspb.BindChannelToTrooperResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	resp, err := g.base.BindChannelToTrooper(ctx, &connect.Request[agentspb.BindChannelToTrooperRequest]{Msg: req})
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) UnbindChannelFromTrooper(ctx context.Context, req *agentspb.UnbindChannelFromTrooperRequest) (*agentspb.UnbindChannelFromTrooperResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	resp, err := g.base.UnbindChannelFromTrooper(ctx, &connect.Request[agentspb.UnbindChannelFromTrooperRequest]{Msg: req})
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }
 
 func (g *GrpcServer) ListTrooperChannelBindings(ctx context.Context, req *agentspb.ListTrooperChannelBindingsRequest) (*agentspb.ListTrooperChannelBindingsResponse, error) {
+	if err := g.base.checkSandboxOwnership(ctx, req); err != nil {
+		return nil, connectToGRPCStatus(err)
+	}
 	resp, err := g.base.ListTrooperChannelBindings(ctx, &connect.Request[agentspb.ListTrooperChannelBindingsRequest]{Msg: req})
 	if err != nil {
-		return nil, err
+		return nil, connectToGRPCStatus(err)
 	}
 	return resp.Msg, nil
 }

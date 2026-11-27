@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { replayMask } from '@/lib/replay-privacy'
 import { useLogin, useRequestMagicLink } from '@/hooks/auth'
 import { ui } from '@everstack/ui'
 import { Icon } from '@iconify/react'
@@ -61,7 +62,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             </CardHeader>
             <CardContent className="space-y-4">
                 {error && (
-                    <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400 light:text-red-600">
+                    <div {...replayMask} className="rounded-lg border border-danger-border bg-danger-surface p-3 text-sm text-danger">
                         {(error as Error).message || 'An error occurred'}
                     </div>
                 )}
@@ -130,7 +131,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
                                     <Icon icon="lucide:mail-check" className="mx-auto h-12 w-12 text-brand-secondary-400 mb-3" />
                                     <p className="text-brand-secondary-400 font-medium">Check your email</p>
                                     <p className="text-zinc-400 light:text-zinc-600 text-sm mt-1">
-                                        We've sent a magic link to <span className="text-white light:text-brand-main-50">{magicLinkEmail}</span>
+                                        We've sent a magic link to <span {...replayMask} className="text-white light:text-brand-main-50">{magicLinkEmail}</span>
                                     </p>
                                 </div>
                                 <Button

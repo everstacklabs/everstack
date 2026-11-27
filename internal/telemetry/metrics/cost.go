@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/everstacklabs/everstack/internal/services/catalog"
@@ -24,6 +25,17 @@ type CostDetails struct {
 	InputCost  float64
 	CachedCost float64
 	OutputCost float64
+
+	// Priceable is true only when the model resolved in the catalog with a
+	// positive input or output rate. A model missing from the catalog, or
+	// listed with no rate at all, is not priceable: the wallet must never
+	// serve it on a platform key, and never "debit zero" for it
+	// (docs/design/prepaid-credits-v2.md section 5, "Unpriced models").
+	//
+	// Callers must check Priceable before recording a cost: when it is false,
+	// EstimatedUSD and the split fields are 0 because the price is UNKNOWN,
+	// not because the request was free. Write "unknown" (omit the cost), not 0.
+	Priceable bool
 }
 
 // CostCalculator provides cost calculation using the model catalog
@@ -111,11 +123,7 @@ func (cc *CostCalculator) calculateCostWithCacheTokens(provider, model string, i
 	}
 	cachedTokens := cacheReadTokens + cacheWriteTokens
 
-	// Get model from catalog. Try the exact id, then a prefix match for
-	// date-versioned models ("gpt-4o-2024-08-06" → "gpt-4o"), then both again
-	// against a variant-normalized id so context-window markers like
-	// "claude-opus-4-8[1m]" resolve to their base model instead of costing zero
-	// (GetModelByPrefix only matches on a "-" boundary, so "[1m]" never matched).
+	// Get model from catalog (see resolveCatalogModel for the lookup order).
 	models := cc.models()
 	if models == nil {
 		return CostDetails{
@@ -186,6 +194,7 @@ func (cc *CostCalculator) calculateCostWithCacheTokens(provider, model string, i
 	totalCost := inputCost + cachedCost + outputCost
 
 	return CostDetails{
+		Priceable:        modelDef.InputCostPer1k > 0 || modelDef.OutputCostPer1k > 0,
 		EstimatedUSD:     totalCost,
 		ActualUSD:        totalCost, // Would be updated from provider billing
 		SavingsUSD:       0,
@@ -200,6 +209,24 @@ func (cc *CostCalculator) calculateCostWithCacheTokens(provider, model string, i
 	}
 }
 
+// IsPriced reports whether provider/model resolves in the catalog with a
+// positive rate, i.e. whether a platform-key attempt on it can be billed. It
+// is the pre-dispatch check the billing middleware fails closed on.
+func (cc *CostCalculator) IsPriced(provider, model string) bool {
+	if cc == nil {
+		return false
+	}
+	models := cc.models()
+	if models == nil {
+		return false
+	}
+	def, _, found := resolveCatalogModel(models, provider, model)
+	if !found || def == nil {
+		return false
+	}
+	return def.InputCostPer1k > 0 || def.OutputCostPer1k > 0
+}
+
 func resolveCatalogModel(models *catalog.Cache, provider, model string) (*catalog.ModelDefinition, string, bool) {
 	model = strings.TrimSpace(model)
 	provider = strings.TrimSpace(provider)
@@ -212,15 +239,20 @@ func resolveCatalogModel(models *catalog.Cache, provider, model string) (*catalo
 		}
 	}
 
+	// Exact id, then the id without a "[1m]"-style variant marker, then the
+	// longest catalog id it extends with "-" (dated snapshots). The marker is
+	// stripped before any prefix match: "claude-fable-5-2[1m]" would otherwise
+	// prefix-match the shorter, differently priced "claude-fable-5".
 	lookup := func(providerName string) (*catalog.ModelDefinition, bool) {
-		definition, found := models.GetModel(providerName, model)
-		if !found {
-			definition, found = models.GetModelByPrefix(providerName, model)
-		}
-		if !found {
-			if normalized := normalizeModelID(model); normalized != model {
-				if definition, found = models.GetModel(providerName, normalized); !found {
-					definition, found = models.GetModelByPrefix(providerName, normalized)
+		definition, found := models.ResolveModel(providerName, model)
+		// A dated snapshot ("gpt-4o-mini-2024-07-18") is often listed without a
+		// price while its base model carries it. Fall back to the base within
+		// the same provider so traces do not show $0 for a priced model.
+		if found && !hasPrice(definition) {
+			id := catalog.StripModelVariant(strings.TrimSpace(model))
+			if base := stripDateSuffix(id); base != id {
+				if baseDef, ok := models.GetModel(providerName, base); ok && hasPrice(baseDef) {
+					return baseDef, true
 				}
 			}
 		}
@@ -251,12 +283,23 @@ func resolveCatalogModel(models *catalog.Cache, provider, model string) (*catalo
 	return matchedDefinition, matchedProvider, matchedDefinition != nil
 }
 
-// normalizeModelID strips a trailing context-window / variant marker such as
-// the "[1m]" in "claude-opus-4-8[1m]" so the base model resolves in the
-// catalog. Returns the input unchanged when there is no bracket suffix.
-func normalizeModelID(model string) string {
-	if i := strings.IndexByte(model, '['); i > 0 {
-		return strings.TrimRight(model[:i], "-")
+func hasPrice(def *catalog.ModelDefinition) bool {
+	return def != nil && (def.InputCostPer1k > 0 || def.OutputCostPer1k > 0)
+}
+
+var (
+	dashedDateSuffix  = regexp.MustCompile(`-\d{4}-\d{2}-\d{2}$`)
+	compactDateSuffix = regexp.MustCompile(`-\d{8}$`)
+)
+
+// stripDateSuffix removes a trailing "-YYYY-MM-DD" or "-YYYYMMDD" snapshot
+// marker. Returns the input unchanged when there is none.
+func stripDateSuffix(model string) string {
+	if loc := dashedDateSuffix.FindStringIndex(model); loc != nil {
+		return model[:loc[0]]
+	}
+	if loc := compactDateSuffix.FindStringIndex(model); loc != nil {
+		return model[:loc[0]]
 	}
 	return model
 }

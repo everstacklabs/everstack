@@ -27,11 +27,11 @@ export function SpawnCard({
 
     const statusIndicator =
         status === 'running' ? (
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-info-solid animate-pulse" />
         ) : status === 'failed' ? (
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400" />
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-danger-solid" />
         ) : (
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400/70" />
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-success-solid/70" />
         )
 
     // Collect child text chunks

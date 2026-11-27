@@ -241,7 +241,7 @@ type StepState = 'complete' | 'current' | 'pending' | 'failed'
 
 function StepIcon({ state }: { state: StepState }) {
   if (state === 'complete') {
-    return <CheckCircle2 className="h-4 w-4 text-emerald-300 light:text-emerald-600" />
+    return <CheckCircle2 className="h-4 w-4 text-success" />
   }
   if (state === 'current') {
     return (
@@ -249,20 +249,20 @@ function StepIcon({ state }: { state: StepState }) {
     )
   }
   if (state === 'failed') {
-    return <XCircle className="h-4 w-4 text-red-300 light:text-red-600" />
+    return <XCircle className="h-4 w-4 text-danger" />
   }
   return <Clock3 className="h-4 w-4 text-white/35 light:text-black/35" />
 }
 
 function stepCardClass(state: StepState) {
   if (state === 'complete') {
-    return 'border-emerald-500/25 bg-emerald-500/10'
+    return 'border-success-border bg-success-surface'
   }
   if (state === 'current') {
     return 'border-brand-secondary-500/30 bg-brand-secondary-600/10'
   }
   if (state === 'failed') {
-    return 'border-red-500/25 bg-red-500/10'
+    return 'border-danger-border bg-danger-surface'
   }
   return 'border-brand-main-600 bg-brand-main-900/40'
 }
@@ -470,7 +470,7 @@ function OverviewRoute() {
                 <StatusPill
                   className={
                     agent.enabled
-                      ? 'bg-emerald-500/15 text-emerald-300 light:text-emerald-600 border border-emerald-500/25'
+                      ? 'bg-success-surface-strong text-success border border-success-border'
                       : 'bg-brand-main-500/30 text-brand-main-200 border border-brand-main-500/25'
                   }
                 >
@@ -479,7 +479,7 @@ function OverviewRoute() {
                 <StatusPill
                   className={
                     agent.mode === AgentMode.SUBAGENT
-                      ? 'bg-amber-500/15 text-amber-300 light:text-amber-700 border border-amber-500/25'
+                      ? 'bg-warning-surface-strong text-warning border border-warning-border'
                       : 'bg-brand-secondary-600/15 text-brand-secondary-300 border border-brand-secondary-500/25'
                   }
                 >
@@ -662,7 +662,6 @@ function OverviewRoute() {
                         <span
                           key={tool}
                           className="inline-flex items-center rounded border border-brand-secondary-500/25 bg-brand-secondary-600/10 px-2.5 py-1 text-xs text-brand-secondary-100"
-                          title={tool}
                         >
                           {toolLabel(tool)}
                         </span>

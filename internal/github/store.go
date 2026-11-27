@@ -63,6 +63,11 @@ type ManifestSession struct {
 // Store handles database operations for GitHub App integrations.
 type Store struct {
 	db *sqlx.DB
+	// sharedGateway refuses claims of unowned installations. A pending row
+	// comes from the shared app's webhook with no tenant, and nothing binds it
+	// to the tenant that installed it, so on a gateway serving several tenants
+	// any of them could claim it by its (sequential) installation id.
+	sharedGateway bool
 }
 
 var (
@@ -79,6 +84,14 @@ var (
 // NewStore creates a new GitHub integration store.
 func NewStore(db *sqlx.DB) *Store {
 	return &Store{db: db}
+}
+
+// SetSharedGateway marks the store as serving several tenants, which stops
+// ClaimInstallation from handing out unowned (pending) installations.
+func (s *Store) SetSharedGateway(shared bool) {
+	if s != nil {
+		s.sharedGateway = shared
+	}
 }
 
 func (s *Store) ensureDB() error {
@@ -154,19 +167,26 @@ func (s *Store) UpsertInstallation(ctx context.Context, inst *Installation) erro
 }
 
 // ListActiveInstallations returns all active installations for a tenant.
+//
+// Every tenant-facing query here filters on tenant_id: the gateway shares one
+// schema across tenants (see internal/database/shared_pool.go), so an
+// unfiltered query returns every tenant's rows.
 func (s *Store) ListActiveInstallations(ctx context.Context, tenantID string) ([]Installation, error) {
 	if err := s.ensureDB(); err != nil {
 		return nil, err
+	}
+	if strings.TrimSpace(tenantID) == "" {
+		return nil, ErrInstallationNotFound
 	}
 	var installations []Installation
 	const q = `
 		SELECT id, tenant_id, installation_id, account_login, account_type, app_id,
 		       permissions, repository_selection, status, installed_by, created_at, updated_at
 		FROM github_app_installations
-		WHERE status = 'active'
+		WHERE tenant_id = $1 AND status = 'active'
 		ORDER BY created_at DESC`
 
-	if err := s.db.SelectContext(ctx, &installations, q); err != nil {
+	if err := s.db.SelectContext(ctx, &installations, q, tenantID); err != nil {
 		return nil, wrapSchemaError(err)
 	}
 	return installations, nil
@@ -196,14 +216,50 @@ func (s *Store) GetInstallationForTenant(ctx context.Context, tenantID string, i
 	if err := s.ensureDB(); err != nil {
 		return nil, err
 	}
+	if strings.TrimSpace(tenantID) == "" {
+		return nil, ErrInstallationNotFound
+	}
 	var inst Installation
 	const q = `
 		SELECT id, tenant_id, installation_id, account_login, account_type, app_id,
 		       permissions, repository_selection, status, installed_by, created_at, updated_at
 		FROM github_app_installations
-		WHERE installation_id = $1 AND status = 'active'`
+		WHERE installation_id = $1 AND tenant_id = $2 AND status = 'active'`
 
-	if err := s.db.GetContext(ctx, &inst, q, installationID); err != nil {
+	if err := s.db.GetContext(ctx, &inst, q, installationID, tenantID); err != nil {
+		return nil, wrapSchemaError(err)
+	}
+	return &inst, nil
+}
+
+// ClaimInstallation links an installation to tenantID and activates it, but
+// only when the installation is unclaimed (a pending row from the shared
+// legacy app's webhook, empty tenant_id; never on a shared gateway, see
+// sharedGateway) or already belongs to tenantID. An
+// installation owned by another tenant is never re-pointed; that case and a
+// missing installation both return ErrInstallationNotFound so the caller
+// learns nothing about other tenants' installations.
+func (s *Store) ClaimInstallation(ctx context.Context, tenantID string, installationID int64) (*Installation, error) {
+	if err := s.ensureDB(); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(tenantID) == "" {
+		return nil, ErrInstallationNotFound
+	}
+	const q = `
+		UPDATE github_app_installations
+		SET tenant_id = $2, status = 'active', updated_at = NOW()
+		WHERE installation_id = $1
+		  AND (tenant_id = $2 OR (tenant_id = '' AND $3))
+		  AND status IN ('pending', 'active')
+		RETURNING id, tenant_id, installation_id, account_login, account_type, app_id,
+		          permissions, repository_selection, status, installed_by, created_at, updated_at`
+
+	var inst Installation
+	if err := s.db.QueryRowxContext(ctx, q, installationID, tenantID, !s.sharedGateway).StructScan(&inst); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrInstallationNotFound
+		}
 		return nil, wrapSchemaError(err)
 	}
 	return &inst, nil
@@ -214,12 +270,15 @@ func (s *Store) RemoveInstallation(ctx context.Context, tenantID string, install
 	if err := s.ensureDB(); err != nil {
 		return err
 	}
+	if strings.TrimSpace(tenantID) == "" {
+		return ErrInstallationNotFound
+	}
 	const q = `
 		UPDATE github_app_installations
 		SET status = 'removed', updated_at = NOW()
-		WHERE installation_id = $1 AND status = 'active'`
+		WHERE installation_id = $1 AND tenant_id = $2 AND status = 'active'`
 
-	result, err := s.db.ExecContext(ctx, q, installationID)
+	result, err := s.db.ExecContext(ctx, q, installationID, tenantID)
 	if err != nil {
 		return wrapSchemaError(err)
 	}
@@ -403,15 +462,18 @@ func (s *Store) GetAppByTenant(ctx context.Context, tenantID string) (*AppRecord
 	if err := s.ensureDB(); err != nil {
 		return nil, err
 	}
+	if strings.TrimSpace(tenantID) == "" {
+		return nil, ErrGitHubAppNotFound
+	}
 	const q = `
 		SELECT id, tenant_id, app_id, app_slug, app_name, private_key_encrypted,
 		       webhook_secret_encrypted, webhook_key, COALESCE(setup_url, '') AS setup_url,
 		       COALESCE(html_url, '') AS html_url, status, created_at, updated_at
 		FROM github_apps
-		WHERE status = 'active'`
+		WHERE tenant_id = $1 AND status = 'active'`
 
 	var rec AppRecord
-	err := s.db.GetContext(ctx, &rec, q)
+	err := s.db.GetContext(ctx, &rec, q, tenantID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrGitHubAppNotFound

@@ -78,7 +78,7 @@ export function ScorerPicker() {
                         type="button"
                         onClick={() => toggle(c.id)}
                         className="hover:text-white light:hover:text-black"
-                        aria-label={`Remove ${c.name}`}
+                        aria-label="Remove scorer"
                     >
                         <X className="h-2.5 w-2.5" />
                     </button>

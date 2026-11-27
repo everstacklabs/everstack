@@ -25,10 +25,12 @@ import (
 	"fmt"
 	"net/http"
 
+	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"github.com/jmoiron/sqlx"
 
 	adk "github.com/everstacklabs/everstack/internal/adk"
 	"github.com/everstacklabs/everstack/internal/agents/agentrun"
+	agentrt "github.com/everstacklabs/everstack/internal/agents/runtime"
 	tools "github.com/everstacklabs/everstack/internal/agents/runtime/tools"
 	gw "github.com/everstacklabs/everstack/internal/lib/handlers/gateway"
 	"github.com/everstacklabs/everstack/internal/mcp"
@@ -88,6 +90,9 @@ const toolRunADKAgent = "run_adk_agent"
 
 // adkAllowed reports whether run_adk_agent may be exposed/called for the tenant.
 func (p *Provider) adkAllowed(ctx context.Context, tenantID string) bool {
+	if contextkeys.GetAPIKeySurfaces(ctx) != nil {
+		return false
+	}
 	if p.d.ADK == nil {
 		return false // instance not capable
 	}
@@ -200,6 +205,10 @@ func (p *Provider) ListTools(ctx context.Context, tenantID string) ([]mcp.ToolIn
 func (p *Provider) CallTool(ctx context.Context, tenantID, name string, args map[string]interface{}) (*mcp.ToolCallResult, error) {
 	if tenantID == "" {
 		return nil, errNoTenant
+	}
+	ctx = agentrt.ContextWithTenantIdentity(ctx, tenantID)
+	if name == toolRunADKAgent && contextkeys.GetAPIKeySurfaces(ctx) != nil {
+		return nil, fmt.Errorf("unknown tool: %s", name)
 	}
 	settings := p.resolveSettings(ctx, tenantID)
 	for _, h := range p.buildHandlers(tenantID) {
@@ -357,7 +366,9 @@ func (t *getAgentTool) Execute(ctx context.Context, args map[string]interface{})
 }
 
 type runAgentTool struct {
-	runner   *agentrun.Runner
+	runner interface {
+		Run(context.Context, string, string, string) (string, error)
+	}
 	tenantID string
 }
 
@@ -375,6 +386,11 @@ func (t *runAgentTool) Definition() gw.ToolDefinition {
 }
 
 func (t *runAgentTool) Execute(ctx context.Context, args map[string]interface{}) (string, error) {
+	var hopErr error
+	ctx, hopErr = contextkeys.NextAgentHop(ctx)
+	if hopErr != nil {
+		return "", hopErr
+	}
 	agentID, _ := args["agent_id"].(string)
 	message, _ := args["message"].(string)
 	if agentID == "" || message == "" {
@@ -386,7 +402,9 @@ func (t *runAgentTool) Execute(ctx context.Context, args map[string]interface{})
 // ─── ADK runtime tool ───────────────────────────────────────────────
 
 type runADKTool struct {
-	rt       *adk.Runtime
+	rt interface {
+		Run(context.Context, adk.RunRequest) (*adk.RunResult, error)
+	}
 	tenantID string
 }
 
@@ -405,6 +423,11 @@ func (t *runADKTool) Definition() gw.ToolDefinition {
 }
 
 func (t *runADKTool) Execute(ctx context.Context, args map[string]interface{}) (string, error) {
+	var hopErr error
+	ctx, hopErr = contextkeys.NextAgentHop(ctx)
+	if hopErr != nil {
+		return "", hopErr
+	}
 	code, _ := args["agent_code"].(string)
 	input, _ := args["input"].(string)
 	if code == "" {

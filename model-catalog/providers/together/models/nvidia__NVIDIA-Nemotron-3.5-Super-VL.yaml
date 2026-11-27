@@ -1,0 +1,38 @@
+name: "nvidia/NVIDIA-Nemotron-3.5-Super-VL"
+display_name: "Nemotron 3.5 Super VL 120B A12B (Together)"
+family: "nemotron-super"
+status: "stable"
+release_date: "2026-10-15"
+
+cost:
+  input_per_1k: 0.00015
+  output_per_1k: 0.0005
+  cache_read_per_1k: 0.00002
+
+limits:
+  max_tokens: 262144
+  max_completion_tokens: 262144
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image","video"]
+  output: ["text"]
+notes: "NVIDIA vision-language reasoning model for text, image, and video understanding and agentic tool use"
+structured_output: true
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 262144
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+added_in_version: "2.11.0"

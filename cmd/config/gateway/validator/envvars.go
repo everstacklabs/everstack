@@ -1,7 +1,13 @@
 package validator
 
 import (
+	"os"
+	"strings"
+
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+
+	"github.com/everstacklabs/everstack/internal/lib/logger"
 )
 
 // EnvVar represents a single environment variable binding
@@ -16,6 +22,12 @@ type EnvVar struct {
 	Required bool
 	// DefaultValue is the default if not set (for documentation purposes)
 	DefaultValue string
+	// Usable, when set, decides whether a value found in the environment may
+	// override the config. A value it rejects is ignored with a warning and
+	// the config file or default applies instead. For variables that were
+	// accepted but had no effect in earlier releases, so that a value which
+	// used to be harmless cannot now stop the server from starting.
+	Usable func(value string) bool
 }
 
 // EnvVarRegistry contains all supported environment variables for Everstack configuration.
@@ -116,6 +128,26 @@ var EnvVarRegistry = []EnvVar{
 		EnvName:      "EVS_SERVER_PORT",
 		Description:  "HTTP server port",
 		DefaultValue: "8089",
+	},
+	{
+		// Documented and set by the Helm values and CI for a long time, but
+		// never bound, so it was ignored and the level came from YAML alone.
+		ConfigKey:    "server.log.level",
+		EnvName:      "EVS_LOG_LEVEL",
+		Description:  "Log level: trace, debug, info, warn, error",
+		DefaultValue: "info",
+		// Deployments have set this for as long as it did nothing. One that
+		// set it to something the logger cannot parse must keep starting.
+		Usable: func(value string) bool {
+			_, err := logrus.ParseLevel(value)
+			return err == nil
+		},
+	},
+	{
+		ConfigKey:    "server.config.shutdown_drain_timeout",
+		EnvName:      "EVS_SERVER_SHUTDOWN_DRAIN_TIMEOUT",
+		Description:  "How long in-flight HTTP requests may finish after SIGTERM (Go duration, > 0, max 10m)",
+		DefaultValue: "10s",
 	},
 	{
 		ConfigKey:    "server.config.external_domain",
@@ -506,6 +538,13 @@ var EnvVarRegistry = []EnvVar{
 // This must be called before Unmarshal to ensure env vars override config values.
 func BindEnvVars(v *viper.Viper) {
 	for _, ev := range EnvVarRegistry {
+		if ev.Usable != nil {
+			if value := os.Getenv(ev.EnvName); strings.TrimSpace(value) != "" && !ev.Usable(value) {
+				logger.WithFields("env", ev.EnvName, "config_key", ev.ConfigKey).
+					Warn("ignoring an environment variable whose value is not usable; the configured value applies")
+				continue
+			}
+		}
 		_ = v.BindEnv(ev.ConfigKey, ev.EnvName)
 	}
 }

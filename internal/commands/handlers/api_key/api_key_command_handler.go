@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/everstacklabs/everstack/internal/commands"
 	"github.com/everstacklabs/everstack/internal/commands/handlers/gateway/chat"
 	"github.com/everstacklabs/everstack/internal/database"
@@ -14,6 +13,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/lib/correlation"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/everstacklabs/everstack/internal/lib/utils"
+	"github.com/google/uuid"
 )
 
 // ApiKeyCommandHandler handles API key create/revoke commands.
@@ -54,14 +54,15 @@ func (h *ApiKeyCommandHandler) handleCreate(ctx context.Context, cmd *CreateApiK
 	if hv, ok := apikeylib.HashFromContext(ctx, cmd.Plaintext); ok {
 		hashVal = hv
 	}
-	
+
 	// create masked version for display
 	maskedKey := utils.MaskApiKey(cmd.Plaintext)
-	
+
 	payload := map[string]interface{}{
-		"id":             uuid.New().String(),
+		"id":             cmd.ID,
+		"surfaces":       cmd.Surfaces,
 		"name":           cmd.Name,
-		"hash":           hashVal,
+		"hash":           apikeylib.StoredHash(hashVal, cmd.Surfaces),
 		"type":           cmd.Type,
 		"sensitive_id":   maskedKey,
 		"user_id":        cmd.UserID,

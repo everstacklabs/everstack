@@ -15,6 +15,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	providerutil "github.com/everstacklabs/everstack/internal/providers"
 	clientx "github.com/everstacklabs/everstack/internal/providers/httpclient"
+	"github.com/everstacklabs/everstack/internal/providers/openai_compatible"
 	"github.com/everstacklabs/everstack/internal/providers/ratelimit"
 )
 
@@ -46,7 +47,7 @@ func (p *Provider) Name() string {
 
 type qwenMessage struct {
 	Role       string         `json:"role"`
-	Content    string         `json:"content,omitempty"`
+	Content    any            `json:"content,omitempty"`
 	ToolCalls  []qwenToolCall `json:"tool_calls,omitempty"`
 	ToolCallID string         `json:"tool_call_id,omitempty"`
 }
@@ -74,16 +75,18 @@ type qwenToolFuncDef struct {
 }
 
 type qwenChatReq struct {
-	Model          string        `json:"model"`
-	Messages       []qwenMessage `json:"messages"`
-	Tools          []qwenTool    `json:"tools,omitempty"`
-	Temperature    *float64      `json:"temperature,omitempty"`
-	TopP           *float64      `json:"top_p,omitempty"`
-	TopK           *int          `json:"top_k,omitempty"`
-	MaxTokens      int           `json:"max_tokens,omitempty"`
-	EnableThinking *bool         `json:"enable_thinking,omitempty"`
-	ThinkingBudget *int          `json:"thinking_budget,omitempty"`
-	Stream         bool          `json:"stream,omitempty"`
+	Model          string         `json:"model"`
+	Messages       []qwenMessage  `json:"messages"`
+	Tools          []qwenTool     `json:"tools,omitempty"`
+	Temperature    *float64       `json:"temperature,omitempty"`
+	TopP           *float64       `json:"top_p,omitempty"`
+	TopK           *int           `json:"top_k,omitempty"`
+	Stop           []string       `json:"stop,omitempty"`
+	MaxTokens      int            `json:"max_tokens,omitempty"`
+	EnableThinking *bool          `json:"enable_thinking,omitempty"`
+	ThinkingBudget *int           `json:"thinking_budget,omitempty"`
+	Stream         bool           `json:"stream,omitempty"`
+	StreamOptions  *streamOptions `json:"stream_options,omitempty"`
 }
 
 type qwenChatResp struct {
@@ -94,6 +97,7 @@ type qwenChatResp struct {
 			Content   string         `json:"content"`
 			ToolCalls []qwenToolCall `json:"tool_calls,omitempty"`
 		} `json:"message"`
+		FinishReason string `json:"finish_reason"`
 	} `json:"choices"`
 	Usage struct {
 		PromptTokens     int `json:"prompt_tokens"`
@@ -115,12 +119,7 @@ func convertMessages(msgs []gw.Message) []qwenMessage {
 		if m.ToolCallID != "" {
 			qm.ToolCallID = m.ToolCallID
 			qm.Role = "tool"
-			for _, c := range m.Content {
-				if c.Type == "text" && c.Text != nil {
-					qm.Content = *c.Text
-					break
-				}
-			}
+			qm.Content = openai_compatible.WireContent(m.Content)
 			out = append(out, qm)
 			continue
 		}
@@ -138,23 +137,13 @@ func convertMessages(msgs []gw.Message) []qwenMessage {
 				})
 			}
 			// Assistant messages with tool calls may also have text content
-			for _, c := range m.Content {
-				if c.Type == "text" && c.Text != nil {
-					qm.Content = *c.Text
-					break
-				}
-			}
+			qm.Content = openai_compatible.WireContent(m.Content)
 			out = append(out, qm)
 			continue
 		}
 
 		// Regular text message
-		for _, c := range m.Content {
-			if c.Type == "text" && c.Text != nil {
-				qm.Content = *c.Text
-				break
-			}
-		}
+		qm.Content = openai_compatible.WireContent(m.Content)
 		out = append(out, qm)
 	}
 	return out
@@ -230,8 +219,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	ratelimit.GlobalMonitor.Update(rateLimitInfo)
 
 	if resp.StatusCode >= 400 {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return gw.ChatCompletionResponse{}, fmt.Errorf("qwen error: %s", string(bodyBytes))
+		return gw.ChatCompletionResponse{}, openai_compatible.UpstreamError("qwen", resp)
 	}
 
 	var qwenResp qwenChatResp
@@ -241,7 +229,9 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 
 	var content string
 	var toolCalls []gw.ToolCall
+	var finishReason string
 	if len(qwenResp.Choices) > 0 {
+		finishReason = qwenResp.Choices[0].FinishReason
 		content = qwenResp.Choices[0].Message.Content
 		for _, tc := range qwenResp.Choices[0].Message.ToolCalls {
 			toolCalls = append(toolCalls, gw.ToolCall{
@@ -259,8 +249,9 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	msg.ToolCalls = toolCalls
 
 	choice := gw.Choice{
-		Index:   0,
-		Message: msg,
+		Index:        0,
+		Message:      msg,
+		FinishReason: finishReason,
 	}
 
 	usage := gw.Usage{
@@ -280,6 +271,9 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 		Messages: convertMessages(req.Messages),
 		Tools:    convertTools(req.Tools),
 		Stream:   true,
+		// Ask for the final usage chunk so platform-key streams bill on
+		// reported tokens, not the billing seam's estimate.
+		StreamOptions: &streamOptions{IncludeUsage: true},
 	}
 	applyQwenSampling(&qReq, req.Sampling)
 
@@ -308,8 +302,7 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 	ratelimit.GlobalMonitor.Update(rateLimitInfo)
 
 	if resp.StatusCode >= 400 {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("qwen stream error: %s", string(bodyBytes))
+		return openai_compatible.UpstreamError("qwen", resp)
 	}
 
 	// Track in-flight tool calls being accumulated across chunks.
@@ -321,6 +314,7 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 	}
 	pendingCalls := make(map[int]*pendingToolCall)
 
+	sawFinish := false
 	reader := bufio.NewReader(resp.Body)
 	for {
 		line, err := reader.ReadString('\n')
@@ -379,6 +373,10 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 			}
 
 			for _, ch := range partial.Choices {
+				emitted := false
+				if ch.FinishReason != "" {
+					sawFinish = true
+				}
 				// Accumulate streaming tool call deltas
 				for _, tc := range ch.Delta.ToolCalls {
 					pc, exists := pendingCalls[tc.Index]
@@ -408,6 +406,7 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 						FinishReason: ch.FinishReason,
 					}
 					chunk.Choices = append(chunk.Choices, delta)
+					emitted = true
 				}
 
 				// When finish_reason is "tool_calls" or "stop" and we have pending calls,
@@ -435,6 +434,16 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 					}
 					chunk.Choices = append(chunk.Choices, delta)
 					pendingCalls = make(map[int]*pendingToolCall)
+					emitted = true
+				}
+				if ch.FinishReason != "" && !emitted {
+					// The terminal frame usually has no content; forward it so
+					// a length-truncated answer is distinguishable.
+					chunk.Choices = append(chunk.Choices, gw.ChoiceDelta{
+						Index:        ch.Index,
+						Delta:        gw.NewMessage(gw.RoleAssistant, gw.Text("")),
+						FinishReason: ch.FinishReason,
+					})
 				}
 			}
 
@@ -444,10 +453,16 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 		}
 		if err != nil {
 			if err == io.EOF {
+				if !sawFinish {
+					return openai_compatible.ErrStreamTruncated("qwen")
+				}
 				return nil
 			}
 			return err
 		}
+	}
+	if !sawFinish {
+		return openai_compatible.ErrStreamTruncated("qwen")
 	}
 	return nil
 }
@@ -465,9 +480,8 @@ func applyQwenSampling(request *qwenChatReq, sampling gw.SamplingParams) {
 		topK := *sampling.TopK
 		request.TopK = &topK
 	}
-	if sampling.MaxTokens > 0 {
-		request.MaxTokens = sampling.MaxTokens
-	}
+	request.MaxTokens = openai_compatible.MaxOutputTokens(sampling)
+	request.Stop = sampling.Stop
 
 	if sampling.ReasoningBudget != nil {
 		enabled := true
@@ -535,8 +549,7 @@ func (p *Provider) Embed(ctx context.Context, req gw.EmbeddingsRequest) (gw.Embe
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return gw.EmbeddingsResponse{}, fmt.Errorf("qwen embeddings error: %s", string(bodyBytes))
+		return gw.EmbeddingsResponse{}, openai_compatible.UpstreamError("qwen", resp)
 	}
 
 	var qwenResp struct {
@@ -549,11 +562,15 @@ func (p *Provider) Embed(ctx context.Context, req gw.EmbeddingsRequest) (gw.Embe
 		return gw.EmbeddingsResponse{}, err
 	}
 
+	var first []float64
 	if len(qwenResp.Data) > 0 {
-		return gw.EmbeddingsResponse{Embedding: qwenResp.Data[0].Embedding}, nil
+		first = qwenResp.Data[0].Embedding
 	}
-
-	return gw.EmbeddingsResponse{Embedding: []float64{}}, nil
+	vec, err := openai_compatible.NonEmptyEmbedding("qwen", first)
+	if err != nil {
+		return gw.EmbeddingsResponse{}, err
+	}
+	return gw.EmbeddingsResponse{Embedding: vec}, nil
 }
 
 // --- Model support ---
@@ -587,4 +604,10 @@ func (p *Provider) SupportsModel(model string) bool {
 		}
 	}
 	return false
+}
+
+// streamOptions asks an OpenAI-compatible endpoint to append a usage chunk
+// to the stream.
+type streamOptions struct {
+	IncludeUsage bool `json:"include_usage"`
 }

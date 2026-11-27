@@ -312,7 +312,7 @@ export function OpenAISessionResources({
         <p
           key={i}
           role="alert"
-          className="text-sm text-red-400 light:text-red-700"
+          className="text-sm text-danger"
         >
           {message(error)}
         </p>

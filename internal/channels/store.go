@@ -72,6 +72,9 @@ type ChannelStore interface {
 	// against and what the usage reporter forwards to billing.
 	RecordChannelMessage(ctx context.Context, msg *ChannelMessageRecord) error
 	CountChannelMessagesThisMonth(ctx context.Context, tenantID string) (int64, error)
+	// CountChannelMessagesSince counts inbound messages across a set of
+	// tenant ids (one organization's ids on a managed gateway) since a time.
+	CountChannelMessagesSince(ctx context.Context, tenantIDs []string, since time.Time) (int64, error)
 
 	// Session mapping operations
 	FindSessionMapping(ctx context.Context, channelConfigID, platformChannelRef, platformUserID, platformThreadRef string) (*SessionMappingRecord, error)

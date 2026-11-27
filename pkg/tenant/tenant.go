@@ -67,6 +67,11 @@ type Config struct {
 	CreatedAt        time.Time  `db:"created_at"          json:"created_at"`
 	UpdatedAt        time.Time  `db:"updated_at"          json:"updated_at"`
 	PausedAt         *time.Time `db:"paused_at"           json:"paused_at,omitempty"`
+	// PausedReason says why Status is "paused": "over_limit_choice",
+	// "over_limit_auto" or "extra_billing_unpaid" for the instance-limit
+	// flow (docs/design/instance-over-limit.md), nil for a user stop. The
+	// tenant middleware picks the error body from it.
+	PausedReason *string `db:"paused_reason" json:"paused_reason,omitempty"`
 
 	// PlanTier is the org's commercial plan ("free"/"basic"/"pro"/"enterprise"),
 	// written at provision time and refreshed by the controlplane reconciler.

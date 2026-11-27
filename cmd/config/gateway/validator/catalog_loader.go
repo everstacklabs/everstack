@@ -100,6 +100,10 @@ type CatalogModelConfig struct {
 	Parameters       []ModelParameter  `yaml:"parameters"`
 	Variants         []ModelVariant    `yaml:"variants"`
 	StructuredOutput bool              `yaml:"structured_output"`
+	// UnsupportedParameters lists request controls the upstream rejects for
+	// this model (temperature, top_p, top_k, thinking_toggle,
+	// thinking_budget). The gateway drops them before dispatch.
+	UnsupportedParameters []string `yaml:"unsupported_parameters"`
 }
 
 // CatalogCost represents model cost configuration.
@@ -330,6 +334,11 @@ func buildLegacyModelsProvider(provider *CatalogProviderConfig, models []Catalog
 		}
 		if m.APIType != "" {
 			legacyModel["api_type"] = m.APIType
+		}
+		// Emitted only when set so catalogs without the field serialise
+		// exactly as before.
+		if len(m.UnsupportedParameters) > 0 {
+			legacyModel["unsupported_parameters"] = m.UnsupportedParameters
 		}
 		// Emitted only when priced, so a missing rate stays distinguishable
 		// from a genuine zero and consumers can pick their fallback.

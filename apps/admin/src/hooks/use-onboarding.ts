@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import {
   type OnboardingPath,
   useOnboardingStore,
@@ -6,11 +6,17 @@ import {
 import { useConfiguredProviders } from '@/hooks/vault/use-providers'
 import { useApiKeys } from '@/hooks/vault/use-api-keys'
 import { useAgents } from '@/hooks/deployments/use-agents'
+import { useGatewayModels } from '@/hooks/deployments/use-gateway-models'
+import { useModelTrial } from '@/hooks/billing/use-model-trial'
 import { useInstanceHasData } from '@/hooks/use-instance-has-data'
 import {
-  INTERFACE_DENSITY_CHANGED_EVENT,
-  readStoredInterfaceDensity,
-} from '@/lib/interface-density'
+  isUsableProvider,
+  pickServableModel,
+  pickTestModel,
+  type ServableModels,
+  type TestModel,
+  type TestModelProvider,
+} from '@/lib/first-request'
 
 export interface OnboardingStep {
   id: string
@@ -26,6 +32,27 @@ export interface OnboardingLaunchStep extends OnboardingStep {
   helper: string
 }
 
+const EMPTY_PROVIDERS: TestModelProvider[] = []
+const EMPTY_SERVABLE: ServableModels[] = []
+
+/**
+ * Resolves which launch step the wizard shows. A step pinned in the URL
+ * (`obStep`, from a deep link or a spine click) wins; otherwise the first
+ * incomplete step, so the flow auto-advances. The URL carries a step id, never
+ * an index, so a stale id from an older flow (the removed `density` step, say)
+ * simply falls through to the first incomplete step instead of breaking.
+ */
+export function resolveCurrentStep<T extends { id: string; complete: boolean }>(
+  steps: readonly T[],
+  pinnedId: string | undefined,
+): T | undefined {
+  return (
+    steps.find((s) => s.id === pinnedId) ??
+    steps.find((s) => !s.complete) ??
+    steps[steps.length - 1]
+  )
+}
+
 export function useOnboarding() {
   const dismissed = useOnboardingStore((s) => s.dismissed)
   const minimized = useOnboardingStore((s) => s.minimized)
@@ -33,36 +60,51 @@ export function useOnboarding() {
   const selectedPath = useOnboardingStore((s) => s.selectedPath)
   const sandboxSkipped = useOnboardingStore((s) => s.sandboxSkipped)
   const hydrated = useOnboardingStore((s) => s.hydrated)
-  const [hasDensityPreference, setHasDensityPreference] = useState(
-    () => readStoredInterfaceDensity() !== null,
-  )
 
-  useEffect(() => {
-    const syncDensityPreference = () => {
-      setHasDensityPreference(readStoredInterfaceDensity() !== null)
-    }
-
-    syncDensityPreference()
-    window.addEventListener(
-      INTERFACE_DENSITY_CHANGED_EVENT,
-      syncDensityPreference,
-    )
-    window.addEventListener('storage', syncDensityPreference)
-    return () => {
-      window.removeEventListener(
-        INTERFACE_DENSITY_CHANGED_EVENT,
-        syncDensityPreference,
-      )
-      window.removeEventListener('storage', syncDensityPreference)
-    }
-  }, [])
-
-  // Step 1: LLM Provider configured
+  // Step 1: LLM Provider configured. The list holds every catalog provider,
+  // configured or not, so only active rows with enabled models count.
   const { data: providersData, isLoading: providersLoading } =
     useConfiguredProviders()
-  const hasProvider = (providersData?.providers?.length ?? 0) > 0
+  const usableProviders = useMemo(
+    () => (providersData?.providers ?? EMPTY_PROVIDERS).filter(isUsableProvider),
+    [providersData],
+  )
+  // What the gateway itself says it can route (the data behind /v1/models).
+  // Covers providers configured through YAML rather than the console, which
+  // ListConfiguredProviders does not see.
+  const { data: servableModels, isLoading: servableLoading } =
+    useGatewayModels()
+  // Free model requests (cloud only; null when off or unavailable). While they
+  // are active and the org has no key of its own, the playground runs on the
+  // trial model so the first request works before any provider is connected.
+  const { data: trialData, isLoading: trialLoading } = useModelTrial()
+  const trial = trialData ?? null
+  // True until every read that decides the test model has answered, so the
+  // playground can hold its place instead of flashing "add a key" at a user
+  // whose free requests or provider are still loading.
+  const modelLoading = providersLoading || servableLoading || trialLoading
+  // Cheap model for whichever provider is connected; drives the in-console
+  // test request and the gateway quickstart snippet. Null means nothing is
+  // routable yet, and no test request is attempted.
+  const ownModel: TestModel | null = useMemo(
+    () =>
+      pickTestModel(usableProviders) ??
+      pickServableModel(servableModels ?? EMPTY_SERVABLE),
+    [usableProviders, servableModels],
+  )
+  // Gateway path only: a starter agent carries tools and a routed model, which
+  // free requests refuse, so the agent path still asks for a key.
+  const usingTrial =
+    selectedPath === 'gateway' &&
+    ownModel === null &&
+    trial?.state === 'active'
+  const testModel: TestModel | null =
+    ownModel ??
+    (usingTrial && trial ? { provider: 'openai', model: trial.model } : null)
+  const hasProvider = testModel !== null
   const hasOpenAI =
-    providersData?.providers?.some((p) => p.catalog?.name === 'openai') ?? false
+    usableProviders.some((p) => p.catalog?.name === 'openai') ||
+    testModel?.provider === 'openai'
 
   // Step 2: Agent created
   const { data: agents, isLoading: agentsLoading } = useAgents()
@@ -136,18 +178,6 @@ export function useOnboarding() {
   const agentLaunchSteps: OnboardingLaunchStep[] = useMemo(
     () => [
       {
-        id: 'density',
-        label: 'Choose layout density',
-        description:
-          'Pick how much information the admin UI should show at once.',
-        helper:
-          'Comfortable gives controls more room; Compact keeps tables and dashboards dense.',
-        actionLabel: hasDensityPreference ? 'Layout selected' : 'Choose layout',
-        href: '/settings/general',
-        icon: 'lucide:layout-dashboard',
-        complete: hasDensityPreference,
-      },
-      {
         id: 'provider',
         label: 'Connect an LLM provider',
         description:
@@ -209,7 +239,6 @@ export function useOnboarding() {
       },
     ],
     [
-      hasDensityPreference,
       hasProvider,
       hasAgent,
       hasApiKey,
@@ -223,25 +252,17 @@ export function useOnboarding() {
   const gatewayLaunchSteps: OnboardingLaunchStep[] = useMemo(
     () => [
       {
-        id: 'density',
-        label: 'Choose layout density',
-        description:
-          'Pick how much information the admin UI should show at once.',
-        helper:
-          'Comfortable gives controls more room; Compact keeps tables and dashboards dense.',
-        actionLabel: hasDensityPreference ? 'Layout selected' : 'Choose layout',
-        href: '/settings/general',
-        icon: 'lucide:layout-dashboard',
-        complete: hasDensityPreference,
-      },
-      {
         id: 'provider',
         label: 'Connect an LLM provider',
         description:
           'Add a provider key so the OpenAI-compatible gateway can route traffic.',
         helper:
           'This powers chat completions, responses, fallback, and observability.',
-        actionLabel: hasProvider ? 'Provider connected' : 'Connect provider',
+        actionLabel: usingTrial
+          ? 'Free requests active'
+          : hasProvider
+            ? 'Provider connected'
+            : 'Connect provider',
         href: '/vault/llm-providers',
         icon: 'hugeicons:ai-lock',
         complete: hasProvider,
@@ -261,7 +282,7 @@ export function useOnboarding() {
         id: 'test',
         label: 'Send a gateway request',
         description:
-          'Call `/v1/responses` or `/v1/chat/completions` through Everstack.',
+          'Call /v1/chat/completions or /v1/responses through Everstack.',
         helper:
           'Once traffic lands, traces and logs become your source of truth.',
         actionLabel: hasData ? 'Traffic observed' : 'View request snippets',
@@ -270,7 +291,7 @@ export function useOnboarding() {
         complete: hasData,
       },
     ],
-    [hasDensityPreference, hasProvider, hasApiKey, hasData],
+    [hasProvider, usingTrial, hasApiKey, hasData],
   )
 
   const launchStepsByPath: Record<OnboardingPath, OnboardingLaunchStep[]> =
@@ -308,6 +329,11 @@ export function useOnboarding() {
     firstAgentId,
     firstAgent,
     hasOpenAI,
+    hasProvider,
+    testModel,
+    modelLoading,
+    trial,
+    usingTrial,
     selectedPath,
     activePath,
     launchSteps,

@@ -1,7 +1,7 @@
 name: "moonshotai/kimi-k2-instruct-0905"
 display_name: "Kimi K2 Instruct 0905 (Groq)"
 family: "kimi"
-status: "stable"
+status: "deprecated"
 
 cost:
   input_per_1k: 0.001
@@ -59,3 +59,4 @@ parameters:
   - key: "seed"
     display_name: "Seed"
     type: "integer"
+notes: "Shut down by Groq on 2026-04-15. Migrate to openai/gpt-oss-120b."

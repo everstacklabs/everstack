@@ -10,3 +10,7 @@ import "errors"
 func availableBytes(string) (int64, error) {
 	return 0, errors.New("firecracker: statfs unsupported on this platform")
 }
+
+func storeBytes(string) (int64, int64, error) {
+	return 0, 0, errors.New("firecracker: statfs unsupported on this platform")
+}

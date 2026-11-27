@@ -19,7 +19,8 @@ export declare const file_everstack_gateway_v1_responses: GenFile;
  */
 export declare type ResponseInput = Message<"everstack.gateway.v1.ResponseInput"> & {
   /**
-   * Type of input: "message", "item_reference"
+   * Type of input: "message", "item_reference", "function_call",
+   * "function_call_output"
    *
    * @generated from field: string type = 1;
    */
@@ -45,6 +46,35 @@ export declare type ResponseInput = Message<"everstack.gateway.v1.ResponseInput"
    * @generated from field: string item_id = 4;
    */
   itemId: string;
+
+  /**
+   * For function_call and function_call_output types: the tool call the
+   * item belongs to
+   *
+   * @generated from field: string call_id = 5;
+   */
+  callId: string;
+
+  /**
+   * For function_call_output type: the tool's result
+   *
+   * @generated from field: string output = 6;
+   */
+  output: string;
+
+  /**
+   * For function_call type: the function the model called
+   *
+   * @generated from field: string name = 7;
+   */
+  name: string;
+
+  /**
+   * For function_call type: the call's arguments, as a JSON string
+   *
+   * @generated from field: string arguments = 8;
+   */
+  arguments: string;
 };
 
 /**
@@ -54,7 +84,8 @@ export declare type ResponseInput = Message<"everstack.gateway.v1.ResponseInput"
  */
 export declare type ResponseInputJson = {
   /**
-   * Type of input: "message", "item_reference"
+   * Type of input: "message", "item_reference", "function_call",
+   * "function_call_output"
    *
    * @generated from field: string type = 1;
    */
@@ -80,6 +111,35 @@ export declare type ResponseInputJson = {
    * @generated from field: string item_id = 4;
    */
   itemId?: string;
+
+  /**
+   * For function_call and function_call_output types: the tool call the
+   * item belongs to
+   *
+   * @generated from field: string call_id = 5;
+   */
+  callId?: string;
+
+  /**
+   * For function_call_output type: the tool's result
+   *
+   * @generated from field: string output = 6;
+   */
+  output?: string;
+
+  /**
+   * For function_call type: the function the model called
+   *
+   * @generated from field: string name = 7;
+   */
+  name?: string;
+
+  /**
+   * For function_call type: the call's arguments, as a JSON string
+   *
+   * @generated from field: string arguments = 8;
+   */
+  arguments?: string;
 };
 
 /**
@@ -984,11 +1044,14 @@ export declare type CreateResponseRequest = Message<"everstack.gateway.v1.Create
   truncation?: TruncationStrategy;
 
   /**
-   * Whether to store the response for retrieval
+   * Whether to store the response for retrieval and previous_response_id
+   * chaining. Unset means true, as in OpenAI's API. Declared optional so an
+   * explicit false is distinguishable from unset; the wire format is
+   * unchanged.
    *
-   * @generated from field: bool store = 14;
+   * @generated from field: optional bool store = 14;
    */
-  store: boolean;
+  store?: boolean;
 
   /**
    * Optional previous response ID to continue from
@@ -1108,9 +1171,12 @@ export declare type CreateResponseRequestJson = {
   truncation?: TruncationStrategyJson;
 
   /**
-   * Whether to store the response for retrieval
+   * Whether to store the response for retrieval and previous_response_id
+   * chaining. Unset means true, as in OpenAI's API. Declared optional so an
+   * explicit false is distinguishable from unset; the wire format is
+   * unchanged.
    *
-   * @generated from field: bool store = 14;
+   * @generated from field: optional bool store = 14;
    */
   store?: boolean;
 
@@ -1905,6 +1971,18 @@ export declare type CreateResponseResponse = Message<"everstack.gateway.v1.Creat
    * @generated from field: everstack.gateway.v1.TruncationStrategy truncation = 16;
    */
   truncation?: TruncationStrategy;
+
+  /**
+   * Set only on incremental frames of a streamed response (stream: true):
+   * the text or arguments one output item grew by since the previous frame.
+   * A delta frame is not a snapshot: it carries id and object, and its other
+   * fields are empty. Every other frame, including the final one, is a full
+   * snapshot of the response and leaves delta unset. An item or content part
+   * always appears in a snapshot before the first delta that names it.
+   *
+   * @generated from field: everstack.gateway.v1.ResponseDelta delta = 17;
+   */
+  delta?: ResponseDelta;
 };
 
 /**
@@ -2022,6 +2100,18 @@ export declare type CreateResponseResponseJson = {
    * @generated from field: everstack.gateway.v1.TruncationStrategy truncation = 16;
    */
   truncation?: TruncationStrategyJson;
+
+  /**
+   * Set only on incremental frames of a streamed response (stream: true):
+   * the text or arguments one output item grew by since the previous frame.
+   * A delta frame is not a snapshot: it carries id and object, and its other
+   * fields are empty. Every other frame, including the final one, is a full
+   * snapshot of the response and leaves delta unset. An item or content part
+   * always appears in a snapshot before the first delta that names it.
+   *
+   * @generated from field: everstack.gateway.v1.ResponseDelta delta = 17;
+   */
+  delta?: ResponseDeltaJson;
 };
 
 /**
@@ -2116,6 +2206,20 @@ export declare type ResponseDelta = Message<"everstack.gateway.v1.ResponseDelta"
    * @generated from field: string arguments_delta = 3;
    */
   argumentsDelta: string;
+
+  /**
+   * Index of the item in the response output
+   *
+   * @generated from field: int32 output_index = 4;
+   */
+  outputIndex: number;
+
+  /**
+   * Index of the content part within a message item (content_delta only)
+   *
+   * @generated from field: int32 content_index = 5;
+   */
+  contentIndex: number;
 };
 
 /**
@@ -2142,6 +2246,20 @@ export declare type ResponseDeltaJson = {
    * @generated from field: string arguments_delta = 3;
    */
   argumentsDelta?: string;
+
+  /**
+   * Index of the item in the response output
+   *
+   * @generated from field: int32 output_index = 4;
+   */
+  outputIndex?: number;
+
+  /**
+   * Index of the content part within a message item (content_delta only)
+   *
+   * @generated from field: int32 content_index = 5;
+   */
+  contentIndex?: number;
 };
 
 /**

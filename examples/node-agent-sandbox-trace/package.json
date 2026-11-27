@@ -1,0 +1,25 @@
+{
+  "name": "everstack-node-agent-sandbox-trace-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end Everstack Node SDK example for gateway routing, agent execution, sandboxing, tracing, and evaluation",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "sdk:build": "pnpm --dir ../../packages/sdks/everstack-node exec tsup",
+    "start": "tsx --env-file=.env src/index.ts",
+    "test": "node --import tsx --test src/*.test.ts",
+    "verify": "npm run check && npm test"
+  },
+  "dependencies": {
+    "@everstack/node": "file:../../packages/sdks/everstack-node"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20.6"
+  }
+}

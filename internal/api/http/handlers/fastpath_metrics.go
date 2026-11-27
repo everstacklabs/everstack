@@ -87,6 +87,14 @@ func FastPathStatsHandler(w http.ResponseWriter, r *http.Request) {
 				"p50": snapshot.StreamingP50,
 				"p99": snapshot.StreamingP99,
 			},
+			"provider": map[string]interface{}{
+				"p50": snapshot.ProviderP50,
+				"p99": snapshot.ProviderP99,
+			},
+			"gateway_overhead": map[string]interface{}{
+				"p50": snapshot.TelemetryP50,
+				"p99": snapshot.TelemetryP99,
+			},
 			"total": map[string]interface{}{
 				"p50":  snapshot.TotalP50,
 				"p99":  snapshot.TotalP99,

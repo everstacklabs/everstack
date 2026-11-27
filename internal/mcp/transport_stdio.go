@@ -8,9 +8,55 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"sort"
 	"sync"
 	"sync/atomic"
 )
+
+// stdioInheritedEnv is the only part of the gateway's own environment a
+// stdio child receives. Everything else the gateway holds (database DSNs,
+// signing keys, provider credentials, service tokens, any EVS_ or MF_
+// setting) stays out of the child; the server's configured env is layered
+// on top.
+//
+// Beyond PATH and HOME the list carries what common self-hosted setups
+// need to work at all: an egress proxy (both spellings, since tools differ
+// on which they read), a private CA bundle, a temp dir, locale, timezone
+// and the user name. None of these names a secret. Note that a proxy URL
+// can embed credentials (http://user:pass@proxy); that is the operator's
+// own proxy, which the child must use anyway to reach the network. Never
+// add a variable here whose name suggests a key, token, password or DSN.
+var stdioInheritedEnv = []string{
+	"PATH", "HOME", "USER", "TMPDIR",
+	"LANG", "LC_ALL", "TZ",
+	"HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY",
+	"http_proxy", "https_proxy", "no_proxy",
+	"SSL_CERT_FILE", "SSL_CERT_DIR", "NODE_EXTRA_CA_CERTS",
+}
+
+// childEnv builds the environment for a stdio MCP child process: the
+// allowlisted parent variables that exist, then the configured env in a
+// deterministic order. Configured keys may override the inherited ones.
+func childEnv(cfg StdioConfig) []string {
+	env := make([]string, 0, len(stdioInheritedEnv)+len(cfg.Env))
+	for _, k := range stdioInheritedEnv {
+		if _, overridden := cfg.Env[k]; overridden {
+			continue
+		}
+		if v, ok := os.LookupEnv(k); ok {
+			env = append(env, k+"="+v)
+		}
+	}
+	keys := make([]string, 0, len(cfg.Env))
+	for k := range cfg.Env {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		env = append(env, k+"="+cfg.Env[k])
+	}
+	return env
+}
 
 // stdioTransport implements Transport by managing an MCP server as a child
 // process. Communication happens via stdin (requests) / stdout (responses)
@@ -23,14 +69,14 @@ type stdioTransport struct {
 	cmd     *exec.Cmd
 	stdin   io.WriteCloser
 	started bool
-	pending map[interface{}]chan *JsonRpcResponse
+	pending map[string]chan *JsonRpcResponse // keyed by idKey(id)
 	done    chan struct{}
 }
 
 func newStdioTransport(cfg ServerConfig) (*stdioTransport, error) {
 	return &stdioTransport{
 		cfg:     *cfg.StdioConfig,
-		pending: make(map[interface{}]chan *JsonRpcResponse),
+		pending: make(map[string]chan *JsonRpcResponse),
 		done:    make(chan struct{}),
 	}, nil
 }
@@ -42,16 +88,20 @@ func (t *stdioTransport) start() error {
 	if t.started {
 		return nil
 	}
+	// Exec-time policy gate, the last line before a process is spawned:
+	// a transport constructed before the switch was flipped (or by a
+	// future path that bypasses NewTransport) still cannot run.
+	if !StdioAllowed() {
+		return ErrStdioNotAllowed
+	}
 
 	cmd := exec.Command(t.cfg.Command, t.cfg.Args...)
 	if t.cfg.WorkingDir != "" {
 		cmd.Dir = t.cfg.WorkingDir
 	}
-	// Inherit parent env, then overlay custom vars
-	cmd.Env = os.Environ()
-	for k, v := range t.cfg.Env {
-		cmd.Env = append(cmd.Env, k+"="+v)
-	}
+	// Never hand the child the gateway's full environment: it carries the
+	// process's own secrets. Allowlisted vars plus the configured env only.
+	cmd.Env = childEnv(t.cfg)
 	cmd.Stderr = os.Stderr
 
 	stdin, err := cmd.StdinPipe()
@@ -88,13 +138,17 @@ func (t *stdioTransport) Send(ctx context.Context, req *JsonRpcRequest) (*JsonRp
 	}
 	req.JSONRPC = jsonRPCVersion
 
+	// Keyed by idKey: the request id is an int64 from nextID but the
+	// child's echoed id decodes as float64, so a raw interface{} key never
+	// matched and every Send blocked until ctx timeout (same fix as SSE).
+	key := idKey(req.ID)
 	ch := make(chan *JsonRpcResponse, 1)
 	t.mu.Lock()
-	t.pending[req.ID] = ch
+	t.pending[key] = ch
 	t.mu.Unlock()
 	defer func() {
 		t.mu.Lock()
-		delete(t.pending, req.ID)
+		delete(t.pending, key)
 		t.mu.Unlock()
 	}()
 
@@ -152,7 +206,7 @@ func (t *stdioTransport) readStdout(r io.Reader) {
 			continue
 		}
 		t.mu.Lock()
-		if ch, ok := t.pending[resp.ID]; ok {
+		if ch, ok := t.pending[idKey(resp.ID)]; ok {
 			ch <- &resp
 		}
 		t.mu.Unlock()

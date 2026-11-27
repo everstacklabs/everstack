@@ -55,7 +55,7 @@ export function FeatureGatedError({
     return (
         <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-6 text-center">
             <div className="rounded-xl border border-brand-main-600 bg-brand-main-800/80 p-3">
-                <AlertCircle className="size-6 text-red-400 light:text-red-600" />
+                <AlertCircle className="size-6 text-danger" />
             </div>
             <h3 className="text-sm font-medium text-white light:text-brand-main-50">
                 Couldn&apos;t load {featureName.toLowerCase()}

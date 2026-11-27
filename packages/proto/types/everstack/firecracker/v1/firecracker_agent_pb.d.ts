@@ -2496,6 +2496,80 @@ export declare type NodeHealthJson = {
 export declare const NodeHealthSchema: GenMessage<NodeHealth, NodeHealthJson>;
 
 /**
+ * @generated from message everstack.firecracker.v1.ReportRootfsReferencesRequest
+ */
+export declare type ReportRootfsReferencesRequest = Message<"everstack.firecracker.v1.ReportRootfsReferencesRequest"> & {
+  /**
+   * Identity of the reporting gateway process as "<name>/<instance>",
+   * for example "everstack-gateway/<pod name>". Reports are kept per
+   * reporter and unioned; only names in the agent's FC_ROOTFS_GC_REPORTERS
+   * allowlist are recorded (others get PERMISSION_DENIED).
+   *
+   * @generated from field: string reporter = 1;
+   */
+  reporter: string;
+
+  /**
+   * Image references as stored on sandbox rows, for example
+   * "everstack/openai-codex-firecracker-rootfs:openai-codex-0.154.0-r3".
+   * The agent resolves each to its rootfs tag. An empty list is treated
+   * as unknown.
+   *
+   * @generated from field: repeated string images = 2;
+   */
+  images: string[];
+
+  /**
+   * unknown means the reporter cannot vouch for the full set, for example
+   * because its executor image is not configured. While any unexpired
+   * report is unknown the agent's GC keeps every tag image.
+   *
+   * @generated from field: bool unknown = 3;
+   */
+  unknown: boolean;
+};
+
+/**
+ * @generated from message everstack.firecracker.v1.ReportRootfsReferencesRequest
+ */
+export declare type ReportRootfsReferencesRequestJson = {
+  /**
+   * Identity of the reporting gateway process as "<name>/<instance>",
+   * for example "everstack-gateway/<pod name>". Reports are kept per
+   * reporter and unioned; only names in the agent's FC_ROOTFS_GC_REPORTERS
+   * allowlist are recorded (others get PERMISSION_DENIED).
+   *
+   * @generated from field: string reporter = 1;
+   */
+  reporter?: string;
+
+  /**
+   * Image references as stored on sandbox rows, for example
+   * "everstack/openai-codex-firecracker-rootfs:openai-codex-0.154.0-r3".
+   * The agent resolves each to its rootfs tag. An empty list is treated
+   * as unknown.
+   *
+   * @generated from field: repeated string images = 2;
+   */
+  images?: string[];
+
+  /**
+   * unknown means the reporter cannot vouch for the full set, for example
+   * because its executor image is not configured. While any unexpired
+   * report is unknown the agent's GC keeps every tag image.
+   *
+   * @generated from field: bool unknown = 3;
+   */
+  unknown?: boolean;
+};
+
+/**
+ * Describes the message everstack.firecracker.v1.ReportRootfsReferencesRequest.
+ * Use `create(ReportRootfsReferencesRequestSchema)` to create a new message.
+ */
+export declare const ReportRootfsReferencesRequestSchema: GenMessage<ReportRootfsReferencesRequest, ReportRootfsReferencesRequestJson>;
+
+/**
  * FirecrackerAgent manages Firecracker microVMs on a single host.
  * One agent runs per KVM-enabled worker node.
  *
@@ -2726,6 +2800,21 @@ export declare const FirecrackerAgent: GenService<{
     methodKind: "unary";
     input: typeof InvokeFunctionRequestSchema;
     output: typeof InvokeFunctionResultSchema;
+  },
+  /**
+   * ReportRootfsReferences tells the agent which rootfs images the
+   * calling gateway still needs: its configured executor image(s) and the
+   * image of every sandbox row that can still boot or wake. The agent's
+   * rootfs GC never deletes an image while any unexpired report names
+   * it, and deletes no per-tag image at all until a complete report
+   * arrives. Each reporter's latest report replaces its previous one.
+   *
+   * @generated from rpc everstack.firecracker.v1.FirecrackerAgent.ReportRootfsReferences
+   */
+  reportRootfsReferences: {
+    methodKind: "unary";
+    input: typeof ReportRootfsReferencesRequestSchema;
+    output: typeof EmptySchema;
   },
 }>;
 

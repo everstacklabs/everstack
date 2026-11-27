@@ -410,11 +410,11 @@ function getMetricClassName(status: HealthStatus): string {
 
 function getStatusBadgeClass(status: HealthStatus): string {
   if (status === 'healthy')
-    return 'bg-emerald-500/15 text-emerald-300 light:text-emerald-600 border-emerald-500/25'
+    return 'bg-success-surface-strong text-success border-success-border'
   if (status === 'watch')
-    return 'bg-amber-500/15 text-amber-300 light:text-amber-700 border-amber-500/25'
+    return 'bg-warning-surface-strong text-warning border-warning-border'
   if (status === 'critical')
-    return 'bg-red-500/15 text-red-400 light:text-red-600 border-red-500/25'
+    return 'bg-danger-surface-strong text-danger border-danger-border'
   return 'bg-brand-main-500/30 text-brand-main-200 border-brand-main-500/25'
 }
 
@@ -1179,7 +1179,7 @@ function OverviewTab({
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {newlyCritical.slice(0, 4).map((entry) => (
-                      <Badge key={entry.scoreName} className="bg-red-500/15 text-red-400 light:text-red-600 border-red-500/25">
+                      <Badge key={entry.scoreName} className="bg-danger-surface-strong text-danger border-danger-border">
                         {entry.meta.label}
                       </Badge>
                     ))}

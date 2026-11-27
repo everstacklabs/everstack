@@ -14,6 +14,12 @@ export interface PlanUsageLimit {
   type: string;
   value: number;
   subText?: string;
+  /** Hourly allowances: "vcpu_hour", "gib_hour" or "browser_hour". */
+  unit?: string;
+  /** "allowance": included each period, usage beyond is paid from credit. */
+  billing?: string;
+  /** Price per unit beyond the allowance. */
+  overage_rate_usd?: number;
 }
 
 export interface PerSeatPricing {
@@ -108,6 +114,25 @@ export function formatSeatsLabel(seatLimit: number): string {
   if (seatLimit === 0) return "Unlimited seats";
   if (seatLimit === 1) return "1 seat";
   return `${seatLimit} seats included`;
+}
+
+/**
+ * Plan features that gate server-side behaviour but are not marketed yet:
+ * spend_limits is the plans.json flag for the spend limit write API, whose
+ * UI ships later. Plan cards, pricing pages and the pricing corpus never
+ * list these.
+ */
+export const UNLISTED_PLAN_FEATURES: ReadonlySet<string> = new Set([
+  "spend_limits",
+]);
+
+/** The plan's enabled features that may be shown to customers. */
+export function listedPlanFeatures(
+  features: PlanFeature[] | undefined | null,
+): PlanFeature[] {
+  return (features ?? []).filter(
+    (f) => f.enabled && !UNLISTED_PLAN_FEATURES.has(f.name),
+  );
 }
 
 // Helper function to get human-readable feature descriptions.
@@ -221,6 +246,28 @@ const LIMIT_LABELS: Record<string, { label: string; tooltip: string }> = {
     label: "Days of session history",
     tooltip: "Days sessions are retained before expiry",
   },
+  SANDBOX_VCPU_HOURS: {
+    label: "vCPU-hours/month",
+    tooltip:
+      "Sandbox vCPU-hours included each billing period; usage beyond is paid from credit",
+  },
+  SANDBOX_MEMORY_GIB_HOURS: {
+    label: "Memory GiB-hours/month",
+    tooltip:
+      "Sandbox memory GiB-hours included each billing period; usage beyond is paid from credit",
+  },
+  BROWSER_HOURS: {
+    label: "Browser hours/month",
+    tooltip:
+      "Hosted browser hours included each billing period; usage beyond is paid from credit",
+  },
+};
+
+// Hourly allowances keep their unit's casing ("vCPU", "GiB").
+const HOURLY_ALLOWANCE_PHRASE: Record<string, string> = {
+  SANDBOX_VCPU_HOURS: "vCPU-hours/month",
+  SANDBOX_MEMORY_GIB_HOURS: "memory GiB-hours/month",
+  BROWSER_HOURS: "browser hours/month",
 };
 
 export function getLimitLabel(type: string): string {
@@ -242,6 +289,12 @@ function formatPlanLimitValue(value: number): string {
 // Helper function to format usage limits
 export function formatUsageLimit(limit: PlanUsageLimit): string {
   const label = getLimitLabel(limit.type);
+  const hourly = HOURLY_ALLOWANCE_PHRASE[limit.type];
+  if (hourly) {
+    return limit.value === -1
+      ? `Unlimited ${hourly}`
+      : `${limit.value.toLocaleString()} ${hourly}`;
+  }
   if (limit.value === -1) {
     return `Unlimited ${label.toLowerCase()}`;
   }
@@ -325,3 +378,30 @@ export function isUpgrade(currentTier: string, targetTier: string): boolean {
   const targetRank = PLAN_RANK[targetTier.toLowerCase()] ?? 0;
   return targetRank > currentRank;
 }
+
+/** Hosted browser runtime rates, from the plan catalog. */
+export interface BrowserRuntimePricing {
+  currency: string;
+  /** USD per active browser hour beyond a plan's included hours. */
+  browserHour: number;
+  minimumSessionSeconds: number;
+  idlePoolBilling: boolean;
+}
+
+const rawBrowserRuntimePricing = (
+  plansConfig as unknown as {
+    browser_runtime_pricing: {
+      currency: string;
+      browser_hour: number;
+      minimum_session_seconds: number;
+      idle_pool_billing: boolean;
+    };
+  }
+).browser_runtime_pricing;
+
+export const browserRuntimePricing: BrowserRuntimePricing = {
+  currency: rawBrowserRuntimePricing.currency,
+  browserHour: rawBrowserRuntimePricing.browser_hour,
+  minimumSessionSeconds: rawBrowserRuntimePricing.minimum_session_seconds,
+  idlePoolBilling: rawBrowserRuntimePricing.idle_pool_billing,
+};

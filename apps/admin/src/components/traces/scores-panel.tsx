@@ -342,7 +342,6 @@ function ScoreCard({
         {score.comment && (
           <span
             className="text-[10px] text-brand-main-50 truncate light:text-black"
-            title={score.comment}
           >
             <MessageSquare className="h-2.5 w-2.5 inline mr-0.5 relative -top-px" />
             {score.comment}
@@ -359,7 +358,7 @@ function ScoreCard({
         </button>
         <button
           onClick={onDelete}
-          className="flex items-center justify-center w-5 h-5 rounded hover:bg-rose-500/15 transition-colors"
+          className="flex items-center justify-center w-5 h-5 rounded hover:bg-danger-surface-strong transition-colors"
         >
           <Trash2 className="h-2.5 w-2.5 text-brand-main-50 light:text-black" />
         </button>

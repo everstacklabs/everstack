@@ -203,6 +203,42 @@ func (c *Cache) GetModelByPrefix(provider, model string) (*ModelDefinition, bool
 	return nil, false
 }
 
+// ResolveModel finds the catalog entry for a model id as it reaches a
+// provider. It tries, in order: the exact id, the id with a trailing variant
+// marker stripped ("claude-opus-4-8[1m]" -> "claude-opus-4-8"), and finally a
+// dated snapshot of a catalog entry ("gpt-4o-2024-08-06" -> "gpt-4o").
+//
+// The variant marker is stripped before any prefix match on purpose: a prefix
+// match on "claude-fable-5-2[1m]" would otherwise land on the shorter sibling
+// "claude-fable-5" (the remainder "-2[1m]" starts with "-") and apply the
+// wrong model's definition. A nil cache finds nothing.
+func (c *Cache) ResolveModel(provider, model string) (*ModelDefinition, bool) {
+	if c == nil {
+		return nil, false
+	}
+	model = strings.TrimSpace(model)
+	if definition, ok := c.GetModel(provider, model); ok {
+		return definition, true
+	}
+	base := StripModelVariant(model)
+	if base != model {
+		if definition, ok := c.GetModel(provider, base); ok {
+			return definition, true
+		}
+	}
+	return c.GetModelByPrefix(provider, base)
+}
+
+// StripModelVariant removes a trailing context-window or variant marker such
+// as the "[1m]" in "claude-opus-4-8[1m]". The input is returned unchanged when
+// it has no bracket suffix.
+func StripModelVariant(model string) string {
+	if i := strings.IndexByte(model, '['); i > 0 {
+		return strings.TrimRight(model[:i], "-")
+	}
+	return model
+}
+
 // GetModelWhitelist returns a map of provider -> allowed models (for bootstrap validation)
 func (c *Cache) GetModelWhitelist() map[string]map[string]struct{} {
 	c.mu.RLock()

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/everstacklabs/everstack/internal/auth/selfhosted/domain"
+	"github.com/everstacklabs/everstack/internal/lib/orgident"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
@@ -120,10 +121,14 @@ func (r *OrganizationRepository) SlugExists(ctx context.Context, slug string) (b
 
 // GenerateUniqueSlug generates a unique slug from a name
 func (r *OrganizationRepository) GenerateUniqueSlug(ctx context.Context, name string) (string, error) {
-	baseSlug := slugify(name)
+	baseSlug := orgident.FitSlug(slugify(name))
 	slug := baseSlug
 
 	for i := 1; i <= 100; i++ {
+		if orgident.ValidateSlug(slug) != nil {
+			slug = fmt.Sprintf("%s-%d", baseSlug, i)
+			continue
+		}
 		exists, err := r.SlugExists(ctx, slug)
 		if err != nil {
 			return "", err
@@ -434,6 +439,24 @@ func (r *OrganizationRepository) ListPaginated(ctx context.Context, limit, offse
 // List returns all organizations
 func (r *OrganizationRepository) List(ctx context.Context) ([]domain.Organization, error) {
 	return r.ListPaginated(ctx, 1000, 0)
+}
+
+// ListMembersBasicForOrg lists one organization's members. Team listings
+// must use this (scoped to the caller's organization), never ListAllMembers:
+// organization_members holds every organization in the database.
+func (r *OrganizationRepository) ListMembersBasicForOrg(ctx context.Context, orgID uuid.UUID) ([]OrganizationMemberBasic, error) {
+	query := `
+		SELECT user_id, role, created_at
+		FROM everstack.organization_members
+		WHERE organization_id = $1
+		ORDER BY created_at
+		LIMIT 1000
+	`
+	var members []OrganizationMemberBasic
+	if err := r.db.SelectContext(ctx, &members, query, orgID); err != nil {
+		return nil, err
+	}
+	return members, nil
 }
 
 // ListAllMembersPaginated lists all members across all organizations with pagination

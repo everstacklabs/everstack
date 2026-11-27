@@ -1,20 +1,14 @@
+import { safeReturnPath } from '@everstack/utils/functions/return-url'
+
 export const POST_AUTH_RETURN_URL_KEY = 'evs_post_auth_return_url'
 
-export function safeLocalReturnURL(value: unknown, fallback = '/'): string {
-  if (
-    typeof value !== 'string' ||
-    !value.startsWith('/') ||
-    value.startsWith('//')
-  ) {
-    return fallback
-  }
+// Any origin works as the base: only the same-origin path is ever returned.
+const LOCAL_BASE = 'https://everstack.local'
 
-  try {
-    const base = new URL('https://everstack.local')
-    const parsed = new URL(value, base)
-    if (parsed.origin !== base.origin) return fallback
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`
-  } catch {
-    return fallback
-  }
+/**
+ * A same-origin route for a post-auth return value, or the fallback. Shares
+ * the console's return URL policy so the two apps cannot drift apart.
+ */
+export function safeLocalReturnURL(value: unknown, fallback = '/'): string {
+  return safeReturnPath(value, LOCAL_BASE, fallback)
 }

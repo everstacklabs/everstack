@@ -30,7 +30,36 @@ type WebhookHandler struct {
 	store    Store
 	executor *Executor
 	limiters sync.Map // triggerID → *rate.Limiter
+
+	// hostTenant resolves the request host to the tenant (managed instance)
+	// it belongs to. Nil, or a host that does not resolve (platform host,
+	// self-hosted), keeps path-only lookup.
+	hostTenantMu sync.RWMutex
+	hostTenant   func(ctx context.Context, host string) (instanceID string, found bool)
 }
+
+// SetHostTenantResolver installs the host → tenant resolver. When the request
+// host resolves to a tenant, a webhook path owned by a different tenant is
+// answered exactly like an unknown path (404), so paths never leak across
+// tenants. nil disables the check.
+func (wh *WebhookHandler) SetHostTenantResolver(fn func(ctx context.Context, host string) (instanceID string, found bool)) {
+	wh.hostTenantMu.Lock()
+	wh.hostTenant = fn
+	wh.hostTenantMu.Unlock()
+}
+
+func (wh *WebhookHandler) resolveHostTenant(ctx context.Context, host string) (string, bool) {
+	wh.hostTenantMu.RLock()
+	fn := wh.hostTenant
+	wh.hostTenantMu.RUnlock()
+	if fn == nil || host == "" {
+		return "", false
+	}
+	return fn(ctx, host)
+}
+
+// webhookPausedBody is the 403 body for a webhook whose tenant is paused.
+const webhookPausedBody = `{"error":{"type":"instance_paused","code":"instance_paused","message":"This instance is paused."}}`
 
 // NewWebhookHandler creates a new webhook handler.
 func NewWebhookHandler(store Store, executor *Executor) *WebhookHandler {
@@ -54,8 +83,28 @@ func (wh *WebhookHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	// Look up trigger by webhook path
 	t, err := wh.store.GetTriggerByWebhookPath(ctx, path)
-	if err != nil {
+	if err != nil || t == nil {
 		http.Error(w, `{"error":"webhook not found"}`, http.StatusNotFound)
+		return
+	}
+
+	// On a tenant host, the path must belong to that tenant. Answer a
+	// mismatch exactly like an unknown path.
+	if hostTenant, found := wh.resolveHostTenant(ctx, r.Host); found && hostTenant != t.TenantID {
+		logger.WithFields("trigger_id", t.ID, "tenant_id", t.TenantID, "host_tenant_id", hostTenant).
+			Info("trigger_webhook: path does not belong to the request host's tenant")
+		http.Error(w, `{"error":"webhook not found"}`, http.StatusNotFound)
+		return
+	}
+
+	// A paused tenant runs nothing. Answered synchronously (Execute runs in
+	// the background) and before the rate limiter so no tokens are spent.
+	if !wh.executor.tenantActive(ctx, t.TenantID) {
+		logger.WithFields("trigger_id", t.ID, "tenant_id", t.TenantID).
+			Info("trigger_webhook: rejected (tenant paused)")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = io.WriteString(w, webhookPausedBody)
 		return
 	}
 

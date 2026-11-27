@@ -30,6 +30,8 @@ type Identity struct {
 	OrganizationSlug string
 	InstanceID       string
 	ClientID         string
+	// IssuedAt is the token's iat, set by Verify. Issue ignores it.
+	IssuedAt time.Time
 }
 
 type tokenClaims struct {
@@ -127,14 +129,18 @@ func (m *TokenManager) Verify(tokenString string) (*Identity, error) {
 	if !token.Valid || claims.Subject == "" || claims.OrganizationID == "" {
 		return nil, errors.New("verify device token: required claims are missing")
 	}
-	return &Identity{
+	identity := &Identity{
 		UserID:           claims.Subject,
 		Email:            claims.Email,
 		OrganizationID:   claims.OrganizationID,
 		OrganizationSlug: claims.OrganizationSlug,
 		InstanceID:       claims.InstanceID,
 		ClientID:         claims.ClientID,
-	}, nil
+	}
+	if claims.IssuedAt != nil {
+		identity.IssuedAt = claims.IssuedAt.Time
+	}
+	return identity, nil
 }
 
 func deriveTokenKey(masterKey []byte) []byte {
@@ -144,4 +150,18 @@ func deriveTokenKey(masterKey []byte) []byte {
 		panic(fmt.Sprintf("derive device token key: %v", err))
 	}
 	return derivedKey
+}
+
+// cliClientIDs are the client_id values real CLI tokens carry: "evs-cli"
+// (self-hosted device flow and the CLI's own OAuth client), "ewt-cli" (cloud
+// device authorization default) and "ewt" (the cloud auth service's
+// issueCLIToken). Every verifier must accept exactly this set; a narrower
+// list broke cloud CLI login (EVS-309 review).
+var cliClientIDs = map[string]struct{}{"evs-cli": {}, "ewt-cli": {}, "ewt": {}}
+
+// IsCLIClientID reports whether a verified token's client_id belongs to a
+// CLI issuer this platform trusts.
+func IsCLIClientID(clientID string) bool {
+	_, ok := cliClientIDs[clientID]
+	return ok
 }

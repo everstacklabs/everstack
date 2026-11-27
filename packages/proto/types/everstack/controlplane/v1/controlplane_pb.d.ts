@@ -280,6 +280,51 @@ export declare type GatewayInstance = Message<"everstack.controlplane.v1.Gateway
    * @generated from field: string region = 22;
    */
   region: string;
+
+  /**
+   * Instance-limit flow (docs/design/instance-over-limit.md).
+   *
+   * "over_limit_choice" | "over_limit_auto" | "extra_billing_unpaid" | ""
+   *
+   * @generated from field: string pause_reason = 23;
+   */
+  pauseReason: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp paused_at = 24;
+   */
+  pausedAt?: Timestamp;
+
+  /**
+   * last accepted API request (throttled); unset = never
+   *
+   * @generated from field: google.protobuf.Timestamp last_used_at = 25;
+   */
+  lastUsedAt?: Timestamp;
+
+  /**
+   * owner/admin opted to pay the monthly extra-instance fee
+   *
+   * @generated from field: bool extra_billing = 26;
+   */
+  extraBilling: boolean;
+
+  /**
+   * fee covers until here; unset = unpaid
+   *
+   * @generated from field: google.protobuf.Timestamp extra_billing_paid_through = 27;
+   */
+  extraBillingPaidThrough?: Timestamp;
+
+  /**
+   * The instance holds a slot the plan does not have: it is paused when the
+   * over-limit grace period ends unless the org frees a slot or pays for it.
+   * Set on GetInstanceLimitStatus, from the limit engine's own selection
+   * (instance_limits.go, billing ledger included); false elsewhere.
+   *
+   * @generated from field: bool over_limit = 28;
+   */
+  overLimit: boolean;
 };
 
 /**
@@ -401,6 +446,51 @@ export declare type GatewayInstanceJson = {
    * @generated from field: string region = 22;
    */
   region?: string;
+
+  /**
+   * Instance-limit flow (docs/design/instance-over-limit.md).
+   *
+   * "over_limit_choice" | "over_limit_auto" | "extra_billing_unpaid" | ""
+   *
+   * @generated from field: string pause_reason = 23;
+   */
+  pauseReason?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp paused_at = 24;
+   */
+  pausedAt?: TimestampJson;
+
+  /**
+   * last accepted API request (throttled); unset = never
+   *
+   * @generated from field: google.protobuf.Timestamp last_used_at = 25;
+   */
+  lastUsedAt?: TimestampJson;
+
+  /**
+   * owner/admin opted to pay the monthly extra-instance fee
+   *
+   * @generated from field: bool extra_billing = 26;
+   */
+  extraBilling?: boolean;
+
+  /**
+   * fee covers until here; unset = unpaid
+   *
+   * @generated from field: google.protobuf.Timestamp extra_billing_paid_through = 27;
+   */
+  extraBillingPaidThrough?: TimestampJson;
+
+  /**
+   * The instance holds a slot the plan does not have: it is paused when the
+   * over-limit grace period ends unless the org frees a slot or pays for it.
+   * Set on GetInstanceLimitStatus, from the limit engine's own selection
+   * (instance_limits.go, billing ledger included); false elsewhere.
+   *
+   * @generated from field: bool over_limit = 28;
+   */
+  overLimit?: boolean;
 };
 
 /**
@@ -778,7 +868,7 @@ export declare type ListInstancesResponse = Message<"everstack.controlplane.v1.L
   instances: GatewayInstance[];
 
   /**
-   * Number of active instances
+   * Instances occupying a plan slot (running; not stopped, paused or paid extra)
    *
    * @generated from field: int32 instance_count = 2;
    */
@@ -802,7 +892,7 @@ export declare type ListInstancesResponseJson = {
   instances?: GatewayInstanceJson[];
 
   /**
-   * Number of active instances
+   * Instances occupying a plan slot (running; not stopped, paused or paid extra)
    *
    * @generated from field: int32 instance_count = 2;
    */
@@ -821,6 +911,424 @@ export declare type ListInstancesResponseJson = {
  * Use `create(ListInstancesResponseSchema)` to create a new message.
  */
 export declare const ListInstancesResponseSchema: GenMessage<ListInstancesResponse, ListInstancesResponseJson>;
+
+/**
+ * @generated from message everstack.controlplane.v1.GetInstanceLimitStatusRequest
+ */
+export declare type GetInstanceLimitStatusRequest = Message<"everstack.controlplane.v1.GetInstanceLimitStatusRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+};
+
+/**
+ * @generated from message everstack.controlplane.v1.GetInstanceLimitStatusRequest
+ */
+export declare type GetInstanceLimitStatusRequestJson = {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+};
+
+/**
+ * Describes the message everstack.controlplane.v1.GetInstanceLimitStatusRequest.
+ * Use `create(GetInstanceLimitStatusRequestSchema)` to create a new message.
+ */
+export declare const GetInstanceLimitStatusRequestSchema: GenMessage<GetInstanceLimitStatusRequest, GetInstanceLimitStatusRequestJson>;
+
+/**
+ * @generated from message everstack.controlplane.v1.InstanceLimitStatus
+ */
+export declare type InstanceLimitStatus = Message<"everstack.controlplane.v1.InstanceLimitStatus"> & {
+  /**
+   * 0 = unlimited
+   *
+   * @generated from field: int32 instance_limit = 1;
+   */
+  instanceLimit: number;
+
+  /**
+   * @generated from field: int32 slots_used = 2;
+   */
+  slotsUsed: number;
+
+  /**
+   * an over-limit episode is open
+   *
+   * @generated from field: bool over_limit = 3;
+   */
+  overLimit: boolean;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp over_limit_since = 4;
+   */
+  overLimitSince?: Timestamp;
+
+  /**
+   * auto-pause happens after this
+   *
+   * @generated from field: google.protobuf.Timestamp grace_ends_at = 5;
+   */
+  graceEndsAt?: Timestamp;
+
+  /**
+   * the pay-per-extra-instance option can be offered
+   *
+   * @generated from field: bool extra_billing_available = 6;
+   */
+  extraBillingAvailable: boolean;
+
+  /**
+   * its monthly price
+   *
+   * @generated from field: double extra_instance_usd_per_month = 7;
+   */
+  extraInstanceUsdPerMonth: number;
+
+  /**
+   * @generated from field: string plan_tier = 8;
+   */
+  planTier: string;
+
+  /**
+   * Spendable wallet balance (balance minus holds) in USD, valid when
+   * available_credit_known. Lets the UI disable the pay option up front.
+   *
+   * @generated from field: double available_credit_usd = 9;
+   */
+  availableCreditUsd: number;
+
+  /**
+   * @generated from field: bool available_credit_known = 10;
+   */
+  availableCreditKnown: boolean;
+
+  /**
+   * Customers can buy credit (prepaid v2 slice S3 is live).
+   *
+   * @generated from field: bool credit_purchase_available = 11;
+   */
+  creditPurchaseAvailable: boolean;
+};
+
+/**
+ * @generated from message everstack.controlplane.v1.InstanceLimitStatus
+ */
+export declare type InstanceLimitStatusJson = {
+  /**
+   * 0 = unlimited
+   *
+   * @generated from field: int32 instance_limit = 1;
+   */
+  instanceLimit?: number;
+
+  /**
+   * @generated from field: int32 slots_used = 2;
+   */
+  slotsUsed?: number;
+
+  /**
+   * an over-limit episode is open
+   *
+   * @generated from field: bool over_limit = 3;
+   */
+  overLimit?: boolean;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp over_limit_since = 4;
+   */
+  overLimitSince?: TimestampJson;
+
+  /**
+   * auto-pause happens after this
+   *
+   * @generated from field: google.protobuf.Timestamp grace_ends_at = 5;
+   */
+  graceEndsAt?: TimestampJson;
+
+  /**
+   * the pay-per-extra-instance option can be offered
+   *
+   * @generated from field: bool extra_billing_available = 6;
+   */
+  extraBillingAvailable?: boolean;
+
+  /**
+   * its monthly price
+   *
+   * @generated from field: double extra_instance_usd_per_month = 7;
+   */
+  extraInstanceUsdPerMonth?: number | "NaN" | "Infinity" | "-Infinity";
+
+  /**
+   * @generated from field: string plan_tier = 8;
+   */
+  planTier?: string;
+
+  /**
+   * Spendable wallet balance (balance minus holds) in USD, valid when
+   * available_credit_known. Lets the UI disable the pay option up front.
+   *
+   * @generated from field: double available_credit_usd = 9;
+   */
+  availableCreditUsd?: number | "NaN" | "Infinity" | "-Infinity";
+
+  /**
+   * @generated from field: bool available_credit_known = 10;
+   */
+  availableCreditKnown?: boolean;
+
+  /**
+   * Customers can buy credit (prepaid v2 slice S3 is live).
+   *
+   * @generated from field: bool credit_purchase_available = 11;
+   */
+  creditPurchaseAvailable?: boolean;
+};
+
+/**
+ * Describes the message everstack.controlplane.v1.InstanceLimitStatus.
+ * Use `create(InstanceLimitStatusSchema)` to create a new message.
+ */
+export declare const InstanceLimitStatusSchema: GenMessage<InstanceLimitStatus, InstanceLimitStatusJson>;
+
+/**
+ * @generated from message everstack.controlplane.v1.GetInstanceLimitStatusResponse
+ */
+export declare type GetInstanceLimitStatusResponse = Message<"everstack.controlplane.v1.GetInstanceLimitStatusResponse"> & {
+  /**
+   * @generated from field: everstack.controlplane.v1.InstanceLimitStatus status = 1;
+   */
+  status?: InstanceLimitStatus;
+
+  /**
+   * most recently used first
+   *
+   * @generated from field: repeated everstack.controlplane.v1.GatewayInstance instances = 2;
+   */
+  instances: GatewayInstance[];
+};
+
+/**
+ * @generated from message everstack.controlplane.v1.GetInstanceLimitStatusResponse
+ */
+export declare type GetInstanceLimitStatusResponseJson = {
+  /**
+   * @generated from field: everstack.controlplane.v1.InstanceLimitStatus status = 1;
+   */
+  status?: InstanceLimitStatusJson;
+
+  /**
+   * most recently used first
+   *
+   * @generated from field: repeated everstack.controlplane.v1.GatewayInstance instances = 2;
+   */
+  instances?: GatewayInstanceJson[];
+};
+
+/**
+ * Describes the message everstack.controlplane.v1.GetInstanceLimitStatusResponse.
+ * Use `create(GetInstanceLimitStatusResponseSchema)` to create a new message.
+ */
+export declare const GetInstanceLimitStatusResponseSchema: GenMessage<GetInstanceLimitStatusResponse, GetInstanceLimitStatusResponseJson>;
+
+/**
+ * @generated from message everstack.controlplane.v1.PauseInstanceRequest
+ */
+export declare type PauseInstanceRequest = Message<"everstack.controlplane.v1.PauseInstanceRequest"> & {
+  /**
+   * @generated from field: string instance_id = 1;
+   */
+  instanceId: string;
+};
+
+/**
+ * @generated from message everstack.controlplane.v1.PauseInstanceRequest
+ */
+export declare type PauseInstanceRequestJson = {
+  /**
+   * @generated from field: string instance_id = 1;
+   */
+  instanceId?: string;
+};
+
+/**
+ * Describes the message everstack.controlplane.v1.PauseInstanceRequest.
+ * Use `create(PauseInstanceRequestSchema)` to create a new message.
+ */
+export declare const PauseInstanceRequestSchema: GenMessage<PauseInstanceRequest, PauseInstanceRequestJson>;
+
+/**
+ * @generated from message everstack.controlplane.v1.PauseInstanceResponse
+ */
+export declare type PauseInstanceResponse = Message<"everstack.controlplane.v1.PauseInstanceResponse"> & {
+  /**
+   * @generated from field: everstack.controlplane.v1.GatewayInstance instance = 1;
+   */
+  instance?: GatewayInstance;
+
+  /**
+   * @generated from field: everstack.controlplane.v1.InstanceLimitStatus status = 2;
+   */
+  status?: InstanceLimitStatus;
+};
+
+/**
+ * @generated from message everstack.controlplane.v1.PauseInstanceResponse
+ */
+export declare type PauseInstanceResponseJson = {
+  /**
+   * @generated from field: everstack.controlplane.v1.GatewayInstance instance = 1;
+   */
+  instance?: GatewayInstanceJson;
+
+  /**
+   * @generated from field: everstack.controlplane.v1.InstanceLimitStatus status = 2;
+   */
+  status?: InstanceLimitStatusJson;
+};
+
+/**
+ * Describes the message everstack.controlplane.v1.PauseInstanceResponse.
+ * Use `create(PauseInstanceResponseSchema)` to create a new message.
+ */
+export declare const PauseInstanceResponseSchema: GenMessage<PauseInstanceResponse, PauseInstanceResponseJson>;
+
+/**
+ * @generated from message everstack.controlplane.v1.ResumeInstanceRequest
+ */
+export declare type ResumeInstanceRequest = Message<"everstack.controlplane.v1.ResumeInstanceRequest"> & {
+  /**
+   * @generated from field: string instance_id = 1;
+   */
+  instanceId: string;
+};
+
+/**
+ * @generated from message everstack.controlplane.v1.ResumeInstanceRequest
+ */
+export declare type ResumeInstanceRequestJson = {
+  /**
+   * @generated from field: string instance_id = 1;
+   */
+  instanceId?: string;
+};
+
+/**
+ * Describes the message everstack.controlplane.v1.ResumeInstanceRequest.
+ * Use `create(ResumeInstanceRequestSchema)` to create a new message.
+ */
+export declare const ResumeInstanceRequestSchema: GenMessage<ResumeInstanceRequest, ResumeInstanceRequestJson>;
+
+/**
+ * @generated from message everstack.controlplane.v1.ResumeInstanceResponse
+ */
+export declare type ResumeInstanceResponse = Message<"everstack.controlplane.v1.ResumeInstanceResponse"> & {
+  /**
+   * @generated from field: everstack.controlplane.v1.GatewayInstance instance = 1;
+   */
+  instance?: GatewayInstance;
+
+  /**
+   * @generated from field: everstack.controlplane.v1.InstanceLimitStatus status = 2;
+   */
+  status?: InstanceLimitStatus;
+};
+
+/**
+ * @generated from message everstack.controlplane.v1.ResumeInstanceResponse
+ */
+export declare type ResumeInstanceResponseJson = {
+  /**
+   * @generated from field: everstack.controlplane.v1.GatewayInstance instance = 1;
+   */
+  instance?: GatewayInstanceJson;
+
+  /**
+   * @generated from field: everstack.controlplane.v1.InstanceLimitStatus status = 2;
+   */
+  status?: InstanceLimitStatusJson;
+};
+
+/**
+ * Describes the message everstack.controlplane.v1.ResumeInstanceResponse.
+ * Use `create(ResumeInstanceResponseSchema)` to create a new message.
+ */
+export declare const ResumeInstanceResponseSchema: GenMessage<ResumeInstanceResponse, ResumeInstanceResponseJson>;
+
+/**
+ * @generated from message everstack.controlplane.v1.SetInstanceExtraBillingRequest
+ */
+export declare type SetInstanceExtraBillingRequest = Message<"everstack.controlplane.v1.SetInstanceExtraBillingRequest"> & {
+  /**
+   * @generated from field: string instance_id = 1;
+   */
+  instanceId: string;
+
+  /**
+   * @generated from field: bool enabled = 2;
+   */
+  enabled: boolean;
+};
+
+/**
+ * @generated from message everstack.controlplane.v1.SetInstanceExtraBillingRequest
+ */
+export declare type SetInstanceExtraBillingRequestJson = {
+  /**
+   * @generated from field: string instance_id = 1;
+   */
+  instanceId?: string;
+
+  /**
+   * @generated from field: bool enabled = 2;
+   */
+  enabled?: boolean;
+};
+
+/**
+ * Describes the message everstack.controlplane.v1.SetInstanceExtraBillingRequest.
+ * Use `create(SetInstanceExtraBillingRequestSchema)` to create a new message.
+ */
+export declare const SetInstanceExtraBillingRequestSchema: GenMessage<SetInstanceExtraBillingRequest, SetInstanceExtraBillingRequestJson>;
+
+/**
+ * @generated from message everstack.controlplane.v1.SetInstanceExtraBillingResponse
+ */
+export declare type SetInstanceExtraBillingResponse = Message<"everstack.controlplane.v1.SetInstanceExtraBillingResponse"> & {
+  /**
+   * @generated from field: everstack.controlplane.v1.GatewayInstance instance = 1;
+   */
+  instance?: GatewayInstance;
+
+  /**
+   * @generated from field: everstack.controlplane.v1.InstanceLimitStatus status = 2;
+   */
+  status?: InstanceLimitStatus;
+};
+
+/**
+ * @generated from message everstack.controlplane.v1.SetInstanceExtraBillingResponse
+ */
+export declare type SetInstanceExtraBillingResponseJson = {
+  /**
+   * @generated from field: everstack.controlplane.v1.GatewayInstance instance = 1;
+   */
+  instance?: GatewayInstanceJson;
+
+  /**
+   * @generated from field: everstack.controlplane.v1.InstanceLimitStatus status = 2;
+   */
+  status?: InstanceLimitStatusJson;
+};
+
+/**
+ * Describes the message everstack.controlplane.v1.SetInstanceExtraBillingResponse.
+ * Use `create(SetInstanceExtraBillingResponseSchema)` to create a new message.
+ */
+export declare const SetInstanceExtraBillingResponseSchema: GenMessage<SetInstanceExtraBillingResponse, SetInstanceExtraBillingResponseJson>;
 
 /**
  * @generated from message everstack.controlplane.v1.StartInstanceRequest
@@ -1421,6 +1929,548 @@ export declare type RemoveCustomDomainResponseJson = {
 export declare const RemoveCustomDomainResponseSchema: GenMessage<RemoveCustomDomainResponse, RemoveCustomDomainResponseJson>;
 
 /**
+ * @generated from message everstack.controlplane.v1.GetOrgActivityRequest
+ */
+export declare type GetOrgActivityRequest = Message<"everstack.controlplane.v1.GetOrgActivityRequest"> & {
+  /**
+   * The only scope input. Membership-gated by the auth interceptor.
+   *
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * "24h" | "7d" | "30d".
+   *
+   * @generated from field: string range = 2;
+   */
+  range: string;
+};
+
+/**
+ * @generated from message everstack.controlplane.v1.GetOrgActivityRequest
+ */
+export declare type GetOrgActivityRequestJson = {
+  /**
+   * The only scope input. Membership-gated by the auth interceptor.
+   *
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId?: string;
+
+  /**
+   * "24h" | "7d" | "30d".
+   *
+   * @generated from field: string range = 2;
+   */
+  range?: string;
+};
+
+/**
+ * Describes the message everstack.controlplane.v1.GetOrgActivityRequest.
+ * Use `create(GetOrgActivityRequestSchema)` to create a new message.
+ */
+export declare const GetOrgActivityRequestSchema: GenMessage<GetOrgActivityRequest, GetOrgActivityRequestJson>;
+
+/**
+ * One model call is one generation span: a provider call made by the
+ * gateway (each retry or fallback attempt counts), or an LLM span the
+ * customer's app sent over OTLP. An app span whose trace also holds a
+ * gateway generation span is the same call seen twice and is not counted.
+ *
+ * @generated from message everstack.controlplane.v1.OrgActivityBucket
+ */
+export declare type OrgActivityBucket = Message<"everstack.controlplane.v1.OrgActivityBucket"> & {
+  /**
+   * @generated from field: google.protobuf.Timestamp start = 1;
+   */
+  start?: Timestamp;
+
+  /**
+   * mapped to a name client-side, never displayed
+   *
+   * @generated from field: string instance_id = 2;
+   */
+  instanceId: string;
+
+  /**
+   * @generated from field: int64 requests = 3;
+   */
+  requests: bigint;
+
+  /**
+   * @generated from field: int64 tokens = 4;
+   */
+  tokens: bigint;
+
+  /**
+   * @generated from field: int64 errors = 5;
+   */
+  errors: bigint;
+};
+
+/**
+ * One model call is one generation span: a provider call made by the
+ * gateway (each retry or fallback attempt counts), or an LLM span the
+ * customer's app sent over OTLP. An app span whose trace also holds a
+ * gateway generation span is the same call seen twice and is not counted.
+ *
+ * @generated from message everstack.controlplane.v1.OrgActivityBucket
+ */
+export declare type OrgActivityBucketJson = {
+  /**
+   * @generated from field: google.protobuf.Timestamp start = 1;
+   */
+  start?: TimestampJson;
+
+  /**
+   * mapped to a name client-side, never displayed
+   *
+   * @generated from field: string instance_id = 2;
+   */
+  instanceId?: string;
+
+  /**
+   * @generated from field: int64 requests = 3;
+   */
+  requests?: string;
+
+  /**
+   * @generated from field: int64 tokens = 4;
+   */
+  tokens?: string;
+
+  /**
+   * @generated from field: int64 errors = 5;
+   */
+  errors?: string;
+};
+
+/**
+ * Describes the message everstack.controlplane.v1.OrgActivityBucket.
+ * Use `create(OrgActivityBucketSchema)` to create a new message.
+ */
+export declare const OrgActivityBucketSchema: GenMessage<OrgActivityBucket, OrgActivityBucketJson>;
+
+/**
+ * p95 latency of one bucket across all of the org's instances (quantiles
+ * do not add up across instances, so this is not per instance). Only
+ * buckets with at least one timed call are sent.
+ *
+ * @generated from message everstack.controlplane.v1.OrgActivityLatencyBucket
+ */
+export declare type OrgActivityLatencyBucket = Message<"everstack.controlplane.v1.OrgActivityLatencyBucket"> & {
+  /**
+   * @generated from field: google.protobuf.Timestamp start = 1;
+   */
+  start?: Timestamp;
+
+  /**
+   * @generated from field: double p95_latency_ms = 2;
+   */
+  p95LatencyMs: number;
+
+  /**
+   * @generated from field: int64 samples = 3;
+   */
+  samples: bigint;
+};
+
+/**
+ * p95 latency of one bucket across all of the org's instances (quantiles
+ * do not add up across instances, so this is not per instance). Only
+ * buckets with at least one timed call are sent.
+ *
+ * @generated from message everstack.controlplane.v1.OrgActivityLatencyBucket
+ */
+export declare type OrgActivityLatencyBucketJson = {
+  /**
+   * @generated from field: google.protobuf.Timestamp start = 1;
+   */
+  start?: TimestampJson;
+
+  /**
+   * @generated from field: double p95_latency_ms = 2;
+   */
+  p95LatencyMs?: number | "NaN" | "Infinity" | "-Infinity";
+
+  /**
+   * @generated from field: int64 samples = 3;
+   */
+  samples?: string;
+};
+
+/**
+ * Describes the message everstack.controlplane.v1.OrgActivityLatencyBucket.
+ * Use `create(OrgActivityLatencyBucketSchema)` to create a new message.
+ */
+export declare const OrgActivityLatencyBucketSchema: GenMessage<OrgActivityLatencyBucket, OrgActivityLatencyBucketJson>;
+
+/**
+ * @generated from message everstack.controlplane.v1.OrgActivityTotals
+ */
+export declare type OrgActivityTotals = Message<"everstack.controlplane.v1.OrgActivityTotals"> & {
+  /**
+   * @generated from field: int64 requests = 1;
+   */
+  requests: bigint;
+
+  /**
+   * @generated from field: int64 tokens = 2;
+   */
+  tokens: bigint;
+
+  /**
+   * @generated from field: int64 errors = 3;
+   */
+  errors: bigint;
+
+  /**
+   * errors / requests, 0..1; 0 when there are no requests
+   *
+   * @generated from field: double error_rate = 4;
+   */
+  errorRate: number;
+
+  /**
+   * valid when p95_available
+   *
+   * @generated from field: double p95_latency_ms = 5;
+   */
+  p95LatencyMs: number;
+
+  /**
+   * @generated from field: bool p95_available = 6;
+   */
+  p95Available: boolean;
+};
+
+/**
+ * @generated from message everstack.controlplane.v1.OrgActivityTotals
+ */
+export declare type OrgActivityTotalsJson = {
+  /**
+   * @generated from field: int64 requests = 1;
+   */
+  requests?: string;
+
+  /**
+   * @generated from field: int64 tokens = 2;
+   */
+  tokens?: string;
+
+  /**
+   * @generated from field: int64 errors = 3;
+   */
+  errors?: string;
+
+  /**
+   * errors / requests, 0..1; 0 when there are no requests
+   *
+   * @generated from field: double error_rate = 4;
+   */
+  errorRate?: number | "NaN" | "Infinity" | "-Infinity";
+
+  /**
+   * valid when p95_available
+   *
+   * @generated from field: double p95_latency_ms = 5;
+   */
+  p95LatencyMs?: number | "NaN" | "Infinity" | "-Infinity";
+
+  /**
+   * @generated from field: bool p95_available = 6;
+   */
+  p95Available?: boolean;
+};
+
+/**
+ * Describes the message everstack.controlplane.v1.OrgActivityTotals.
+ * Use `create(OrgActivityTotalsSchema)` to create a new message.
+ */
+export declare const OrgActivityTotalsSchema: GenMessage<OrgActivityTotals, OrgActivityTotalsJson>;
+
+/**
+ * Change versus the previous equal-length window. has_value is false when
+ * the previous window is not available or its value is zero.
+ *
+ * @generated from message everstack.controlplane.v1.OrgActivityDelta
+ */
+export declare type OrgActivityDelta = Message<"everstack.controlplane.v1.OrgActivityDelta"> & {
+  /**
+   * @generated from field: bool has_value = 1;
+   */
+  hasValue: boolean;
+
+  /**
+   * Relative change (0.12 = +12%) for requests, tokens and p95; for the
+   * error rate it is the difference of the two rates (0.004 = +0.4 points).
+   *
+   * @generated from field: double change = 2;
+   */
+  change: number;
+};
+
+/**
+ * Change versus the previous equal-length window. has_value is false when
+ * the previous window is not available or its value is zero.
+ *
+ * @generated from message everstack.controlplane.v1.OrgActivityDelta
+ */
+export declare type OrgActivityDeltaJson = {
+  /**
+   * @generated from field: bool has_value = 1;
+   */
+  hasValue?: boolean;
+
+  /**
+   * Relative change (0.12 = +12%) for requests, tokens and p95; for the
+   * error rate it is the difference of the two rates (0.004 = +0.4 points).
+   *
+   * @generated from field: double change = 2;
+   */
+  change?: number | "NaN" | "Infinity" | "-Infinity";
+};
+
+/**
+ * Describes the message everstack.controlplane.v1.OrgActivityDelta.
+ * Use `create(OrgActivityDeltaSchema)` to create a new message.
+ */
+export declare const OrgActivityDeltaSchema: GenMessage<OrgActivityDelta, OrgActivityDeltaJson>;
+
+/**
+ * @generated from message everstack.controlplane.v1.OrgActivityModel
+ */
+export declare type OrgActivityModel = Message<"everstack.controlplane.v1.OrgActivityModel"> & {
+  /**
+   * @generated from field: string model = 1;
+   */
+  model: string;
+
+  /**
+   * @generated from field: int64 requests = 2;
+   */
+  requests: bigint;
+
+  /**
+   * @generated from field: int64 tokens = 3;
+   */
+  tokens: bigint;
+};
+
+/**
+ * @generated from message everstack.controlplane.v1.OrgActivityModel
+ */
+export declare type OrgActivityModelJson = {
+  /**
+   * @generated from field: string model = 1;
+   */
+  model?: string;
+
+  /**
+   * @generated from field: int64 requests = 2;
+   */
+  requests?: string;
+
+  /**
+   * @generated from field: int64 tokens = 3;
+   */
+  tokens?: string;
+};
+
+/**
+ * Describes the message everstack.controlplane.v1.OrgActivityModel.
+ * Use `create(OrgActivityModelSchema)` to create a new message.
+ */
+export declare const OrgActivityModelSchema: GenMessage<OrgActivityModel, OrgActivityModelJson>;
+
+/**
+ * @generated from message everstack.controlplane.v1.GetOrgActivityResponse
+ */
+export declare type GetOrgActivityResponse = Message<"everstack.controlplane.v1.GetOrgActivityResponse"> & {
+  /**
+   * @generated from field: google.protobuf.Timestamp window_start = 1;
+   */
+  windowStart?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp window_end = 2;
+   */
+  windowEnd?: Timestamp;
+
+  /**
+   * Bucket width. Buckets are sparse (only non-empty (start, instance)
+   * pairs); bucket starts are UTC multiples of bucket_seconds, the first one
+   * at or before window_start. Clients fill the gaps with zeros.
+   *
+   * @generated from field: int64 bucket_seconds = 3;
+   */
+  bucketSeconds: bigint;
+
+  /**
+   * @generated from field: repeated everstack.controlplane.v1.OrgActivityBucket buckets = 4;
+   */
+  buckets: OrgActivityBucket[];
+
+  /**
+   * @generated from field: everstack.controlplane.v1.OrgActivityTotals current = 5;
+   */
+  current?: OrgActivityTotals;
+
+  /**
+   * @generated from field: everstack.controlplane.v1.OrgActivityTotals previous = 6;
+   */
+  previous?: OrgActivityTotals;
+
+  /**
+   * False when the previous window reaches past raw telemetry retention, so
+   * a delta would compare against data that has already expired.
+   *
+   * @generated from field: bool previous_available = 7;
+   */
+  previousAvailable: boolean;
+
+  /**
+   * @generated from field: everstack.controlplane.v1.OrgActivityDelta requests_delta = 8;
+   */
+  requestsDelta?: OrgActivityDelta;
+
+  /**
+   * @generated from field: everstack.controlplane.v1.OrgActivityDelta tokens_delta = 9;
+   */
+  tokensDelta?: OrgActivityDelta;
+
+  /**
+   * @generated from field: everstack.controlplane.v1.OrgActivityDelta error_rate_delta = 10;
+   */
+  errorRateDelta?: OrgActivityDelta;
+
+  /**
+   * @generated from field: everstack.controlplane.v1.OrgActivityDelta p95_latency_delta = 11;
+   */
+  p95LatencyDelta?: OrgActivityDelta;
+
+  /**
+   * by requests, at most 5
+   *
+   * @generated from field: repeated everstack.controlplane.v1.OrgActivityModel top_models = 12;
+   */
+  topModels: OrgActivityModel[];
+
+  /**
+   * False when this deployment has no telemetry store; every number is then
+   * zero because it was not measured, not because nothing happened.
+   *
+   * @generated from field: bool available = 13;
+   */
+  available: boolean;
+
+  /**
+   * Per-bucket p95 over the current window, same bucket starts as buckets.
+   * Sparse: a bucket with no timed calls is absent.
+   *
+   * @generated from field: repeated everstack.controlplane.v1.OrgActivityLatencyBucket latency_buckets = 14;
+   */
+  latencyBuckets: OrgActivityLatencyBucket[];
+};
+
+/**
+ * @generated from message everstack.controlplane.v1.GetOrgActivityResponse
+ */
+export declare type GetOrgActivityResponseJson = {
+  /**
+   * @generated from field: google.protobuf.Timestamp window_start = 1;
+   */
+  windowStart?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp window_end = 2;
+   */
+  windowEnd?: TimestampJson;
+
+  /**
+   * Bucket width. Buckets are sparse (only non-empty (start, instance)
+   * pairs); bucket starts are UTC multiples of bucket_seconds, the first one
+   * at or before window_start. Clients fill the gaps with zeros.
+   *
+   * @generated from field: int64 bucket_seconds = 3;
+   */
+  bucketSeconds?: string;
+
+  /**
+   * @generated from field: repeated everstack.controlplane.v1.OrgActivityBucket buckets = 4;
+   */
+  buckets?: OrgActivityBucketJson[];
+
+  /**
+   * @generated from field: everstack.controlplane.v1.OrgActivityTotals current = 5;
+   */
+  current?: OrgActivityTotalsJson;
+
+  /**
+   * @generated from field: everstack.controlplane.v1.OrgActivityTotals previous = 6;
+   */
+  previous?: OrgActivityTotalsJson;
+
+  /**
+   * False when the previous window reaches past raw telemetry retention, so
+   * a delta would compare against data that has already expired.
+   *
+   * @generated from field: bool previous_available = 7;
+   */
+  previousAvailable?: boolean;
+
+  /**
+   * @generated from field: everstack.controlplane.v1.OrgActivityDelta requests_delta = 8;
+   */
+  requestsDelta?: OrgActivityDeltaJson;
+
+  /**
+   * @generated from field: everstack.controlplane.v1.OrgActivityDelta tokens_delta = 9;
+   */
+  tokensDelta?: OrgActivityDeltaJson;
+
+  /**
+   * @generated from field: everstack.controlplane.v1.OrgActivityDelta error_rate_delta = 10;
+   */
+  errorRateDelta?: OrgActivityDeltaJson;
+
+  /**
+   * @generated from field: everstack.controlplane.v1.OrgActivityDelta p95_latency_delta = 11;
+   */
+  p95LatencyDelta?: OrgActivityDeltaJson;
+
+  /**
+   * by requests, at most 5
+   *
+   * @generated from field: repeated everstack.controlplane.v1.OrgActivityModel top_models = 12;
+   */
+  topModels?: OrgActivityModelJson[];
+
+  /**
+   * False when this deployment has no telemetry store; every number is then
+   * zero because it was not measured, not because nothing happened.
+   *
+   * @generated from field: bool available = 13;
+   */
+  available?: boolean;
+
+  /**
+   * Per-bucket p95 over the current window, same bucket starts as buckets.
+   * Sparse: a bucket with no timed calls is absent.
+   *
+   * @generated from field: repeated everstack.controlplane.v1.OrgActivityLatencyBucket latency_buckets = 14;
+   */
+  latencyBuckets?: OrgActivityLatencyBucketJson[];
+};
+
+/**
+ * Describes the message everstack.controlplane.v1.GetOrgActivityResponse.
+ * Use `create(GetOrgActivityResponseSchema)` to create a new message.
+ */
+export declare const GetOrgActivityResponseSchema: GenMessage<GetOrgActivityResponse, GetOrgActivityResponseJson>;
+
+/**
  * InstanceStatus represents the lifecycle state of a managed gateway instance.
  *
  * @generated from enum everstack.controlplane.v1.InstanceStatus
@@ -1470,6 +2520,14 @@ export enum InstanceStatus {
    * @generated from enum value: INSTANCE_STATUS_DELETING = 8;
    */
   DELETING = 8,
+
+  /**
+   * Paused by the instance-limit flow: traffic refused, everything kept.
+   * Only ResumeInstance leaves it. See docs/design/instance-over-limit.md.
+   *
+   * @generated from enum value: INSTANCE_STATUS_PAUSED = 9;
+   */
+  PAUSED = 9,
 }
 
 /**
@@ -1477,7 +2535,7 @@ export enum InstanceStatus {
  *
  * @generated from enum everstack.controlplane.v1.InstanceStatus
  */
-export declare type InstanceStatusJson = "INSTANCE_STATUS_UNSPECIFIED" | "INSTANCE_STATUS_PROVISIONING" | "INSTANCE_STATUS_STARTING" | "INSTANCE_STATUS_RUNNING" | "INSTANCE_STATUS_STOPPING" | "INSTANCE_STATUS_STOPPED" | "INSTANCE_STATUS_DEGRADED" | "INSTANCE_STATUS_FAILED" | "INSTANCE_STATUS_DELETING";
+export declare type InstanceStatusJson = "INSTANCE_STATUS_UNSPECIFIED" | "INSTANCE_STATUS_PROVISIONING" | "INSTANCE_STATUS_STARTING" | "INSTANCE_STATUS_RUNNING" | "INSTANCE_STATUS_STOPPING" | "INSTANCE_STATUS_STOPPED" | "INSTANCE_STATUS_DEGRADED" | "INSTANCE_STATUS_FAILED" | "INSTANCE_STATUS_DELETING" | "INSTANCE_STATUS_PAUSED";
 
 /**
  * Describes the enum everstack.controlplane.v1.InstanceStatus.

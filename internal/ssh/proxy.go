@@ -2,11 +2,14 @@ package ssh
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -28,10 +31,11 @@ type ProxyConfig struct {
 
 // Proxy is a Go SSH server that routes connections to sandbox shells.
 type Proxy struct {
-	config   ProxyConfig
-	listener net.Listener
-	done     chan struct{}
-	cancel   context.CancelFunc
+	config        ProxyConfig
+	sandboxLookup sandboxLookupResolver
+	listener      net.Listener
+	done          chan struct{}
+	cancel        context.CancelFunc
 
 	// Per-IP rate limiters
 	rateMu     sync.Mutex
@@ -47,6 +51,58 @@ type Proxy struct {
 	// credential probing now that the listener is public on :2222.
 	banMu sync.Mutex
 	bans  map[string]*banEntry
+
+	// tenantActiveFn reports whether a tenant's instance may run compute.
+	// Nil treats every tenant as active.
+	tenantActiveFn atomic.Pointer[func(ctx context.Context, tenantID string) bool]
+}
+
+type sandboxLookupResolver interface {
+	GetBySandboxIDOrNameInScope(string, sandbox.TenantInstanceScope) (*sandbox.Instance, bool)
+	LookupInstanceByIDFromDBInScope(context.Context, string, sandbox.TenantInstanceScope) (*sandbox.Instance, error)
+	GetBySandboxIDOrShortCodeInScope(string, sandbox.TenantInstanceScope) (*sandbox.Instance, bool)
+	LookupInstanceByIDOrShortCodeFromDBInScope(context.Context, string, sandbox.TenantInstanceScope) (*sandbox.Instance, error)
+	GetBySandboxNameInScope(string, sandbox.TenantInstanceScope) (*sandbox.Instance, bool)
+	LookupInstanceByNameFromDBInScope(context.Context, string, sandbox.TenantInstanceScope) (*sandbox.Instance, error)
+}
+
+// errInstancePaused is returned from the auth callbacks when the sandbox's
+// instance is paused. SSH never shows callback errors to the client; the text
+// is for server logs.
+var errInstancePaused = errors.New("auth failed: instance is paused (over plan instance limit or stopped); resume it to use SSH")
+
+// SetTenantActiveFn installs the paused-instance gate. fn returns false when
+// the tenant's instance is paused; SSH auth into its sandboxes is then
+// refused. Passing nil treats every tenant as active. Safe for concurrent use.
+func (p *Proxy) SetTenantActiveFn(fn func(ctx context.Context, tenantID string) bool) {
+	if fn == nil {
+		p.tenantActiveFn.Store(nil)
+		return
+	}
+	p.tenantActiveFn.Store(&fn)
+}
+
+// pausedTenant returns the first of ids whose instance is paused.
+func (p *Proxy) pausedTenant(ctx context.Context, ids ...string) (string, bool) {
+	ptr := p.tenantActiveFn.Load()
+	if ptr == nil {
+		return "", false
+	}
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		if _, dup := seen[id]; dup {
+			continue
+		}
+		seen[id] = struct{}{}
+		if !(*ptr)(ctx, id) {
+			return id, true
+		}
+	}
+	return "", false
 }
 
 type rateLimitEntry struct {
@@ -103,13 +159,17 @@ func NewProxy(config ProxyConfig) *Proxy {
 		config.ConnRatePerIP = 10
 	}
 
-	return &Proxy{
+	p := &Proxy{
 		config:        config,
 		done:          make(chan struct{}),
 		rateLimits:    make(map[string]*rateLimitEntry),
 		sessionCounts: make(map[string]int),
 		bans:          make(map[string]*banEntry),
 	}
+	if config.SandboxManager != nil {
+		p.sandboxLookup = config.SandboxManager
+	}
+	return p
 }
 
 // isBanned returns true if `ip` is currently in the banned window.
@@ -445,60 +505,158 @@ func (p *Proxy) publicKeyCallback(connMeta ssh.ConnMetadata, key ssh.PublicKey) 
 		return nil, fmt.Errorf("auth failed")
 	}
 
+	// Sandbox ids and short codes are globally unique. Resolve them across
+	// every tenant candidate before considering display names, so key-row
+	// creation order cannot change the destination.
 	for i := range keys {
 		sshKey := &keys[i]
-		scope := sandbox.TenantInstanceScope{
-			OrganizationID: sshKey.TenantID,
-			TenantID:       sshKey.TenantID,
-			InstanceID:     sshKey.TenantID,
+		scope := sshKeyScope(sshKey)
+		inst, lookupErr := p.lookupSandboxByIDOrShortCodeInScope(ctx, idOrName, scope)
+		if lookupErr != nil {
+			logger.WithFields("user", idOrName, "tenant_id", sshKey.TenantID, "error", lookupErr.Error()).Warn("ssh auth: sandbox identifier lookup failed")
+			return nil, fmt.Errorf("auth failed")
 		}
-		inst, ok := p.lookupSandboxByIdentifierInScope(ctx, idOrName, scope)
-		if !ok || inst == nil {
+		if inst == nil {
 			continue
+		}
+		return p.authorizePublicKeySandbox(ctx, idOrName, sshKey, scope, inst)
+	}
+
+	// Display names are tenant-local. They are safe only when exactly one
+	// candidate tenant has a running sandbox with that name.
+	nameMatches := make([]publicKeySandboxMatch, 0, 1)
+	seenTenants := make(map[string]struct{}, len(keys))
+	for i := range keys {
+		sshKey := &keys[i]
+		if _, seen := seenTenants[sshKey.TenantID]; seen {
+			continue
+		}
+		seenTenants[sshKey.TenantID] = struct{}{}
+		scope := sshKeyScope(sshKey)
+		inst, lookupErr := p.lookupSandboxByNameInScope(ctx, idOrName, scope)
+		if lookupErr != nil {
+			logger.WithFields("user", idOrName, "tenant_id", sshKey.TenantID, "error", lookupErr.Error()).Warn("ssh auth: sandbox name lookup failed")
+			return nil, fmt.Errorf("auth failed")
 		}
 		if !isSandboxRunningForSSH(inst) {
-			logger.WithFields("user", idOrName, "sandbox_id", inst.ID, "status", inst.Status, "lifecycle", inst.LifecycleState).Warn("ssh auth: sandbox not running")
 			continue
 		}
+		nameMatches = append(nameMatches, publicKeySandboxMatch{key: sshKey, scope: scope, instance: inst})
+	}
+	if len(nameMatches) > 1 {
+		logger.WithFields("user", idOrName, "candidate_count", len(nameMatches)).Warn("ssh auth: sandbox name is ambiguous; connect with the sandbox id or short code")
+		return nil, fmt.Errorf("auth failed: sandbox name is ambiguous; connect with the sandbox id or short code")
+	}
+	if len(nameMatches) == 1 {
+		match := nameMatches[0]
+		return p.authorizePublicKeySandbox(ctx, idOrName, match.key, match.scope, match.instance)
+	}
 
-		sandboxID := inst.ID
-		tenantID := inst.Config.TenantID
-		if tenantID == "" {
-			tenantID = scope.SandboxTenantID()
-		}
+	if pausedErr := p.pausedKeyCandidate(ctx, idOrName, keys); pausedErr != nil {
+		return nil, pausedErr
+	}
+	logger.WithFields("user", idOrName, "fingerprint", fingerprint).Warn("ssh auth: no scoped sandbox access matched")
+	return nil, fmt.Errorf("auth failed")
+}
 
-		hasAccess, accessErr := p.config.KeyStore.CheckAccess(ctx, sandboxID, sshKey.UserID, tenantID)
-		if accessErr != nil || !hasAccess {
+type publicKeySandboxMatch struct {
+	key      *UserSSHKey
+	scope    sandbox.TenantInstanceScope
+	instance *sandbox.Instance
+}
+
+func sshKeyScope(key *UserSSHKey) sandbox.TenantInstanceScope {
+	return sandbox.TenantInstanceScope{
+		OrganizationID: key.TenantID,
+		TenantID:       key.TenantID,
+		InstanceID:     key.TenantID,
+	}
+}
+
+func (p *Proxy) pausedKeyCandidate(ctx context.Context, idOrName string, keys []UserSSHKey) error {
+	var pausedErr error
+	for i := range keys {
+		sshKey := &keys[i]
+		if paused, ok := p.pausedTenant(ctx, sshKey.TenantID); ok {
 			p.logSSHAudit("ssh_key_auth_denied",
 				"user", idOrName,
-				"sandbox_id", sandboxID,
-				"tenant_id", tenantID,
+				"tenant_id", paused,
 				"ssh_user_id", sshKey.UserID,
-				"has_access", hasAccess,
-			).Warn("ssh audit: key auth denied")
-			continue
+				"key_id", sshKey.ID,
+				"reason", "instance_paused",
+			).Info("ssh audit: key auth denied; instance is paused")
+			pausedErr = errInstancePaused
 		}
+	}
+	return pausedErr
+}
 
-		go p.config.KeyStore.TouchKeyLastUsed(context.Background(), sshKey.ID)
-		p.logSSHAudit("ssh_key_auth_succeeded",
+func (p *Proxy) authorizePublicKeySandbox(
+	ctx context.Context,
+	idOrName string,
+	sshKey *UserSSHKey,
+	scope sandbox.TenantInstanceScope,
+	inst *sandbox.Instance,
+) (*ssh.Permissions, error) {
+	if paused, ok := p.pausedTenant(ctx, sshKey.TenantID); ok {
+		p.logSSHAudit("ssh_key_auth_denied",
+			"user", idOrName,
+			"tenant_id", paused,
+			"ssh_user_id", sshKey.UserID,
+			"key_id", sshKey.ID,
+			"reason", "instance_paused",
+		).Info("ssh audit: key auth denied; instance is paused")
+		return nil, errInstancePaused
+	}
+	if !isSandboxRunningForSSH(inst) {
+		logger.WithFields("user", idOrName, "sandbox_id", inst.ID, "status", inst.Status, "lifecycle", inst.LifecycleState).Warn("ssh auth: sandbox not running")
+		return nil, fmt.Errorf("auth failed")
+	}
+
+	sandboxID := inst.ID
+	tenantID := inst.Config.TenantID
+	if tenantID == "" {
+		tenantID = scope.SandboxTenantID()
+	}
+	if paused, ok := p.pausedTenant(ctx, tenantID); ok {
+		p.logSSHAudit("ssh_key_auth_denied",
+			"user", idOrName,
+			"sandbox_id", sandboxID,
+			"tenant_id", paused,
+			"ssh_user_id", sshKey.UserID,
+			"reason", "instance_paused",
+		).Info("ssh audit: key auth denied; instance is paused")
+		return nil, errInstancePaused
+	}
+
+	hasAccess, accessErr := p.config.KeyStore.CheckAccess(ctx, sandboxID, sshKey.UserID, tenantID)
+	if accessErr != nil || !hasAccess {
+		p.logSSHAudit("ssh_key_auth_denied",
 			"user", idOrName,
 			"sandbox_id", sandboxID,
 			"tenant_id", tenantID,
 			"ssh_user_id", sshKey.UserID,
-			"key_id", sshKey.ID,
-		).Info("ssh audit: key auth succeeded")
-
-		return &ssh.Permissions{
-			Extensions: map[string]string{
-				"user_id":    sshKey.UserID,
-				"tenant_id":  tenantID,
-				"sandbox_id": sandboxID,
-			},
-		}, nil
+			"has_access", hasAccess,
+		).Warn("ssh audit: key auth denied")
+		return nil, fmt.Errorf("auth failed")
 	}
 
-	logger.WithFields("user", idOrName, "fingerprint", fingerprint).Warn("ssh auth: no scoped sandbox access matched")
-	return nil, fmt.Errorf("auth failed")
+	go p.config.KeyStore.TouchKeyLastUsed(context.Background(), sshKey.ID)
+	p.logSSHAudit("ssh_key_auth_succeeded",
+		"user", idOrName,
+		"sandbox_id", sandboxID,
+		"tenant_id", tenantID,
+		"ssh_user_id", sshKey.UserID,
+		"key_id", sshKey.ID,
+	).Info("ssh audit: key auth succeeded")
+
+	return &ssh.Permissions{
+		Extensions: map[string]string{
+			"user_id":    sshKey.UserID,
+			"tenant_id":  tenantID,
+			"sandbox_id": sandboxID,
+		},
+	}, nil
 }
 
 func (p *Proxy) keyboardInteractiveCallback(connMeta ssh.ConnMetadata, challenge ssh.KeyboardInteractiveChallenge) (*ssh.Permissions, error) {
@@ -556,9 +714,19 @@ func (p *Proxy) tokenPermissions(ctx context.Context, connMeta ssh.ConnMetadata,
 		).Warn("ssh audit: token auth failed")
 		return nil, fmt.Errorf("auth failed")
 	}
+	if paused, ok := p.pausedTenant(ctx, token.TenantID, token.InstanceID); ok {
+		p.logSSHAudit("ssh_token_auth_failed",
+			"sandbox_id", token.SandboxID,
+			"tenant_id", paused,
+			"token_id", token.ID,
+			"token_prefix", token.TokenPrefix,
+			"reason", "instance_paused",
+		).Info("ssh audit: token auth denied; instance is paused")
+		return nil, errInstancePaused
+	}
 
-	inst, ok := p.lookupSandboxByIdentifierInScope(ctx, token.SandboxID, scope.TenantInstance())
-	if !ok {
+	inst, lookupErr := p.lookupSandboxByIdentifierInScope(ctx, token.SandboxID, scope.TenantInstance())
+	if lookupErr != nil || inst == nil {
 		p.logSSHAudit("ssh_token_auth_failed",
 			"sandbox_id", token.SandboxID,
 			"token_id", token.ID,
@@ -568,8 +736,8 @@ func (p *Proxy) tokenPermissions(ctx context.Context, connMeta ssh.ConnMetadata,
 		return nil, fmt.Errorf("auth failed")
 	}
 	if idOrName != "" {
-		requested, requestedOK := p.lookupSandboxByIdentifierInScope(ctx, idOrName, scope.TenantInstance())
-		if !requestedOK || requested == nil || requested.ID != token.SandboxID {
+		requested, requestedErr := p.lookupSandboxByIdentifierInScope(ctx, idOrName, scope.TenantInstance())
+		if requestedErr != nil || requested == nil || requested.ID != token.SandboxID {
 			p.logSSHAudit("ssh_token_auth_failed",
 				"user", idOrName,
 				"sandbox_id", token.SandboxID,
@@ -637,19 +805,67 @@ func isSandboxRunningForSSH(inst *sandbox.Instance) bool {
 	return inst.Status == sandbox.StatusRunning
 }
 
-func (p *Proxy) lookupSandboxByIdentifierInScope(ctx context.Context, idOrName string, scope sandbox.TenantInstanceScope) (*sandbox.Instance, bool) {
-	if p.config.SandboxManager == nil || !scope.HasSandboxTenant() {
-		return nil, false
+func (p *Proxy) lookupSandboxByIdentifierInScope(ctx context.Context, idOrName string, scope sandbox.TenantInstanceScope) (*sandbox.Instance, error) {
+	if p.sandboxLookup == nil {
+		return nil, nil
 	}
-	inst, ok := p.config.SandboxManager.GetBySandboxIDOrNameInScope(idOrName, scope)
+	if !scope.HasSandboxTenant() {
+		return nil, fmt.Errorf("sandbox lookup is unavailable")
+	}
+	inst, ok := p.sandboxLookup.GetBySandboxIDOrNameInScope(idOrName, scope)
 	if ok && inst != nil {
-		return inst, true
+		return inst, nil
 	}
-	dbInst, dbErr := p.config.SandboxManager.LookupInstanceByIDFromDBInScope(ctx, idOrName, scope)
-	if dbErr != nil || dbInst == nil {
-		return nil, false
+	dbInst, dbErr := p.sandboxLookup.LookupInstanceByIDFromDBInScope(ctx, idOrName, scope)
+	if dbErr != nil {
+		if errors.Is(dbErr, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, dbErr
 	}
-	return dbInst, true
+	return dbInst, nil
+}
+
+func (p *Proxy) lookupSandboxByIDOrShortCodeInScope(ctx context.Context, identifier string, scope sandbox.TenantInstanceScope) (*sandbox.Instance, error) {
+	if p.sandboxLookup == nil {
+		return nil, nil
+	}
+	if !scope.HasSandboxTenant() {
+		return nil, fmt.Errorf("sandbox lookup is unavailable")
+	}
+	inst, ok := p.sandboxLookup.GetBySandboxIDOrShortCodeInScope(identifier, scope)
+	if ok && inst != nil {
+		return inst, nil
+	}
+	dbInst, dbErr := p.sandboxLookup.LookupInstanceByIDOrShortCodeFromDBInScope(ctx, identifier, scope)
+	if dbErr != nil {
+		if errors.Is(dbErr, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, dbErr
+	}
+	return dbInst, nil
+}
+
+func (p *Proxy) lookupSandboxByNameInScope(ctx context.Context, name string, scope sandbox.TenantInstanceScope) (*sandbox.Instance, error) {
+	if p.sandboxLookup == nil {
+		return nil, nil
+	}
+	if !scope.HasSandboxTenant() {
+		return nil, fmt.Errorf("sandbox lookup is unavailable")
+	}
+	inst, ok := p.sandboxLookup.GetBySandboxNameInScope(name, scope)
+	if ok && inst != nil {
+		return inst, nil
+	}
+	dbInst, dbErr := p.sandboxLookup.LookupInstanceByNameFromDBInScope(ctx, name, scope)
+	if dbErr != nil {
+		if errors.Is(dbErr, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, dbErr
+	}
+	return dbInst, nil
 }
 
 func (p *Proxy) logSSHAudit(event string, fields ...interface{}) *logger.Entry {

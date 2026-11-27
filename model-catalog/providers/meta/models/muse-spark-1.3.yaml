@@ -1,0 +1,75 @@
+# Verified 2026-11-24.
+# Source: https://dev.meta.ai/docs/pricing-rate-limits
+name: "muse-spark-1.3"
+display_name: "Muse Spark 1.3"
+family: "muse-spark"
+status: "stable"
+release_date: "2026-09-02"
+
+cost:
+  input_per_1k: 0.00125
+  output_per_1k: 0.00425
+  cache_read_per_1k: 0.00015
+
+limits:
+  max_tokens: 1048576
+  max_completion_tokens: 131072
+
+capabilities:
+  - chat
+  - function_calling
+  - reasoning
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+notes: "Muse Spark 1.3 is a multimodal reasoning model from Meta for long-running agentic, multi-agent, and coding workflows. It improves long-horizon agent collaboration, instruction following, and coding efficiency relative to Muse Spark 1.2."
+
+structured_output: true
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 131072
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "reasoning_effort"
+    display_name: "Reasoning effort"
+    type: "enum"
+    options: ["minimal","low","medium","high","xhigh","max"]
+variants:
+  - id: "minimal"
+    display_name: "Minimal reasoning"
+    description: "Minimal reasoning for low-latency, high-throughput work."
+    parameters:
+      reasoning_effort: "minimal"
+  - id: "low"
+    display_name: "Low reasoning"
+    description: "Lower latency and cost for straightforward tasks."
+    parameters:
+      reasoning_effort: "low"
+  - id: "medium"
+    display_name: "Medium reasoning"
+    description: "Balanced reasoning for general-purpose work."
+    parameters:
+      reasoning_effort: "medium"
+  - id: "high"
+    display_name: "High reasoning"
+    description: "Deeper reasoning for complex analysis and coding."
+    parameters:
+      reasoning_effort: "high"
+  - id: "xhigh"
+    display_name: "Extra-high reasoning"
+    description: "Extended reasoning for long-horizon agentic work."
+    parameters:
+      reasoning_effort: "xhigh"
+  - id: "max"
+    display_name: "Maximum reasoning"
+    description: "Maximum available reasoning depth for the model."
+    parameters:
+      reasoning_effort: "max"
+added_in_version: "2.11.0"

@@ -1,0 +1,37 @@
+name: "ricursive-ai/Ripple-65B-Preview"
+display_name: "Ripple 65B Preview (Together)"
+family: "ricursive-ai/Ripple-65B-Preview"
+status: "preview"
+release_date: "2026-11-04"
+
+cost:
+  input_per_1k: 0.0002
+  output_per_1k: 0.0006
+  cache_read_per_1k: 0.00002
+
+limits:
+  max_tokens: 131072
+  max_completion_tokens: 131072
+
+capabilities:
+  - chat
+  - function_calling
+  - reasoning
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+notes: "Dense 65B open-weight model pretrained from scratch on 12T tokens and post-trained for agentic coding"
+structured_output: true
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 131072
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+added_in_version: "2.12.0"

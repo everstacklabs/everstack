@@ -10,6 +10,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/database"
 	"github.com/everstacklabs/everstack/internal/lib/correlation"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
+	"github.com/sirupsen/logrus"
 )
 
 // DefaultCommandBus implements CommandBus with event persistence.
@@ -120,23 +121,25 @@ func (cb *DefaultCommandBus) Dispatch(ctx context.Context, cmd Command) error {
 		}
 	}
 
-	// Build structured payload for command completion
-	payload := logger.NewPayload().
-		WithCommand(cmd.AggregateID(), cmd.CommandType(), "completed", time.Since(start).Milliseconds()).
-		WithCorrelation(correlationID).
-		Build()
+	// Internal gateway log - not forwarded to OTEL (CategorySystem). The JSON
+	// payload is only built when the line will be written.
+	if logger.IsLevelEnabled(logrus.DebugLevel) {
+		payload := logger.NewPayload().
+			WithCommand(cmd.AggregateID(), cmd.CommandType(), "completed", time.Since(start).Milliseconds()).
+			WithCorrelation(correlationID).
+			Build()
 
-	// Internal gateway log - not forwarded to OTEL (CategorySystem)
-	logger.WithCategory(logger.CategorySystem).
-		WithLogEvent(logger.EventCommandCompleted).
-		WithPayload(payload).
-		SetFields(
-			"command_type", cmd.CommandType(),
-			"aggregate_id", cmd.AggregateID(),
-			"correlation_id", correlationID,
-			"event_count", len(events),
-			"elapsed_ms", time.Since(start).Milliseconds(),
-		).Debug("command processed successfully")
+		logger.WithCategory(logger.CategorySystem).
+			WithLogEvent(logger.EventCommandCompleted).
+			WithPayload(payload).
+			SetFields(
+				"command_type", cmd.CommandType(),
+				"aggregate_id", cmd.AggregateID(),
+				"correlation_id", correlationID,
+				"event_count", len(events),
+				"elapsed_ms", time.Since(start).Milliseconds(),
+			).Debug("command processed successfully")
+	}
 
 	return nil
 }

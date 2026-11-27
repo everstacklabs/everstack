@@ -14,17 +14,17 @@ const badgeVariants = cva(
         secondary:
           "border-brand-main-500 bg-brand-main-700 text-brand-main-100 light:border-brand-main-600 light:bg-brand-main-800 light:text-brand-main-100 [a&]:hover:bg-brand-main-600 light:[a&]:hover:bg-brand-main-700",
         chatType:
-          "border-transparent w-fit font-semibold bg-blue-500/50 text-white light:text-blue-950 [a&]:hover:bg-blue-500/90 border-blue-500",
+          "w-fit font-semibold border-info-border bg-info-surface-strong text-info [a&]:hover:bg-info-surface-strong",
         success:
-          "border-transparent bg-emerald-900 light:bg-emerald-100 text-white light:text-emerald-900 border-emerald-500",
+          "border-success-border bg-success-surface text-success [a&]:hover:bg-success-surface-strong",
         warning:
-          "border-transparent bg-yellow-700/20 text-white light:text-yellow-900 [a&]:hover:bg-yellow-500/90 border-yellow-800 light:border-yellow-600",
+          "border-warning-border bg-warning-surface text-warning [a&]:hover:bg-warning-surface-strong",
         error:
-          "border-transparent bg-rose-900 light:bg-rose-100 text-white light:text-rose-900 border-rose-500",
+          "border-danger-border bg-danger-surface text-danger [a&]:hover:bg-danger-surface-strong",
         active:
           "border-brand-secondary-500/35 bg-brand-secondary-500/15 text-brand-secondary-100 light:border-brand-secondary-300 light:bg-brand-secondary-200 light:text-brand-secondary-900 [a&]:hover:bg-brand-secondary-500/20 light:[a&]:hover:bg-brand-secondary-300",
         destructive:
-          "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "border-transparent bg-destructive text-destructive-foreground [a&]:hover:bg-destructive/90 focus-visible:ring-danger-border",
         outline:
           "border-brand-main-600 bg-brand-main-950/40 text-brand-main-100 light:bg-brand-main-950 light:text-brand-main-100 [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
       },

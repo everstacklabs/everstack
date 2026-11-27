@@ -1,0 +1,48 @@
+# Verified 2026-11-26.
+# Source: https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-openai-gpt-6-2-sol.md
+name: "us.openai.gpt-6.2-sol"
+display_name: "GPT-6.2 Sol (US) (Bedrock)"
+family: "gpt-sol"
+status: "stable"
+release_date: "2026-11-17"
+
+cost:
+  input_per_1k: 0.0022
+  output_per_1k: 0.011
+  cache_read_per_1k: 0.00011
+  cache_write_per_1k: 0.00275
+  long_context:
+    threshold_tokens: 272000
+    input_multiplier: 2
+    cache_multiplier: 2
+    output_multiplier: 1.5
+
+limits:
+  max_tokens: 1050000
+  max_completion_tokens: 128000
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image"]
+  output: ["text"]
+
+knowledge_cutoff: "2026-06-01"
+notes: "An efficient reasoning model for everyday work, multistep agentic workflows, and coding. Served through the Converse API, which takes this inference profile id rather than the base model id. Prompts over 272K input tokens bill the whole request at 2x input and cache rates and 1.5x output. Cache write price is the 30-minute rate."
+unsupported_parameters:
+  - "temperature"
+  - "top_p"
+structured_output: false
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 128000
+    has_max_value: true
+added_in_version: "2.13.0"

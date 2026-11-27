@@ -1,7 +1,9 @@
 import { useEffect } from 'react'
 import { Navigate, useLocation } from '@tanstack/react-router'
 import { useAuthMode, useSession, useGlobalLogoutWatcher } from '@/hooks/auth'
-import { isCloudManaged, getCloudConsoleUrl } from '@/lib/cloud-mode'
+import { isCloudManaged } from '@/lib/cloud-mode'
+import { isPublicAuthRoute } from '@/lib/auth-routes'
+import { cloudLoginURLForPage } from '@/lib/auth-redirect'
 
 interface AuthGuardProps {
     children: React.ReactNode
@@ -32,8 +34,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     useGlobalLogoutWatcher()
 
     // Public routes that don't require authentication
-    const publicRoutes = ['/login', '/register', '/invite', '/device']
-    const isPublicRoute = publicRoutes.some(route => location.pathname.startsWith(route))
+    const isPublicRoute = isPublicAuthRoute(location.pathname)
 
     const unauthed = !!sessionError || !session?.authenticated
     const cloudManaged = isCloudManaged()
@@ -48,8 +49,14 @@ export function AuthGuard({ children }: AuthGuardProps) {
         if (authModeLoading || sessionLoading) return
         if (!cloudManaged) return
         if (!unauthed && !authModeUnknown) return
-        const target = `${getCloudConsoleUrl()}/login`
-        if (typeof window !== 'undefined' && window.location.href !== target) {
+        if (typeof window === 'undefined') return
+        // Carry this instance as the return target: a user whose cloud
+        // session is still alive comes straight back into the console, and
+        // one who has to sign in again lands on this instance (the cloud
+        // keeps only the origin) rather than on the cloud home. See
+        // cloudLoginURL for the allowlist and the loop guard.
+        const target = cloudLoginURLForPage()
+        if (window.location.href !== target) {
             window.location.href = target
         }
     }, [

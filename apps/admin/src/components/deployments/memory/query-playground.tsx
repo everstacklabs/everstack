@@ -79,7 +79,7 @@ export function QueryPlayground({ collectionName }: Props) {
             </div>
 
             {queryMutation.isError && (
-                <div className="text-sm text-red-400 light:text-red-600">
+                <div className="text-sm text-danger">
                     Error: {queryMutation.error.message}
                 </div>
             )}

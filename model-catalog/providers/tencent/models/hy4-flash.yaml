@@ -1,0 +1,39 @@
+# Verified 2026-11-24.
+# Source: https://www.tencentcloud.com/document/product/1300/78937
+name: "hy4-flash"
+display_name: "Hy4 flash"
+family: "hy"
+status: "stable"
+release_date: "2026-11-16"
+
+cost:
+  input_per_1k: 0.00007
+  output_per_1k: 0.000281
+  cache_read_per_1k: 0.000003
+
+limits:
+  max_tokens: 1048576
+  max_completion_tokens: 65536
+
+capabilities:
+  - chat
+  - function_calling
+  - reasoning
+
+modalities:
+  input: ["text"]
+  output: ["text"]
+
+structured_output: false
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 65536
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+added_in_version: "2.11.0"

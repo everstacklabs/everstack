@@ -109,7 +109,7 @@ export const EventsTable = ({
                     <div className='flex text-sm items-center justify-center'>
                         {error ? (
                             <div className='flex flex-col items-center justify-center space-y-3 text-center px-4'>
-                                <AlertCircle className='size-12 text-rose-400' />
+                                <AlertCircle className='size-12 text-danger' />
                                 <div className='space-y-1'>
                                     <div className='text-white/90 font-semibold light:text-black/90'>Error Loading Events</div>
                                     <div className='text-white/50 text-xs max-w-md light:text-black/50'>

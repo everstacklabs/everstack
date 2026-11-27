@@ -92,7 +92,7 @@ export function OverviewTab() {
 
   if (error) {
     return (
-      <div className="flex-1 flex items-center justify-center text-red-400 light:text-red-600">
+      <div className="flex-1 flex items-center justify-center text-danger">
         Error loading overview: {error.message}
       </div>
     )

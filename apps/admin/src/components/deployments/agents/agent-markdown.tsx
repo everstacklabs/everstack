@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
+import { replayMask } from '@/lib/replay-privacy'
 import { Marked } from 'marked'
 import morphdom from 'morphdom'
 import { highlightCode } from '@/lib/shiki'
@@ -257,6 +258,7 @@ export function AgentMarkdown({
     return (
         <div
             ref={containerRef}
+            {...replayMask}
             className={`${variantClass}${isStreaming ? ' streaming-cursor' : ''}${className ? ` ${className}` : ''}`}
         />
     )

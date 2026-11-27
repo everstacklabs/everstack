@@ -1,7 +1,7 @@
 name: "magistral-small-2509"
 display_name: "Magistral Small 1.2"
 family: "magistral"
-status: "stable"
+status: "deprecated"
 
 cost:
   input_per_1k: 0.0005
@@ -38,3 +38,4 @@ parameters:
     has_min_value: true
     max_value: 1
     has_max_value: true
+notes: "Deprecated by Mistral; retirement date 2026-07-31 has passed. Replacement: Mistral Small 4 (mistral-small-latest)."

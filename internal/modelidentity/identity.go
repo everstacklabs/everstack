@@ -62,7 +62,8 @@ func infer(provider, model string) (publisher, canonicalModel string) {
 		}
 	case "fireworks":
 		return inferFireworks(model)
-	case "openrouter", "huggingface", "together", "nvidia-nim":
+	case "openrouter", "huggingface", "together", "nvidia-nim",
+		"deepinfra", "novita", "nebius", "baseten", "chutes":
 		if owner, name, ok := splitRepositoryModel(model); ok {
 			return normalizePublisher(owner), name
 		}
@@ -127,7 +128,7 @@ func normalizePublisher(value string) string {
 		return "qwen"
 	case "deepseek-ai":
 		return "deepseek"
-	case "meta-llama":
+	case "meta-llama", "meta-models":
 		return "meta"
 	case "minimaxai":
 		return "minimax"

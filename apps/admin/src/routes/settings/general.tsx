@@ -225,10 +225,10 @@ function DangerActionRow({
       description: 'text-white/45 light:text-black/55',
     },
     destructive: {
-      row: 'border-red-500/20 bg-red-500/[0.06] light:border-red-200 light:bg-red-50/70',
-      icon: 'text-red-300 light:text-red-700',
-      title: 'text-red-100 light:text-red-700',
-      description: 'text-red-200/70 light:text-red-700/75',
+      row: 'border-danger-border bg-danger-surface/60 light:bg-danger-surface',
+      icon: 'text-danger',
+      title: 'text-danger',
+      description: 'text-danger/70 light:text-danger/75',
     },
   }[tone]
 
@@ -796,7 +796,7 @@ function GeneralSettingsPage() {
                 action={
                   <Button
                     variant="outline"
-                    className="h-8 border-red-500/40 px-3 text-red-200 hover:bg-red-500/15 light:text-red-700"
+                    className="h-8 border-danger-border px-3 text-danger hover:bg-danger-surface-strong"
                     onClick={() => handleDangerAction('Delete instance')}
                   >
                     Delete

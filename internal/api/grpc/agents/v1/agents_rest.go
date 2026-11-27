@@ -3,6 +3,7 @@ package v1
 import (
 	"bufio"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +20,7 @@ import (
 	"github.com/everstacklabs/everstack/internal/cqrs"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/everstacklabs/everstack/internal/memory"
+	"github.com/everstacklabs/everstack/internal/query"
 	agentsquery "github.com/everstacklabs/everstack/internal/query/handlers/agents"
 	"github.com/everstacklabs/everstack/internal/sandbox"
 	agentspb "github.com/everstacklabs/everstack/pkg/grpc/everstack/agents/v1"
@@ -80,10 +82,21 @@ func (s *sseEventSender) Send(msg *agentspb.AgentEvent, rawData map[string]inter
 func (s *Server) handleRunTurnStreamGateway(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
 	sessionID := pathParams["session_id"]
 	logger.WithFields("session_id", sessionID).Info("handleRunTurnStreamGateway: request received")
+	if sessionID == "" {
+		writeJSONError(w, http.StatusBadRequest, "session_id is required")
+		return
+	}
+	tenantID, ok := s.requireVerifiedTenantHTTP(w, r)
+	if !ok {
+		return
+	}
+	if !s.sessionOwnedByTenantHTTP(r, sessionID, tenantID) {
+		writeJSONError(w, http.StatusNotFound, "session not found")
+		return
+	}
 
 	// Parse JSON body
 	var body struct {
-		TenantID        string `json:"tenant_id"`
 		UserInput       string `json:"user_input"`
 		EnableStreaming bool   `json:"enable_streaming"`
 		EnableWebSearch bool   `json:"enable_web_search"`
@@ -96,12 +109,12 @@ func (s *Server) handleRunTurnStreamGateway(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	logger.WithFields("session_id", sessionID, "tenant_id", body.TenantID, "enable_streaming", body.EnableStreaming, "model_override", body.ModelOverride).
+	logger.WithFields("session_id", sessionID, "tenant_id", tenantID, "enable_streaming", body.EnableStreaming, "model_override", body.ModelOverride).
 		Info("handleRunTurnStreamGateway: request parsed")
 
 	// Build Connect-style request so we can reuse runTurnStreamInternal
 	protoReq := &agentspb.RunTurnStreamRequest{
-		TenantId:        body.TenantID,
+		TenantId:        tenantID,
 		SessionId:       sessionID,
 		UserInput:       body.UserInput,
 		EnableStreaming: body.EnableStreaming,
@@ -158,11 +171,33 @@ func (s *Server) handleRunCronNow(w http.ResponseWriter, r *http.Request, pathPa
 		http.Error(w, `{"error":{"code":"failed_precondition","message":"sandbox manager unavailable"}}`, http.StatusFailedDependency)
 		return
 	}
+	tenantID, ok := s.requireVerifiedTenantHTTP(w, r)
+	if !ok {
+		return
+	}
+	db := s.sandboxTriggerDB()
+	if db == nil {
+		http.Error(w, `{"error":{"code":"failed_precondition","message":"database unavailable"}}`, http.StatusFailedDependency)
+		return
+	}
+	var exists int
+	if err := db.GetContext(r.Context(), &exists, `SELECT 1 FROM sandbox_crons WHERE id = $1 AND tenant_id = $2`, cronID, tenantID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, `{"error":{"code":"not_found","message":"cron not found"}}`, http.StatusNotFound)
+			return
+		}
+		http.Error(w, `{"error":{"code":"internal","message":"failed to load cron"}}`, http.StatusInternalServerError)
+		return
+	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Minute)
 	defer cancel()
 
-	if err := s.sandboxMgr.RunCronNow(ctx, cronID); err != nil {
+	runCronNow := s.runCronNow
+	if runCronNow == nil {
+		runCronNow = s.sandboxMgr.RunCronNow
+	}
+	if err := runCronNow(ctx, cronID, tenantID); err != nil {
 		logger.WithFields("cron_id", cronID, "error", err.Error()).Error("handleRunCronNow: failed to run cron")
 		http.Error(w, fmt.Sprintf(`{"error":{"code":"internal","message":%q}}`, err.Error()), http.StatusInternalServerError)
 		return
@@ -184,6 +219,15 @@ func (s *Server) handleSubscribeSessionEvents(w http.ResponseWriter, r *http.Req
 	sessionID := pathParams["session_id"]
 	if sessionID == "" {
 		http.Error(w, `{"error":"session_id is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	tenantID, ok := s.requireVerifiedTenantHTTP(w, r)
+	if !ok {
+		return
+	}
+	if !s.sessionOwnedByTenantHTTP(r, sessionID, tenantID) {
+		writeJSONError(w, http.StatusNotFound, "session not found")
 		return
 	}
 
@@ -276,7 +320,11 @@ func (s *Server) handleSandboxLogsSSE(w http.ResponseWriter, r *http.Request, pa
 		Timestamps: true,
 	})
 	if err != nil {
-		errData, _ := json.Marshal(map[string]string{"error": err.Error()})
+		// The backend error can name internal hosts and ports; keep it in the
+		// server log and send the client a fixed message.
+		logger.WithFields("session_id", sessionID, "error", err.Error()).
+			Warn("sandbox_logs_sse: log stream unavailable")
+		errData, _ := json.Marshal(map[string]string{"error": "sandbox logs are unavailable"})
 		fmt.Fprintf(w, "event: error\ndata: %s\n\n", errData)
 		flusher.Flush()
 		return
@@ -347,7 +395,9 @@ func (s *Server) handleSandboxStatsSSE(w http.ResponseWriter, r *http.Request, p
 		case <-ticker.C:
 			stats, err := s.sandboxMgr.Stats(r.Context(), sessionID)
 			if err != nil {
-				errData, _ := json.Marshal(map[string]string{"error": err.Error()})
+				logger.WithFields("session_id", sessionID, "error", err.Error()).
+					Debug("sandbox_stats_sse: stats unavailable")
+				errData, _ := json.Marshal(map[string]string{"error": "sandbox stats are unavailable"})
 				fmt.Fprintf(w, "event: error\ndata: %s\n\n", errData)
 				flusher.Flush()
 				return
@@ -371,6 +421,7 @@ func (s *Server) handleCreateSandbox(w http.ResponseWriter, r *http.Request, _ m
 	var body struct {
 		TenantID             string   `json:"tenant_id"`
 		SessionID            string   `json:"session_id"`
+		Name                 string   `json:"name"`
 		Image                string   `json:"image"`
 		CPULimit             float64  `json:"cpu_limit"`
 		MemoryMB             float64  `json:"memory_mb"`
@@ -393,6 +444,10 @@ func (s *Server) handleCreateSandbox(w http.ResponseWriter, r *http.Request, _ m
 	tenantID, err := s.resolveTenantID(r.Context(), body.TenantID)
 	if err != nil || tenantID == "" {
 		http.Error(w, `{"error":"authentication required"}`, http.StatusUnauthorized)
+		return
+	}
+	if err := validateSandboxName(body.Name); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -436,18 +491,27 @@ func (s *Server) handleCreateSandbox(w http.ResponseWriter, r *http.Request, _ m
 	if body.IdleRetentionSeconds != 0 {
 		cfg.IdleRetentionSeconds = body.IdleRetentionSeconds
 	}
+	if body.Name != "" {
+		cfg.Name = body.Name
+	}
 
 	// Auto-include the port-exposure base domain so sandbox-hosted apps
 	// can reach their own exposed URLs when in whitelist mode.
 	s.injectPortExposureDomain(&cfg)
 
+	if err := s.sessionIDAvailableToTenant(r.Context(), sessionID, tenantID); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	createCtx := context.WithoutCancel(r.Context())
 	inst, err := s.sandboxMgr.GetOrCreate(createCtx, sessionID, tenantID, cfg)
 	if err != nil {
 		logger.WithFields("error", err.Error()).Error("handleCreateSandbox: failed to create sandbox")
 		errResp, _ := json.Marshal(map[string]string{"error": err.Error()})
 		status := http.StatusInternalServerError
-		if errors.Is(err, sandbox.ErrSandboxBillingRequired) {
+		if errors.Is(err, sandbox.ErrTenantPaused) {
+			status = http.StatusForbidden
+		} else if errors.Is(err, sandbox.ErrSandboxBillingRequired) {
 			status = http.StatusPaymentRequired
 		} else if errors.Is(err, sandbox.ErrConcurrentSandboxLimit) {
 			status = http.StatusTooManyRequests
@@ -486,6 +550,7 @@ func (s *Server) handleCreateSandboxConnect(w http.ResponseWriter, r *http.Reque
 	var body struct {
 		TenantID             string   `json:"tenantId"`
 		SessionID            string   `json:"sessionId"`
+		Name                 string   `json:"name"`
 		Image                string   `json:"image"`
 		CpuLimit             float64  `json:"cpuLimit"`
 		MemoryMb             float64  `json:"memoryMb"`
@@ -512,6 +577,10 @@ func (s *Server) handleCreateSandboxConnect(w http.ResponseWriter, r *http.Reque
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]string{"code": "unauthenticated", "message": "authentication required"})
+		return
+	}
+	if err := validateSandboxName(body.Name); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -557,18 +626,27 @@ func (s *Server) handleCreateSandboxConnect(w http.ResponseWriter, r *http.Reque
 	if body.IdleRetentionSeconds != 0 {
 		cfg.IdleRetentionSeconds = body.IdleRetentionSeconds
 	}
+	if body.Name != "" {
+		cfg.Name = body.Name
+	}
 
 	s.injectPortExposureDomain(&cfg)
 
 	// Use a detached context so container creation completes even if the
 	// HTTP client disconnects (e.g. browser navigates away).
+	if err := s.sessionIDAvailableToTenant(r.Context(), sessionID, tenantID); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	createCtx := context.WithoutCancel(r.Context())
 	inst, err := s.sandboxMgr.GetOrCreate(createCtx, sessionID, tenantID, cfg)
 	if err != nil {
 		logger.WithFields("error", err.Error()).Error("handleCreateSandboxConnect: failed to create sandbox")
 		w.Header().Set("Content-Type", "application/json")
 		status, code := http.StatusInternalServerError, "internal"
-		if errors.Is(err, sandbox.ErrSandboxBillingRequired) {
+		if errors.Is(err, sandbox.ErrTenantPaused) {
+			status, code = http.StatusForbidden, "instance_paused"
+		} else if errors.Is(err, sandbox.ErrSandboxBillingRequired) {
 			status, code = http.StatusPaymentRequired, "failed_precondition"
 		} else if errors.Is(err, sandbox.ErrConcurrentSandboxLimit) {
 			status, code = http.StatusTooManyRequests, "resource_exhausted"
@@ -684,13 +762,19 @@ func (s *Server) handleRecreateSandboxConnect(w http.ResponseWriter, r *http.Req
 		EnvVars:        cfg.EnvVars,
 	}
 
+	if err := s.sessionIDAvailableToTenant(r.Context(), sessionID, tenantID); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	recreateCtx := context.WithoutCancel(r.Context())
 	inst, err := s.sandboxMgr.GetOrCreate(recreateCtx, sessionID, tenantID, sandboxCfg)
 	if err != nil {
 		logger.WithFields("error", err.Error()).Error("handleRecreateSandbox: failed to recreate sandbox")
 		w.Header().Set("Content-Type", "application/json")
 		status, code := http.StatusInternalServerError, "internal"
-		if errors.Is(err, sandbox.ErrSandboxBillingRequired) {
+		if errors.Is(err, sandbox.ErrTenantPaused) {
+			status, code = http.StatusForbidden, "instance_paused"
+		} else if errors.Is(err, sandbox.ErrSandboxBillingRequired) {
 			status, code = http.StatusPaymentRequired, "failed_precondition"
 		} else if errors.Is(err, sandbox.ErrConcurrentSandboxLimit) {
 			status, code = http.StatusTooManyRequests, "resource_exhausted"
@@ -931,24 +1015,7 @@ func (s *Server) handleSetupMemoryConnect(w http.ResponseWriter, r *http.Request
 		}
 		memStore := memory.NewTracedVectorStore(pgStore)
 
-		// Create embedder using the request's tenant-scoped registry/router.
-		if s.engine != nil {
-			registry, router, providerErr := s.engine.ProvidersForContext(r.Context())
-			if providerErr != nil {
-				logger.WithFields("error", providerErr.Error()).Error("handleSetupMemory: provider resolution failed")
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusInternalServerError)
-				json.NewEncoder(w).Encode(map[string]string{
-					"code":    "internal",
-					"message": providerErr.Error(),
-				})
-				return
-			}
-			memEmbedder := memory.NewTracedEmbedder(memory.NewEmbedder(registry, router))
-			s.SetMemoryBackend(memStore, memEmbedder)
-		} else {
-			s.memoryStore = memStore
-		}
+		s.memoryStore = memStore
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -980,6 +1047,11 @@ func (s *Server) handleSubmitUserInput(w http.ResponseWriter, r *http.Request, p
 		return
 	}
 
+	tenantID, ok := s.requireVerifiedTenantHTTP(w, r)
+	if !ok {
+		return
+	}
+
 	var body struct {
 		InputID string `json:"input_id"`
 		Text    string `json:"text"`
@@ -998,10 +1070,18 @@ func (s *Server) handleSubmitUserInput(w http.ResponseWriter, r *http.Request, p
 		return
 	}
 
+	// The input id is the only thing naming the waiting agent, so check that
+	// the session it belongs to is the caller's before delivering anything.
+	// One answer for "not pending" and "not yours" keeps this from confirming
+	// another tenant's pending input.
+	pendingSession, pending := s.sessionMgr.PendingUserInputSession(body.InputID)
+	if !pending || !s.sessionOwnedByTenantHTTP(r, pendingSession, tenantID) {
+		writeJSONError(w, http.StatusNotFound, "user input is not pending")
+		return
+	}
+
 	if err := s.sessionMgr.SubmitUserInput(r.Context(), body.InputID, body.Text); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		writeJSONError(w, http.StatusNotFound, "user input is not pending")
 		return
 	}
 
@@ -1208,46 +1288,16 @@ func (s *Server) handleStopSessionTurn(w http.ResponseWriter, r *http.Request, p
 		return
 	}
 
-	var body struct {
-		TenantID string `json:"tenant_id"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid JSON body"})
-		return
-	}
-	if body.TenantID == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "tenant_id is required"})
-		return
-	}
-
-	sys, err := cqrs.GetSystemFromContext(r.Context())
-	if err != nil && s.ctx != nil {
-		sys, err = cqrs.GetSystemFromContext(s.ctx)
-	}
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": "CQRS system not available"})
+	// The tenant comes from the verified caller, never from the request body:
+	// a body-supplied tenant id let anyone interrupt another tenant's turn.
+	tenantID, ok := s.requireVerifiedTenantHTTP(w, r)
+	if !ok {
 		return
 	}
 
 	// Ensure the session exists for the caller's tenant before interrupting.
-	sessionQ := agentsquery.NewGetSessionByIDQuery(sessionID, body.TenantID)
-	sessionRes, err := sys.QueryBus.Execute(r.Context(), sessionQ)
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-		return
-	}
-	if sessionRes == nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "session not found"})
+	if !s.sessionOwnedByTenantHTTP(r, sessionID, tenantID) {
+		writeJSONError(w, http.StatusNotFound, "session not found")
 		return
 	}
 
@@ -1266,6 +1316,30 @@ func (s *Server) handleStopSessionTurn(w http.ResponseWriter, r *http.Request, p
 		"success": true,
 		"message": "active turn interrupted",
 	})
+}
+
+// sessionOwnedByTenantHTTP reports whether sessionID is an agent session of
+// tenantID. It fails closed: a lookup error counts as "not owned".
+func (s *Server) sessionOwnedByTenantHTTP(r *http.Request, sessionID, tenantID string) bool {
+	if sessionID == "" || tenantID == "" {
+		return false
+	}
+	sys, err := cqrs.GetSystemFromContext(r.Context())
+	if err != nil && s.ctx != nil {
+		sys, err = cqrs.GetSystemFromContext(s.ctx)
+	}
+	if err != nil || sys == nil {
+		return false
+	}
+	res, err := sys.QueryBus.Execute(r.Context(), agentsquery.NewGetSessionByIDQuery(sessionID, tenantID))
+	if err != nil {
+		return false
+	}
+	// The bus always wraps the handler result in a non-nil *query.Response,
+	// so "res != nil" is true for a session that is not the caller's. Only
+	// the wrapped data says whether the tenant-scoped query found a row.
+	resp, ok := res.(*query.Response)
+	return ok && resp != nil && resp.Data != nil
 }
 
 // handleAgentCapabilities returns feature availability flags for the agent UI.
@@ -1532,11 +1606,13 @@ func (s *Server) handleGetEgressPolicy(w http.ResponseWriter, r *http.Request, _
 	mode := "allow"
 	var allowedHosts []string
 
-	if s.sandboxMgr != nil && sandboxID != "" {
-		if inst, ok := s.sandboxMgr.GetInstance(sandboxID); ok && inst != nil {
-			mode = string(inst.Config.NetworkMode)
-			allowedHosts = inst.Config.AllowedHosts
+	if sandboxID != "" {
+		inst, ok := s.ownedSandboxHTTP(w, r, sandboxID)
+		if !ok {
+			return
 		}
+		mode = string(inst.Config.NetworkMode)
+		allowedHosts = inst.Config.AllowedHosts
 	}
 
 	if allowedHosts == nil {
@@ -1568,33 +1644,17 @@ func (s *Server) handleSubscribeAgentLifecycle(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	tenantID, err := s.resolveTenantID(r.Context(), r.URL.Query().Get("tenant_id"))
-	if err != nil || tenantID == "" {
-		http.Error(w, `{"error":"invalid tenant"}`, http.StatusBadRequest)
+	tenantID, ok := s.requireVerifiedTenantHTTP(w, r)
+	if !ok {
 		return
 	}
-
-	// Verify the agent belongs to this tenant. Without this, anyone with a
-	// valid session could subscribe to another tenant's agent lifecycle
-	// channel — Redis Pub/Sub does not enforce isolation.
-	if s.db != nil {
-		var owned bool
-		checkCtx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-		err := s.db.GetContext(checkCtx, &owned,
-			`SELECT EXISTS(SELECT 1 FROM agent_definitions
-			               WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL)`,
-			agentID, tenantID)
-		cancel()
-		if err != nil {
-			logger.WithFields("agent_id", agentID, "error", err.Error()).
-				Warn("subscribe_lifecycle: ownership check failed")
-			http.Error(w, `{"error":"server error"}`, http.StatusInternalServerError)
+	if _, err := s.requireOwnedAgent(r.Context(), agentID, tenantID); err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			writeJSONError(w, http.StatusNotFound, "agent not found")
 			return
 		}
-		if !owned {
-			http.Error(w, `{"error":"agent not found"}`, http.StatusNotFound)
-			return
-		}
+		writeJSONError(w, http.StatusInternalServerError, "failed to load agent")
+		return
 	}
 
 	flusher, ok := w.(http.Flusher)

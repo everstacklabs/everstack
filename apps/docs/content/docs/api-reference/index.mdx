@@ -8,14 +8,16 @@ Everstack exposes an OpenAI-compatible gateway API for LLM operations, plus plat
 
 All endpoints are served on the same port (default `8089`).
 
-OpenAI-compatible endpoints live under `/openai/v1` and take a standard `Authorization: Bearer <key>` header. The native REST surface under `/v1` takes `x-evs-api-key` instead and will reject a Bearer token.
+The base URL for OpenAI-compatible clients is `https://{instance}.{region}.everstack.ai/v1`. Pass it to an OpenAI SDK as `base_url` (Python) or `baseURL` (Node.js): the SDK appends the endpoint path, such as `/chat/completions`, itself. Authenticate with your Everstack API key, either as `Authorization: Bearer <key>` (what OpenAI SDKs send) or in the `x-evs-api-key` header.
 
 ```bash
-curl https://{instance}.{region}.everstack.ai/openai/v1/chat/completions \
+curl https://{instance}.{region}.everstack.ai/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "Hello"}]}'
+  -d '{"model": "gpt-5.4-mini", "messages": [{"role": "user", "content": "Hello"}]}'
 ```
+
+Clients configured with the older `/openai/v1` base URL keep working; it is still served as an alias.
 
 ## Gateway
 

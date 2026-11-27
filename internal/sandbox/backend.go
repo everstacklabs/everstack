@@ -127,6 +127,39 @@ type InstanceConfig struct {
 
 	// Persistent trooper fields
 	AgentID string `json:"agent_id,omitempty"`
+
+	// Metered, when set, caps what the sandbox is billed for below its
+	// provisioned size. It is set when a stored agent size smaller than
+	// every managed profile had to be provisioned on a larger one: the
+	// customer is billed for what they configured, not for the round-up.
+	Metered *MeteredResources `json:"metered,omitempty"`
+}
+
+// MeteredResources is the per-dimension billing ceiling for a sandbox. A
+// zero field means "no ceiling" for that dimension.
+type MeteredResources struct {
+	CPULimit float64 `json:"cpu_limit,omitempty"`
+	MemoryMB int64   `json:"memory_mb,omitempty"`
+	DiskMB   int64   `json:"disk_mb,omitempty"`
+}
+
+// BillableResources is the size usage is priced at: the provisioned size,
+// lowered per dimension to the Metered ceiling when one is recorded.
+func (c InstanceConfig) BillableResources() (cpu float64, memoryMB, diskMB int64) {
+	cpu, memoryMB, diskMB = c.CPULimit, c.MemoryMB, c.DiskMB
+	if c.Metered == nil {
+		return cpu, memoryMB, diskMB
+	}
+	if c.Metered.CPULimit > 0 && c.Metered.CPULimit < cpu {
+		cpu = c.Metered.CPULimit
+	}
+	if c.Metered.MemoryMB > 0 && c.Metered.MemoryMB < memoryMB {
+		memoryMB = c.Metered.MemoryMB
+	}
+	if c.Metered.DiskMB > 0 && c.Metered.DiskMB < diskMB {
+		diskMB = c.Metered.DiskMB
+	}
+	return cpu, memoryMB, diskMB
 }
 
 // BrowserSidecarConfig defines the browser sidecar container settings.
@@ -401,8 +434,19 @@ type VMSnapshotter interface {
 // Returns an Instance with Status = StatusRunning on success. Errors
 // from a missing snapshot bubble up as snapshot.ErrSnapshotMissing
 // so callers can distinguish "no work to do" from real failures.
+//
+// policy is the egress policy the restored VM must come back with. The
+// caller takes it from the authoritative sandbox record, never from the
+// snapshot: a snapshot only describes the guest at capture time.
 type VMRestorer interface {
-	RestoreVMSnapshot(ctx context.Context, sandboxID, tenantID, agentID string, store snapshot.Store) (*Instance, error)
+	RestoreVMSnapshot(ctx context.Context, sandboxID, tenantID, agentID string, policy RestoreNetworkPolicy, store snapshot.Store) (*Instance, error)
+}
+
+// RestoreNetworkPolicy is the network policy applied to a VM restored
+// from a snapshot.
+type RestoreNetworkPolicy struct {
+	Mode         NetworkMode
+	AllowedHosts []string
 }
 
 // BackendTargeter is an optional interface that backends can implement to

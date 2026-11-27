@@ -192,7 +192,7 @@ export function SemanticMappingsManager() {
                                         placeholder="my_app.model_id"
                                         className={INPUT_CLASS}
                                     />
-                                    <p className={attrKey !== '' && !keyValid ? 'min-h-4 text-[11px] leading-snug text-red-400' : HELP_CLASS}>
+                                    <p className={attrKey !== '' && !keyValid ? 'min-h-4 text-[11px] leading-snug text-danger' : HELP_CLASS}>
                                         {attrKey !== '' && !keyValid
                                             ? 'Letters, numbers, and . _ : / - only.'
                                             : 'Built-in keys keep priority; your key is used as a fallback.'}

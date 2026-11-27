@@ -1,0 +1,24 @@
+# Verified 2026-11-24.
+# Source: https://www.alibabacloud.com/help/en/model-studio/text-embedding-synchronous-api
+name: "qwen3.7-text-embedding"
+display_name: "Qwen3.7 Text Embedding"
+family: "qwen-embedding"
+status: "stable"
+
+cost:
+  input_per_1k: 0.00007
+  output_per_1k: 0.0
+
+limits:
+  max_tokens: 128000
+  max_completion_tokens: 0
+
+capabilities:
+  - embeddings
+
+modalities:
+  input: ["text"]
+  output: ["embedding"]
+
+notes: "International (Singapore) rate. Up to 20 rows of 128,000 tokens each; dimensions 2560, 2048, 1536, 1024 (default), 768, 512 or 256; 201 languages and dialects."
+added_in_version: "2.11.0"

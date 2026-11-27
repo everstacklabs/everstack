@@ -5,6 +5,7 @@ import { ui } from '@everstack/ui'
 import type { Plan, BillingPeriod } from '../../lib/plans'
 import {
     getFeatureDescription,
+    listedPlanFeatures,
     formatUsageLimit,
     formatSeatsLabel,
     PLAN_META,
@@ -56,7 +57,7 @@ export function PlanCard({
     const displayPrice = plan.pricing[billingPeriod]
     const isCustom = displayPrice === 'Custom'
 
-    const enabledFeatures = plan.features.filter((f) => f.enabled)
+    const enabledFeatures = listedPlanFeatures(plan.features)
     const keyUsageLimits = plan.usage_limits.slice(0, 2)
     const keyFeatures = enabledFeatures.slice(0, 3)
     const hiddenUsageLimits = plan.usage_limits.slice(keyUsageLimits.length)

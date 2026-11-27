@@ -42,14 +42,23 @@ type listShellSessionsResponse struct {
 // GET /v1/sandbox/{session_id}/shell-sessions
 // GET /v1/sandbox/instances/{sandbox_id}/shell-sessions
 func (s *Server) HandleListSandboxShellSessions(w http.ResponseWriter, r *http.Request) {
+	tenantID, scoped, authErr := s.prepareShellLookup(r)
+	if authErr != nil {
+		writeShellAuthenticationRequired(w)
+		return
+	}
 	if s.sandboxMgr == nil {
 		writeJSONError(w, http.StatusServiceUnavailable, "sandbox feature is not enabled")
 		return
 	}
 
-	inst, err := s.resolveShellSandboxInstance(r.Context(), r)
+	inst, err := s.resolveShellSandboxInstance(r.Context(), r, tenantID, scoped)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "sandbox not found")
+		if scoped {
+			writeJSONError(w, http.StatusNotFound, "sandbox not found")
+		} else {
+			writeShellAuthenticationRequired(w)
+		}
 		return
 	}
 
@@ -57,7 +66,7 @@ func (s *Server) HandleListSandboxShellSessions(w http.ResponseWriter, r *http.R
 	// SSH key. Keeps the admin UI's cookie-auth working while still
 	// allowing the CLI to inspect sessions over signed requests.
 	if err := s.authenticateShellRequest(r, inst.ID, inst.TenantID); err != nil {
-		writeJSONError(w, http.StatusUnauthorized, "unauthorized: "+err.Error())
+		writeShellAuthenticationRequired(w)
 		return
 	}
 
@@ -142,19 +151,28 @@ func (s *Server) HandleKillSandboxShellSession(w http.ResponseWriter, r *http.Re
 		writeJSONError(w, http.StatusBadRequest, "shell_session_id is required")
 		return
 	}
+	tenantID, scoped, authErr := s.prepareShellLookup(r)
+	if authErr != nil {
+		writeShellAuthenticationRequired(w)
+		return
+	}
 	if s.sandboxMgr == nil {
 		writeJSONError(w, http.StatusServiceUnavailable, "sandbox feature is not enabled")
 		return
 	}
 
-	inst, err := s.resolveShellSandboxInstance(r.Context(), r)
+	inst, err := s.resolveShellSandboxInstance(r.Context(), r, tenantID, scoped)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "sandbox not found")
+		if scoped {
+			writeJSONError(w, http.StatusNotFound, "sandbox not found")
+		} else {
+			writeShellAuthenticationRequired(w)
+		}
 		return
 	}
 
 	if err := s.authenticateShellRequest(r, inst.ID, inst.TenantID); err != nil {
-		writeJSONError(w, http.StatusUnauthorized, "unauthorized: "+err.Error())
+		writeShellAuthenticationRequired(w)
 		return
 	}
 
@@ -175,46 +193,36 @@ func (s *Server) HandleKillSandboxShellSession(w http.ResponseWriter, r *http.Re
 // /v1/sandbox/{session_id}/... or /v1/sandbox/instances/{sandbox_id}/...
 // routes. Prefer the concrete sandbox ID route when present because
 // multiple sandbox rows can share a session_id.
-func (s *Server) resolveShellSandboxInstance(ctx context.Context, r *http.Request) (instanceRef, error) {
+func (s *Server) resolveShellSandboxInstance(ctx context.Context, r *http.Request, tenantID string, scoped bool) (instanceRef, error) {
 	if sandboxID := mux.Vars(r)["sandbox_id"]; sandboxID != "" {
-		return s.resolveSandboxInstanceByIDOrName(ctx, sandboxID)
+		return s.resolveSandboxInstanceByIDOrName(ctx, sandboxID, tenantID, scoped)
 	}
 	sessionID := sandboxSessionIDFromRequest(r)
 	if sessionID == "" {
 		return instanceRef{}, errMissingSandboxIdentifier
 	}
-	return s.resolveSandboxInstance(ctx, sessionID)
+	return s.resolveSandboxInstance(ctx, sessionID, tenantID, scoped)
 }
 
 // resolveSandboxInstance mirrors the lookup path used by the shell
 // WebSocket handler: in-memory cache first, fall back to the DB so
 // the endpoints survive a gateway pod restart even when this pod
 // didn't directly create the sandbox.
-func (s *Server) resolveSandboxInstance(ctx context.Context, sessionID string) (instanceRef, error) {
-	if inst, ok := s.sandboxMgr.GetInstance(sessionID); ok {
-		return instanceRef{ID: inst.ID, TenantID: inst.Config.TenantID, ShortCode: inst.ShortCode}, nil
+func (s *Server) resolveSandboxInstance(ctx context.Context, sessionID, tenantID string, scoped bool) (instanceRef, error) {
+	inst, ok := s.lookupShellInstanceBySession(ctx, sessionID, tenantID, scoped)
+	if !ok {
+		return instanceRef{}, errMissingSandboxIdentifier
 	}
-	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	dbInst, err := s.sandboxMgr.LookupInstanceBySession(dbCtx, sessionID)
-	if err != nil {
-		return instanceRef{}, err
-	}
-	return instanceRef{ID: dbInst.ID, TenantID: dbInst.Config.TenantID, ShortCode: dbInst.ShortCode}, nil
+	return instanceRef{ID: inst.ID, TenantID: inst.Config.TenantID, ShortCode: inst.ShortCode}, nil
 }
 
 // resolveSandboxInstanceByIDOrName mirrors HandleSandboxShellByIDOrName.
-func (s *Server) resolveSandboxInstanceByIDOrName(ctx context.Context, sandboxID string) (instanceRef, error) {
-	if inst, ok := s.sandboxMgr.GetBySandboxIDOrName(sandboxID); ok {
-		return instanceRef{ID: inst.ID, TenantID: inst.Config.TenantID, ShortCode: inst.ShortCode}, nil
+func (s *Server) resolveSandboxInstanceByIDOrName(ctx context.Context, sandboxID, tenantID string, scoped bool) (instanceRef, error) {
+	inst, ok := s.lookupShellInstanceByIDOrName(ctx, sandboxID, tenantID, scoped)
+	if !ok {
+		return instanceRef{}, errMissingSandboxIdentifier
 	}
-	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	dbInst, err := s.sandboxMgr.LookupInstanceByIDFromDB(dbCtx, sandboxID)
-	if err != nil {
-		return instanceRef{}, err
-	}
-	return instanceRef{ID: dbInst.ID, TenantID: dbInst.Config.TenantID, ShortCode: dbInst.ShortCode}, nil
+	return instanceRef{ID: inst.ID, TenantID: inst.Config.TenantID, ShortCode: inst.ShortCode}, nil
 }
 
 // instanceRef is the small slice of sandbox.Instance that the session

@@ -19,19 +19,24 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ControlPlaneService_ProvisionInstance_FullMethodName  = "/everstack.controlplane.v1.ControlPlaneService/ProvisionInstance"
-	ControlPlaneService_GetInstance_FullMethodName        = "/everstack.controlplane.v1.ControlPlaneService/GetInstance"
-	ControlPlaneService_ListInstances_FullMethodName      = "/everstack.controlplane.v1.ControlPlaneService/ListInstances"
-	ControlPlaneService_StartInstance_FullMethodName      = "/everstack.controlplane.v1.ControlPlaneService/StartInstance"
-	ControlPlaneService_StopInstance_FullMethodName       = "/everstack.controlplane.v1.ControlPlaneService/StopInstance"
-	ControlPlaneService_RestartInstance_FullMethodName    = "/everstack.controlplane.v1.ControlPlaneService/RestartInstance"
-	ControlPlaneService_DeleteInstance_FullMethodName     = "/everstack.controlplane.v1.ControlPlaneService/DeleteInstance"
-	ControlPlaneService_GetInstanceLogs_FullMethodName    = "/everstack.controlplane.v1.ControlPlaneService/GetInstanceLogs"
-	ControlPlaneService_PushConfig_FullMethodName         = "/everstack.controlplane.v1.ControlPlaneService/PushConfig"
-	ControlPlaneService_SetCustomDomain_FullMethodName    = "/everstack.controlplane.v1.ControlPlaneService/SetCustomDomain"
-	ControlPlaneService_VerifyCustomDomain_FullMethodName = "/everstack.controlplane.v1.ControlPlaneService/VerifyCustomDomain"
-	ControlPlaneService_RemoveCustomDomain_FullMethodName = "/everstack.controlplane.v1.ControlPlaneService/RemoveCustomDomain"
-	ControlPlaneService_ListRegions_FullMethodName        = "/everstack.controlplane.v1.ControlPlaneService/ListRegions"
+	ControlPlaneService_ProvisionInstance_FullMethodName       = "/everstack.controlplane.v1.ControlPlaneService/ProvisionInstance"
+	ControlPlaneService_GetInstance_FullMethodName             = "/everstack.controlplane.v1.ControlPlaneService/GetInstance"
+	ControlPlaneService_ListInstances_FullMethodName           = "/everstack.controlplane.v1.ControlPlaneService/ListInstances"
+	ControlPlaneService_StartInstance_FullMethodName           = "/everstack.controlplane.v1.ControlPlaneService/StartInstance"
+	ControlPlaneService_StopInstance_FullMethodName            = "/everstack.controlplane.v1.ControlPlaneService/StopInstance"
+	ControlPlaneService_RestartInstance_FullMethodName         = "/everstack.controlplane.v1.ControlPlaneService/RestartInstance"
+	ControlPlaneService_DeleteInstance_FullMethodName          = "/everstack.controlplane.v1.ControlPlaneService/DeleteInstance"
+	ControlPlaneService_GetInstanceLogs_FullMethodName         = "/everstack.controlplane.v1.ControlPlaneService/GetInstanceLogs"
+	ControlPlaneService_PushConfig_FullMethodName              = "/everstack.controlplane.v1.ControlPlaneService/PushConfig"
+	ControlPlaneService_SetCustomDomain_FullMethodName         = "/everstack.controlplane.v1.ControlPlaneService/SetCustomDomain"
+	ControlPlaneService_VerifyCustomDomain_FullMethodName      = "/everstack.controlplane.v1.ControlPlaneService/VerifyCustomDomain"
+	ControlPlaneService_RemoveCustomDomain_FullMethodName      = "/everstack.controlplane.v1.ControlPlaneService/RemoveCustomDomain"
+	ControlPlaneService_ListRegions_FullMethodName             = "/everstack.controlplane.v1.ControlPlaneService/ListRegions"
+	ControlPlaneService_GetInstanceLimitStatus_FullMethodName  = "/everstack.controlplane.v1.ControlPlaneService/GetInstanceLimitStatus"
+	ControlPlaneService_PauseInstance_FullMethodName           = "/everstack.controlplane.v1.ControlPlaneService/PauseInstance"
+	ControlPlaneService_ResumeInstance_FullMethodName          = "/everstack.controlplane.v1.ControlPlaneService/ResumeInstance"
+	ControlPlaneService_SetInstanceExtraBilling_FullMethodName = "/everstack.controlplane.v1.ControlPlaneService/SetInstanceExtraBilling"
+	ControlPlaneService_GetOrgActivity_FullMethodName          = "/everstack.controlplane.v1.ControlPlaneService/GetOrgActivity"
 )
 
 // ControlPlaneServiceClient is the client API for ControlPlaneService service.
@@ -69,6 +74,22 @@ type ControlPlaneServiceClient interface {
 	RemoveCustomDomain(ctx context.Context, in *RemoveCustomDomainRequest, opts ...grpc.CallOption) (*RemoveCustomDomainResponse, error)
 	// ListRegions returns the regions this controlplane can provision into.
 	ListRegions(ctx context.Context, in *ListRegionsRequest, opts ...grpc.CallOption) (*ListRegionsResponse, error)
+	// Instance limit (docs/design/instance-over-limit.md). Reads need org
+	// membership; the three mutations need the owner or admin role.
+	GetInstanceLimitStatus(ctx context.Context, in *GetInstanceLimitStatusRequest, opts ...grpc.CallOption) (*GetInstanceLimitStatusResponse, error)
+	// PauseInstance stops serving an instance and keeps everything else.
+	PauseInstance(ctx context.Context, in *PauseInstanceRequest, opts ...grpc.CallOption) (*PauseInstanceResponse, error)
+	// ResumeInstance brings a paused instance back; ResourceExhausted when
+	// the org has no free slot.
+	ResumeInstance(ctx context.Context, in *ResumeInstanceRequest, opts ...grpc.CallOption) (*ResumeInstanceResponse, error)
+	// SetInstanceExtraBilling opts an instance into (or out of) the monthly
+	// extra-instance fee debited from the prepaid wallet.
+	SetInstanceExtraBilling(ctx context.Context, in *SetInstanceExtraBillingRequest, opts ...grpc.CallOption) (*SetInstanceExtraBillingResponse, error)
+	// GetOrgActivity summarises model-call activity across the organization's
+	// own instances (docs/design/org-overview-redesign.md, section 4.3). Any
+	// member may read it. The instance set is resolved server-side from the
+	// organization; the request carries no instance or tenant identifiers.
+	GetOrgActivity(ctx context.Context, in *GetOrgActivityRequest, opts ...grpc.CallOption) (*GetOrgActivityResponse, error)
 }
 
 type controlPlaneServiceClient struct {
@@ -209,6 +230,56 @@ func (c *controlPlaneServiceClient) ListRegions(ctx context.Context, in *ListReg
 	return out, nil
 }
 
+func (c *controlPlaneServiceClient) GetInstanceLimitStatus(ctx context.Context, in *GetInstanceLimitStatusRequest, opts ...grpc.CallOption) (*GetInstanceLimitStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetInstanceLimitStatusResponse)
+	err := c.cc.Invoke(ctx, ControlPlaneService_GetInstanceLimitStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *controlPlaneServiceClient) PauseInstance(ctx context.Context, in *PauseInstanceRequest, opts ...grpc.CallOption) (*PauseInstanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PauseInstanceResponse)
+	err := c.cc.Invoke(ctx, ControlPlaneService_PauseInstance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *controlPlaneServiceClient) ResumeInstance(ctx context.Context, in *ResumeInstanceRequest, opts ...grpc.CallOption) (*ResumeInstanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResumeInstanceResponse)
+	err := c.cc.Invoke(ctx, ControlPlaneService_ResumeInstance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *controlPlaneServiceClient) SetInstanceExtraBilling(ctx context.Context, in *SetInstanceExtraBillingRequest, opts ...grpc.CallOption) (*SetInstanceExtraBillingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetInstanceExtraBillingResponse)
+	err := c.cc.Invoke(ctx, ControlPlaneService_SetInstanceExtraBilling_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *controlPlaneServiceClient) GetOrgActivity(ctx context.Context, in *GetOrgActivityRequest, opts ...grpc.CallOption) (*GetOrgActivityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetOrgActivityResponse)
+	err := c.cc.Invoke(ctx, ControlPlaneService_GetOrgActivity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ControlPlaneServiceServer is the server API for ControlPlaneService service.
 // All implementations must embed UnimplementedControlPlaneServiceServer
 // for forward compatibility.
@@ -244,6 +315,22 @@ type ControlPlaneServiceServer interface {
 	RemoveCustomDomain(context.Context, *RemoveCustomDomainRequest) (*RemoveCustomDomainResponse, error)
 	// ListRegions returns the regions this controlplane can provision into.
 	ListRegions(context.Context, *ListRegionsRequest) (*ListRegionsResponse, error)
+	// Instance limit (docs/design/instance-over-limit.md). Reads need org
+	// membership; the three mutations need the owner or admin role.
+	GetInstanceLimitStatus(context.Context, *GetInstanceLimitStatusRequest) (*GetInstanceLimitStatusResponse, error)
+	// PauseInstance stops serving an instance and keeps everything else.
+	PauseInstance(context.Context, *PauseInstanceRequest) (*PauseInstanceResponse, error)
+	// ResumeInstance brings a paused instance back; ResourceExhausted when
+	// the org has no free slot.
+	ResumeInstance(context.Context, *ResumeInstanceRequest) (*ResumeInstanceResponse, error)
+	// SetInstanceExtraBilling opts an instance into (or out of) the monthly
+	// extra-instance fee debited from the prepaid wallet.
+	SetInstanceExtraBilling(context.Context, *SetInstanceExtraBillingRequest) (*SetInstanceExtraBillingResponse, error)
+	// GetOrgActivity summarises model-call activity across the organization's
+	// own instances (docs/design/org-overview-redesign.md, section 4.3). Any
+	// member may read it. The instance set is resolved server-side from the
+	// organization; the request carries no instance or tenant identifiers.
+	GetOrgActivity(context.Context, *GetOrgActivityRequest) (*GetOrgActivityResponse, error)
 	mustEmbedUnimplementedControlPlaneServiceServer()
 }
 
@@ -292,6 +379,21 @@ func (UnimplementedControlPlaneServiceServer) RemoveCustomDomain(context.Context
 }
 func (UnimplementedControlPlaneServiceServer) ListRegions(context.Context, *ListRegionsRequest) (*ListRegionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListRegions not implemented")
+}
+func (UnimplementedControlPlaneServiceServer) GetInstanceLimitStatus(context.Context, *GetInstanceLimitStatusRequest) (*GetInstanceLimitStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetInstanceLimitStatus not implemented")
+}
+func (UnimplementedControlPlaneServiceServer) PauseInstance(context.Context, *PauseInstanceRequest) (*PauseInstanceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PauseInstance not implemented")
+}
+func (UnimplementedControlPlaneServiceServer) ResumeInstance(context.Context, *ResumeInstanceRequest) (*ResumeInstanceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResumeInstance not implemented")
+}
+func (UnimplementedControlPlaneServiceServer) SetInstanceExtraBilling(context.Context, *SetInstanceExtraBillingRequest) (*SetInstanceExtraBillingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetInstanceExtraBilling not implemented")
+}
+func (UnimplementedControlPlaneServiceServer) GetOrgActivity(context.Context, *GetOrgActivityRequest) (*GetOrgActivityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetOrgActivity not implemented")
 }
 func (UnimplementedControlPlaneServiceServer) mustEmbedUnimplementedControlPlaneServiceServer() {}
 func (UnimplementedControlPlaneServiceServer) testEmbeddedByValue()                             {}
@@ -548,6 +650,96 @@ func _ControlPlaneService_ListRegions_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ControlPlaneService_GetInstanceLimitStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetInstanceLimitStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlPlaneServiceServer).GetInstanceLimitStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlPlaneService_GetInstanceLimitStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlPlaneServiceServer).GetInstanceLimitStatus(ctx, req.(*GetInstanceLimitStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ControlPlaneService_PauseInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PauseInstanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlPlaneServiceServer).PauseInstance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlPlaneService_PauseInstance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlPlaneServiceServer).PauseInstance(ctx, req.(*PauseInstanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ControlPlaneService_ResumeInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResumeInstanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlPlaneServiceServer).ResumeInstance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlPlaneService_ResumeInstance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlPlaneServiceServer).ResumeInstance(ctx, req.(*ResumeInstanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ControlPlaneService_SetInstanceExtraBilling_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetInstanceExtraBillingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlPlaneServiceServer).SetInstanceExtraBilling(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlPlaneService_SetInstanceExtraBilling_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlPlaneServiceServer).SetInstanceExtraBilling(ctx, req.(*SetInstanceExtraBillingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ControlPlaneService_GetOrgActivity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOrgActivityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlPlaneServiceServer).GetOrgActivity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlPlaneService_GetOrgActivity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlPlaneServiceServer).GetOrgActivity(ctx, req.(*GetOrgActivityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ControlPlaneService_ServiceDesc is the grpc.ServiceDesc for ControlPlaneService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -606,6 +798,26 @@ var ControlPlaneService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListRegions",
 			Handler:    _ControlPlaneService_ListRegions_Handler,
+		},
+		{
+			MethodName: "GetInstanceLimitStatus",
+			Handler:    _ControlPlaneService_GetInstanceLimitStatus_Handler,
+		},
+		{
+			MethodName: "PauseInstance",
+			Handler:    _ControlPlaneService_PauseInstance_Handler,
+		},
+		{
+			MethodName: "ResumeInstance",
+			Handler:    _ControlPlaneService_ResumeInstance_Handler,
+		},
+		{
+			MethodName: "SetInstanceExtraBilling",
+			Handler:    _ControlPlaneService_SetInstanceExtraBilling_Handler,
+		},
+		{
+			MethodName: "GetOrgActivity",
+			Handler:    _ControlPlaneService_GetOrgActivity_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

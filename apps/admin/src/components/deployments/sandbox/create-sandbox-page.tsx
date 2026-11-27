@@ -29,6 +29,8 @@ import type {
   SandboxTemplate,
 } from '@/server/sandbox'
 import { EnvironmentCard } from './environment-card'
+import { PlanLimitNotice } from '@/components/billing/plan-limit-notice'
+import { isPlanLimitError } from '@/lib/plan-limit-error'
 
 const {
   Button,
@@ -511,7 +513,7 @@ export function CreateSandboxPage({
   const handleCreate = () => {
     if (!sandboxBillingEnabled) {
       toast.error(
-        'Your sandbox starter credit is exhausted. Add billing to continue',
+        "You have used this month's included sandbox hours. Add credit to keep running.",
       )
       return
     }
@@ -573,10 +575,13 @@ export function CreateSandboxPage({
         toast.success('Sandbox created successfully')
         navigate({ to: '/deployments/sandboxes', search: { tab: 'instances' } })
       },
-      onError: (error) =>
+      onError: (error) => {
+        // A plan cap is shown inline with an Upgrade link, not as an error.
+        if (isPlanLimitError(error)) return
         toast.error(
           error instanceof Error ? error.message : 'Failed to create sandbox',
-        ),
+        )
+      },
     })
   }
 
@@ -663,19 +668,19 @@ export function CreateSandboxPage({
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
         {managedCloud && !sandboxBillingEnabled && (
-          <div className="max-w-3xl mx-auto mb-4 flex flex-wrap items-center justify-between gap-3 rounded border border-amber-500/25 bg-amber-500/5 p-3">
+          <div className="max-w-3xl mx-auto mb-4 flex flex-wrap items-center justify-between gap-3 rounded border border-warning-border bg-warning-surface/60 p-3">
             <div className="flex min-w-0 items-start gap-3">
               <Iconify.Icon
                 icon="heroicons:credit-card"
-                className="size-4 shrink-0 text-amber-400 light:text-amber-700 mt-0.5"
+                className="size-4 shrink-0 text-warning mt-0.5"
               />
               <div>
                 <p className="text-sm font-medium text-white light:text-brand-main-50">
                   Sandbox compute is paused
                 </p>
                 <p className="mt-1 text-xs text-white/55 light:text-black/55">
-                  The organization starter credit is exhausted. Add or restore
-                  billing to continue.
+                  This month&apos;s included sandbox hours are used up. Add
+                  credit to keep running.
                 </p>
               </div>
             </div>
@@ -692,10 +697,10 @@ export function CreateSandboxPage({
           </div>
         )}
         {isRecreate && (
-          <div className="max-w-3xl mx-auto mb-4 flex items-start gap-3 rounded border border-amber-500/25 bg-amber-500/5 p-3">
+          <div className="max-w-3xl mx-auto mb-4 flex items-start gap-3 rounded border border-warning-border bg-warning-surface/60 p-3">
             <Iconify.Icon
               icon="heroicons:exclamation-triangle"
-              className="size-4 shrink-0 text-amber-400/80 light:text-amber-700/80 mt-0.5"
+              className="size-4 shrink-0 text-warning/80 mt-0.5"
             />
             <div className="text-xs leading-relaxed text-white/65 light:text-black/65">
               <p className="font-medium text-white light:text-brand-main-50">
@@ -1170,7 +1175,7 @@ export function CreateSandboxPage({
                                   prev.filter((h) => h !== host),
                                 )
                               }
-                              className="text-white/30 light:text-black/30 hover:text-red-400 light:hover:text-red-600"
+                              className="text-white/30 light:text-black/30 hover:text-danger"
                             >
                               <X className="w-3 h-3" />
                             </button>
@@ -1269,7 +1274,7 @@ export function CreateSandboxPage({
                                     prev.filter((c) => c !== cidr),
                                   )
                                 }
-                                className="text-white/30 light:text-black/30 hover:text-red-400 light:hover:text-red-600"
+                                className="text-white/30 light:text-black/30 hover:text-danger"
                               >
                                 <X className="w-3 h-3" />
                               </button>
@@ -1454,7 +1459,7 @@ export function CreateSandboxPage({
                               prev.filter((_, i) => i !== idx),
                             )
                           }
-                          className="text-white/30 light:text-black/30 hover:text-red-400 light:hover:text-red-600"
+                          className="text-white/30 light:text-black/30 hover:text-danger"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -1666,6 +1671,8 @@ export function CreateSandboxPage({
           </div>
         )}
       </div>
+
+      <PlanLimitNotice error={createMutation.error} className="mx-6 mb-3" />
 
       {/* Footer */}
       <div className="flex items-center justify-between px-6 py-4 border-t border-brand-main-600">

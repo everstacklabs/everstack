@@ -77,6 +77,13 @@ func (g *Gateway) Proxy() *ProxyHandler {
 	return g.proxy
 }
 
+// SetTenantActiveFn installs the paused-instance gate on the preview proxy.
+// fn returns false when the tenant's instance is paused. Passing nil treats
+// every tenant as active. Safe for concurrent use.
+func (g *Gateway) SetTenantActiveFn(fn func(ctx context.Context, tenantID string) bool) {
+	g.proxy.SetTenantActiveFn(fn)
+}
+
 // Config returns the gateway configuration (for callers that need base domain, port, etc.).
 func (g *Gateway) Config() Config {
 	return g.config

@@ -16,10 +16,39 @@ import (
 )
 
 const (
-	SchemaVersion                 = "1.0"
-	SemanticVersion               = "2026-07-30"
-	MinimumPublicTenants          = uint64(5)
-	MinimumPublicRequests         = uint64(100)
+	SchemaVersion         = "1.0"
+	SemanticVersion       = "2026-07-30"
+	MinimumPublicTenants  = uint64(5)
+	MinimumPublicRequests = uint64(100)
+
+	// MinimumStreamSamples is the smallest number of streaming requests that
+	// may back a published avg_ttft_ms or avg_throughput_tps.
+	//
+	// Both figures are streaming-only: the gateway stamps
+	// llm.stream.time_to_first_token_ms and llm.stream.total_latency_ms on a
+	// provider span only when the response actually streamed
+	// (attributes.SetLLMStreamMetrics), and mv_model_metrics_hourly counts a
+	// sample by the presence of those attributes. Everything else in the
+	// bucket contributes to Requests without contributing a sample, so the
+	// denominator is a sample size, not a request count, and it can be
+	// arbitrarily small while the bucket looks busy.
+	//
+	// Twenty is the conventional floor at which a mean is worth quoting at
+	// all. It is not a precision guarantee; it is the point below which the
+	// number says more about which single request happened to stream than
+	// about the model.
+	MinimumStreamSamples = uint64(20)
+
+	// MinimumStreamCoverage is the smallest share of a bucket's requests that
+	// must have produced a streaming sample before the derived figure is
+	// published.
+	//
+	// MinimumStreamSamples alone is not enough on a high-volume model: twenty
+	// streams out of a hundred thousand requests clears the absolute floor
+	// while still being a rounding-error slice of the traffic the public
+	// catalog labels it with. One percent is deliberately permissive so a
+	// model that is genuinely used mostly non-streaming still reports.
+	MinimumStreamCoverage         = 0.01
 	MaximumTestingThresholdWindow = 48 * time.Hour
 	DefaultBreakdownSeriesLimit   = uint32(10)
 	MaximumBreakdownSeriesLimit   = uint32(12)
@@ -295,9 +324,14 @@ type PublicMetrics struct {
 	TotalTokens              uint64  `json:"total_tokens"`
 	CostUSD                  float64 `json:"cost_usd"`
 	AvgLatencyMS             float64 `json:"avg_latency_ms"`
-	AvgTTFTMS                float64 `json:"avg_ttft_ms"`
-	AvgThroughputTPS         float64 `json:"avg_throughput_tps"`
-	SuccessRate              float64 `json:"success_rate"`
+	// AvgTTFTMS and AvgThroughputTPS are nil when the streaming sample behind
+	// them is too thin to publish. Nil is not zero: a first chunk that lands
+	// inside the same millisecond is a genuine 0 ms TTFT, and the wire
+	// contract keeps the two apart by omitting the field entirely rather than
+	// emitting 0. See streamAverages.
+	AvgTTFTMS        *float64 `json:"avg_ttft_ms,omitempty"`
+	AvgThroughputTPS *float64 `json:"avg_throughput_tps,omitempty"`
+	SuccessRate      float64  `json:"success_rate"`
 }
 
 type Point struct {
@@ -509,6 +543,12 @@ func (s *Service) Compare(ctx context.Context, query CompareQuery) (Comparison, 
 			Total:       metricValue(report.Summary, query.Metric),
 			Points:      make([]ComparisonPoint, 0, len(report.Points)),
 			DataThrough: report.DataThrough,
+		}
+		// A model with an unpublishable streaming sample has no value for
+		// this metric, so the series reports insufficient data rather than
+		// charting a zero the reader would take for a measurement.
+		if metricSuppressed(report.Summary, query.Metric) {
+			series.Status = StatusInsufficientData
 		}
 		for _, point := range report.Points {
 			series.Points = append(series.Points, ComparisonPoint{
@@ -924,6 +964,8 @@ func derivePublicMetrics(metrics Metrics) PublicMetrics {
 		nonReasoning = 0
 	}
 
+	avgTTFT, avgThroughput := streamAverages(metrics)
+
 	return PublicMetrics{
 		Requests:                 metrics.Requests,
 		Successes:                successes,
@@ -937,10 +979,49 @@ func derivePublicMetrics(metrics Metrics) PublicMetrics {
 		TotalTokens:              metrics.InputTokens + metrics.OutputTokens,
 		CostUSD:                  finite(metrics.CostUSD),
 		AvgLatencyMS:             safeRatio(metrics.LatencyTotalMS, float64(metrics.LatencySamples)),
-		AvgTTFTMS:                safeRatio(metrics.TTFTTotalMS, float64(metrics.TTFTSamples)),
-		AvgThroughputTPS:         safeRatio(float64(metrics.StreamOutputTokens)*1000, metrics.GenerationDurationMS),
+		AvgTTFTMS:                avgTTFT,
+		AvgThroughputTPS:         avgThroughput,
 		SuccessRate:              safeRatio(float64(successes), float64(metrics.Requests)),
 	}
+}
+
+// streamAverages derives the two streaming-only averages, or nil for either
+// one that is not backed by a publishable sample.
+//
+// TTFTSamples is the sample size for both. It counts provider spans carrying
+// llm.stream.time_to_first_token_ms, and the throughput terms
+// (StreamOutputTokens, GenerationDurationMS) come from the same streaming
+// spans -- GenerationDurationMS is literally stream latency minus TTFT, so a
+// span without a TTFT attribute cannot contribute a meaningful generation
+// window in the first place. Verified on production 2026-09-01: of 688
+// retained provider spans, 30 carry llm.stream.time_to_first_token_ms, 30
+// carry llm.stream.total_latency_ms, and the two sets are identical.
+//
+// Why this exists: openai/gpt-5.4-mini was publishing an avg_throughput_tps of
+// exactly 200 on the public model catalog. That was 4 output tokens over a
+// 20 ms window -- one streamed request out of 510 in the bucket. The number
+// was not wrong arithmetic, it was a mean over a sample of one, and there is
+// no honest way to publish it. Omitting the figure is the correct answer;
+// consumers render "no data" rather than a fabricated speed.
+func streamAverages(metrics Metrics) (ttftMS, throughputTPS *float64) {
+	if metrics.TTFTSamples < MinimumStreamSamples {
+		return nil, nil
+	}
+	if metrics.Requests > 0 &&
+		float64(metrics.TTFTSamples) < MinimumStreamCoverage*float64(metrics.Requests) {
+		return nil, nil
+	}
+
+	ttft := safeRatio(metrics.TTFTTotalMS, float64(metrics.TTFTSamples))
+	ttftMS = &ttft
+
+	// A zero generation window means no streamed token was ever timed, so
+	// there is no throughput to report even though TTFT stands.
+	if metrics.GenerationDurationMS > 0 {
+		tps := safeRatio(float64(metrics.StreamOutputTokens)*1000, metrics.GenerationDurationMS)
+		throughputTPS = &tps
+	}
+	return ttftMS, throughputTPS
 }
 
 func metricValue(metrics PublicMetrics, metric Metric) float64 {
@@ -950,14 +1031,36 @@ func metricValue(metrics PublicMetrics, metric Metric) float64 {
 	case MetricRequests:
 		return float64(metrics.Requests)
 	case MetricTTFT:
-		return metrics.AvgTTFTMS
+		return derefOrZero(metrics.AvgTTFTMS)
 	case MetricThroughput:
-		return metrics.AvgThroughputTPS
+		return derefOrZero(metrics.AvgThroughputTPS)
 	case MetricSuccessRate:
 		return metrics.SuccessRate
 	default:
 		return 0
 	}
+}
+
+// metricSuppressed reports whether the requested metric has no publishable
+// value for these totals. Comparison points are plain doubles on the wire, so
+// a suppressed streaming metric would otherwise be indistinguishable from a
+// real zero; the series status carries the distinction instead.
+func metricSuppressed(metrics PublicMetrics, metric Metric) bool {
+	switch metric {
+	case MetricTTFT:
+		return metrics.AvgTTFTMS == nil
+	case MetricThroughput:
+		return metrics.AvgThroughputTPS == nil
+	default:
+		return false
+	}
+}
+
+func derefOrZero(value *float64) float64 {
+	if value == nil {
+		return 0
+	}
+	return *value
 }
 
 func safeRatio(numerator, denominator float64) float64 {

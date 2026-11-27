@@ -3,6 +3,7 @@ package v1
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -117,6 +118,9 @@ func (s *Server) DeleteSSHKey(ctx context.Context, req *connect.Request[agentspb
 	}
 
 	if err := s.sshKeyStore.DeleteKeyByTenant(ctx, req.Msg.KeyId, tenantID); err != nil {
+		if errors.Is(err, sshpkg.ErrSSHKeyNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, sshpkg.ErrSSHKeyNotFound)
+		}
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
@@ -545,7 +549,13 @@ func (s *Server) resolveSandboxInfo(ctx context.Context, identifier string) sand
 
 	resultCh := make(chan sandboxResolved, 1)
 	go func() {
-		inst, ok := s.sandboxMgr.GetBySandboxIDOrName(identifier)
+		// The direct HTTP route has already resolved and ownership-checked
+		// the sandbox; use that instance rather than looking the caller's
+		// string up again without tenant scope.
+		inst, ok := ResolvedSandboxFromContext(ctx)
+		if !ok || inst == nil {
+			inst, ok = s.sandboxMgr.GetBySandboxIDOrName(identifier)
+		}
 		if !ok || inst == nil {
 			// Cache miss → DB fallback. LookupInstanceByIDFromDB
 			// matches id, name, OR short_code in a single index hit,

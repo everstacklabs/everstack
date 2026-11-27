@@ -60,6 +60,17 @@ func (m *SandboxManager) cloneRepo(ctx context.Context, sandboxID, tenantID stri
 	branch := config.GitBranch
 	installationID := config.GitInstallationID
 
+	// The installation id comes from the caller's sandbox config. The shared
+	// (legacy, env-configured) app is installed by many tenants, so its
+	// installation tokens would open any tenant's repositories: require the
+	// installation to be linked to this tenant first. A tenant's own
+	// manifest app can only mint tokens for its own installations.
+	if m.githubApp != nil {
+		if err := m.requireTenantInstallation(ctx, tenantID, installationID); err != nil {
+			return "", "", 0, err
+		}
+	}
+
 	// Get installation token
 	token, err := appClient.GetInstallationToken(ctx, installationID)
 	if err != nil {
@@ -262,6 +273,34 @@ func redactToken(s, token string) string {
 	return strings.ReplaceAll(s, token, "[REDACTED]")
 }
 
+// SetGitHubTenantKeyResolver installs the mapping from a sandbox's tenant
+// id to the key GitHub rows are stored under. On a managed instance the
+// sandbox carries the instance id while installations and apps are keyed by
+// the owning organization.
+func (m *SandboxManager) SetGitHubTenantKeyResolver(r github.TenantKeyResolver) {
+	m.githubTenantKey = r
+}
+
+// githubTenantID returns the GitHub row key for a sandbox tenant.
+func (m *SandboxManager) githubTenantID(ctx context.Context, tenantID string) string {
+	if m.githubTenantKey == nil {
+		return tenantID
+	}
+	return m.githubTenantKey(ctx, tenantID)
+}
+
+// requireTenantInstallation refuses a GitHub installation that is not
+// linked to tenantID. Missing and foreign installations look the same.
+func (m *SandboxManager) requireTenantInstallation(ctx context.Context, tenantID string, installationID int64) error {
+	if m.db == nil {
+		return fmt.Errorf("github installation ownership cannot be verified")
+	}
+	if _, err := github.NewStore(m.db).GetInstallationForTenant(ctx, m.githubTenantID(ctx, tenantID), installationID); err != nil {
+		return fmt.Errorf("github installation %d is not linked to this tenant", installationID)
+	}
+	return nil
+}
+
 func (m *SandboxManager) resolveGitHubApp(ctx context.Context, tenantID string) (*github.App, error) {
 	if m.githubApp != nil {
 		return m.githubApp, nil
@@ -270,7 +309,7 @@ func (m *SandboxManager) resolveGitHubApp(ctx context.Context, tenantID string) 
 		return nil, fmt.Errorf("github app is not configured")
 	}
 	store := github.NewStore(m.db)
-	appClient, _, err := store.LoadAppClientForTenant(ctx, tenantID)
+	appClient, _, err := store.LoadAppClientForTenant(ctx, m.githubTenantID(ctx, tenantID))
 	if err != nil {
 		if errors.Is(err, github.ErrGitHubAppNotFound) {
 			return nil, fmt.Errorf("github app is not connected for tenant %s", tenantID)

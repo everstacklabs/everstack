@@ -60,3 +60,29 @@ func TestAutoRecoverNoRowReturnsNotFound(t *testing.T) {
 		t.Fatalf("unmet sql expectations: %v", err)
 	}
 }
+
+// The recovery checker must never auto-retry a row whose saved workspace is
+// gone: the scan excludes the restore-failed error code.
+func TestRecoveryCheckerSkipsRestoreFailedRows(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	defer db.Close()
+	xdb := sqlx.NewDb(db, "sqlmock")
+	rc := NewRecoveryChecker(xdb, NewRepository(xdb))
+
+	mock.ExpectBegin()
+	mock.ExpectQuery(`pg_try_advisory_xact_lock`).
+		WillReturnRows(sqlmock.NewRows([]string{"locked"}).AddRow(true))
+	mock.ExpectQuery(`(?s)FROM sandbox_instances.*lifecycle_state = 'error'.*COALESCE\(error, ''\) NOT LIKE \$5.*COALESCE\(error, ''\) NOT LIKE \$6`).
+		WithArgs(rc.MaxAttempts, rc.MaxBackoff.Seconds(), rc.BaseBackoff.Seconds(), rc.BatchLimit,
+			"workspace_restore_failed%", "workspace_needs_attention%").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "desired_state", "recovery_attempts"}))
+	mock.ExpectRollback()
+
+	rc.tick(context.Background())
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet sql expectations: %v", err)
+	}
+}

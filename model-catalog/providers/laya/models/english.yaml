@@ -1,0 +1,17 @@
+# Verified 2026-09-29: https://github.com/NandhaKishorM/laya
+# Self-hosted infrastructure is billed separately; zero here means no vendor per-token API fee. Default serving token budget, not the encoder maximum. Long inputs may be truncated upstream.
+name: "english"
+display_name: "Laya English"
+api_type: "systemone"
+family: "laya"
+status: "stable"
+added_in_version: "2.10.0"
+cost:
+  input_per_1k: 0
+  output_per_1k: 0
+limits:
+  max_tokens: 512
+capabilities: [decisions]
+modalities:
+  input: [text]
+  output: [json]

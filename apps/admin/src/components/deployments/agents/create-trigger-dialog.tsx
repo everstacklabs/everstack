@@ -99,7 +99,7 @@ export function CreateTriggerDialog({ agentId, open, onOpenChange }: Props) {
                         <div className="space-y-2">
                             <Label>Webhook Secret</Label>
                             <Input readOnly value={webhookResult.secret} className="font-mono text-xs" />
-                            <p className="text-[11px] text-yellow-400 light:text-yellow-700">
+                            <p className="text-[11px] text-warning">
                                 Copy this secret now. It will not be shown again.
                             </p>
                         </div>

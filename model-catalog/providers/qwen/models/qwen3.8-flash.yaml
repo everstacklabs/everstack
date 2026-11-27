@@ -1,0 +1,56 @@
+# Verified 2026-11-24.
+# Source: https://www.alibabacloud.com/help/en/model-studio/qwen3-8-flash
+# Source: https://www.alibabacloud.com/help/en/model-studio/model-pricing
+# Release date from models.dev (alibaba entry); the provider's pages do not state one.
+name: "qwen3.8-flash"
+display_name: "Qwen3.8 Flash"
+family: "qwen"
+status: "stable"
+release_date: "2026-08-26"
+
+cost:
+  input_per_1k: 0.00015
+  output_per_1k: 0.00047
+  cache_read_per_1k: 1.6e-05
+  cache_write_per_1k: 0.0002
+
+limits:
+  max_tokens: 1000000
+  max_completion_tokens: 131072
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image","video"]
+  output: ["text"]
+
+notes: "Fast, low-cost Qwen model with 1M context and thinking and non-thinking modes at the same price (International deployment, Singapore rates). Cache read is the implicit or explicit cache hit rate; cache write is the explicit cache creation rate."
+
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 131072
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+  - key: "top_p"
+    display_name: "Top P"
+    type: "number"
+    min_value: 0
+    has_min_value: true
+    max_value: 1
+    has_max_value: true
+  - key: "top_k"
+    display_name: "Top K"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+added_in_version: "2.11.0"

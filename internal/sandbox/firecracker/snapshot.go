@@ -110,13 +110,16 @@ func SaveSnapshot(ctx context.Context, vm *MicroVM, tenantID, agentID string, st
 	// different MAC (guest kernel sees an interface flap) or no host-
 	// side TAP attached at all.
 	if vm.Network != nil {
+		// DNSServers is deliberately left empty. The guest's resolver is
+		// its own TAP host IP, which is not an upstream and means nothing
+		// on another host; restore takes DNS upstreams from the operator
+		// and the egress policy from the sandbox record.
 		manifest.Network = &snapshot.NetworkSpec{
-			IfaceID:    "eth0",
-			GuestMAC:   vm.Network.GuestMAC,
-			GuestIP:    vm.Network.GuestIP,
-			HostIP:     vm.Network.HostIP,
-			MTU:        vm.Network.MTU,
-			DNSServers: vm.Network.GuestResolvers(),
+			IfaceID:  "eth0",
+			GuestMAC: vm.Network.GuestMAC,
+			GuestIP:  vm.Network.GuestIP,
+			HostIP:   vm.Network.HostIP,
+			MTU:      vm.Network.MTU,
 		}
 	}
 

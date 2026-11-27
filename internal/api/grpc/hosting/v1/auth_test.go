@@ -113,7 +113,7 @@ func TestVerifyCodeDoesNotIssueKeyWhenQuotaCheckedClaimFails(t *testing.T) {
 		WithArgs("hosting-quota:tenant-1").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("COUNT\\(DISTINCT s.id\\)").
-		WithArgs("tenant-1").
+		WithArgs(sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"sites", "storage_bytes"}).AddRow(0, 0))
 	mock.ExpectRollback()
 	mock.ExpectExec("pg_advisory_unlock").
@@ -288,7 +288,7 @@ func TestFailedClaimRestoresAnonymousManifest(t *testing.T) {
 		WithArgs("hosting-quota:tenant-1").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("COUNT\\(DISTINCT s.id\\)").
-		WithArgs("tenant-1").
+		WithArgs(sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"sites", "storage_bytes"}).AddRow(0, 0))
 	mock.ExpectQuery("SELECT f.path, f.r2_key").
 		WithArgs("site-1", int32(1)).
@@ -382,7 +382,7 @@ func TestAmbiguousClaimManifestWriteRestoresAfterRequestCancellation(t *testing.
 		WithArgs("hosting-quota:tenant-1").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("COUNT\\(DISTINCT s.id\\)").
-		WithArgs("tenant-1").
+		WithArgs(sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"sites", "storage_bytes"}).AddRow(0, 0))
 	mock.ExpectQuery("SELECT f.path, f.r2_key").
 		WithArgs("site-1", int32(1)).

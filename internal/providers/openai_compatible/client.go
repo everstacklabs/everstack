@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -59,21 +58,28 @@ func (p *Provider) Name() string {
 
 // Wire types for OpenAI-compatible API
 type openaiMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role       string        `json:"role"`
+	Content    any           `json:"content"`
+	ToolCalls  []gw.ToolCall `json:"tool_calls,omitempty"`
+	ToolCallID string        `json:"tool_call_id,omitempty"`
 }
 
 type openaiChatReq struct {
-	Model            string          `json:"model"`
-	Messages         []openaiMessage `json:"messages"`
-	Temperature      *float64        `json:"temperature,omitempty"`
-	TopP             *float64        `json:"top_p,omitempty"`
-	MaxTokens        int             `json:"max_tokens,omitempty"`
-	ReasoningEffort  string          `json:"reasoning_effort,omitempty"`
-	FrequencyPenalty float64         `json:"frequency_penalty,omitempty"`
-	PresencePenalty  float64         `json:"presence_penalty,omitempty"`
-	TopK             *int            `json:"top_k,omitempty"`
-	Seed             *int64          `json:"seed,omitempty"`
+	Tools             []gw.ToolDefinition `json:"tools,omitempty"`
+	ToolChoice        interface{}         `json:"tool_choice,omitempty"`
+	ParallelToolCalls *bool               `json:"parallel_tool_calls,omitempty"`
+	Stop              []string            `json:"stop,omitempty"`
+	User              string              `json:"user,omitempty"`
+	Model             string              `json:"model"`
+	Messages          []openaiMessage     `json:"messages"`
+	Temperature       *float64            `json:"temperature,omitempty"`
+	TopP              *float64            `json:"top_p,omitempty"`
+	MaxTokens         int                 `json:"max_tokens,omitempty"`
+	ReasoningEffort   string              `json:"reasoning_effort,omitempty"`
+	FrequencyPenalty  float64             `json:"frequency_penalty,omitempty"`
+	PresencePenalty   float64             `json:"presence_penalty,omitempty"`
+	TopK              *int                `json:"top_k,omitempty"`
+	Seed              *int64              `json:"seed,omitempty"`
 }
 
 type openaiChatResp struct {
@@ -81,14 +87,57 @@ type openaiChatResp struct {
 	Model   string `json:"model"`
 	Choices []struct {
 		Message struct {
-			Content string `json:"content"`
+			Content   string        `json:"content"`
+			ToolCalls []gw.ToolCall `json:"tool_calls,omitempty"`
 		} `json:"message"`
+		FinishReason string `json:"finish_reason"`
 	} `json:"choices"`
-	Usage struct {
-		PromptTokens     int `json:"prompt_tokens"`
-		CompletionTokens int `json:"completion_tokens"`
-		TotalTokens      int `json:"total_tokens"`
-	} `json:"usage"`
+	Usage wireUsage `json:"usage"`
+}
+
+// wireUsage is the usage block of an OpenAI-compatible response.
+type wireUsage struct {
+	PromptTokens        int `json:"prompt_tokens"`
+	CompletionTokens    int `json:"completion_tokens"`
+	TotalTokens         int `json:"total_tokens"`
+	PromptTokensDetails *struct {
+		CachedTokens int `json:"cached_tokens"`
+	} `json:"prompt_tokens_details,omitempty"`
+	CompletionTokensDetails *struct {
+		ReasoningTokens int `json:"reasoning_tokens"`
+	} `json:"completion_tokens_details,omitempty"`
+}
+
+// toUsage maps wire usage onto the gateway's OpenAI semantics, where
+// reasoning tokens are part of CompletionTokens.
+//
+// Providers disagree on that. OpenAI counts reasoning inside
+// completion_tokens (total = prompt + completion). xAI counts it outside:
+// its documented responses report completion_tokens 9, reasoning_tokens 110
+// and total_tokens 151 for a 32-token prompt
+// (https://docs.x.ai/developers/rest-api-reference/inference/responses), and
+// bills reasoning at the completion rate
+// (https://docs.x.ai/developers/advanced-api-usage/prompt-caching/usage-and-pricing).
+// Reading completion_tokens alone would bill xAI reasoning at zero, so the
+// reasoning count is folded in when total_tokens shows it was excluded.
+func (w wireUsage) toUsage() gw.Usage {
+	u := gw.Usage{
+		PromptTokens:     w.PromptTokens,
+		CompletionTokens: w.CompletionTokens,
+		TotalTokens:      w.TotalTokens,
+	}
+	if w.PromptTokensDetails != nil {
+		u.PromptDetails = CachedPromptDetails(w.PromptTokensDetails.CachedTokens)
+	}
+	if w.CompletionTokensDetails == nil || w.CompletionTokensDetails.ReasoningTokens <= 0 {
+		return u
+	}
+	reasoning := w.CompletionTokensDetails.ReasoningTokens
+	if w.TotalTokens == w.PromptTokens+w.CompletionTokens+reasoning {
+		u.CompletionTokens += reasoning
+	}
+	u.CompletionDetails = &gw.TokenDetails{ReasoningTokens: reasoning}
+	return u
 }
 
 func optionalTopP(sampling gw.SamplingParams) *float64 {
@@ -99,22 +148,22 @@ func optionalTopP(sampling gw.SamplingParams) *float64 {
 	return &value
 }
 
-// Chat sends a chat completion request (OpenAI-compatible format)
-func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.ChatCompletionResponse, error) {
-	messages := make([]openaiMessage, 0, len(req.Messages))
-	for _, m := range req.Messages {
-		var textContent string
-		for _, c := range m.Content {
-			if c.Type == "text" && c.Text != nil {
-				textContent = *c.Text
-				break
-			}
-		}
+func convertMessages(msgs []gw.Message) []openaiMessage {
+	messages := make([]openaiMessage, 0, len(msgs))
+	for _, m := range msgs {
 		messages = append(messages, openaiMessage{
-			Role:    string(m.Role),
-			Content: textContent,
+			Role:       string(m.Role),
+			Content:    WireContent(m.Content),
+			ToolCalls:  m.ToolCalls,
+			ToolCallID: m.ToolCallID,
 		})
 	}
+	return messages
+}
+
+// Chat sends a chat completion request (OpenAI-compatible format)
+func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.ChatCompletionResponse, error) {
+	messages := convertMessages(req.Messages)
 
 	openaiReq := openaiChatReq{
 		Model:    req.Model,
@@ -125,8 +174,13 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 		temperature := req.Sampling.Temperature
 		openaiReq.Temperature = &temperature
 	}
-	if req.Sampling.MaxTokens > 0 {
-		openaiReq.MaxTokens = req.Sampling.MaxTokens
+	openaiReq.MaxTokens = MaxOutputTokens(req.Sampling)
+	openaiReq.Tools = req.Tools
+	openaiReq.ToolChoice = req.ToolChoice
+	openaiReq.ParallelToolCalls = req.ParallelToolCalls
+	openaiReq.Stop = req.Sampling.Stop
+	if user, ok := req.Metadata["user"].(string); ok {
+		openaiReq.User = user
 	}
 	openaiReq.TopP = optionalTopP(req.Sampling)
 	openaiReq.ReasoningEffort = req.Sampling.ReasoningEffort
@@ -176,8 +230,7 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 	ratelimit.GlobalMonitor.Update(rateLimitInfo)
 
 	if resp.StatusCode >= 400 {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return gw.ChatCompletionResponse{}, fmt.Errorf("%s error: %s", p.name, string(bodyBytes))
+		return gw.ChatCompletionResponse{}, UpstreamError(p.name, resp)
 	}
 
 	var openaiResp openaiChatResp
@@ -195,11 +248,14 @@ func (p *Provider) Chat(ctx context.Context, req gw.ChatCompletionRequest) (gw.C
 		Message: gw.NewMessage(gw.RoleAssistant, gw.Text(content)),
 	}
 
-	usage := gw.Usage{
-		PromptTokens:     openaiResp.Usage.PromptTokens,
-		CompletionTokens: openaiResp.Usage.CompletionTokens,
-		TotalTokens:      openaiResp.Usage.TotalTokens,
+	if len(openaiResp.Choices) > 0 {
+		choice.Message.ToolCalls = openaiResp.Choices[0].Message.ToolCalls
+		choice.FinishReason = openaiResp.Choices[0].FinishReason
+		if len(choice.Message.ToolCalls) > 0 && (choice.FinishReason == "" || choice.FinishReason == "stop") {
+			choice.FinishReason = "tool_calls"
+		}
 	}
+	usage := openaiResp.Usage.toUsage()
 
 	return gw.NewChatResponse(openaiResp.ID, openaiResp.Model, []gw.Choice{choice}, usage), nil
 }
@@ -211,37 +267,25 @@ type openaiStreamResp struct {
 	Choices []struct {
 		Index int `json:"index"`
 		Delta struct {
-			Content string `json:"content"`
+			Content   string        `json:"content"`
+			ToolCalls []gw.ToolCall `json:"tool_calls,omitempty"`
 		} `json:"delta"`
 		FinishReason string `json:"finish_reason"`
 	} `json:"choices"`
-	Usage *struct {
-		PromptTokens     int `json:"prompt_tokens"`
-		CompletionTokens int `json:"completion_tokens"`
-		TotalTokens      int `json:"total_tokens"`
-	} `json:"usage,omitempty"`
+	Usage *wireUsage `json:"usage,omitempty"`
 }
 
 // ChatStream implements streaming for OpenAI-compatible providers (OpenRouter, HuggingFace, etc.).
 func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest, onChunk func(gw.ChatResponseChunk) error) error {
-	messages := make([]openaiMessage, 0, len(req.Messages))
-	for _, m := range req.Messages {
-		var textContent string
-		for _, c := range m.Content {
-			if c.Type == "text" && c.Text != nil {
-				textContent = *c.Text
-				break
-			}
-		}
-		messages = append(messages, openaiMessage{
-			Role:    string(m.Role),
-			Content: textContent,
-		})
-	}
+	messages := convertMessages(req.Messages)
 
+	type streamOptions struct {
+		IncludeUsage bool `json:"include_usage"`
+	}
 	type streamReq struct {
 		openaiChatReq
-		Stream bool `json:"stream"`
+		Stream        bool           `json:"stream"`
+		StreamOptions *streamOptions `json:"stream_options,omitempty"`
 	}
 	oReq := streamReq{
 		openaiChatReq: openaiChatReq{
@@ -249,13 +293,21 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 			Messages: messages,
 		},
 		Stream: true,
+		// Ask for the final usage chunk: without it a platform-key stream
+		// can only be billed on an estimate.
+		StreamOptions: &streamOptions{IncludeUsage: true},
 	}
 	if req.Sampling.Temperature > 0 || req.Sampling.TemperatureConfigured {
 		temperature := req.Sampling.Temperature
 		oReq.Temperature = &temperature
 	}
-	if req.Sampling.MaxTokens > 0 {
-		oReq.MaxTokens = req.Sampling.MaxTokens
+	oReq.MaxTokens = MaxOutputTokens(req.Sampling)
+	oReq.Tools = req.Tools
+	oReq.ToolChoice = req.ToolChoice
+	oReq.ParallelToolCalls = req.ParallelToolCalls
+	oReq.Stop = req.Sampling.Stop
+	if user, ok := req.Metadata["user"].(string); ok {
+		oReq.User = user
 	}
 	oReq.TopP = optionalTopP(req.Sampling)
 	oReq.ReasoningEffort = req.Sampling.ReasoningEffort
@@ -264,32 +316,18 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 	oReq.FrequencyPenalty = req.Sampling.FrequencyPenalty
 	oReq.PresencePenalty = req.Sampling.PresencePenalty
 
-	body, _ := json.Marshal(oReq)
-	httpReq, _ := http.NewRequestWithContext(ctx, "POST", p.cfg.BaseURL+"/chat/completions", bytes.NewReader(body))
-
-	authValue := p.cfg.AuthHeaderValue
-	if authValue == "" {
-		authValue = "Bearer " + p.cfg.APIKey
-	} else {
-		authValue = strings.ReplaceAll(authValue, "{api_key}", p.cfg.APIKey)
+	resp, err := p.sendStream(ctx, oReq, req.Model)
+	if err == nil && (resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusUnprocessableEntity) {
+		// An upstream that rejects stream_options gets one retry without
+		// it; the billing seam then settles an estimate for the stream.
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if !strings.Contains(strings.ToLower(string(bodyBytes)), "stream_options") {
+			return gw.NewUpstreamError(p.name, resp.StatusCode, bodyBytes)
+		}
+		oReq.StreamOptions = nil
+		resp, err = p.sendStream(ctx, oReq, req.Model)
 	}
-	headerName := p.cfg.AuthHeaderName
-	if headerName == "" {
-		headerName = "Authorization"
-	}
-	httpReq.Header.Set(headerName, authValue)
-	httpReq.Header.Set("Content-Type", "application/json")
-
-	cid := correlation.GetCorrelationID(ctx)
-	logger.WithFields(
-		"provider", p.name,
-		"endpoint", p.cfg.BaseURL+"/chat/completions",
-		"model", req.Model,
-		"stream", true,
-		"correlation_id", cid,
-	).Info("provider stream request issued")
-
-	resp, err := p.client.Do(httpReq)
 	if err != nil {
 		return err
 	}
@@ -299,10 +337,10 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 	ratelimit.GlobalMonitor.Update(rateLimitInfo)
 
 	if resp.StatusCode >= 400 {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("%s stream error: %s", p.name, string(bodyBytes))
+		return UpstreamError(p.name, resp)
 	}
 
+	sawFinish := false
 	reader := bufio.NewReader(resp.Body)
 	for {
 		line, err := reader.ReadString('\n')
@@ -329,19 +367,20 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 
 			chunk := gw.NewChatChunk(partial.ID, partial.Model, nil)
 			if partial.Usage != nil {
-				chunk.Usage = &gw.Usage{
-					PromptTokens:     partial.Usage.PromptTokens,
-					CompletionTokens: partial.Usage.CompletionTokens,
-					TotalTokens:      partial.Usage.TotalTokens,
-				}
+				usage := partial.Usage.toUsage()
+				chunk.Usage = &usage
 			}
 			for _, ch := range partial.Choices {
-				if ch.Delta.Content != "" {
+				if ch.FinishReason != "" {
+					sawFinish = true
+				}
+				if ch.Delta.Content != "" || len(ch.Delta.ToolCalls) > 0 || ch.FinishReason != "" {
 					delta := gw.ChoiceDelta{
 						Index:        ch.Index,
 						Delta:        gw.NewMessage(gw.RoleAssistant, gw.Text(ch.Delta.Content)),
 						FinishReason: ch.FinishReason,
 					}
+					delta.Delta.ToolCalls = ch.Delta.ToolCalls
 					chunk.Choices = append(chunk.Choices, delta)
 				}
 			}
@@ -351,10 +390,19 @@ func (p *Provider) ChatStream(ctx context.Context, req gw.ChatCompletionRequest,
 		}
 		if err != nil {
 			if err == io.EOF {
+				if !sawFinish {
+					// Cut off before any finish_reason: an aborted stream,
+					// not a completed one. Servers that omit [DONE] but did
+					// send a finish_reason still end cleanly.
+					return ErrStreamTruncated(p.name)
+				}
 				return nil
 			}
 			return err
 		}
+	}
+	if !sawFinish {
+		return ErrStreamTruncated(p.name)
 	}
 	return nil
 }
@@ -390,6 +438,10 @@ func (p *Provider) Embed(ctx context.Context, req gw.EmbeddingsRequest) (gw.Embe
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode >= 300 {
+		return gw.EmbeddingsResponse{}, UpstreamError(p.name, resp)
+	}
+
 	var openaiResp struct {
 		Data []struct {
 			Embedding []float64 `json:"embedding"`
@@ -400,11 +452,15 @@ func (p *Provider) Embed(ctx context.Context, req gw.EmbeddingsRequest) (gw.Embe
 		return gw.EmbeddingsResponse{}, err
 	}
 
+	var first []float64
 	if len(openaiResp.Data) > 0 {
-		return gw.EmbeddingsResponse{Embedding: openaiResp.Data[0].Embedding}, nil
+		first = openaiResp.Data[0].Embedding
 	}
-
-	return gw.EmbeddingsResponse{Embedding: []float64{}}, nil
+	vec, err := NonEmptyEmbedding(p.name, first)
+	if err != nil {
+		return gw.EmbeddingsResponse{}, err
+	}
+	return gw.EmbeddingsResponse{Embedding: vec}, nil
 }
 
 // SupportsModel checks if a model is supported
@@ -418,4 +474,40 @@ func (p *Provider) SupportsModel(model string) bool {
 		}
 	}
 	return false
+}
+
+// sendStream issues one streaming chat request with payload.
+func (p *Provider) sendStream(ctx context.Context, payload any, model string) (*http.Response, error) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", p.cfg.BaseURL+"/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+
+	authValue := p.cfg.AuthHeaderValue
+	if authValue == "" {
+		authValue = "Bearer " + p.cfg.APIKey
+	} else {
+		authValue = strings.ReplaceAll(authValue, "{api_key}", p.cfg.APIKey)
+	}
+	headerName := p.cfg.AuthHeaderName
+	if headerName == "" {
+		headerName = "Authorization"
+	}
+	httpReq.Header.Set(headerName, authValue)
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	cid := correlation.GetCorrelationID(ctx)
+	logger.WithFields(
+		"provider", p.name,
+		"endpoint", p.cfg.BaseURL+"/chat/completions",
+		"model", model,
+		"stream", true,
+		"correlation_id", cid,
+	).Info("provider stream request issued")
+
+	return p.client.Do(httpReq)
 }

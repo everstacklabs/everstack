@@ -35,8 +35,10 @@ func ExecuteResponseWithCacheOutcome(
 	}
 
 	engine := fastpath.EngineFromContext(ctx)
+	// One cache view of the request: fingerprints are computed once and
+	// shared by the lookups and the stores.
+	adapter := &responseRequestAdapter{req: req}
 	if engine != nil && engine.IsEnabled() {
-		adapter := &responseRequestAdapter{req: req}
 
 		// 1) Exact cache lookup.
 		if cached, found := engine.GetCachedResponseWithContext(ctx, adapter); found {
@@ -53,7 +55,7 @@ func ExecuteResponseWithCacheOutcome(
 		if engine.IsSemanticCacheEnabled() {
 			queryText := extractResponseQueryText(req)
 			if queryText != "" {
-				if cached, found := engine.GetSemanticCachedResponseWithContext(ctx, queryText); found {
+				if cached, found := engine.GetSemanticCachedResponseWithContext(ctx, adapter, queryText); found {
 					var cachedResp gw.CreateResponseResponse
 					if err := fastpath.Unmarshal(cached.Response, &cachedResp); err == nil {
 						engine.RecordFastPathRequest()
@@ -80,14 +82,15 @@ func ExecuteResponseWithCacheOutcome(
 				Model:        resp.Model,
 				OutputTokens: responseOutputTokens(resp.Usage),
 			}
-			adapter := &responseRequestAdapter{req: req}
 			engine.CacheResponseWithContext(ctx, adapter, cachedResp)
 			outcome.Stored = true
 
 			if engine.IsSemanticCacheEnabled() {
 				queryText := extractResponseQueryText(req)
 				if queryText != "" {
-					go engine.CacheSemanticResponseWithContext(context.Background(), queryText, cachedResp)
+					// Detach from cancellation but keep the tenant identity:
+					// semantic entries are tenant-owned.
+					go engine.CacheSemanticResponseWithContext(context.WithoutCancel(ctx), adapter, queryText, cachedResp)
 					outcome.SemanticStored = true
 				}
 			}
@@ -98,7 +101,8 @@ func ExecuteResponseWithCacheOutcome(
 }
 
 type responseRequestAdapter struct {
-	req gw.CreateResponseRequest
+	req  gw.CreateResponseRequest
+	memo cache.FingerprintMemo
 }
 
 func (a *responseRequestAdapter) GetModel() string        { return a.req.Model }
@@ -106,6 +110,12 @@ func (a *responseRequestAdapter) GetTemperature() float64 { return a.req.Tempera
 func (a *responseRequestAdapter) GetMaxTokens() int       { return a.req.MaxOutputTokens }
 func (a *responseRequestAdapter) GetTopP() float64        { return a.req.TopP }
 func (a *responseRequestAdapter) GetStream() bool         { return a.req.Stream }
+func (a *responseRequestAdapter) CacheFingerprint() []byte {
+	return a.memo.Exact(func() []byte { return gw.ResponseCacheFingerprint(a.req) })
+}
+func (a *responseRequestAdapter) SemanticContextFingerprint() []byte {
+	return a.memo.Semantic(func() []byte { return gw.ResponseSemanticContextFingerprint(a.req) })
+}
 
 func (a *responseRequestAdapter) GetMessages() []cache.Message {
 	msgs := make([]cache.Message, 0, len(a.req.Input)+4)

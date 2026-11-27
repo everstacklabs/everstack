@@ -30,3 +30,4 @@ parameters:
     has_min_value: true
     max_value: 262144
     has_max_value: true
+notes: "Moonshot closed the K2 series to newly registered users on 2026-10-31 and plans to retire all K2 models by the end of December 2026. Migrate to kimi-k3.1-pro."

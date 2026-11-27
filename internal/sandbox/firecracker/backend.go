@@ -208,6 +208,25 @@ func (b *FirecrackerBackend) TrackedIDs() map[string]struct{} {
 // know where on disk to look.
 func (b *FirecrackerBackend) WorkDir() string { return b.config.WorkDir }
 
+// RootfsDir returns the directory holding the base and per-tag rootfs
+// images. Used by the rootfs GC.
+func (b *FirecrackerBackend) RootfsDir() string { return b.config.RootfsDir }
+
+// TrackedImages returns the image reference of every VM this backend
+// tracks, so the rootfs GC never removes the image a live VM was created
+// from. Warm-pool VMs always boot base.ext4, which the GC keeps anyway.
+func (b *FirecrackerBackend) TrackedImages() []string {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	images := make([]string, 0, len(b.vms))
+	for _, vm := range b.vms {
+		if vm != nil && vm.Config.Image != "" {
+			images = append(images, vm.Config.Image)
+		}
+	}
+	return images
+}
+
 // PoolMaxTotal returns the configured hard cap on this node's total VM
 // count (warm + active). Used by the pressure collector to compute
 // remaining capacity for the placement signal. Zero when the pool is
@@ -1004,17 +1023,31 @@ func applyPortMapping(pm *firecrackerPortMapping) error {
 	guest := net.JoinHostPort(pm.GuestIP, strconv.Itoa(pm.GuestPort))
 	guestPort := strconv.Itoa(pm.GuestPort)
 
-	if err := runCmd("iptables", "-t", "nat", "-I", "PREROUTING", "1", "-p", pm.Protocol, "--dport", hostPort, "-j", "DNAT", "--to-destination", guest); err != nil {
+	// Neither the DNAT nor the FORWARD accept may match traffic that
+	// arrives from a guest TAP. Without the interface exclusion, guest A
+	// could address any host-local address on B's host port and be
+	// DNATed straight into B, and A's packets to B's mapped port would be
+	// accepted by this FORWARD rule ahead of A's own isolation chain. The
+	// shared guest deny guard (guest_deny.go) drops both before they get
+	// here; the exclusion keeps these rules correct on their own.
+	if err := runCmd("iptables", "-t", "nat", "-I", "PREROUTING", "1", "!", "-i", guestIfaceWildcard, "-p", pm.Protocol, "--dport", hostPort, "-j", "DNAT", "--to-destination", guest); err != nil {
 		return fmt.Errorf("failed to add PREROUTING rule: %w", err)
 	}
 	if err := runCmd("iptables", "-t", "nat", "-I", "OUTPUT", "1", "-p", pm.Protocol, "-d", "127.0.0.1", "--dport", hostPort, "-j", "DNAT", "--to-destination", guest); err != nil {
-		_ = runCmd("iptables", "-t", "nat", "-D", "PREROUTING", "-p", pm.Protocol, "--dport", hostPort, "-j", "DNAT", "--to-destination", guest)
+		_ = runCmd("iptables", "-t", "nat", "-D", "PREROUTING", "!", "-i", guestIfaceWildcard, "-p", pm.Protocol, "--dport", hostPort, "-j", "DNAT", "--to-destination", guest)
 		return fmt.Errorf("failed to add OUTPUT rule: %w", err)
 	}
-	if err := runCmd("iptables", "-I", "FORWARD", "1", "-p", pm.Protocol, "-d", pm.GuestIP, "--dport", guestPort, "-j", "ACCEPT"); err != nil {
+	if err := runCmd("iptables", "-I", "FORWARD", "1", "!", "-i", guestIfaceWildcard, "-p", pm.Protocol, "-d", pm.GuestIP, "--dport", guestPort, "-j", "ACCEPT"); err != nil {
 		_ = runCmd("iptables", "-t", "nat", "-D", "OUTPUT", "-p", pm.Protocol, "-d", "127.0.0.1", "--dport", hostPort, "-j", "DNAT", "--to-destination", guest)
-		_ = runCmd("iptables", "-t", "nat", "-D", "PREROUTING", "-p", pm.Protocol, "--dport", hostPort, "-j", "DNAT", "--to-destination", guest)
+		_ = runCmd("iptables", "-t", "nat", "-D", "PREROUTING", "!", "-i", guestIfaceWildcard, "-p", pm.Protocol, "--dport", hostPort, "-j", "DNAT", "--to-destination", guest)
 		return fmt.Errorf("failed to add FORWARD rule: %w", err)
+	}
+	// The FORWARD insert above displaced the shared guest deny jump from
+	// position 1. Harmless on its own (this rule never matches a TAP
+	// source), but the invariant "deny first" is what verification and
+	// the re-assert loop check, so restore it here rather than wait a tick.
+	if err := reassertGuestDenyJumps(); err != nil {
+		return fmt.Errorf("re-assert guest deny jumps after port mapping: %w", err)
 	}
 	return nil
 }
@@ -1031,9 +1064,27 @@ func removePortMapping(pm *firecrackerPortMapping) error {
 		}
 	}
 
-	tryDelete("-D", "FORWARD", "-p", pm.Protocol, "-d", pm.GuestIP, "--dport", guestPort, "-j", "ACCEPT")
+	// Current form first; the pre-guard form (no interface exclusion) is
+	// retried silently so a mapping installed by an older agent build
+	// still comes out cleanly after an upgrade.
+	tryDeleteEither := func(current, legacy []string) {
+		if err := runCmd("iptables", current...); err == nil {
+			return
+		}
+		if err := runCmd("iptables", legacy...); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+
+	tryDeleteEither(
+		[]string{"-D", "FORWARD", "!", "-i", guestIfaceWildcard, "-p", pm.Protocol, "-d", pm.GuestIP, "--dport", guestPort, "-j", "ACCEPT"},
+		[]string{"-D", "FORWARD", "-p", pm.Protocol, "-d", pm.GuestIP, "--dport", guestPort, "-j", "ACCEPT"},
+	)
 	tryDelete("-t", "nat", "-D", "OUTPUT", "-p", pm.Protocol, "-d", "127.0.0.1", "--dport", hostPort, "-j", "DNAT", "--to-destination", guest)
-	tryDelete("-t", "nat", "-D", "PREROUTING", "-p", pm.Protocol, "--dport", hostPort, "-j", "DNAT", "--to-destination", guest)
+	tryDeleteEither(
+		[]string{"-t", "nat", "-D", "PREROUTING", "!", "-i", guestIfaceWildcard, "-p", pm.Protocol, "--dport", hostPort, "-j", "DNAT", "--to-destination", guest},
+		[]string{"-t", "nat", "-D", "PREROUTING", "-p", pm.Protocol, "--dport", hostPort, "-j", "DNAT", "--to-destination", guest},
+	)
 
 	if firstErr != nil {
 		return fmt.Errorf("failed to remove firecracker port mapping host=%d guest=%s:%d: %w", pm.HostPort, pm.GuestIP, pm.GuestPort, firstErr)

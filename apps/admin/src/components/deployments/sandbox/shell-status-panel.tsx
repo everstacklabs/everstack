@@ -32,14 +32,14 @@ export function ShellStatusPanel({
     onReconnect,
 }: ShellStatusPanelProps) {
     const stateColor = isGone
-        ? 'bg-red-500'
+        ? 'bg-danger-solid'
         : isConnected
-          ? 'bg-green-500'
+          ? 'bg-success-solid'
           : isRecovering
-            ? 'bg-sky-400 animate-pulse'
+            ? 'bg-info-solid animate-pulse'
             : isReconnecting
-              ? 'bg-yellow-500 animate-pulse'
-              : 'bg-red-500'
+              ? 'bg-warning-solid animate-pulse'
+              : 'bg-danger-solid'
 
     const stateLabel = isGone
         ? 'Sandbox no longer running'

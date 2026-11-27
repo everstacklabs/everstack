@@ -84,7 +84,7 @@ const MODE_META: Array<{ id: WorkbenchMode; label: string; icon: typeof Sparkles
 
 const TASK_META: Record<TaskType, { label: string; icon: typeof MessageSquare; color: string }> = {
     prompt: { label: 'Prompt', icon: MessageSquare, color: 'text-brand-secondary-300' },
-    workflow: { label: 'Workflow', icon: Workflow, color: 'text-amber-300' },
+    workflow: { label: 'Workflow', icon: Workflow, color: 'text-warning' },
     remote: { label: 'Remote eval', icon: Globe, color: 'text-sky-300' },
     scorer: { label: 'Scorer', icon: Triangle, color: 'text-emerald-300' },
 }
@@ -476,7 +476,7 @@ function CommandHeader({
                         <button
                             type="button"
                             onClick={onStopAll}
-                            className="inline-flex items-center gap-1.5 rounded border border-rose-400/50 bg-rose-500/10 px-2 py-1 text-xs text-rose-300 transition-colors hover:text-rose-200"
+                            className="inline-flex items-center gap-1.5 rounded border border-danger-border bg-danger-surface px-2 py-1 text-xs text-danger transition-colors"
                         >
                             <Square className="h-3.5 w-3.5" />
                             Stop all
@@ -496,7 +496,7 @@ function CommandHeader({
                         <button
                             type="button"
                             onClick={onStopActive}
-                            className="inline-flex items-center gap-1.5 rounded border border-rose-400/50 bg-rose-500/10 px-2 py-1 text-xs text-rose-300 transition-colors hover:text-rose-200"
+                            className="inline-flex items-center gap-1.5 rounded border border-danger-border bg-danger-surface px-2 py-1 text-xs text-danger transition-colors"
                         >
                             <Square className="h-3.5 w-3.5" />
                             Stop task
@@ -628,7 +628,7 @@ function TaskRail({
                                             onRemove(variant.id)
                                         }
                                     }}
-                                    className="mt-0.5 text-white/0 transition-colors group-hover:text-white/35 hover:!text-rose-300 light:text-black/0 light:group-hover:text-black/35"
+                                    className="mt-0.5 text-white/0 transition-colors group-hover:text-white/35 hover:!text-danger light:text-black/0 light:group-hover:text-black/35"
                                     aria-label="Remove task"
                                 >
                                     <X className="h-3.5 w-3.5" />
@@ -714,7 +714,7 @@ function PromptStudio({
                         <button
                             type="button"
                             onClick={onStop}
-                            className="inline-flex items-center gap-1.5 rounded border border-rose-400/50 bg-rose-500/10 px-2 py-1 text-xs text-rose-300 transition-colors hover:text-rose-200"
+                            className="inline-flex items-center gap-1.5 rounded border border-danger-border bg-danger-surface px-2 py-1 text-xs text-danger transition-colors"
                         >
                             <Square className="h-3.5 w-3.5" />
                             Stop
@@ -765,7 +765,7 @@ function VariableStrip({ variables }: { variables: string[] }) {
                         className={
                             variable === 'input' || variable === 'expected'
                                 ? 'text-brand-secondary-300'
-                                : 'text-amber-300'
+                                : 'text-warning'
                         }
                     >
                         {'{{'}
@@ -963,7 +963,7 @@ function SettingsRail({
                             Dataset variables are ready for input and expected fields.
                         </p>
                     ) : (
-                        <p className="text-xs leading-relaxed text-amber-300/85">
+                        <p className="text-xs leading-relaxed text-warning/85">
                             Unsupported fields: {unsupportedVariables.join(', ')}
                         </p>
                     )}
@@ -1043,7 +1043,7 @@ function TryConsole({
                     Task output
                 </div>
                 {run?.status === 'error' ? (
-                    <div className="text-sm leading-relaxed text-rose-300">{run.error}</div>
+                    <div className="text-sm leading-relaxed text-danger">{run.error}</div>
                 ) : run?.text ? (
                     <div className="space-y-3">
                         <div className="whitespace-pre-wrap text-sm leading-relaxed text-white/85 light:text-black/85">

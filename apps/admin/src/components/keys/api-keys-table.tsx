@@ -106,7 +106,7 @@ export const ApiKeysTable = ({ apiKeys }: { apiKeys: ApiKey[] }) => {
     const getTypeBadgeColor = (type: ApiKeyType) => {
         switch (type) {
             case ApiKeyType.USER:
-                return 'bg-blue-500/20 text-blue-300 light:text-blue-600'
+                return 'bg-info-surface-strong text-info'
             case ApiKeyType.ORG:
                 return 'bg-purple-500/20 text-purple-300 light:text-purple-600'
             default:
@@ -181,7 +181,7 @@ export const ApiKeysTable = ({ apiKeys }: { apiKeys: ApiKey[] }) => {
                 <div className='flex items-center gap-2 justify-center'>
                     <button
                         type='button'
-                        className='p-1 rounded hover:bg-blue-500/20 hover:text-blue-400 light:hover:text-blue-600 transition-colors'
+                        className='p-1 rounded hover:bg-info-surface-strong hover:text-info transition-colors'
                         onClick={handleRegenerate}
                         title='Regenerate API key (creates new key, revokes old one)'
                     >
@@ -189,7 +189,7 @@ export const ApiKeysTable = ({ apiKeys }: { apiKeys: ApiKey[] }) => {
                     </button>
                     <button
                         type='button'
-                        className='p-1 rounded hover:bg-red-500/20 hover:text-red-400 light:hover:text-red-600 transition-colors'
+                        className='p-1 rounded hover:bg-danger-surface-strong hover:text-danger transition-colors'
                         onClick={() => setDeleteConfirmId(apiKey.id)}
                         title='Delete API key'
                     >

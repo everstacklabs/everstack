@@ -114,6 +114,15 @@ const (
 	StageProvider       = "provider"
 	StageStreaming      = "streaming"
 	StageEncode         = "encode"
+	// Gateway-overhead attribution stages for processChatCompletion
+	// (EVS-83 perf work). Normalize/resolve/telemetry all record into the
+	// telemetry histogram: together they are "time spent in the gateway
+	// itself, excluding cache and upstream provider". Provider records
+	// upstream time separately, so provider-vs-overhead splits read
+	// directly off the two histograms.
+	StageNormalize = "normalize"
+	StageResolve   = "resolve"
+	StageTelemetry = "telemetry"
 )
 
 // FastPathMetrics holds aggregated metrics for the fast-path gateway.
@@ -124,6 +133,8 @@ type FastPathMetrics struct {
 	cacheHist      *histogram
 	semanticHist   *histogram
 	streamingHist  *histogram
+	providerHist   *histogram
+	telemetryHist  *histogram
 	totalHist      *histogram
 	embeddingsHist *histogram
 
@@ -165,11 +176,15 @@ var globalMetrics = newFastPathMetrics()
 func newFastPathMetrics() *FastPathMetrics {
 	return &FastPathMetrics{
 		// Buckets in microseconds: 1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000
-		authHist:       newHistogram([]float64{1, 5, 10, 25, 50, 100, 250, 500, 1000}),
-		routingHist:    newHistogram([]float64{1, 5, 10, 25, 50}),
-		cacheHist:      newHistogram([]float64{10, 25, 50, 100, 250, 500, 1000}),
-		semanticHist:   newHistogram([]float64{100, 250, 500, 1000, 2500, 5000}), // Semantic is slower than exact
-		streamingHist:  newHistogram([]float64{10, 25, 50, 100, 250, 500}),
+		authHist:      newHistogram([]float64{1, 5, 10, 25, 50, 100, 250, 500, 1000}),
+		routingHist:   newHistogram([]float64{1, 5, 10, 25, 50}),
+		cacheHist:     newHistogram([]float64{10, 25, 50, 100, 250, 500, 1000}),
+		semanticHist:  newHistogram([]float64{100, 250, 500, 1000, 2500, 5000}), // Semantic is slower than exact
+		streamingHist: newHistogram([]float64{10, 25, 50, 100, 250, 500}),
+		// Upstream provider time in microseconds: 10ms to 30s.
+		providerHist: newHistogram([]float64{10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2500000, 5000000, 10000000, 30000000}),
+		// In-gateway overhead (normalize/resolve/telemetry attrs) in microseconds: 100us to 250ms.
+		telemetryHist:  newHistogram([]float64{100, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000}),
 		totalHist:      newHistogram([]float64{100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000}),
 		embeddingsHist: newHistogram([]float64{50000, 100000, 250000, 500000, 1000000, 2500000}), // Embeddings in microseconds (50ms-2.5s)
 	}
@@ -188,6 +203,10 @@ func (m *FastPathMetrics) recordStage(name string, d time.Duration) {
 		m.semanticHist.observe(us)
 	case StageStreaming, StageEncode:
 		m.streamingHist.observe(us)
+	case StageProvider:
+		m.providerHist.observe(us)
+	case StageNormalize, StageResolve, StageTelemetry:
+		m.telemetryHist.observe(us)
 	}
 }
 
@@ -282,6 +301,8 @@ type MetricsSnapshot struct {
 	RoutingP50, RoutingP99        float64
 	CacheP50, CacheP99            float64
 	StreamingP50, StreamingP99    float64
+	ProviderP50, ProviderP99      float64
+	TelemetryP50, TelemetryP99    float64
 	TotalP50, TotalP99, TotalP999 float64
 	EmbeddingsP50, EmbeddingsP99  float64
 
@@ -342,6 +363,10 @@ func GetMetricsSnapshot() MetricsSnapshot {
 		CacheP99:               m.cacheHist.percentile(0.99),
 		StreamingP50:           m.streamingHist.percentile(0.50),
 		StreamingP99:           m.streamingHist.percentile(0.99),
+		ProviderP50:            m.providerHist.percentile(0.50),
+		ProviderP99:            m.providerHist.percentile(0.99),
+		TelemetryP50:           m.telemetryHist.percentile(0.50),
+		TelemetryP99:           m.telemetryHist.percentile(0.99),
 		TotalP50:               m.totalHist.percentile(0.50),
 		TotalP99:               m.totalHist.percentile(0.99),
 		TotalP999:              m.totalHist.percentile(0.999),

@@ -36,6 +36,21 @@ func (r *AuthConfigRepository) Get(ctx context.Context) (*domain.AuthConfig, err
 	return &cfg, nil
 }
 
+// MarkCloudManaged switches the instance to cloud auth mode without recording
+// any organization, workspace or URL. A managed gateway shares one auth_config
+// row across every tenant, so per-tenant columns have no correct value there;
+// the mode itself is tenant-independent. Idempotent: rows already in cloud
+// mode are left untouched.
+func (r *AuthConfigRepository) MarkCloudManaged(ctx context.Context) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE auth_config
+		SET auth_mode = 'cloud',
+		    updated_at = NOW()
+		WHERE auth_mode IS DISTINCT FROM 'cloud'
+	`)
+	return err
+}
+
 func (r *AuthConfigRepository) SetCloudManaged(ctx context.Context, organizationID, organizationSlug, workspaceID, workspaceSlug, gatewayURL string) error {
 	connectedAt := time.Now().UTC()
 	_, err := r.db.ExecContext(ctx, `

@@ -1,0 +1,83 @@
+chat:
+  - deepseek-ai/DeepSeek-V4.1-Flash-1017
+  - deepseek-ai/DeepSeek-V4-Pro-0813
+  - zai-org/GLM-5.3
+  - zai-org/GLM-5.3-Flash
+  - zai-org/GLM-5.2
+  - NousResearch/Hermes-4-405B
+  - thinkingmachines/Inkling-2-Small
+  - reflection/beam
+  - openai/gpt-oss-120b
+  - MiniMaxAI/MiniMax-M3.1-Flash
+  - MiniMaxAI/MiniMax-M3
+  - nvidia/Nemotron-3-Ultra-550b-a55b
+  - nvidia/Nemotron-3_5-Lightning
+  - nvidia/nemotron-3-super-120b-a12b
+  - nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B
+  - nvidia/Nemotron-3.5-Super-VL
+  - google/gemma-3-27b-it
+  - Qwen/Qwen3-30B-A3B-Instruct-2507
+  - Qwen/Qwen3-235B-A22B-Instruct-2507
+  - Qwen/Qwen3.8-27B
+  - moonshotai/Kimi-K3.1-Pro
+  - moonshotai/Kimi-K3
+  - meta-models/muse-spark-open
+
+function_calling:
+  - deepseek-ai/DeepSeek-V4.1-Flash-1017
+  - deepseek-ai/DeepSeek-V4-Pro-0813
+  - zai-org/GLM-5.3
+  - zai-org/GLM-5.3-Flash
+  - zai-org/GLM-5.2
+  - NousResearch/Hermes-4-405B
+  - thinkingmachines/Inkling-2-Small
+  - reflection/beam
+  - openai/gpt-oss-120b
+  - MiniMaxAI/MiniMax-M3.1-Flash
+  - MiniMaxAI/MiniMax-M3
+  - nvidia/Nemotron-3-Ultra-550b-a55b
+  - nvidia/Nemotron-3_5-Lightning
+  - nvidia/nemotron-3-super-120b-a12b
+  - nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B
+  - nvidia/Nemotron-3.5-Super-VL
+  - google/gemma-3-27b-it
+  - Qwen/Qwen3-30B-A3B-Instruct-2507
+  - Qwen/Qwen3-235B-A22B-Instruct-2507
+  - Qwen/Qwen3.8-27B
+  - moonshotai/Kimi-K3.1-Pro
+  - moonshotai/Kimi-K3
+  - meta-models/muse-spark-open
+
+reasoning:
+  - deepseek-ai/DeepSeek-V4.1-Flash-1017
+  - deepseek-ai/DeepSeek-V4-Pro-0813
+  - zai-org/GLM-5.3
+  - zai-org/GLM-5.3-Flash
+  - zai-org/GLM-5.2
+  - NousResearch/Hermes-4-405B
+  - thinkingmachines/Inkling-2-Small
+  - reflection/beam
+  - openai/gpt-oss-120b
+  - MiniMaxAI/MiniMax-M3.1-Flash
+  - MiniMaxAI/MiniMax-M3
+  - nvidia/Nemotron-3-Ultra-550b-a55b
+  - nvidia/Nemotron-3_5-Lightning
+  - nvidia/nemotron-3-super-120b-a12b
+  - nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B
+  - nvidia/Nemotron-3.5-Super-VL
+  - Qwen/Qwen3.8-27B
+  - moonshotai/Kimi-K3.1-Pro
+  - moonshotai/Kimi-K3
+  - meta-models/muse-spark-open
+
+vision:
+  - deepseek-ai/DeepSeek-V4.1-Flash-1017
+  - zai-org/GLM-5.3-Flash
+  - thinkingmachines/Inkling-2-Small
+  - MiniMaxAI/MiniMax-M3.1-Flash
+  - nvidia/Nemotron-3.5-Super-VL
+  - google/gemma-3-27b-it
+  - Qwen/Qwen3.8-27B
+  - moonshotai/Kimi-K3.1-Pro
+  - moonshotai/Kimi-K3
+  - meta-models/muse-spark-open

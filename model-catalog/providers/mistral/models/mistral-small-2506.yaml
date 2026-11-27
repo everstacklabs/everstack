@@ -1,7 +1,7 @@
 name: "mistral-small-2506"
 display_name: "Mistral Small 3.2"
 family: "mistral-small"
-status: "stable"
+status: "deprecated"
 release_date: "2025-06-20"
 
 cost:
@@ -22,7 +22,7 @@ modalities:
   output: ["text"]
 
 knowledge_cutoff: "2025-03"
-notes: "Efficient Mistral model for fast chat, extraction, and production assistants"
+notes: "Deprecated by Mistral; retirement date 2026-07-31 has passed. Replacement: Mistral Small 4 (mistral-small-latest)."
 parameters:
   - key: "max_output_tokens"
     display_name: "Max output tokens"

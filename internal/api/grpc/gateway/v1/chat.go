@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/everstacklabs/everstack/internal/activity"
 	"github.com/everstacklabs/everstack/internal/api/common"
+	"github.com/everstacklabs/everstack/internal/billingmeter"
 	"github.com/everstacklabs/everstack/internal/commands/handlers/gateway"
 	"github.com/everstacklabs/everstack/internal/cqrs"
 	"github.com/everstacklabs/everstack/internal/database"
@@ -160,7 +162,7 @@ func (s *Server) ChatCompletion(ctx context.Context, req *connect.Request[gatewa
 
 	// NOTE: ************** MOCK PATH **************
 	// Baseline mock path: when X-MF-Mock: true is present, short-circuit provider call
-	if strings.EqualFold(req.Header().Get("X-MF-Mock"), "true") {
+	if mockPathEnabled() && strings.EqualFold(req.Header().Get("X-MF-Mock"), "true") {
 		logger.WithFields(
 			"correlation_id", correlationID,
 			"procedure", "ChatCompletion",
@@ -186,8 +188,19 @@ func (s *Server) ChatCompletion(ctx context.Context, req *connect.Request[gatewa
 	// after model validation succeeds, to avoid creating session.started
 	// events for requests that fail early (e.g., model not found)
 
+	// The model trial gate notes the organization's remaining free
+	// requests here; the header goes out with the first message.
+	ctx, trialNote := billingmeter.WithModelTrialNote(ctx)
+	trialHeaderSent := false
+
 	// Wrap send callback to add fallback headers if present
 	retErr = processChatCompletion(ctx, s, req.Msg, func(r *gatewaypb.ChatCompletionResponse) error {
+		if !trialHeaderSent {
+			if v, ok := modelTrialHeader(trialNote); ok {
+				stream.ResponseHeader().Set(common.EverstackModelTrial, v)
+			}
+			trialHeaderSent = true
+		}
 		// Add fallback headers if fallback was used
 		if r.FallbackInfo != nil && r.FallbackInfo.FallbackUsed {
 			// Emit canonical x-evs-* and legacy x-mf-* response headers so
@@ -216,7 +229,11 @@ func (s *Server) ChatCompletion(ctx context.Context, req *connect.Request[gatewa
 }
 
 // Classic gRPC ChatCompletion
-func (g *GrpcServer) ChatCompletion(req *gatewaypb.ChatCompletionRequest, srv gatewaypb.GatewayService_ChatCompletionServer) error {
+func (g *GrpcServer) ChatCompletion(req *gatewaypb.ChatCompletionRequest, srv gatewaypb.GatewayService_ChatCompletionServer) (retErr error) {
+	// processChatCompletion reports statuses as Connect errors; the classic
+	// gRPC server only understands GRPCStatus, so translate on the way out.
+	defer func() { retErr = connectToGRPCError(retErr) }()
+
 	// Prepare metadata for headers (correlation ID + fallback info)
 	headerMD := metadata.New(map[string]string{})
 
@@ -237,7 +254,7 @@ func (g *GrpcServer) ChatCompletion(req *gatewaypb.ChatCompletionRequest, srv ga
 		if len(vals) == 0 {
 			vals = md.Get("x-mf-mock")
 		}
-		if len(vals) > 0 && strings.EqualFold(vals[0], "true") {
+		if mockPathEnabled() && len(vals) > 0 && strings.EqualFold(vals[0], "true") {
 			cid := correlation.GetCorrelationID(srv.Context())
 			mockTid := database.TenantSchemaFromContext(srv.Context())
 			if mockTid == "" {
@@ -279,6 +296,8 @@ func (g *GrpcServer) ChatCompletion(req *gatewaypb.ChatCompletionRequest, srv ga
 			}
 		}
 		ctx := g.base.withKeySourceFromHeaders(srv.Context(), hdr)
+		ctx, trialNote := billingmeter.WithModelTrialNote(ctx)
+		trialHeaderSent := false
 
 		// NOTE: CQRS command dispatch happens INSIDE processChatCompletion
 		// after model validation succeeds, to avoid creating session.started
@@ -286,6 +305,12 @@ func (g *GrpcServer) ChatCompletion(req *gatewaypb.ChatCompletionRequest, srv ga
 
 		// Wrap send callback to add fallback headers if present
 		return processChatCompletion(ctx, g.base, req, func(r *gatewaypb.ChatCompletionResponse) error {
+			if !trialHeaderSent {
+				if v, ok := modelTrialHeader(trialNote); ok {
+					_ = srv.SetHeader(metadata.Pairs(common.EverstackModelTrial, v))
+				}
+				trialHeaderSent = true
+			}
 			// Add fallback headers if fallback was used
 			if r.FallbackInfo != nil && r.FallbackInfo.FallbackUsed {
 				fallbackMD := metadata.New(map[string]string{
@@ -316,8 +341,17 @@ func (g *GrpcServer) ChatCompletion(req *gatewaypb.ChatCompletionRequest, srv ga
 	// after model validation succeeds, to avoid creating session.started
 	// events for requests that fail early (e.g., model not found)
 
+	ctx, trialNote := billingmeter.WithModelTrialNote(srv.Context())
+	trialHeaderSent := false
+
 	// Wrap send callback to add fallback headers if present
-	return processChatCompletion(srv.Context(), g.base, req, func(r *gatewaypb.ChatCompletionResponse) error {
+	return processChatCompletion(ctx, g.base, req, func(r *gatewaypb.ChatCompletionResponse) error {
+		if !trialHeaderSent {
+			if v, ok := modelTrialHeader(trialNote); ok {
+				_ = srv.SetHeader(metadata.Pairs(common.EverstackModelTrial, v))
+			}
+			trialHeaderSent = true
+		}
 		// Add fallback headers if fallback was used
 		if r.FallbackInfo != nil && r.FallbackInfo.FallbackUsed {
 			fallbackMD := metadata.New(map[string]string{
@@ -516,4 +550,13 @@ func (s *Server) extractAPIKey(ctx context.Context) string {
 		}
 	}
 	return ""
+}
+
+// mockPathEnabled gates the mock short-circuit to non-production
+// deployments. The mock path skips providers and therefore the billing seam;
+// in production a customer-controlled header must not turn a request into an
+// unmetered one. EVS_ENV defaults to production when unset (cmd/serve).
+func mockPathEnabled() bool {
+	env := strings.ToLower(strings.TrimSpace(os.Getenv("EVS_ENV")))
+	return env != "" && env != "production" && env != "prod"
 }

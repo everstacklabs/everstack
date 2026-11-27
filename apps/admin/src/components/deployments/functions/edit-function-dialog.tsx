@@ -249,7 +249,7 @@ export function EditFunctionDialog({
             <span
               className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
                 enabled
-                  ? 'bg-emerald-500/15 text-emerald-300 light:text-emerald-600 border border-emerald-500/25'
+                  ? 'bg-success-surface-strong text-success border border-success-border'
                   : 'bg-brand-main-500/30 text-brand-main-200 border border-brand-main-500/25'
               }`}
             >

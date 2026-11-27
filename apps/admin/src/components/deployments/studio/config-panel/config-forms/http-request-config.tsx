@@ -73,7 +73,7 @@ export function HttpRequestConfigForm({ config, onChange }: Props) {
                             <button
                                 type="button"
                                 onClick={() => removeHeader(i)}
-                                className="text-brand-main-400 hover:text-red-400 light:hover:text-red-600 px-1 text-sm"
+                                className="text-brand-main-400 hover:text-danger px-1 text-sm"
                             >
                                 &times;
                             </button>

@@ -22,6 +22,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 
+	agentrt "github.com/everstacklabs/everstack/internal/agents/runtime"
 	"github.com/everstacklabs/everstack/internal/lib/logger"
 	"github.com/everstacklabs/everstack/internal/memory"
 	"github.com/everstacklabs/everstack/internal/query"
@@ -67,6 +68,8 @@ type Runner struct {
 	// allowUnsandboxedScorers gates in-process execution of code scorers with
 	// use_sandbox=false. Zero value (false) means such scorers are refused.
 	allowUnsandboxedScorers bool
+
+	tenantGate tenantGate
 }
 
 const (
@@ -75,6 +78,15 @@ const (
 )
 
 var errEvalRunLeaseLost = errors.New("eval run lease lost")
+
+// SetTenantActiveFn installs the check that keeps paused tenants' eval runs
+// from executing. A claimed run whose tenant is paused is returned to pending
+// (no attempt counted, not failed) and its lease is pushed out by
+// pausedTenantRetryDelay so it is retried after resume without hot-looping.
+// nil treats every tenant as active. Safe for concurrent use.
+func (r *Runner) SetTenantActiveFn(fn func(ctx context.Context, tenantID string) bool) {
+	r.tenantGate.set(fn)
+}
 
 // SetRegressionNotifier sets the notifier that fires alerts on regressions.
 // Called after alert system initialization (which happens after runner start).
@@ -169,6 +181,11 @@ func (r *Runner) tick(ctx context.Context) {
 			continue
 		}
 
+		if !r.tenantGate.active(ctx, run.TenantID) {
+			r.deferPausedRun(ctx, run, claim.LeaseEpoch)
+			continue
+		}
+
 		go func(run evalRunRow, leaseEpoch int64) {
 			if err := r.processRun(ctx, run, leaseEpoch); err != nil {
 				logger.WithFields("eval_run_id", run.ID).WithError(err).Warn("eval_runner: run processing failed")
@@ -215,6 +232,28 @@ func (r *Runner) claimRuns(ctx context.Context) ([]claimedEvalRun, error) {
 	return claims, err
 }
 
+// deferPausedRun hands a claimed run of a paused tenant back: status returns
+// to pending and the lease is parked under pausedLeaseOwner until
+// pausedTenantRetryDelay from now, after which any worker may claim it again
+// (and re-check the tenant). Nothing is counted as an attempt or a failure.
+func (r *Runner) deferPausedRun(ctx context.Context, run evalRunRow, leaseEpoch int64) {
+	logger.WithFields("tenant_id", run.TenantID, "eval_run_id", run.ID).
+		Info("eval_runner: tenant paused, deferring eval run")
+	delaySeconds := int64(pausedTenantRetryDelay.Seconds())
+	if _, err := r.db.ExecContext(ctx, `
+		UPDATE eval_runs
+		SET status = 'pending',
+			lease_owner = $4,
+			lease_expires_at = NOW() + ($5 * INTERVAL '1 second'),
+			updated_at = NOW()
+		WHERE id = $1 AND lease_owner = $2 AND lease_epoch = $3 AND status = 'running'
+	`, run.ID, r.workerID, leaseEpoch, pausedLeaseOwner, delaySeconds); err != nil {
+		logger.WithFields("tenant_id", run.TenantID, "eval_run_id", run.ID).WithError(err).
+			Warn("eval_runner: failed to defer paused tenant run")
+		r.releaseLeaseOnNonTerminalExit(run.ID, leaseEpoch)
+	}
+}
+
 func (r *Runner) resetStaleRunningItems(ctx context.Context, runID string) error {
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE eval_run_items
@@ -237,6 +276,7 @@ func (r *Runner) getClaimedRun(ctx context.Context, runID string, leaseEpoch int
 }
 
 func (r *Runner) processRun(ctx context.Context, run evalRunRow, leaseEpoch int64) error {
+	ctx = agentrt.ContextWithTenantIdentity(ctx, run.TenantID)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	stopHeartbeat := r.startLeaseHeartbeat(ctx, run.ID, leaseEpoch, cancel)
@@ -270,6 +310,13 @@ func (r *Runner) processRun(ctx context.Context, run evalRunRow, leaseEpoch int6
 			return err
 		}
 		if status == "cancelled" {
+			return nil
+		}
+		// A tenant paused mid-run stops between batches. The deferred lease
+		// release makes the run claimable again; the next claim defers it.
+		if !r.tenantGate.active(ctx, run.TenantID) {
+			logger.WithFields("tenant_id", run.TenantID, "eval_run_id", run.ID).
+				Info("eval_runner: tenant paused, stopping eval run between batches")
 			return nil
 		}
 

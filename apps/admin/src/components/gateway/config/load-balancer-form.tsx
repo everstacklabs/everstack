@@ -26,6 +26,39 @@ import {
 interface LoadBalancerFormProps {
   config: LoadBalancerConfig
   onChange: (config: LoadBalancerConfig) => void
+  /**
+   * The instance bills inference to the organization's credit (Everstack
+   * Cloud), so the form must say that every attempt is billed.
+   */
+  billedAttempts?: boolean
+}
+
+/**
+ * Everstack Cloud bills every provider attempt on an Everstack-provided key
+ * that generated tokens, so racing and fallback can cost more than one call.
+ * Self-hosted gateways do not bill and never show this.
+ */
+export function BilledAttemptsNote() {
+  return (
+    <div
+      role="note"
+      className="flex items-start gap-2 rounded-lg border border-brand-main-600 bg-brand-main-800/30 p-3"
+    >
+      <Iconify.Icon icon="lucide:receipt" className="mt-0.5 size-4 shrink-0 text-brand-secondary-400" aria-hidden />
+      <p className="text-xs leading-5 text-brand-main-200">
+        Each attempt is billed for the tokens it generated. With fallback on,
+        an attempt that fails after generating tokens is charged before the
+        next model takes over. A Parallel (race) factor sends the request to
+        every model in it at once, and every model that generates tokens is
+        charged, including the ones that lose the race. Max attempts repeats a
+        failing model, and each repeat is billed the same way. Without any of
+        these, an interrupted stream is charged for the tokens it generated,
+        and calls Everstack makes for the request, such as context summaries
+        and cache lookups, are charged too. Requests on your own provider keys
+        are not billed. The Usage tab of the Billing page lists every attempt.
+      </p>
+    </div>
+  )
 }
 
 function Field({
@@ -79,7 +112,7 @@ const FALLBACK_STRATEGIES = [
   { value: 'parallel', label: 'Parallel (race)' },
 ] as const
 
-export function LoadBalancerForm({ config, onChange }: LoadBalancerFormProps) {
+export function LoadBalancerForm({ config, onChange, billedAttempts = false }: LoadBalancerFormProps) {
   const { data: gatewayModels = [] } = useGatewayModels()
 
   const updateConfig = (updates: Partial<LoadBalancerConfig>) => {
@@ -222,6 +255,7 @@ export function LoadBalancerForm({ config, onChange }: LoadBalancerFormProps) {
 
             {fallback.enabled && (
               <div className="space-y-4 mt-2">
+                {billedAttempts && <BilledAttemptsNote />}
                 {/* Default fallback model */}
                 <div className="rounded-lg border border-brand-main-600 bg-brand-main-800/30 p-4 space-y-3">
                   <Label className="text-white light:text-brand-main-50 text-xs font-medium">Default Fallback Model</Label>
@@ -294,7 +328,7 @@ export function LoadBalancerForm({ config, onChange }: LoadBalancerFormProps) {
                         <Button
                           variant="ghost"
                           onClick={() => removeFactor(fi)}
-                          className="text-red-400 light:text-red-600 w-7.5 h-7.5 hover:text-red-300 light:hover:text-red-600"
+                          className="text-danger w-7.5 h-7.5"
                         >
                           <Trash2 className="size-3.5" />
                         </Button>
@@ -392,7 +426,7 @@ export function LoadBalancerForm({ config, onChange }: LoadBalancerFormProps) {
                             <Button
                               variant="ghost"
                               onClick={() => removeModelFromFactor(fi, mi)}
-                              className="text-red-400 light:text-red-600 w-7.5 h-7.5 hover:text-red-300 light:hover:text-red-600"
+                              className="text-danger w-7.5 h-7.5"
                             >
                               <Trash2 className="size-3.5" />
                             </Button>

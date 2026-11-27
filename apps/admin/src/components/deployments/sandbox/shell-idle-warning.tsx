@@ -105,9 +105,9 @@ export function ShellIdleWarning({ instance }: ShellIdleWarningProps) {
     const isPastDeadline = remainingMs <= 0
 
     const containerClass = isUrgent
-        ? 'bg-red-500/15 border-b border-red-500/40 text-red-200 light:text-red-600'
-        : 'bg-yellow-500/10 border-b border-yellow-500/30 text-yellow-200 light:text-yellow-700'
-    const iconClass = isUrgent ? 'text-red-400 light:text-red-600 animate-pulse' : 'text-yellow-400 light:text-yellow-700'
+        ? 'bg-danger-surface-strong border-b border-danger-border text-danger'
+        : 'bg-warning-surface border-b border-warning-border text-warning'
+    const iconClass = isUrgent ? 'text-danger animate-pulse' : 'text-warning'
 
     return (
         <div

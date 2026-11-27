@@ -8,8 +8,8 @@ type StatusFeed = { label: string; dot: string; text: string }
 
 const STATUS_FEED: Record<number, StatusFeed> = {
   [IssueStatus.UNRESOLVED]: { label: 'Ongoing', dot: 'bg-white/30 light:bg-black/30', text: 'text-white/45 light:text-black/45' },
-  [IssueStatus.REGRESSED]: { label: 'Regressed', dot: 'bg-amber-400/60', text: 'text-amber-300/75' },
-  [IssueStatus.RESOLVED]: { label: 'Resolved', dot: 'bg-emerald-400/50', text: 'text-emerald-300/70' },
+  [IssueStatus.REGRESSED]: { label: 'Regressed', dot: 'bg-warning-solid/60', text: 'text-warning/75' },
+  [IssueStatus.RESOLVED]: { label: 'Resolved', dot: 'bg-success-solid/50', text: 'text-success/70' },
   [IssueStatus.IGNORED]: { label: 'Ignored', dot: 'bg-white/15 light:bg-black/15', text: 'text-white/30 light:text-black/30' },
 }
 

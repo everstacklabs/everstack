@@ -44,13 +44,13 @@ function AgentBreadcrumb() {
           {/* Status badges */}
           {agent && (
             <span
-              className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium ${agent.enabled ? 'bg-green-500/20 text-green-300 light:text-green-600' : 'bg-gray-500/20 text-gray-400 light:text-gray-600'}`}
+              className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium ${agent.enabled ? 'bg-success-surface-strong text-success' : 'bg-gray-500/20 text-gray-400 light:text-gray-600'}`}
             >
               {agent.enabled ? 'Enabled' : 'Disabled'}
             </span>
           )}
           {isPersistent && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/15 text-blue-300 light:text-blue-600">
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-info-surface-strong text-info">
               Persistent
             </span>
           )}

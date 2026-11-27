@@ -1,0 +1,39 @@
+name: "meta"
+display_name: "Meta"
+base_url: "https://api.meta.ai/v1"
+api_version: "2024-01-01"
+
+provider_type: "static"
+supports_model_discovery: false
+
+auth:
+  type: "api_key"
+  header_name: "Authorization"
+  header_format: "Bearer {api_key}"
+  env_var: "META_MODEL_API_KEY"
+
+rate_limits:
+  requests_per_minute: 1200
+  tokens_per_minute: 240000
+  concurrent_requests: 30
+
+capabilities:
+  chat: true
+  completions: false
+  embeddings: false
+  function_calling: true
+  vision: false
+  streaming: true
+  fine_tuning: false
+  assistants: false
+
+model_families:
+  muse-spark:
+    description: "Muse Spark multimodal reasoning models, Standard and Contributor modes"
+    capabilities: ["chat", "function_calling", "reasoning"]
+  muse-wonder:
+    description: "Muse Wonder, in preview on the Model API"
+    capabilities: ["chat", "function_calling", "reasoning"]
+  muse-ember:
+    description: "Muse Ember, the low-cost Muse model"
+    capabilities: ["chat", "function_calling", "reasoning"]

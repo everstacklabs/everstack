@@ -35,9 +35,9 @@ export function MetricBar({ label, value, limit, unit = '', description, formatt
 
     if (!isUnlimited) {
         if (percentage >= 90) {
-            barColor = 'bg-red-500'
+            barColor = 'bg-danger-solid'
         } else if (percentage >= 75) {
-            barColor = 'bg-amber-500'
+            barColor = 'bg-warning-solid'
         }
     }
 

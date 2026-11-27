@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { replayBlock } from '@/lib/replay-privacy'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { MARKDOWN_COMPONENTS } from './markdown-code'
@@ -86,6 +87,7 @@ function ContentParts({ parts }: { parts: ContentPart[] }) {
           return (
             <a
               key={i}
+              {...replayBlock}
               href={part.url}
               target="_blank"
               rel="noopener noreferrer"

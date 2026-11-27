@@ -1,7 +1,7 @@
 name: "gemma-4-31b"
 display_name: "Gemma 4 31B IT"
 family: "gemma"
-status: "beta"
+status: "deprecated"
 release_date: "2026-04-02"
 
 cost:
@@ -22,7 +22,7 @@ modalities:
   input: ["text","image"]
   output: ["text"]
 
-notes: "Largest Gemma 4 instruction model for open, self-hosted chat and reasoning"
+notes: "Removed from Cerebras Shared Inference on 2026-09-03 (Dedicated Inference only). Migrate to qwen-3.8-27b."
 parameters:
   - key: "max_output_tokens"
     display_name: "Max output tokens"

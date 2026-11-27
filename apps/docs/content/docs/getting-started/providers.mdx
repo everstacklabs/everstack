@@ -75,6 +75,30 @@ Everstack ships with a built-in **model catalog** containing 22 LLM providers an
   <Card title="Moonshot" href="https://www.moonshot.cn" icon={<MoonshotIcon />}>
     Moonshot AI models with long-context support.
   </Card>
+  <Card title="DeepInfra" href="https://deepinfra.com" icon={<DeepInfraIcon />}>
+    Open-weight models such as DeepSeek, Qwen, GLM and Kimi on an OpenAI-compatible API.
+  </Card>
+  <Card title="Novita AI" href="https://novita.ai" icon={<NovitaIcon />}>
+    Open-weight and third-party models on an OpenAI-compatible API.
+  </Card>
+  <Card title="Nebius Token Factory" href="https://docs.tokenfactory.nebius.com" icon={<NebiusIcon />}>
+    Open-weight models including Kimi, GLM, MiniMax and Nemotron.
+  </Card>
+  <Card title="Baseten" href="https://docs.baseten.co/inference/model-apis/overview" icon={<BasetenIcon />}>
+    Baseten Model APIs, including Fast variants of GLM and DeepSeek.
+  </Card>
+  <Card title="SambaNova" href="https://docs.sambanova.ai" icon={<SambaNovaIcon />}>
+    GLM, MiniMax, Gemma and gpt-oss on SambaNova Cloud.
+  </Card>
+  <Card title="Chutes" href="https://chutes.ai">
+    Open-weight models, including TEE variants, on a single OpenAI-compatible host.
+  </Card>
+  <Card title="Meta" href="https://dev.meta.ai/docs" icon={<MetaIcon />}>
+    Meta's Muse models through the Model API's Chat Completions endpoint.
+  </Card>
+  <Card title="Tencent TokenHub" href="https://www.tencentcloud.com/document/product/1300/80632" icon={<TencentIcon />}>
+    Tencent Hy (Hunyuan) models. Defaults to the Singapore host; set `base_url` for Guangzhou or Silicon Valley.
+  </Card>
 </Cards>
 
 ## Configuring a Provider
@@ -96,14 +120,14 @@ gateway:
   models:
     - provider: openai
       model:
-        - gpt-4o
-        - gpt-4o-mini
+        - gpt-5.4
+        - gpt-5.4-mini
       api_key: sk-your-openai-key
       default: true
 
     - provider: anthropic
       model:
-        - claude-sonnet-4-6
+        - claude-sonnet-5-5
         - claude-haiku-4-5-20251001
       api_key: sk-ant-your-anthropic-key
 
@@ -131,7 +155,7 @@ Some providers require additional configuration beyond an API key:
       api_key: your-azure-key
       base_url: "https://{resource}.openai.azure.com/openai/deployments/{deployment}"
       model:
-        - gpt-4o
+        - gpt-5.2
     ```
 
   </Tab>
@@ -142,7 +166,7 @@ Some providers require additional configuration beyond an API key:
     - provider: aws-bedrock
       base_url: "https://bedrock-runtime.{region}.amazonaws.com"
       model:
-        - anthropic.claude-3-sonnet-20240229-v1:0
+        - anthropic.claude-sonnet-5
     ```
 
     Set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_REGION` environment variables.
@@ -209,8 +233,8 @@ capabilities:
   streaming: true
 
 model_families:
-  gpt-4:
-    description: "GPT-4 family models"
+  gpt-5:
+    description: "GPT-5 family models"
     capabilities: ["chat", "function_calling", "vision"]
     max_tokens: 128000
 ```
@@ -300,6 +324,16 @@ Each provider supports a different set of capabilities. Here's a summary:
 | Qwen | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | Minimax | ✓ | — | — | — | ✓ | — |
 | Moonshot | ✓ | — | — | ✓ | ✓ | — |
+| DeepInfra | ✓ | ✗ | ✗ | ✓ | ✓ | ✗ |
+| Novita AI | ✓ | ✗ | ✗ | ✓ | ✓ | ✗ |
+| Nebius Token Factory | ✓ | ✗ | ✗ | ✓ | ✓ | ✗ |
+| Baseten | ✓ | ✗ | ✗ | ✓ | ✓ | ✗ |
+| SambaNova | ✓ | ✗ | ✗ | ✓ | ✓ | ✗ |
+| Chutes | ✓ | ✗ | ✗ | ✓ | ✓ | ✗ |
+| Meta | ✓ | ✗ | ✗ | ✓ | ✓ | ✗ |
+| Tencent TokenHub | ✓ | ✗ | ✗ | ✓ | ✓ | ✗ |
+
+Image input is not yet forwarded for the providers above: the gateway sends their requests through the shared OpenAI-compatible adapter, which passes text content only. SambaNova rejects non-zero `frequency_penalty` and `presence_penalty` and any request field it does not recognise; Meta does not support those two penalties and rejects `stop`.
 
 ## Authentication Methods
 
@@ -307,7 +341,7 @@ Most providers use API key authentication, but some require different auth mecha
 
 | Method | Providers | Configuration |
 | --- | --- | --- |
-| API Key (Bearer) | OpenAI, Groq, Together, Fireworks, DeepSeek, xAI, Perplexity, Cerebras, NVIDIA NIM, OpenRouter, HuggingFace, Qwen, Minimax, Moonshot | `Authorization: Bearer {api_key}` |
+| API Key (Bearer) | OpenAI, Groq, Together, Fireworks, DeepSeek, xAI, Perplexity, Cerebras, NVIDIA NIM, OpenRouter, HuggingFace, Qwen, Minimax, Moonshot, DeepInfra, Novita AI, Nebius, Baseten, SambaNova, Chutes, Meta, Tencent TokenHub | `Authorization: Bearer {api_key}` |
 | API Key (Custom Header) | Anthropic | `x-api-key: {api_key}` |
 | API Key (Query Param) | Google | `?key={api_key}` |
 | API Key (Header) | Azure OpenAI, Cohere, Mistral | `api-key: {api_key}` |

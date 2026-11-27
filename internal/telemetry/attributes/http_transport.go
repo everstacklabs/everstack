@@ -20,8 +20,27 @@ type InstrumentedTransport struct {
 }
 
 // NewInstrumentedTransport creates a new HTTP transport wrapper that automatically
-// instruments requests with span attributes
+// instruments requests with span attributes.
+//
+// Wrapping is idempotent: when base is already an InstrumentedTransport the
+// result wraps that transport's own base, so the chain is always one layer
+// deep and the newest providerName (the provider whose client this is) is the
+// one used for rate-limit header parsing. Provider constructors re-wrap the
+// client they are handed on every construction, and tenant bundles are rebuilt
+// every 15 seconds in shared mode; stacking a layer per construction made
+// every request walk a chain that grew with uptime.
 func NewInstrumentedTransport(base http.RoundTripper, providerName string) *InstrumentedTransport {
+	for {
+		inner, ok := base.(*InstrumentedTransport)
+		if !ok {
+			break
+		}
+		if inner == nil {
+			base = nil
+			break
+		}
+		base = inner.base
+	}
 	if base == nil {
 		base = http.DefaultTransport
 	}
@@ -30,6 +49,9 @@ func NewInstrumentedTransport(base http.RoundTripper, providerName string) *Inst
 		providerName: providerName,
 	}
 }
+
+// Base returns the wrapped transport.
+func (t *InstrumentedTransport) Base() http.RoundTripper { return t.base }
 
 // RoundTrip implements http.RoundTripper and automatically adds HTTP metadata to the span
 func (t *InstrumentedTransport) RoundTrip(req *http.Request) (*http.Response, error) {

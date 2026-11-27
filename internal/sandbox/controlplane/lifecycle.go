@@ -162,6 +162,9 @@ func (s *LifecycleService) Recreate(ctx context.Context, req RecreateRequest) (*
 	if err != nil {
 		return nil, err
 	}
+	if err := sandbox.ValidateSandboxName(instCfg.Name); err != nil {
+		return nil, err
+	}
 	sandboxCfg := sandbox.SandboxConfig{
 		Enabled:        true,
 		Image:          instCfg.Image,
@@ -172,6 +175,7 @@ func (s *LifecycleService) Recreate(ctx context.Context, req RecreateRequest) (*
 		NetworkMode:    string(instCfg.NetworkMode),
 		AllowedHosts:   instCfg.AllowedHosts,
 		EnvVars:        instCfg.EnvVars,
+		Name:           instCfg.Name,
 	}
 	recreateCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 90*time.Second)
 	defer cancel()

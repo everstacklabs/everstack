@@ -1,0 +1,41 @@
+# Verified 2026-11-24.
+# Source: https://openrouter.ai/api/v1/models
+# Source: https://openrouter.ai/meta/muse-wonder
+name: "meta/muse-wonder"
+display_name: "Meta: Muse Wonder (OpenRouter)"
+family: "meta"
+status: "stable"
+release_date: "2026-10-12"
+cost:
+  input_per_1k: 0.004
+  output_per_1k: 0.02
+  cache_read_per_1k: 0.0002
+limits:
+  max_tokens: 1048576
+  max_completion_tokens: 943718
+capabilities:
+  - "chat"
+  - "function_calling"
+  - "vision"
+  - "reasoning"
+modalities:
+  input:
+    - "text"
+    - "image"
+    - "video"
+    - "pdf"
+    - "audio"
+  output:
+    - "text"
+structured_output: true
+notes: "OpenRouter listing date, not necessarily the original model launch. Provider-route pricing and limits verified 2026-11-24; endpoint selection can change rates. Tool, audio, and other non-text charges are not represented by these text token rates."
+parameters:
+  -
+    key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 943718
+    has_max_value: true
+added_in_version: "2.11.0"

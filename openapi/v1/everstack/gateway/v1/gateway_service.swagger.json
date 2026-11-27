@@ -744,6 +744,39 @@
           "GatewayService"
         ]
       }
+    },
+    "/v1/systemone": {
+      "post": {
+        "summary": "Structured decisions, using customer-owned keys or self-hosted endpoints.",
+        "operationId": "GatewayService_SystemOne",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SystemOneResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SystemOneRequest"
+            }
+          }
+        ],
+        "tags": [
+          "GatewayService"
+        ]
+      }
     }
   },
   "definitions": {
@@ -1102,6 +1135,10 @@
         "parallelToolCalls": {
           "type": "boolean",
           "title": "Whether to run parallel tool calls (default: true)"
+        },
+        "serviceTier": {
+          "type": "string",
+          "description": "Processing tier requested from the provider (OpenAI service_tier:\n\"auto\", \"default\", \"flex\", \"priority\", ...)."
         }
       }
     },
@@ -1219,6 +1256,10 @@
         },
         "providerJson": {
           "type": "string"
+        },
+        "imageDetail": {
+          "type": "string",
+          "description": "OpenAI image_url.detail (\"auto\", \"low\", \"high\", ...) for an image_url\npart. Empty means the provider default."
         }
       }
     },
@@ -1294,7 +1335,7 @@
         },
         "store": {
           "type": "boolean",
-          "title": "Whether to store the response for retrieval"
+          "description": "Whether to store the response for retrieval and previous_response_id\nchaining. Unset means true, as in OpenAI's API. Declared optional so an\nexplicit false is distinguishable from unset; the wire format is\nunchanged."
         },
         "previousResponseId": {
           "type": "string",
@@ -1390,6 +1431,72 @@
         "truncation": {
           "$ref": "#/definitions/v1TruncationStrategy",
           "title": "Truncation configuration used"
+        },
+        "delta": {
+          "$ref": "#/definitions/v1ResponseDelta",
+          "description": "Set only on incremental frames of a streamed response (stream: true):\nthe text or arguments one output item grew by since the previous frame.\nA delta frame is not a snapshot: it carries id and object, and its other\nfields are empty. Every other frame, including the final one, is a full\nsnapshot of the response and leaves delta unset. An item or content part\nalways appears in a snapshot before the first delta that names it."
+        }
+      }
+    },
+    "v1DecisionAnswer": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "noul": {
+          "type": "number",
+          "format": "double"
+        },
+        "choice": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number",
+          "format": "double"
+        },
+        "confidence": {
+          "type": "number",
+          "format": "double"
+        },
+        "probabilities": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "legend": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1DecisionQuestion": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "instructions": {},
+        "criteria": {
+          "description": "choice: object keyed by option; score: ordered array; noul: true/false object."
+        }
+      },
+      "description": "Shared Jev, Kev and Laya System One request. State and instructions may be any JSON."
+    },
+    "v1DecisionUsage": {
+      "type": "object",
+      "properties": {
+        "inputTokens": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "outputTokens": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -2887,6 +2994,33 @@
       },
       "title": "Token usage information"
     },
+    "v1ResponseDelta": {
+      "type": "object",
+      "properties": {
+        "itemId": {
+          "type": "string",
+          "title": "Item ID being updated"
+        },
+        "contentDelta": {
+          "type": "string",
+          "title": "Content delta"
+        },
+        "argumentsDelta": {
+          "type": "string",
+          "title": "Arguments delta (for function calls)"
+        },
+        "outputIndex": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Index of the item in the response output"
+        },
+        "contentIndex": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Index of the content part within a message item (content_delta only)"
+        }
+      }
+    },
     "v1ResponseError": {
       "type": "object",
       "properties": {
@@ -2919,7 +3053,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "title": "Type of input: \"message\", \"item_reference\""
+          "title": "Type of input: \"message\", \"item_reference\", \"function_call\",\n\"function_call_output\""
         },
         "role": {
           "$ref": "#/definitions/v1Role",
@@ -2936,6 +3070,22 @@
         "itemId": {
           "type": "string",
           "title": "For item_reference type: reference to a previous output item"
+        },
+        "callId": {
+          "type": "string",
+          "title": "For function_call and function_call_output types: the tool call the\nitem belongs to"
+        },
+        "output": {
+          "type": "string",
+          "title": "For function_call_output type: the tool's result"
+        },
+        "name": {
+          "type": "string",
+          "title": "For function_call type: the function the model called"
+        },
+        "arguments": {
+          "type": "string",
+          "title": "For function_call type: the call's arguments, as a JSON string"
         }
       },
       "title": "Input type for responses - can be text, file, or existing input item"
@@ -3129,6 +3279,23 @@
         },
         "verbosity": {
           "type": "string"
+        },
+        "logprobs": {
+          "type": "boolean",
+          "description": "Return log probabilities of the output tokens (OpenAI logprobs)."
+        },
+        "topLogprobs": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of most likely tokens to return per position (0-20); requires logprobs."
+        },
+        "logitBias": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          },
+          "description": "Token ID (as a string) to bias in [-100, 100] (OpenAI logit_bias)."
         }
       }
     },
@@ -3236,6 +3403,38 @@
         }
       }
     },
+    "v1SystemOneRequest": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "state": {},
+        "questions": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/v1DecisionQuestion"
+          }
+        }
+      }
+    },
+    "v1SystemOneResponse": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "answers": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/v1DecisionAnswer"
+          }
+        },
+        "usage": {
+          "$ref": "#/definitions/v1DecisionUsage"
+        }
+      }
+    },
     "v1Tool": {
       "type": "object",
       "properties": {
@@ -3303,6 +3502,10 @@
         "parameters": {
           "type": "object",
           "title": "JSON Schema"
+        },
+        "strict": {
+          "type": "boolean",
+          "description": "OpenAI function.strict: enforce exact schema adherence for tool calls."
         }
       },
       "title": "Tool definition for chat requests"
@@ -3563,6 +3766,14 @@
         "totalTokens": {
           "type": "integer",
           "format": "int32"
+        },
+        "promptTokensDetails": {
+          "$ref": "#/definitions/v1UsageTokenDetails",
+          "description": "Breakdown of prompt_tokens, OpenAI-shaped. Set only when the provider\nreports one."
+        },
+        "completionTokensDetails": {
+          "$ref": "#/definitions/v1UsageTokenDetails",
+          "description": "Breakdown of completion_tokens, OpenAI-shaped. reasoning_tokens counts\nthinking tokens already included in completion_tokens (OpenAI reasoning,\nGemini thoughts). Set only when the provider reports one."
         }
       }
     },
@@ -3708,6 +3919,24 @@
       ],
       "default": "USAGE_LIMITS_TYPE_UNSPECIFIED",
       "description": " - USAGE_LIMITS_TYPE_STORAGE: Object storage allowance in bytes. Keep wire value 3 for older clients.\n - USAGE_LIMITS_TYPE_AGENTS: Agent-related limits (added for unified agent/trooper model)\n - USAGE_LIMITS_TYPE_HOSTING_STORAGE_BYTES: Catalog limits. Hosting storage is distinct from object storage."
+    },
+    "v1UsageTokenDetails": {
+      "type": "object",
+      "properties": {
+        "cachedTokens": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "reasoningTokens": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "audioTokens": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "description": "OpenAI-compatible token breakdown for Usage. Each count is a subset of the\nparent prompt_tokens or completion_tokens, never additional to it."
     },
     "v1WebSearchConfig": {
       "type": "object",

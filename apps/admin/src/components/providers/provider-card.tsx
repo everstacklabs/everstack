@@ -57,16 +57,16 @@ export function ProviderCard({ provider, onConfigure, onToggle, onDelete, onTogg
                 <div className="flex items-center gap-2">
                     <NewModelsIndicator providerName={catalog?.name} />
                     {apiKeys.length > 0 ? (
-                        <Badge className="text-xs rounded-sm px-1.5 py-0.5 bg-blue-600/20 text-blue-400 light:text-blue-600 border border-blue-600/30">
+                        <Badge className="text-xs rounded-sm px-1.5 py-0.5 bg-info-surface-strong text-info border border-info-border">
                             {apiKeys.length} API Keys
                         </Badge>
                     ) : isConfigured && (
-                        <Badge variant="outline" className="text-xs rounded-sm px-1.5 py-0.5 bg-orange-600/20 text-orange-400 light:text-orange-600 border border-orange-600/30">
+                        <Badge variant="outline" className="text-xs rounded-sm px-1.5 py-0.5 bg-warning-surface-strong text-warning border border-warning-border">
                             No API Keys
                         </Badge>
                     )}
                     {isDefault && (
-                        <Badge className="text-xs rounded-sm px-1.5 py-0.5 bg-blue-600/20 text-blue-400 light:text-blue-600 border border-blue-600/30">
+                        <Badge className="text-xs rounded-sm px-1.5 py-0.5 bg-info-surface-strong text-info border border-info-border">
                             Default
                         </Badge>
                     )}
@@ -123,7 +123,7 @@ export function ProviderCard({ provider, onConfigure, onToggle, onDelete, onTogg
                                 className={cn(
                                     "px-3 py-2 rounded-md text-sm font-medium transition-colors",
                                     isActive
-                                        ? "bg-green-600/20 hover:bg-green-600/30 text-green-400 light:text-green-600"
+                                        ? "bg-success-surface-strong hover:bg-success-solid/25 text-success"
                                         : "bg-gray-600/20 hover:bg-gray-600/30 text-gray-400 light:text-gray-600"
                                 )}
                                 title={isActive ? "Disable provider" : "Enable provider"}
@@ -141,7 +141,7 @@ export function ProviderCard({ provider, onConfigure, onToggle, onDelete, onTogg
                                 className={cn(
                                     "px-3 py-2 rounded-md text-sm font-medium transition-colors",
                                     isDefault
-                                        ? "bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 light:text-blue-600"
+                                        ? "bg-info-surface-strong hover:bg-info-solid/25 text-info"
                                         : "bg-brand-main-700 hover:bg-brand-main-600 text-white/60 light:text-black/60",
                                     !isActive && !isDefault && "opacity-50 cursor-not-allowed"
                                 )}
@@ -161,7 +161,7 @@ export function ProviderCard({ provider, onConfigure, onToggle, onDelete, onTogg
                             <Button
                                 variant="destructive"
                                 onClick={() => onDelete(catalog?.name || '')}
-                                className="px-3 py-2 rounded-md text-sm font-medium bg-red-600/10 hover:bg-red-600/20 text-red-400 light:text-red-600 transition-colors"
+                                className="px-3 py-2 rounded-md text-sm font-medium bg-danger-surface hover:bg-danger-surface-strong text-danger transition-colors"
                             >
                                 <Iconify.Icon icon="heroicons:trash" className="size-4" />
                             </Button>

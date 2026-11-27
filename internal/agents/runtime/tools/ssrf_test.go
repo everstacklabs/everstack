@@ -31,14 +31,14 @@ func TestIsDeniedDialIP(t *testing.T) {
 		{"fd12:3456::1", true},    // IPv6 unique-local
 		{"224.0.0.1", true},       // multicast
 		{"::ffff:10.0.0.1", true}, // IPv4-mapped private
-		// Allowed — genuine public addresses.
-		{"93.184.216.34", false},        // example.com
-		{"8.8.8.8", false},              // public DNS
-		{"1.1.1.1", false},              // public DNS
-		{"172.32.0.1", false},           // just outside RFC1918 172.16/12
-		{"100.63.255.255", false},       // just below CGNAT 100.64/10
-		{"100.128.0.0", false},          // just above CGNAT 100.64/10
-		{"2606:4700:4700::1111", false}, // public IPv6 (Cloudflare)
+		// Allowed synthetic public-shaped addresses.
+		{"192.0.2.1", false},      // TEST-NET-1
+		{"198.51.100.1", false},   // TEST-NET-2
+		{"203.0.113.1", false},    // TEST-NET-3
+		{"172.32.0.1", false},     // just outside RFC1918 172.16/12
+		{"100.63.255.255", false}, // just below CGNAT 100.64/10
+		{"100.128.0.0", false},    // just above CGNAT 100.64/10
+		{"2001:db8::1", false},    // IPv6 documentation prefix
 	}
 	for _, c := range cases {
 		ip := net.ParseIP(c.ip)

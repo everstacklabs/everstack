@@ -12,6 +12,8 @@ package server
 import (
 	"context"
 	"encoding/json"
+	apikeylib "github.com/everstacklabs/everstack/internal/lib/apikey"
+	contextkeys "github.com/everstacklabs/everstack/internal/lib/context_keys"
 	"io"
 	"log/slog"
 	"net/http"
@@ -61,8 +63,12 @@ type ToolProvider interface {
 // a single tenant. Crucially, no "first/only tenant in the DB" fallback is
 // permitted here — this endpoint is externally reachable and such a fallback is
 // exactly the cross-tenant leak pattern we have been bitten by before.
+//
+// apiKeyID is the verified key's id (api_keys.id), installed on the request
+// context so inference a tool call triggers is attributed to that key
+// (docs/design/spend-limits-v2.md). Empty when unknown.
 type Authenticator interface {
-	Authenticate(r *http.Request) (tenantID string, ok bool)
+	AuthenticateKey(r *http.Request) (tenantID, apiKeyID string, ok bool)
 }
 
 // Handler is the http.Handler implementing the MCP server protocol.
@@ -118,13 +124,26 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Authenticate every request to a tenant. Fail closed.
-	tenantID, ok := h.auth.Authenticate(r)
+	ctx := r.Context()
+	var tenantID, apiKeyID string
+	var ok bool
+	if auth, hasContext := h.auth.(interface {
+		AuthenticateKeyContext(*http.Request) (context.Context, string, string, bool)
+	}); hasContext {
+		ctx, tenantID, apiKeyID, ok = auth.AuthenticateKeyContext(r)
+	} else {
+		tenantID, apiKeyID, ok = h.auth.AuthenticateKey(r)
+	}
 	if !ok || tenantID == "" {
 		w.Header().Set("WWW-Authenticate", `Bearer realm="everstack-mcp"`)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
+	if apikeylib.WriteRateLimit(w, ctx) {
+		return
+	}
+	ctx = contextkeys.ReadAgentHop(ctx, r.Header)
 	body, err := io.ReadAll(io.LimitReader(r.Body, maxBodyBytes))
 	if err != nil {
 		writeResponse(w, errorResp(nil, codeParseError, "failed to read request body"))
@@ -148,7 +167,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := h.dispatch(r.Context(), tenantID, &req)
+	resp := h.dispatch(contextkeys.WithAPIKeyID(ctx, apiKeyID), tenantID, &req)
 	if resp == nil {
 		// Notification: acknowledge with 202 and no body.
 		w.WriteHeader(http.StatusAccepted)

@@ -91,8 +91,8 @@ export function AgentDeploymentsTab({ agentId, agentName }: AgentDeploymentsTabP
 
 function StatusBadge({ status }: { status: string }) {
     const styles: Record<string, string> = {
-        active: 'bg-green-500/20 text-green-300 light:text-green-600',
-        paused: 'bg-amber-500/20 text-amber-300 light:text-amber-700',
+        active: 'bg-success-surface-strong text-success',
+        paused: 'bg-warning-surface-strong text-warning',
         retired: 'bg-gray-500/20 text-gray-400 light:text-gray-600',
     }
     return (

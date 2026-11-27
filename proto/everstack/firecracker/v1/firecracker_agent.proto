@@ -97,6 +97,14 @@ service FirecrackerAgent {
   // the guest has died. This is the FaaS execution path — distinct from
   // the sandbox lifecycle RPCs above, which manage user-facing sandboxes.
   rpc InvokeFunction(InvokeFunctionRequest) returns (InvokeFunctionResult);
+
+  // ReportRootfsReferences tells the agent which rootfs images the
+  // calling gateway still needs: its configured executor image(s) and the
+  // image of every sandbox row that can still boot or wake. The agent's
+  // rootfs GC never deletes an image while any unexpired report names
+  // it, and deletes no per-tag image at all until a complete report
+  // arrives. Each reporter's latest report replaces its previous one.
+  rpc ReportRootfsReferences(ReportRootfsReferencesRequest) returns (Empty);
 }
 
 message Empty {}
@@ -509,4 +517,23 @@ message NodeHealth {
   // Wall-clock timestamp the snapshot was taken. The cache uses this
   // to age stale entries; >30s old → re-probe before trusting.
   int64 timestamp_unix = 9;
+}
+
+// --- Rootfs GC ---
+
+message ReportRootfsReferencesRequest {
+  // Identity of the reporting gateway process as "<name>/<instance>",
+  // for example "everstack-gateway/<pod name>". Reports are kept per
+  // reporter and unioned; only names in the agent's FC_ROOTFS_GC_REPORTERS
+  // allowlist are recorded (others get PERMISSION_DENIED).
+  string reporter = 1;
+  // Image references as stored on sandbox rows, for example
+  // "everstack/openai-codex-firecracker-rootfs:openai-codex-0.154.0-r3".
+  // The agent resolves each to its rootfs tag. An empty list is treated
+  // as unknown.
+  repeated string images = 2;
+  // unknown means the reporter cannot vouch for the full set, for example
+  // because its executor image is not configured. While any unexpired
+  // report is unknown the agent's GC keeps every tag image.
+  bool unknown = 3;
 }

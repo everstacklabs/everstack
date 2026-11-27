@@ -61,7 +61,7 @@ function MessageRow({ variantId, message }: { variantId: string; message: Compos
                 <button
                     type="button"
                     onClick={() => removeMessage(variantId, message.id)}
-                    className="p-0.5 rounded text-white/0 group-hover:text-white/40 hover:!text-rose-400 transition-colors light:text-black/0 light:group-hover:text-black/40"
+                    className="p-0.5 rounded text-white/0 group-hover:text-white/40 hover:!text-danger transition-colors light:text-black/0 light:group-hover:text-black/40"
                     title="Remove message"
                 >
                     <X className="h-3 w-3" />

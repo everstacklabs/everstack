@@ -17,10 +17,15 @@ service BillingService {
   // CreateBillingPortalSession creates a Stripe billing portal session
   rpc CreateBillingPortalSession(CreateBillingPortalSessionRequest) returns (CreateBillingPortalSessionResponse);
   
-  // CancelSubscription cancels a subscription at period end
+  // CancelSubscription schedules cancellation at the period end (no
+  // refund). When the organization runs more instances than Starter allows,
+  // keep_instance_ids is required; the others pause at the period end.
+  // Idempotent. Owner or admin only.
   rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse);
   
-  // ResumeSubscription resumes a cancelled subscription
+  // ResumeSubscription withdraws a scheduled cancellation or scheduled
+  // downgrade before it takes effect, and the instance pauses that came
+  // with it. Idempotent. Owner or admin only.
   rpc ResumeSubscription(ResumeSubscriptionRequest) returns (ResumeSubscriptionResponse);
   
   // ListInvoices lists invoices for an organization
@@ -70,10 +75,14 @@ service BillingService {
   // GetSpendLimits retrieves all spend limits for an organization
   rpc GetSpendLimits(GetSpendLimitsRequest) returns (GetSpendLimitsResponse);
 
-  // SetSpendLimit creates or updates a spend limit
+  // SetSpendLimit creates or updates a spend limit. Owners and admins only.
+  // Creating, enabling or raising a limit needs a plan with the spend_limits
+  // feature, otherwise FAILED_PRECONDITION with ErrorInfo reason
+  // spend_limits_not_in_plan. Lowering, disabling and deleting are always
+  // allowed. Every change is audited.
   rpc SetSpendLimit(SetSpendLimitRequest) returns (SetSpendLimitResponse);
 
-  // DeleteSpendLimit removes a spend limit
+  // DeleteSpendLimit removes a spend limit. Owners and admins only; audited.
   rpc DeleteSpendLimit(DeleteSpendLimitRequest) returns (DeleteSpendLimitResponse);
 
   // MigrateSubscription migrates a multi-item subscription to single-item (admin only)
@@ -84,6 +93,114 @@ service BillingService {
   // at 0). Free / Enterprise tiers reject. Stripe handles proration on
   // the per-seat line item with create_prorations.
   rpc AdjustSeats(AdjustSeatsRequest) returns (AdjustSeatsResponse);
+
+  // GetCreditBalance returns the organization's prepaid credit wallet:
+  // ledger balance, credit reserved by in-flight requests, what is spendable
+  // now, and lifetime totals. Read by any organization member. A read that
+  // cannot reach the ledger fails with Unavailable, never a zero balance.
+  rpc GetCreditBalance(GetCreditBalanceRequest) returns (GetCreditBalanceResponse);
+
+  // ListCreditLedger pages the organization's credit history, newest first,
+  // with optional entry type, resource type and time filters. Read by any
+  // organization member. Internal deduplication keys are never returned.
+  rpc ListCreditLedger(ListCreditLedgerRequest) returns (ListCreditLedgerResponse);
+
+  // ListInferenceAttempts pages the organization's inference requests,
+  // newest first, each with every provider attempt it made: what was served,
+  // what lost a race or failed before a fallback, and what each attempt was
+  // charged. Read by any organization member. Internal identifiers (request,
+  // key and ledger ids) are never returned.
+  rpc ListInferenceAttempts(ListInferenceAttemptsRequest) returns (ListInferenceAttemptsResponse);
+
+  // GetSpendStatus returns the organization's estimated inference spend for
+  // the current UTC day and UTC month: Everstack credit charged plus
+  // traffic on the organization's own provider keys at list price, in total
+  // and per gateway API key, with the count of attempts on models that have
+  // no list price (not priced, not counted). Read-only, from hourly rollups
+  // that trail live traffic by about a minute (see as_of). Read by any
+  // organization member.
+  rpc GetSpendStatus(GetSpendStatusRequest) returns (GetSpendStatusResponse);
+
+  // PurchaseCredits starts a prepaid credit top-up: it records a pending
+  // purchase and returns a Stripe Checkout URL. Owner or admin only.
+  // FailedPrecondition while purchases are switched off.
+  rpc PurchaseCredits(PurchaseCreditsRequest) returns (PurchaseCreditsResponse);
+
+  // GetCreditPurchase returns one purchase of the organization. The return
+  // page polls it; only state PAID means the credit is available.
+  rpc GetCreditPurchase(GetCreditPurchaseRequest) returns (GetCreditPurchaseResponse);
+
+  // ListCreditPurchases lists the organization's purchases, newest first.
+  rpc ListCreditPurchases(ListCreditPurchasesRequest) returns (ListCreditPurchasesResponse);
+
+  // GetCreditPurchaseOptions returns whether self-serve purchase is on and
+  // the top-up presets and limits.
+  rpc GetCreditPurchaseOptions(GetCreditPurchaseOptionsRequest) returns (GetCreditPurchaseOptionsResponse);
+
+  // GetAutoTopUpPolicy returns the organization's auto top-up settings,
+  // this month's usage of the cap and the last attempt. Any organization
+  // member (docs/design/auto-top-up.md).
+  rpc GetAutoTopUpPolicy(GetAutoTopUpPolicyRequest) returns (GetAutoTopUpPolicyResponse);
+
+  // SetAutoTopUpPolicy turns auto top-up on or off or changes its terms.
+  // Turning it on or editing records consent to the exact terms shown.
+  // A charge already in progress is not affected. Owner or admin only.
+  rpc SetAutoTopUpPolicy(SetAutoTopUpPolicyRequest) returns (SetAutoTopUpPolicyResponse);
+
+  // Saved payment methods (docs/design/payment-methods.md). Card data goes
+  // from Stripe Elements straight to Stripe; these RPCs only see references
+  // and display metadata. Webhooks are the source of truth for the list.
+
+  // CreateSetupIntent starts saving a card for the organization's Stripe
+  // customer (created if missing) and returns the SetupIntent client secret
+  // for Stripe Elements. Owner or admin only.
+  rpc CreateSetupIntent(CreateSetupIntentRequest) returns (CreateSetupIntentResponse);
+
+  // ListPaymentMethods lists the organization's active saved payment
+  // methods, default first. Any organization member.
+  rpc ListPaymentMethods(ListPaymentMethodsRequest) returns (ListPaymentMethodsResponse);
+
+  // SetDefaultPaymentMethod makes one saved payment method the default for
+  // future charges. Owner or admin only.
+  rpc SetDefaultPaymentMethod(SetDefaultPaymentMethodRequest) returns (SetDefaultPaymentMethodResponse);
+
+  // RemovePaymentMethod detaches a saved payment method in Stripe. Removing
+  // the default promotes the most recently added remaining card. Owner or
+  // admin only.
+  rpc RemovePaymentMethod(RemovePaymentMethodRequest) returns (RemovePaymentMethodResponse);
+
+  // UpdatePaymentMethod changes a saved card's expiry and billing details
+  // in Stripe, then re-syncs it. Cards only (a Link method is replaced, not
+  // edited). Owner or admin only.
+  rpc UpdatePaymentMethod(UpdatePaymentMethodRequest) returns (UpdatePaymentMethodResponse);
+
+  // PreviewPlanChange prices and explains a plan or interval change before
+  // it is made: timing, new limits, instances over the new limit, the
+  // prorated charge for an upgrade. Owner or admin only.
+  rpc PreviewPlanChange(PreviewPlanChangeRequest) returns (PreviewPlanChangeResponse);
+
+  // ChangePlan upgrades now with proration (charging the default card) or
+  // schedules a downgrade for the period end. Owner or admin only. Refused
+  // while the organization is past due.
+  rpc ChangePlan(ChangePlanRequest) returns (ChangePlanResponse);
+
+  // RegisterApiKey records which organization a gateway API key belongs to,
+  // so SetSpendLimit can accept a limit for a key that has made no request
+  // yet. Internal only: callable by the managed gateway's M2M client right
+  // after it creates the key, never by a customer session. The tenant is
+  // the one the gateway stored on the key; billing resolves it to the
+  // organization. Idempotent.
+  rpc RegisterApiKey(RegisterApiKeyRequest) returns (RegisterApiKeyResponse);
+
+  // UnregisterApiKey removes the ownership record of a gateway API key the
+  // gateway deleted. Internal only, same caller as RegisterApiKey. Removes
+  // only the row for that key id owned by the organization the tenant
+  // resolves to; a key of another organization is never touched. Idempotent.
+  rpc UnregisterApiKey(UnregisterApiKeyRequest) returns (UnregisterApiKeyResponse);
+
+  // GetModelTrial returns the organization's free model requests: how many
+  // it has, how many it used, and whether it can use them now
+  // (docs/design/free-trial-onboarding.md 4.2). Read-only; never grants.
+  // Read by any organization member.
+  rpc GetModelTrial(GetModelTrialRequest) returns (GetModelTrialResponse);
 }
-
-

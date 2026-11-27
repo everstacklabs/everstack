@@ -36,6 +36,10 @@ type ExecutionContext struct {
 	CacheMiss       bool   // Set by cache executor on miss; triggers post-provider cache write
 	CacheType       string // "exact" or "semantic" — used for post-provider cache write
 	CacheQuery      string // Query text for semantic cache write
+	// CacheKey is the request the cache node looked up, snapshotted before
+	// the provider node rewrites Messages. The post-provider write reuses it
+	// so the lookup and write keys agree.
+	CacheKey *gw.ChatCompletionRequest
 	InputBlocked    bool
 	OutputBlocked   bool
 	ConditionResult bool

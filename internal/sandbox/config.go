@@ -1,9 +1,27 @@
 package sandbox
 
 import (
+	"errors"
 	"os"
 	"strings"
+
+	"github.com/everstacklabs/everstack/internal/lib/logger"
 )
+
+var ErrReservedSandboxName = errors.New("sandbox name must not start with a sandbox identifier prefix")
+
+// ValidateSandboxName rejects names that can be mistaken for internal sandbox
+// identifiers. Function environment ids use a separate fn- namespace and are
+// not sandbox names.
+func ValidateSandboxName(name string) error {
+	name = strings.ToLower(strings.TrimSpace(name))
+	for _, prefix := range []string{"sbx_", "wks_"} {
+		if strings.HasPrefix(name, prefix) {
+			return ErrReservedSandboxName
+		}
+	}
+	return nil
+}
 
 // ReconcilerEnabled reports whether the async sandbox lifecycle
 // reconciler (internal/orchestrator/sandbox) is the lifecycle driver.
@@ -316,18 +334,18 @@ func DefaultSandboxConfig() SandboxConfig {
 // ParseSandboxConfig extracts sandbox configuration from the agent config map.
 // If a "template" field is present (ID or slug), the template's values are used
 // as the base and any explicit fields in the config override them.
-func ParseSandboxConfig(config map[string]interface{}) SandboxConfig {
+func ParseSandboxConfig(config map[string]interface{}) (SandboxConfig, error) {
 	cfg := DefaultSandboxConfig()
 	if config == nil {
-		return cfg
+		return cfg, nil
 	}
 	sandboxRaw, ok := config["sandbox"]
 	if !ok {
-		return cfg
+		return cfg, nil
 	}
 	sandboxMap, ok := sandboxRaw.(map[string]interface{})
 	if !ok {
-		return cfg
+		return cfg, nil
 	}
 
 	// Resolve template as base config if specified
@@ -438,7 +456,20 @@ func ParseSandboxConfig(config map[string]interface{}) SandboxConfig {
 		cfg.LinkedSessionID = linkedSessionID
 	}
 
-	return cfg
+	return cfg, nil
+}
+
+// DropReservedAgentSandboxName keeps stored agent configurations runnable
+// while preserving reserved identifier prefixes for system-generated ids.
+// An empty name selects the normal generated agent sandbox name.
+func DropReservedAgentSandboxName(config SandboxConfig, agentID string) SandboxConfig {
+	if !errors.Is(ValidateSandboxName(config.Name), ErrReservedSandboxName) {
+		return config
+	}
+	logger.WithFields("agent_id", agentID, "sandbox_name", config.Name).
+		Warn("sandbox: reserved agent sandbox name ignored; generated name will be used")
+	config.Name = ""
+	return config
 }
 
 // GlobalSandboxConfig is set at gateway startup level.

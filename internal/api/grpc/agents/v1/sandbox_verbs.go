@@ -28,23 +28,6 @@ import (
 	sandboxlc "github.com/everstacklabs/everstack/internal/orchestrator/sandbox"
 )
 
-// requireSandboxOwnershipHTTP resolves the caller's tenant and verifies
-// it owns sandboxID. Writes the error response and returns false when
-// the check fails. 404 (not 403) on mismatch so the response does not
-// confirm the existence of another tenant's sandbox.
-func (s *Server) requireSandboxOwnershipHTTP(w http.ResponseWriter, r *http.Request, sandboxID string) bool {
-	tenantID, err := s.resolveTenantID(r.Context(), "")
-	if err != nil || tenantID == "" {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
-		return false
-	}
-	if !s.sandboxOwnedByTenant(r.Context(), sandboxID, tenantID) {
-		writeJSONError(w, http.StatusNotFound, "sandbox not found")
-		return false
-	}
-	return true
-}
-
 // requireSandboxBillingHTTP checks the authenticated tenant before accepting
 // a desired-state transition that can allocate compute. The executor checks
 // again immediately before backend.Create; this preflight keeps an unpaid
@@ -54,9 +37,8 @@ func (s *Server) requireSandboxBillingHTTP(w http.ResponseWriter, r *http.Reques
 		writeJSONError(w, http.StatusServiceUnavailable, "sandbox feature is not enabled")
 		return false
 	}
-	tenantID, err := s.resolveTenantID(r.Context(), "")
-	if err != nil || tenantID == "" {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+	tenantID, ok := s.requireVerifiedTenantHTTP(w, r)
+	if !ok {
 		return false
 	}
 	if err := s.sandboxMgr.RequireSandboxBilling(tenantID); err != nil {
@@ -92,9 +74,11 @@ func (s *Server) handleSandboxVerb(w http.ResponseWriter, r *http.Request, desir
 		writeJSONError(w, http.StatusBadRequest, "sandbox_id is required")
 		return
 	}
-	if !s.requireSandboxOwnershipHTTP(w, r, sandboxID) {
+	inst, ok := s.ownedSandboxHTTP(w, r, sandboxID)
+	if !ok {
 		return
 	}
+	sandboxID = inst.ID
 	if desired == sandboxlc.DesireRunning && !s.requireSandboxBillingHTTP(w, r) {
 		return
 	}

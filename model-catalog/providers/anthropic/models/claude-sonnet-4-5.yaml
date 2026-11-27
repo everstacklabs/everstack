@@ -26,7 +26,7 @@ modalities:
   output: ["text"]
 
 knowledge_cutoff: "2025-07-31"
-notes: "Balanced Claude model for coding, analysis, agent workflows, and cost control"
+notes: "Deprecated by Anthropic on 2026-09-30; retires 2026-11-30. Migrate to claude-sonnet-5-5."
 parameters:
   - key: "max_output_tokens"
     display_name: "Max output tokens"

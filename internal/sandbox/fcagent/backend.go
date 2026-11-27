@@ -84,6 +84,11 @@ type Config struct {
 	// TLS enables mTLS between the gateway and agents. When all three paths
 	// are empty, plain (insecure) gRPC is used.
 	TLS TLSConfig
+
+	// AuthToken is the shared secret presented to agents as a bearer
+	// token on every RPC. Falls back to
+	// EVS_SANDBOX_FIRECRACKER_AGENT_AUTH_TOKEN when empty.
+	AuthToken string
 }
 
 // TLSConfig holds paths to client cert/key and server CA for mTLS.
@@ -143,7 +148,8 @@ func New(cfg Config) (*FCAgentBackend, error) {
 		cfg.DialTimeout = 5 * time.Second
 	}
 
-	dialOpts, err := buildDialOptions(cfg.TLS)
+	cfg.AuthToken = resolveAuthToken(cfg.AuthToken)
+	dialOpts, err := buildDialOptions(cfg.TLS, cfg.AuthToken)
 	if err != nil {
 		return nil, fmt.Errorf("fcagent: tls: %w", err)
 	}
@@ -939,7 +945,7 @@ func instanceFromProto(p *fcpb.SandboxInstance, config sandbox.InstanceConfig) *
 //   - WithConnectParams: shorter initial backoff (250ms→5s) so a
 //     subchannel that goes TRANSIENT_FAILURE doesn't sit dark for the
 //     gRPC default 1s→120s window.
-func buildDialOptions(tlsCfg TLSConfig) ([]grpc.DialOption, error) {
+func buildDialOptions(tlsCfg TLSConfig, authToken string) ([]grpc.DialOption, error) {
 	common := []grpc.DialOption{
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time:                10 * time.Second,
@@ -956,6 +962,13 @@ func buildDialOptions(tlsCfg TLSConfig) ([]grpc.DialOption, error) {
 			},
 			MinConnectTimeout: 2 * time.Second,
 		}),
+	}
+
+	// Bearer token rides on every RPC regardless of transport: the agent
+	// authenticates the caller by token, mTLS (when configured) only
+	// authenticates the channel.
+	if authToken != "" {
+		common = append(common, grpc.WithPerRPCCredentials(bearerToken(authToken)))
 	}
 
 	if tlsCfg.ClientCert == "" && tlsCfg.ClientKey == "" && tlsCfg.ServerCA == "" {

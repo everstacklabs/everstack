@@ -1,7 +1,7 @@
 name: "qwen/qwen3-32b"
 display_name: "Qwen 3 32B (Groq)"
 family: "qwen"
-status: "stable"
+status: "deprecated"
 release_date: "2025-06-11"
 
 cost:
@@ -75,3 +75,4 @@ variants:
     description: "Default reasoning effort."
     parameters:
       reasoning_effort: "default"
+notes: "Shut down by Groq on 2026-07-17. Migrate to openai/gpt-oss-120b."

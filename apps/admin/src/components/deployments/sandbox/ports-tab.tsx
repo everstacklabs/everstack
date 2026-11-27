@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { replayBlock } from '@/lib/replay-privacy'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSandboxContext, SandboxSessionPicker } from './sandbox-context'
 import { Loader, toast } from '@everstack/ui/components'
@@ -135,19 +136,19 @@ function useUnexposePort(sessionId: string | undefined) {
 // ─── Status Helpers ─────────────────────────────────────────────────
 
 const STATUS_STYLES: Record<string, string> = {
-    active: 'bg-green-500/20 text-green-400 light:text-green-600 border-green-500/30',
-    listening: 'bg-green-500/20 text-green-400 light:text-green-600 border-green-500/30',
-    pending: 'bg-yellow-500/20 text-yellow-400 light:text-yellow-700 border-yellow-500/30',
+    active: 'bg-success-surface-strong text-success border-success-border',
+    listening: 'bg-success-surface-strong text-success border-success-border',
+    pending: 'bg-warning-surface-strong text-warning border-warning-border',
     closed: 'bg-gray-500/20 text-gray-400 light:text-gray-600 border-gray-500/30',
-    error: 'bg-red-500/20 text-red-400 light:text-red-600 border-red-500/30',
+    error: 'bg-danger-surface-strong text-danger border-danger-border',
 }
 
 const STATUS_DOT_COLORS: Record<string, string> = {
-    active: 'bg-green-400',
-    listening: 'bg-green-400',
-    pending: 'bg-yellow-400',
+    active: 'bg-success-solid',
+    listening: 'bg-success-solid',
+    pending: 'bg-warning-solid',
     closed: 'bg-gray-500',
-    error: 'bg-red-400',
+    error: 'bg-danger-solid',
 }
 
 function copyToClipboard(text: string) {
@@ -279,7 +280,7 @@ export function PortsTab() {
                         <Loader loaderText="Loading ports..." />
                     </div>
                 ) : error ? (
-                    <div className="flex items-center justify-center h-full text-red-400 light:text-red-600 text-sm">
+                    <div className="flex items-center justify-center h-full text-danger text-sm">
                         Error loading ports: {error.message}
                     </div>
                 ) : (
@@ -288,7 +289,7 @@ export function PortsTab() {
                         {unexposedDetected.length > 0 && (
                             <div>
                                 <div className="flex items-center gap-2 mb-2">
-                                    <Iconify.Icon icon="heroicons:signal" className="size-3.5 text-blue-400 light:text-blue-600" />
+                                    <Iconify.Icon icon="heroicons:signal" className="size-3.5 text-info" />
                                     <span className="text-xs text-white/50 light:text-black/50 uppercase font-medium">Detected Ports</span>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
@@ -298,14 +299,14 @@ export function PortsTab() {
                                             onClick={() => handleQuickExpose(dp.port)}
                                             disabled={exposeMutation.isPending}
                                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-brand-main-600 bg-brand-main-800/50 hover:bg-brand-main-700/50 hover:border-brand-secondary-500/40 transition-colors text-xs disabled:opacity-50"
-                                            title={`Expose port ${dp.port}${dp.process ? ` (${dp.process})` : ''}`}
+                                            title={`Expose port ${dp.port}`}
                                         >
                                             <span className="font-mono text-white/80 light:text-black/80">{dp.port}</span>
                                             {dp.process && (
                                                 <span className="text-white/40 light:text-black/40">({dp.process})</span>
                                             )}
                                             {isLocalhost(dp.address) && (
-                                                <span className="px-1 py-0 rounded text-[10px] bg-yellow-500/20 text-yellow-400 light:text-yellow-700 border border-yellow-500/30">
+                                                <span className="px-1 py-0 rounded text-[10px] bg-warning-surface-strong text-warning border border-warning-border">
                                                     localhost
                                                 </span>
                                             )}
@@ -338,7 +339,7 @@ export function PortsTab() {
                             <div>
                                 {unexposedDetected.length > 0 && (
                                     <div className="flex items-center gap-2 mb-2">
-                                        <Iconify.Icon icon="heroicons:globe-alt" className="size-3.5 text-green-400 light:text-green-600" />
+                                        <Iconify.Icon icon="heroicons:globe-alt" className="size-3.5 text-success" />
                                         <span className="text-xs text-white/50 light:text-black/50 uppercase font-medium">Exposed Ports</span>
                                     </div>
                                 )}
@@ -366,7 +367,6 @@ export function PortsTab() {
                                                         <div className="flex items-center gap-2 min-w-0">
                                                             <span
                                                                 className="font-mono text-xs text-brand-secondary-400 truncate max-w-[280px]"
-                                                                title={p.url}
                                                             >
                                                                 {p.url}
                                                             </span>
@@ -378,6 +378,7 @@ export function PortsTab() {
                                                                 <Iconify.Icon icon="heroicons:clipboard-document" className="size-3.5" />
                                                             </button>
                                                             <a
+                                                                {...replayBlock}
                                                                 href={p.url}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
@@ -425,7 +426,7 @@ export function PortsTab() {
                                                     <button
                                                         onClick={() => handleUnexpose(p.port, p.protocol)}
                                                         disabled={unexposeMutation.isPending}
-                                                        className="p-1 rounded text-red-400 light:text-red-600 hover:text-red-300 light:hover:text-red-600 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                                        className="p-1 rounded text-danger hover:bg-danger-surface transition-colors disabled:opacity-50"
                                                         title="Close port"
                                                     >
                                                         <Iconify.Icon icon="heroicons:x-mark" className="size-4" />

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { replayMask } from '@/lib/replay-privacy'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
@@ -7,14 +8,7 @@ import { ui } from '@everstack/ui'
 import { Button } from '@everstack/ui/components'
 import { cn } from '@everstack/utils/functions/cn'
 import { ApiKeyType } from '@everstack/proto/everstack/api_key/v1/api_key_pb'
-import { InterfaceDensityCards } from '@/components/common/interface-density-cards'
-import { getApiBaseUrl } from '@/lib/api-url'
 import { isCloudManaged } from '@/lib/cloud-mode'
-import {
-  type InterfaceDensity,
-  persistInterfaceDensity,
-  readStoredInterfaceDensity,
-} from '@/lib/interface-density'
 import { AgentFormDialog } from '@/components/deployments/agents'
 import type { AgentDefinition } from '@/server/agents'
 import { ConfigureProviderSheet } from '@/components/providers'
@@ -24,6 +18,7 @@ import { useCreateSandbox } from '@/hooks/deployments/use-sandbox'
 import { AgentLifecycleMode, type CreateAgentParams } from '@/server/agents'
 import type { SandboxTemplate } from '@/server/sandbox'
 import {
+  resolveCurrentStep,
   useOnboarding,
   type OnboardingLaunchStep,
 } from '@/hooks/use-onboarding'
@@ -31,12 +26,32 @@ import {
   type OnboardingPath,
   useOnboardingStore,
 } from '@/stores/onboarding-store'
+import { InlineFirstRequest, type TestKey } from './first-request'
+import { MODEL_TRIAL_QUERY_KEY } from '@/hooks/billing/use-model-trial'
+import {
+  applyTrialRefusal,
+  applyTrialRemaining,
+  type ModelTrial,
+  type TrialUpdate,
+} from '@/lib/model-trial'
+import {
+  DEFAULT_KEY_PROVIDER,
+  quickstartModel,
+  type KeyProvider,
+} from '@/lib/first-request'
+import { BRAND_SANS, gatewayBase } from './shared'
+import {
+  buildSnippets,
+  KEY_PLACEHOLDER,
+  SNIPPET_TABS,
+  type LangSnippets,
+  type SnippetLang,
+} from './snippets'
 
 const {
   Tabs,
   TabsList,
   TabsTrigger,
-  TabsContent,
   CodeBlock,
   CodeBlockBody,
   CodeBlockContent,
@@ -44,10 +59,9 @@ const {
   CodeBlockItem,
 } = ui
 
-// Brand sans (Geist, loaded via the Google Fonts link in index.html), applied
-// scoped to onboarding. No monospace anywhere, per design direction.
-const BRAND_SANS =
-  '"Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif'
+// Shiki themes for the quickstart panel: a light grammar on the light theme
+// (the panel's brand-main-950 surface turns white there), mocha on dark.
+const CODE_THEMES = { light: 'github-light', dark: 'catppuccin-mocha' }
 
 type LaunchPathConfig = {
   id: OnboardingPath
@@ -102,30 +116,10 @@ const PROVIDERS = [
   { name: 'groq', label: 'Groq', icon: 'simple-icons:groq' },
 ]
 
-type LangKey = 'curl' | 'node' | 'go' | 'python'
-type LangSnippets = Record<LangKey, string>
-
-const CODE_TABS: { value: LangKey; label: string; language: string }[] = [
-  { value: 'curl', label: 'cURL', language: 'bash' },
-  { value: 'node', label: 'Node', language: 'typescript' },
-  { value: 'go', label: 'Go', language: 'go' },
-  { value: 'python', label: 'Python', language: 'python' },
-]
-
-function gatewayBase(): string {
-  try {
-    const b = getApiBaseUrl()
-    if (b) return b.replace(/\/$/, '')
-  } catch {
-    // fall through to origin
-  }
-  return typeof window !== 'undefined'
-    ? window.location.origin
-    : 'https://your-instance.everstack.ai'
-}
-
+// Model a starter agent is created with when the instance has no routable
+// model yet (agent creation sends no request, so a placeholder is harmless).
 function defaultModel(hasOpenAI: boolean): string {
-  return hasOpenAI ? '@openai/gpt-4o' : '@anthropic/claude-sonnet-4-20250514'
+  return hasOpenAI ? '@openai/gpt-5.4-mini' : '@anthropic/claude-haiku-4-5'
 }
 
 // One-click starter agents. Each pre-fills a coherent name + instructions so a
@@ -230,140 +224,6 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
   },
 ]
 
-// curl + the real Everstack SDKs (@everstack/node, everstack-go, everstack
-// python). The key is never inlined as plaintext: snippets keep the
-// <YOUR_KEY> placeholder and the real key lives in the click-to-reveal pill.
-// cURL authenticates with the x-evs-api-key header (the gateway looks for the
-// api-key header, not a Bearer token).
-function buildSnippets(
-  activePath: OnboardingPath,
-  firstAgentId: string | null,
-  hasOpenAI: boolean,
-): LangSnippets {
-  const base = gatewayBase()
-  const key = '<YOUR_KEY>'
-  const model = defaultModel(hasOpenAI)
-
-  if (activePath === 'gateway') {
-    return {
-      curl: `curl ${base}/v1/chat/completions \\
-  -H "x-evs-api-key: ${key}" \\
-  -H "Content-Type: application/json" \\
-  -d '{"model":"${model}","messages":[{"role":"user","content":"Say hello from Everstack"}]}'`,
-      node: `import Everstack from "@everstack/node"
-
-const client = new Everstack({
-  apiKey: "${key}",
-  baseUrl: "${base}",
-})
-
-const res = await client.chat.completions.create({
-  model: "${model}",
-  messages: [{ role: "user", content: "Say hello from Everstack" }],
-})
-
-console.log(res.choices[0].message.content)`,
-      go: `package main
-
-import (
-	"context"
-	"fmt"
-
-	everstack "github.com/everstacklabs/everstack-go"
-)
-
-func main() {
-	client := everstack.NewClient("${key}", everstack.WithBaseURL("${base}"))
-
-	res, err := client.Chat.Completions.Create(context.Background(), &everstack.ChatCompletionParams{
-		Model: "${model}",
-		Messages: []everstack.Message{
-			{Role: "user", Content: "Say hello from Everstack"},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(*res.Choices[0].Message.Content)
-}`,
-      python: `from everstack import Everstack
-
-client = Everstack(api_key="${key}", base_url="${base}")
-
-res = client.chat.completions.create(
-    model="${model}",
-    messages=[{"role": "user", "content": "Say hello from Everstack"}],
-)
-print(res.choices[0].message.content)`,
-    }
-  }
-
-  const agentId = firstAgentId ?? '<AGENT_ID>'
-  const agentUrl = `${base}/v1/deploy/${agentId}/invoke`
-  return {
-    curl: `curl -X POST ${agentUrl} \\
-  -H "x-evs-api-key: ${key}" \\
-  -H "Content-Type: application/json" \\
-  -d '{"message":"Say hello from Everstack"}'`,
-    node: `import Everstack from "@everstack/node"
-
-const client = new Everstack({
-  apiKey: "${key}",
-  baseUrl: "${base}",
-})
-
-const session = await client.agents.sessions.create({ agentId: "${agentId}" })
-
-const turn = await client.agents.sessions.runTurn({
-  sessionId: session.session.id,
-  input: "Say hello from Everstack",
-})
-
-console.log(turn.outputText)`,
-    go: `package main
-
-import (
-	"context"
-	"fmt"
-
-	everstack "github.com/everstacklabs/everstack-go"
-)
-
-func main() {
-	client := everstack.NewClient("${key}", everstack.WithBaseURL("${base}"))
-	ctx := context.Background()
-
-	session, err := client.Agents.Sessions.Create(ctx, map[string]any{
-		"agent_id": "${agentId}",
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	result, err := client.Agents.Sessions.RunTurn(ctx, session["id"].(string), map[string]any{
-		"message": "Say hello from Everstack",
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(result)
-}`,
-    python: `from everstack import Everstack
-
-client = Everstack(api_key="${key}", base_url="${base}")
-
-session = client.agents.sessions.create(agent_id="${agentId}")
-
-res = client.agents.sessions.send_message(
-    session_id=session["id"],
-    message="Say hello from Everstack",
-)
-print(res)`,
-  }
-}
-
 export function LaunchCenter() {
   const navigate = useNavigate()
   const {
@@ -374,6 +234,10 @@ export function LaunchCenter() {
     firstAgentId,
     firstAgent,
     hasOpenAI,
+    testModel,
+    modelLoading,
+    trial,
+    usingTrial,
   } = useOnboarding()
   const selectPath = useOnboardingStore((s) => s.selectPath)
   const clearPath = useOnboardingStore((s) => s.clearPath)
@@ -407,6 +271,11 @@ export function LaunchCenter() {
   // Cloud-managed instances run on app.everstack.ai already, so the
   // "Hosted Instance" path is irrelevant there: only Agent + Gateway show.
   const cloud = isCloudManaged()
+  // Cheap model on whichever provider is connected, shared by the gateway
+  // snippet and the in-console test request so both send the same thing.
+  // Null until something is routable: nothing guesses a model the instance
+  // cannot serve.
+  const gatewayModel = testModel?.model ?? null
 
   const skipForNow = () => {
     dismiss()
@@ -424,7 +293,7 @@ export function LaunchCenter() {
       <CompletionScreen
         activePath={activePath}
         firstAgentId={firstAgentId}
-        hasOpenAI={hasOpenAI}
+        gatewayModel={gatewayModel}
         steps={launchSteps}
         markDone={markCelebrationShown}
       />
@@ -452,6 +321,10 @@ export function LaunchCenter() {
       firstAgentId={firstAgentId}
       firstAgent={firstAgent}
       hasOpenAI={hasOpenAI}
+      gatewayModel={gatewayModel}
+      trial={trial ?? null}
+      usingTrial={usingTrial === true}
+      modelLoading={modelLoading === true}
       onChangePath={handleClearPath}
       onSkip={skipForNow}
     />
@@ -525,7 +398,7 @@ function PathChooser({
             </p>
           </div>
           <div className="text-[11px] text-brand-main-300">
-            everstack · self-hosted
+            everstack · {cloud ? 'cloud' : 'self-hosted'}
           </div>
         </div>
       }
@@ -591,6 +464,10 @@ function ConsoleWizard({
   firstAgentId,
   firstAgent,
   hasOpenAI,
+  gatewayModel,
+  trial = null,
+  usingTrial = false,
+  modelLoading = false,
   onChangePath,
   onSkip,
 }: {
@@ -599,6 +476,13 @@ function ConsoleWizard({
   firstAgentId: string | null
   firstAgent: AgentDefinition | null
   hasOpenAI: boolean
+  gatewayModel: string | null
+  // Free model requests, when the org has them (cloud only, else null).
+  trial?: ModelTrial | null
+  // True while the test request runs on the trial model (no key of its own).
+  usingTrial?: boolean
+  // The reads behind gatewayModel are still in flight.
+  modelLoading?: boolean
   onChangePath: () => void
   onSkip: () => void
 }) {
@@ -610,20 +494,30 @@ function ConsoleWizard({
   const [providerName, setProviderName] = useState<string | null>(null)
   const [agentDialogOpen, setAgentDialogOpen] = useState(false)
   const [editingAgent, setEditingAgent] = useState<AgentDefinition | null>(null)
-  const [testKey, setTestKey] = useState<string | null>(null)
+  const [testKey, setTestKey] = useState<TestKey | null>(null)
+  // The provider picked on the playground's add-key card. Until something
+  // routes, the snippet names the model a key for it would be enabled with.
+  const [keyProvider, setKeyProvider] =
+    useState<KeyProvider>(DEFAULT_KEY_PROVIDER)
 
   // A step pinned in the URL wins (deep-link / spine click); otherwise show the
   // first incomplete step so the flow still auto-advances.
-  const current =
-    steps.find((s) => s.id === search.obStep) ??
-    steps.find((s) => !s.complete) ??
-    steps[steps.length - 1]
+  const current = resolveCurrentStep(steps, search.obStep)
   const isTest = current?.id === 'test'
   const pathConfig =
     LAUNCH_PATHS.find((p) => p.id === activePath) ?? LAUNCH_PATHS[0]
+  // The real key is inlined only while it is held in memory from the API key
+  // step; after a reload the placeholder comes back.
   const snippets = useMemo(
-    () => buildSnippets(activePath, firstAgentId, hasOpenAI),
-    [activePath, firstAgentId, hasOpenAI],
+    () =>
+      buildSnippets({
+        path: activePath,
+        base: gatewayBase(),
+        model: quickstartModel(gatewayModel, keyProvider),
+        agentId: firstAgentId,
+        apiKey: testKey?.secret ?? null,
+      }),
+    [activePath, firstAgentId, gatewayModel, keyProvider, testKey],
   )
 
   // useInstanceHasData('logs') has staleTime: Infinity with all auto-refetch
@@ -656,6 +550,39 @@ function ConsoleWizard({
   const goToStep = (id: string) =>
     navigate({ to: '/', search: (prev) => ({ ...prev, obStep: id }) })
 
+  // What a send learned about the free requests. The header count is exact
+  // and only moves `remaining`. A refusal moves the local state to what the
+  // gateway just said (exhausted, expired, paused) so the playground agrees
+  // with its own card at once, then the server's view is re-read. Either
+  // can un-complete the provider step, so the current step is pinned first
+  // to keep the user on the playground instead of auto-advancing away.
+  const onTrialUpdate = (update: TrialUpdate) => {
+    if (update.kind === 'remaining') {
+      const old = queryClient.getQueryData<ModelTrial | null>(
+        MODEL_TRIAL_QUERY_KEY,
+      )
+      if (!old) return
+      const next = applyTrialRemaining(old, update.remaining)
+      // The last free request just went out: the state flips to used up,
+      // which un-completes the provider step, so pin the playground first.
+      if (next.state !== old.state && current && search.obStep !== current.id) {
+        goToStep(current.id)
+      }
+      queryClient.setQueryData<ModelTrial | null>(MODEL_TRIAL_QUERY_KEY, next)
+      if (next.state !== old.state) {
+        void queryClient.invalidateQueries({ queryKey: MODEL_TRIAL_QUERY_KEY })
+      }
+      return
+    }
+    if (current && search.obStep !== current.id) goToStep(current.id)
+    if (update.kind === 'refused') {
+      queryClient.setQueryData<ModelTrial | null>(MODEL_TRIAL_QUERY_KEY, (old) =>
+        old ? applyTrialRefusal(old, update.reason) : old,
+      )
+    }
+    void queryClient.invalidateQueries({ queryKey: MODEL_TRIAL_QUERY_KEY })
+  }
+
   // Advance to the next step in order (used by the sandbox Skip action).
   const goToNextStep = () => {
     const i = steps.findIndex((s) => s.id === current?.id)
@@ -677,7 +604,6 @@ function ConsoleWizard({
     // galleries and the StepNav "Open chat" finish button), so the spine
     // carries no inline action for them.
     if (
-      step.id === 'density' ||
       step.id === 'agent' ||
       step.id === 'sandbox' ||
       step.id === 'test'
@@ -751,11 +677,9 @@ function ConsoleWizard({
                 each step's content is built compact enough to fit it without
                 scrolling. */}
             <div className="flex min-h-[34rem] w-full flex-col justify-center">
-              {current?.id === 'density' ? (
-                <DensityGallery onChoose={goToNextStep} />
-              ) : current?.id === 'agent' ? (
+              {current?.id === 'agent' ? (
                 <AgentGallery
-                  hasOpenAI={hasOpenAI}
+                  model={gatewayModel ?? defaultModel(hasOpenAI)}
                   firstAgent={firstAgent}
                   onScratch={() => openAgentDialog(null)}
                   onPin={pinCurrent}
@@ -776,7 +700,14 @@ function ConsoleWizard({
                   snippets={snippets}
                   steps={steps}
                   mode={isTest ? 'listening' : 'waiting'}
-                  hasTestKey={!!testKey}
+                  keyState={testKey ? 'inlined' : 'placeholder'}
+                  providerLabel={
+                    usingTrial
+                      ? 'free requests active'
+                      : gatewayModel === null && !modelLoading
+                        ? 'waiting for a provider key'
+                        : undefined
+                  }
                   runner={
                     // The live in-UI request needs a resolvable tenant, which
                     // only cloud-managed instances provide; self-hosted falls
@@ -785,9 +716,16 @@ function ConsoleWizard({
                       <InlineFirstRequest
                         activePath={activePath}
                         firstAgentId={firstAgentId}
-                        hasOpenAI={hasOpenAI}
+                        agentModel={firstAgent?.model || undefined}
+                        model={gatewayModel}
                         testKey={testKey}
                         onKey={setTestKey}
+                        trial={trial}
+                        usingTrial={usingTrial}
+                        onTrialUpdate={onTrialUpdate}
+                        loading={modelLoading}
+                        keyProvider={keyProvider}
+                        onKeyProviderChange={setKeyProvider}
                       />
                     ) : null
                   }
@@ -913,29 +851,6 @@ function Spine({
   )
 }
 
-function DensityGallery({ onChoose }: { onChoose: () => void }) {
-  const [density, setDensity] = useState<InterfaceDensity | null>(() =>
-    readStoredInterfaceDensity(),
-  )
-
-  const chooseDensity = (value: InterfaceDensity) => {
-    persistInterfaceDensity(value)
-    setDensity(value)
-    onChoose()
-  }
-
-  return (
-    <GalleryShell
-      eyebrow="Step · layout"
-      title="Choose your layout density"
-      subtitle="Pick the default feel before you start. You can change this later in Settings."
-      bodyClassName="space-y-2"
-    >
-      <InterfaceDensityCards value={density} onChange={chooseDensity} />
-    </GalleryShell>
-  )
-}
-
 function ProviderQuickPick({
   onSelect,
 }: {
@@ -976,8 +891,8 @@ function ApiKeyAction({
   onKey,
   onPin,
 }: {
-  testKey: string | null
-  onKey: (key: string) => void
+  testKey: TestKey | null
+  onKey: (key: TestKey) => void
   onPin: () => void
 }) {
   const createApiKey = useCreateApiKey()
@@ -990,9 +905,10 @@ function ApiKeyAction({
         name: 'Onboarding key',
         type: ApiKeyType.USER,
       })
-      const key = res.apiKey?.hash
-      if (!key) throw new Error('No key was returned')
-      onKey(key)
+      const id = res.apiKey?.id
+      const secret = res.apiKey?.hash
+      if (!id || !secret) throw new Error('No key was returned')
+      onKey({ id, secret })
       onPin()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the key')
@@ -1000,7 +916,7 @@ function ApiKeyAction({
   }
 
   if (testKey) {
-    return <ApiKeyPill keyValue={testKey} />
+    return <ApiKeyPill keyValue={testKey.secret} />
   }
   return (
     <div className="space-y-2">
@@ -1020,7 +936,7 @@ function ApiKeyAction({
         Generate API key
       </Button>
       {error && (
-        <p className="text-[11px] text-red-300 light:text-red-600">{error}</p>
+        <p className="text-[11px] text-danger">{error}</p>
       )}
     </div>
   )
@@ -1063,6 +979,7 @@ function ApiKeyPill({ keyValue }: { keyValue: string }) {
           className="size-3.5 shrink-0 text-brand-secondary-300"
         />
         <span
+          {...replayMask}
           className={cn(
             'flex-1 text-xs text-brand-main-100',
             revealed && 'break-all',
@@ -1076,7 +993,7 @@ function ApiKeyPill({ keyValue }: { keyValue: string }) {
           className={cn(
             'size-3.5 shrink-0',
             copied
-              ? 'text-emerald-400 light:text-emerald-600'
+              ? 'text-success'
               : 'text-brand-main-300 group-hover:text-brand-main-100',
           )}
         />
@@ -1084,7 +1001,7 @@ function ApiKeyPill({ keyValue }: { keyValue: string }) {
       <p className="text-[11px] text-brand-main-300">
         {copied
           ? 'Copied to clipboard.'
-          : 'Click to reveal and copy, then paste it into the snippet.'}
+          : 'Click to reveal and copy. The snippet already includes it.'}
       </p>
     </div>
   )
@@ -1143,19 +1060,19 @@ function Chip({ children }: { children: ReactNode }) {
 // spawn duplicates). Reselect replaces the agent's config wholesale so switching
 // away from the Coder template correctly drops its sandbox.
 function AgentGallery({
-  hasOpenAI,
+  model,
   firstAgent,
   onScratch,
   onPin,
 }: {
-  hasOpenAI: boolean
+  // Gateway model reference the starter agents are created with.
+  model: string
   firstAgent: AgentDefinition | null
   onScratch: () => void
   onPin: () => void
 }) {
   const createAgent = useCreateAgent()
   const updateAgent = useUpdateAgent()
-  const model = defaultModel(hasOpenAI)
   const [createdId, setCreatedId] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [pendingId, setPendingId] = useState<string | null>(null)
@@ -1221,7 +1138,7 @@ function AgentGallery({
       }
     >
       {error && (
-        <div className="flex items-center gap-1.5 rounded border border-red-500/25 bg-red-500/10 px-3 py-2 text-[11px] text-red-200 light:text-red-700">
+        <div className="flex items-center gap-1.5 rounded border border-danger-border bg-danger-surface px-3 py-2 text-[11px] text-danger">
           <Iconify.Icon icon="lucide:triangle-alert" className="size-3.5" />
           {error}
         </div>
@@ -1462,13 +1379,13 @@ function SandboxGallery({
       bodyClassName="space-y-2"
     >
       {error && (
-        <div className="flex items-center gap-1.5 rounded border border-red-500/25 bg-red-500/10 px-3 py-2 text-[11px] text-red-200 light:text-red-700">
+        <div className="flex items-center gap-1.5 rounded border border-danger-border bg-danger-surface px-3 py-2 text-[11px] text-danger">
           <Iconify.Icon icon="lucide:triangle-alert" className="size-3.5" />
           {error}
         </div>
       )}
       {provisioned && !error && (
-        <div className="flex items-center gap-1.5 rounded border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-200 light:text-emerald-700">
+        <div className="flex items-center gap-1.5 rounded border border-success-border bg-success-surface px-3 py-2 text-[11px] text-success">
           <Iconify.Icon icon="lucide:check" className="size-3.5" />
           {cloud
             ? 'Sandbox provisioned and linked to your agent.'
@@ -1613,19 +1530,26 @@ function StepNav({
 
 type TerminalMode = 'waiting' | 'listening' | 'received'
 
+// Whether the snippets carry the real key (just generated, held in memory)
+// or the KEY_PLACEHOLDER stand-in.
+type KeyState = 'inlined' | 'placeholder'
+
 function ConsoleTerminal({
   activePath,
   snippets,
   steps,
   mode,
-  hasTestKey,
+  keyState = 'placeholder',
+  providerLabel,
   runner,
 }: {
   activePath: OnboardingPath
   snippets: LangSnippets
   steps: OnboardingLaunchStep[]
   mode: TerminalMode
-  hasTestKey?: boolean
+  keyState?: KeyState
+  // Overrides the provider line of the checklist (e.g. free requests).
+  providerLabel?: string
   runner?: ReactNode
 }) {
   return (
@@ -1647,7 +1571,7 @@ function ConsoleTerminal({
           <span className="ml-auto inline-flex items-center gap-1.5 rounded border border-brand-main-700 px-2 py-0.5 text-[10px] text-brand-main-200">
             {mode === 'received' ? (
               <>
-                <span className="size-1.5 rounded-full bg-emerald-400" />
+                <span className="size-1.5 rounded-full bg-success-solid" />
                 live
               </>
             ) : mode === 'listening' ? (
@@ -1664,90 +1588,91 @@ function ConsoleTerminal({
           </span>
         </div>
 
-        <div className="p-4">
-          <CodeHero snippets={snippets} />
+        <div className="space-y-2 p-4">
+          <CodeHero snippets={snippets} keyState={keyState} />
+          <p className="flex items-center gap-1.5 text-[11px] text-brand-main-300">
+            <Iconify.Icon
+              icon={keyState === 'inlined' ? 'lucide:shield-alert' : 'ph:key-bold'}
+              className="size-3 shrink-0"
+            />
+            {keyState === 'inlined'
+              ? 'This key is shown once. Store it somewhere safe.'
+              : `Replace ${KEY_PLACEHOLDER} with the key from the API key step.`}
+          </p>
         </div>
 
         <div className="space-y-3 border-t border-brand-main-800 bg-brand-main-900/40 px-4 py-3">
-          <TerminalOutput mode={mode} steps={steps} />
-          {runner}
+          <TerminalOutput mode={mode} steps={steps} providerLabel={providerLabel} />
+          {runner && (
+            <div className="border-t border-brand-main-800 pt-3">{runner}</div>
+          )}
         </div>
       </div>
-      <p className="mt-3 text-center text-[11px] text-brand-main-300">
-        {hasTestKey
-          ? 'Replace <YOUR_KEY> with the key from the API key step.'
-          : 'Replace <YOUR_KEY> with an API key once you generate one.'}
-      </p>
     </motion.div>
   )
 }
 
-function CodeHero({ snippets }: { snippets: LangSnippets }) {
-  return (
-    <Tabs defaultValue="curl">
-      <TabsList className="mb-3 inline-flex h-auto gap-1 rounded border border-brand-main-700 bg-brand-main-900/60 p-1">
-        {CODE_TABS.map((tab) => (
-          <TabsTrigger
-            key={tab.value}
-            value={tab.value}
-            className="rounded px-3 py-1 text-xs text-brand-main-200 transition-colors data-[state=active]:bg-brand-secondary-500/15 data-[state=active]:text-brand-secondary-200"
-          >
-            {tab.label}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-      {CODE_TABS.map((tab) => (
-        <TabsContent key={tab.value} value={tab.value} className="mt-0">
-          <CodeView code={snippets[tab.value]} language={tab.language} />
-        </TabsContent>
-      ))}
-    </Tabs>
-  )
-}
-
-function CodeView({ code, language }: { code: string; language: string }) {
-  const ext =
-    language === 'typescript'
-      ? 'ts'
-      : language === 'go'
-        ? 'go'
-        : language === 'bash'
-          ? 'sh'
-          : 'py'
-  const data = [{ language, filename: `example.${ext}`, code }]
+// CodeHero is the tabbed quickstart: one CodeBlock holding every language,
+// a tab strip plus copy button in its header, and the active snippet sized
+// to its content below (no fixed height, no sideways scrolling).
+function CodeHero({
+  snippets,
+  keyState,
+}: {
+  snippets: LangSnippets
+  keyState: KeyState
+}) {
+  const [lang, setLang] = useState<SnippetLang>('curl')
+  const data = SNIPPET_TABS.map((tab) => ({
+    language: tab.value,
+    filename: tab.filename,
+    code: snippets[tab.value],
+  }))
+  const grammar = (value: string) =>
+    SNIPPET_TABS.find((t) => t.value === value)?.language ?? 'plaintext'
   return (
     <CodeBlock
       data={data}
-      defaultValue={language}
+      value={lang}
+      onValueChange={(v) => setLang(v as SnippetLang)}
       className="rounded border-brand-main-800 bg-brand-main-950"
     >
+      <div className="flex items-center justify-between gap-2 border-b border-brand-main-800 px-2 py-1.5">
+        <Tabs value={lang} onValueChange={(v) => setLang(v as SnippetLang)}>
+          <TabsList className="inline-flex h-auto gap-0.5 rounded bg-transparent p-0">
+            {SNIPPET_TABS.map((tab) => (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="rounded px-2.5 py-1 text-xs text-brand-main-300 transition-colors hover:text-brand-main-100 data-[state=active]:bg-brand-secondary-500/15 data-[state=active]:text-brand-secondary-200 data-[state=active]:shadow-none"
+              >
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        <CodeBlockCopyButton
+          aria-label="Copy snippet"
+          className="size-7 text-brand-main-300 hover:text-brand-main-50"
+        />
+      </div>
       <CodeBlockBody>
         {(item) => (
           <CodeBlockItem
             key={item.language}
             value={item.language}
-            className="relative"
+            lineNumbers={false}
+            // Session replay masks the panel while the real key is in it.
+            {...(keyState === 'inlined' ? replayMask : {})}
+            className="max-h-[26rem] overflow-y-auto text-[13px] leading-6 scrollbar-macos [&_.line]:min-h-6 [&_.line]:whitespace-pre-wrap [&_.line]:[overflow-wrap:anywhere] [&_pre]:py-3"
           >
-            {/* Fixed height with a dark fill: every language tab is the exact
-                same height. The horizontal scrollbar lives on THIS box (pinned
-                at the panel's bottom edge) rather than the inner <code>, which
-                otherwise only revealed it after scrolling to the last line.
-                Overriding the component's [&_code]:overflow-x-auto lets long
-                lines overflow into this scroller instead. */}
-            <div
-              className="h-[24rem] overflow-auto bg-brand-main-950 scrollbar-macos"
-              style={{ fontFamily: BRAND_SANS }}
+            <CodeBlockContent
+              language={grammar(item.language)}
+              themes={CODE_THEMES}
+              className="!bg-transparent [&_.shiki]:!bg-transparent [&_pre]:!bg-transparent"
             >
-              <CodeBlockContent
-                language={language}
-                className="!bg-brand-main-950 [&_.shiki]:!bg-transparent [&_pre]:!bg-transparent [&_code]:!overflow-x-visible"
-              >
-                {item.code}
-              </CodeBlockContent>
-            </div>
-            <div className="absolute right-2 top-2">
-              <CodeBlockCopyButton />
-            </div>
+              {item.code}
+            </CodeBlockContent>
           </CodeBlockItem>
         )}
       </CodeBlockBody>
@@ -1758,13 +1683,15 @@ function CodeView({ code, language }: { code: string; language: string }) {
 function TerminalOutput({
   mode,
   steps,
+  providerLabel,
 }: {
   mode: TerminalMode
   steps: OnboardingLaunchStep[]
+  providerLabel?: string
 }) {
   const prereqs = steps.filter((s) => s.id !== 'test')
   const prereqLabel = (id: string, fallback: string) => {
-    if (id === 'provider') return 'provider connected'
+    if (id === 'provider') return providerLabel ?? 'provider connected'
     if (id === 'api-key') return 'api key generated'
     if (id === 'agent') return 'agent created'
     if (id === 'sandbox') return 'sandbox provisioned'
@@ -1779,7 +1706,7 @@ function TerminalOutput({
             className={cn(
               'size-3.5',
               step.complete
-                ? 'text-emerald-400 light:text-emerald-600'
+                ? 'text-success'
                 : 'text-brand-main-400',
             )}
           />
@@ -1797,9 +1724,9 @@ function TerminalOutput({
           <>
             <Iconify.Icon
               icon="lucide:check"
-              className="size-3.5 text-emerald-400 light:text-emerald-600"
+              className="size-3.5 text-success"
             />
-            <span className="text-emerald-300 light:text-emerald-600">
+            <span className="text-success">
               first request received
             </span>
           </>
@@ -1820,203 +1747,6 @@ function TerminalOutput({
           </>
         )}
       </div>
-    </div>
-  )
-}
-
-// ─── In-UI first request ────────────────────────────────────────────
-
-type ChatTurn = { role: 'user' | 'assistant' | 'error'; content: string }
-
-// InlineFirstRequest lets the user send a real message to their new agent (or
-// the gateway) straight from the console and watch the reply land, instead of
-// copying a snippet elsewhere. It generates a one-time test key on first send,
-// then reuses it. The gateway path sends the running transcript so it feels
-// like a conversation; the agent invoke path sends the latest message.
-function InlineFirstRequest({
-  activePath,
-  firstAgentId,
-  hasOpenAI,
-  testKey,
-  onKey,
-}: {
-  activePath: OnboardingPath
-  firstAgentId: string | null
-  hasOpenAI: boolean
-  testKey: string | null
-  onKey: (key: string) => void
-}) {
-  const createApiKey = useCreateApiKey()
-  const [turns, setTurns] = useState<ChatTurn[]>([])
-  const [draft, setDraft] = useState('Say hello from Everstack')
-  const [sending, setSending] = useState(false)
-
-  const send = async () => {
-    const text = draft.trim()
-    if (!text || sending) return
-    setSending(true)
-    const history = turns.filter((t) => t.role !== 'error')
-    setTurns((prev) => [...prev, { role: 'user', content: text }])
-    setDraft('')
-    try {
-      let key = testKey
-      if (!key) {
-        const res = await createApiKey.mutateAsync({
-          name: 'Onboarding key',
-          type: ApiKeyType.USER,
-        })
-        key = res.apiKey?.hash ?? null
-        if (key) onKey(key)
-      }
-      if (!key) throw new Error('Could not generate a test key')
-
-      const base = gatewayBase()
-      const url =
-        activePath === 'gateway'
-          ? `${base}/v1/chat/completions`
-          : `${base}/v1/deploy/${firstAgentId ?? ''}/invoke`
-      const body =
-        activePath === 'gateway'
-          ? {
-              model: defaultModel(hasOpenAI),
-              messages: [
-                ...history.map((t) => ({ role: t.role, content: t.content })),
-                { role: 'user', content: text },
-              ],
-            }
-          : { message: text }
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${key}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      })
-      const raw = await res.text()
-      if (!res.ok) {
-        setTurns((prev) => [
-          ...prev,
-          {
-            role: 'error',
-            content:
-              `${res.status} ${res.statusText} ${raw.slice(0, 200)}`.trim(),
-          },
-        ])
-        return
-      }
-      let content = raw
-      try {
-        const json = JSON.parse(raw)
-        content =
-          json?.choices?.[0]?.message?.content ??
-          json?.outputText ??
-          json?.message ??
-          JSON.stringify(json)
-      } catch {
-        // keep raw text
-      }
-      setTurns((prev) => [
-        ...prev,
-        { role: 'assistant', content: String(content).slice(0, 600) },
-      ])
-    } catch (err) {
-      setTurns((prev) => [
-        ...prev,
-        {
-          role: 'error',
-          content: err instanceof Error ? err.message : 'Request failed',
-        },
-      ])
-    } finally {
-      setSending(false)
-    }
-  }
-
-  return (
-    <div className="space-y-2.5 border-t border-brand-main-800 pt-3">
-      {turns.length > 0 && (
-        <div className="max-h-56 space-y-2 overflow-auto pr-1 scrollbar-macos">
-          {turns.map((turn, i) => (
-            <ChatBubble key={i} turn={turn} />
-          ))}
-          {sending && (
-            <div className="flex items-center gap-1.5 text-[11px] text-brand-main-300">
-              <Iconify.Icon
-                icon="lucide:loader-2"
-                className="size-3.5 animate-spin"
-              />
-              waiting for reply
-            </div>
-          )}
-        </div>
-      )}
-      <div className="flex items-end gap-2">
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              void send()
-            }
-          }}
-          rows={1}
-          placeholder={
-            activePath === 'gateway'
-              ? 'Send a message to the gateway'
-              : 'Send your agent a message'
-          }
-          className="min-h-9 flex-1 resize-none rounded border border-brand-main-700 bg-brand-main-900 px-3 py-2 text-xs text-brand-main-50 placeholder:text-brand-main-400 focus:border-brand-secondary-500/60 focus:outline-none"
-          style={{ fontFamily: BRAND_SANS }}
-        />
-        <Button
-          onClick={() => void send()}
-          disabled={sending || !draft.trim()}
-          className="gap-2"
-        >
-          {sending ? (
-            <Iconify.Icon
-              icon="lucide:loader-2"
-              className="size-4 animate-spin"
-            />
-          ) : (
-            <Iconify.Icon icon="lucide:send" className="size-4" />
-          )}
-          Send
-        </Button>
-      </div>
-      <p className="text-[11px] text-brand-main-300">
-        {testKey
-          ? 'Sends a real request with your test key.'
-          : 'Generates a one-time test key and sends a real request from here.'}
-      </p>
-    </div>
-  )
-}
-
-function ChatBubble({ turn }: { turn: ChatTurn }) {
-  if (turn.role === 'user') {
-    return (
-      <div className="ml-auto max-w-[85%] rounded border border-brand-secondary-500/30 bg-brand-secondary-500/10 px-3 py-1.5 text-[11px] leading-5 text-brand-secondary-100">
-        {turn.content}
-      </div>
-    )
-  }
-  if (turn.role === 'error') {
-    return (
-      <div className="max-w-[85%] rounded border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-[11px] leading-5 text-red-200 light:text-red-700">
-        <span className="mr-1 inline-flex items-center align-[-2px]">
-          <Iconify.Icon icon="lucide:triangle-alert" className="size-3.5" />
-        </span>
-        {turn.content}
-      </div>
-    )
-  }
-  return (
-    <div className="max-w-[85%] rounded border border-brand-main-700 bg-brand-main-900 px-3 py-1.5 text-[11px] leading-5 text-brand-main-100">
-      <p className="whitespace-pre-wrap break-words">{turn.content}</p>
     </div>
   )
 }
@@ -2103,20 +1833,28 @@ function HostedInstanceScreen({
 function CompletionScreen({
   activePath,
   firstAgentId,
-  hasOpenAI,
+  gatewayModel,
   steps,
   markDone,
 }: {
   activePath: OnboardingPath
   firstAgentId: string | null
-  hasOpenAI: boolean
+  gatewayModel: string | null
   steps: OnboardingLaunchStep[]
   markDone: () => void
 }) {
   const navigate = useNavigate()
+  // No key in memory here (the secret is only shown once, on the wizard), so
+  // the snippets carry the placeholder.
   const snippets = useMemo(
-    () => buildSnippets(activePath, firstAgentId, hasOpenAI),
-    [activePath, firstAgentId, hasOpenAI],
+    () =>
+      buildSnippets({
+        path: activePath,
+        base: gatewayBase(),
+        model: quickstartModel(gatewayModel),
+        agentId: firstAgentId,
+      }),
+    [activePath, firstAgentId, gatewayModel],
   )
 
   const goResult = () => {

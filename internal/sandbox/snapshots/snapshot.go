@@ -29,25 +29,25 @@ const (
 
 // Snapshot is a named, reusable sandbox environment template.
 type Snapshot struct {
-	ID             string     `db:"id"              json:"id"`
-	TenantID       string     `db:"tenant_id"       json:"tenant_id"`
-	Name           string     `db:"name"            json:"name"`
-	State          string     `db:"state"           json:"state"`
-	BaseImage      string     `db:"base_image"      json:"base_image"`
-	FromSandboxID  *string    `db:"from_sandbox_id" json:"from_sandbox_id,omitempty"`
-	Error          *string    `db:"error"           json:"error,omitempty"`
-	SizeBytes      int64      `db:"size_bytes"      json:"size_bytes"`
-	CreatedAt      time.Time  `db:"created_at"      json:"created_at"`
-	UpdatedAt      time.Time  `db:"updated_at"      json:"updated_at"`
-	LastUsedAt     *time.Time `db:"last_used_at"    json:"last_used_at,omitempty"`
+	ID            string     `db:"id"              json:"id"`
+	TenantID      string     `db:"tenant_id"       json:"tenant_id"`
+	Name          string     `db:"name"            json:"name"`
+	State         string     `db:"state"           json:"state"`
+	BaseImage     string     `db:"base_image"      json:"base_image"`
+	FromSandboxID *string    `db:"from_sandbox_id" json:"from_sandbox_id,omitempty"`
+	Error         *string    `db:"error"           json:"error,omitempty"`
+	SizeBytes     int64      `db:"size_bytes"      json:"size_bytes"`
+	CreatedAt     time.Time  `db:"created_at"      json:"created_at"`
+	UpdatedAt     time.Time  `db:"updated_at"      json:"updated_at"`
+	LastUsedAt    *time.Time `db:"last_used_at"    json:"last_used_at,omitempty"`
 }
 
 // CreateParams holds the fields needed to create a new snapshot.
 type CreateParams struct {
-	TenantID       string
-	Name           string
-	Image          string  // public OCI image ref (e.g. "node:18-slim")
-	FromSandboxID  string  // create from existing sandbox (optional)
+	TenantID      string
+	Name          string
+	Image         string // public OCI image ref (e.g. "node:18-slim")
+	FromSandboxID string // create from existing sandbox (optional)
 }
 
 // ErrNotFound is returned when a snapshot row doesn't exist.
@@ -55,6 +55,10 @@ var ErrNotFound = errors.New("snapshot not found")
 
 // ErrDuplicateName is returned when a tenant already has a snapshot with the given name.
 var ErrDuplicateName = errors.New("snapshot name already exists")
+
+// ErrSourceSandboxNotFound is returned when the requested source sandbox is
+// not present inside the snapshot tenant.
+var ErrSourceSandboxNotFound = errors.New("sandbox not found")
 
 // Repository is the DB layer for snapshots.
 type Repository struct {
@@ -82,15 +86,19 @@ func (r *Repository) Create(ctx context.Context, p CreateParams) (*Snapshot, err
 	var fromSandboxID *string
 	if p.FromSandboxID != "" {
 		fromSandboxID = &p.FromSandboxID
-		if baseImage == "" {
-			// Pull image from the sandbox row.
-			var img string
-			err := r.db.GetContext(ctx, &img,
-				`SELECT COALESCE(image, '') FROM sandbox_instances WHERE id = $1`,
-				p.FromSandboxID)
-			if err != nil {
-				return nil, fmt.Errorf("from_sandbox_id %q: %w", p.FromSandboxID, err)
+		// Validate the source in the caller's tenant even when an explicit
+		// image is also supplied.
+		var img string
+		err := r.db.GetContext(ctx, &img,
+			`SELECT COALESCE(image, '') FROM sandbox_instances WHERE id = $1 AND tenant_id = $2`,
+			p.FromSandboxID, p.TenantID)
+		if err != nil {
+			if isNotFound(err) {
+				return nil, ErrSourceSandboxNotFound
 			}
+			return nil, fmt.Errorf("from_sandbox_id %q: %w", p.FromSandboxID, err)
+		}
+		if baseImage == "" {
 			baseImage = img
 		}
 	}

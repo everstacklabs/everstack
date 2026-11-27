@@ -123,7 +123,7 @@ function SessionsPage() {
             width: 80,
             minWidth: 60,
             render: (s: any) => (
-                <span className={`text-xs ${s.errorCount > 0 ? 'text-red-400 light:text-red-600' : 'text-brand-main-100/50'}`}>
+                <span className={`text-xs ${s.errorCount > 0 ? 'text-danger' : 'text-brand-main-100/50'}`}>
                     {s.errorCount ?? 0}
                 </span>
             ),

@@ -48,6 +48,14 @@ func (s *Server) HandleCreateSnapshot(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
+	if body.FromSandboxID != "" {
+		inst := s.resolveSandboxByScope(r.Context(), body.FromSandboxID, scope)
+		if inst == nil {
+			writeJSONError(w, http.StatusNotFound, "sandbox not found")
+			return
+		}
+		body.FromSandboxID = inst.ID
+	}
 	snap, err := sandboxcp.NewSnapshotService(s.snapshotRepo).CreateSnapshot(r.Context(), sandboxcp.CreateSnapshotRequest{
 		Scope:         scope,
 		Name:          body.Name,
@@ -107,6 +115,8 @@ func writeSnapshotError(w http.ResponseWriter, err error) {
 		writeJSONError(w, http.StatusConflict, "a snapshot with this name already exists")
 	case errors.Is(err, snapshots.ErrNotFound):
 		writeJSONError(w, http.StatusNotFound, "snapshot not found")
+	case errors.Is(err, snapshots.ErrSourceSandboxNotFound):
+		writeJSONError(w, http.StatusNotFound, "sandbox not found")
 	default:
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 	}

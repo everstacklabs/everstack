@@ -7,6 +7,9 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+
+	"github.com/everstacklabs/everstack/internal/api/grpc/planlimit"
+	"github.com/everstacklabs/everstack/internal/enterprise"
 	eval_runner "github.com/everstacklabs/everstack/internal/services/eval_runner"
 	datasetspb "github.com/everstacklabs/everstack/pkg/grpc/everstack/datasets/v1"
 )
@@ -52,6 +55,22 @@ func (s *DatasetServer) GenerateRedTeamDataset(
 	if len(categories) == 0 {
 		categories = eval_runner.RedTeamAttackCategories()
 	}
+
+	// Red-team prompts are dataset items and count against DATASET_ITEMS.
+	var planned int64
+	for _, category := range categories {
+		n := len(eval_runner.RedTeamAttacksByCategory(category))
+		if limit := int(attacksPerCategory); limit < n {
+			n = limit
+		}
+		planned += int64(n)
+	}
+	limitSlot, limitErr := enterprise.ReserveLimitSlot(ctx, db, enterprise.LicenseMonitorFromContext(ctx),
+		enterprise.DatasetItemsLimit(tenantID, planned).Managed())
+	if limitErr != nil {
+		return nil, planlimit.ConnectError(limitErr, "dataset item")
+	}
+	defer limitSlot.Release()
 
 	tx, err := db.BeginTxx(ctx, nil)
 	if err != nil {
@@ -114,6 +133,7 @@ func (s *DatasetServer) GenerateRedTeamDataset(
 	if err := tx.Commit(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	limitSlot.Confirm(ctx)
 
 	return connect.NewResponse(&datasetspb.GenerateRedTeamDatasetResponse{
 		ItemsCreated:   itemsCreated,

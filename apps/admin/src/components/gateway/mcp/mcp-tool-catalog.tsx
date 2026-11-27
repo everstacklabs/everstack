@@ -63,7 +63,7 @@ export function McpToolCatalog() {
             width: 180,
             minWidth: 100,
             render: (tool: McpTool) => (
-                <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-blue-500/15 text-blue-300 light:text-blue-600">
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-info-surface-strong text-info">
                     {serverMap.get(tool.serverId) ?? tool.serverId}
                 </span>
             ),

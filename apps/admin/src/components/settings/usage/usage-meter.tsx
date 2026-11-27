@@ -18,11 +18,11 @@ export function UsageMeter({ label, value, max, description, showThresholds = tr
     let ringColor = 'ring-brand-secondary-500/20'
     if (!isUnlimited) {
         if (percentage >= 90) {
-            colorClass = 'bg-red-500'
-            ringColor = 'ring-red-500/20'
+            colorClass = 'bg-danger-solid'
+            ringColor = 'ring-danger-border'
         } else if (percentage >= 75) {
-            colorClass = 'bg-amber-500'
-            ringColor = 'ring-amber-500/20'
+            colorClass = 'bg-warning-solid'
+            ringColor = 'ring-warning-border'
         }
     }
 
@@ -77,21 +77,21 @@ export function UsageMeter({ label, value, max, description, showThresholds = tr
                     <>
                         {/* 75% warning threshold */}
                         <div
-                            className="absolute top-0 bottom-0 w-0.5 bg-amber-400/40"
+                            className="absolute top-0 bottom-0 w-0.5 bg-warning-solid/40"
                             style={{ left: '75%' }}
                         >
                             <div className="absolute -top-1 left-1/2 -translate-x-1/2">
-                                <Icon icon="lucide:alert-triangle" className="h-3 w-3 text-amber-400/60 light:text-amber-700/60" />
+                                <Icon icon="lucide:alert-triangle" className="h-3 w-3 text-warning/60" />
                             </div>
                         </div>
 
                         {/* 90% critical threshold */}
                         <div
-                            className="absolute top-0 bottom-0 w-0.5 bg-red-400/40"
+                            className="absolute top-0 bottom-0 w-0.5 bg-danger-solid/40"
                             style={{ left: '90%' }}
                         >
                             <div className="absolute -top-1 left-1/2 -translate-x-1/2">
-                                <Icon icon="lucide:alert-circle" className="h-3 w-3 text-red-400/60 light:text-red-600/60" />
+                                <Icon icon="lucide:alert-circle" className="h-3 w-3 text-danger/60" />
                             </div>
                         </div>
                     </>
@@ -107,13 +107,13 @@ export function UsageMeter({ label, value, max, description, showThresholds = tr
                     </div>
                     {percentage >= 60 && (
                         <div className="flex items-center gap-1.5">
-                            <div className="h-2 w-2 rounded-full bg-amber-500" />
+                            <div className="h-2 w-2 rounded-full bg-warning-solid" />
                             <span>75% warning</span>
                         </div>
                     )}
                     {percentage >= 75 && (
                         <div className="flex items-center gap-1.5">
-                            <div className="h-2 w-2 rounded-full bg-red-500" />
+                            <div className="h-2 w-2 rounded-full bg-danger-solid" />
                             <span>90% critical</span>
                         </div>
                     )}

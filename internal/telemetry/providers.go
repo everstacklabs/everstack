@@ -56,6 +56,11 @@ var defaultProviderMapping = &ProviderMapping{
 		"llama2-":   "meta",
 		"llama3-":   "meta",
 		"codellama-": "meta",
+		"muse-":      "meta",
+
+		// Tencent Hy (Hunyuan)
+		"hy3": "tencent",
+		"hy4": "tencent",
 
 		// Mistral
 		"mistral-":     "mistral",

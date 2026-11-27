@@ -1,0 +1,39 @@
+name: "glm-5.3-flashx-legal"
+display_name: "GLM-5.3-FlashX-Legal"
+family: "glm-flash-legal"
+status: "stable"
+release_date: "2026-11-02"
+
+cost:
+  input_per_1k: 0.00037
+  output_per_1k: 0.00125
+  cache_read_per_1k: 0.000075
+  cache_write_per_1k: 0
+
+limits:
+  max_tokens: 1000000
+  max_completion_tokens: 131072
+
+capabilities:
+  - chat
+  - function_calling
+  - vision
+  - reasoning
+
+modalities:
+  input: ["text","image","video","pdf"]
+  output: ["text"]
+notes: "GLM-5.3-FlashX tuned for legal workflows: legal research, contract review and document drafting"
+structured_output: true
+parameters:
+  - key: "max_output_tokens"
+    display_name: "Max output tokens"
+    type: "integer"
+    min_value: 1
+    has_min_value: true
+    max_value: 131072
+    has_max_value: true
+  - key: "temperature"
+    display_name: "Temperature"
+    type: "number"
+added_in_version: "2.12.0"

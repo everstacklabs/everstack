@@ -64,8 +64,8 @@ export function TaskTypeEditor({ variant }: { variant: PlaygroundVariant }) {
                         />
                     </div>
                 </div>
-                <div className="flex items-center gap-2 rounded-lg border border-dashed border-sky-400/30 px-3 py-2 text-[11px] text-white/40 light:text-black/40">
-                    <Globe className="h-4 w-4 shrink-0 text-sky-300/70" />
+                <div className="flex items-center gap-2 rounded-lg border border-dashed border-info-border px-3 py-2 text-[11px] text-white/40 light:text-black/40">
+                    <Globe className="h-4 w-4 shrink-0 text-info/70" />
                     Remote task execution needs a backend proxy before it can safely run auth headers and avoid CORS.
                 </div>
             </div>
@@ -112,8 +112,8 @@ function WorkflowTaskEditor({ variant }: { variant: PlaygroundVariant }) {
                     </SelectContent>
                 </Select>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-dashed border-amber-300/35 px-3 py-2.5 text-[11px] text-white/40 light:text-black/40">
-                <WorkflowIcon className="h-4 w-4 shrink-0 text-amber-300/70" />
+            <div className="flex items-center gap-2 rounded-lg border border-dashed border-warning-border px-3 py-2.5 text-[11px] text-white/40 light:text-black/40">
+                <WorkflowIcon className="h-4 w-4 shrink-0 text-warning/70" />
                 Runs the selected backend workflow once per sample input or dataset row.
             </div>
         </div>

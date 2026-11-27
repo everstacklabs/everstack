@@ -8,6 +8,7 @@ server:
     external_domain: "localhost"
     enforce_external_domain: false # Set to true in production to reject requests not matching external_domain
     external_secure: false
+    shutdown_drain_timeout: "10s" # in-flight HTTP drain budget after SIGTERM
     public_host_headers:
       - "x-forwarded-host"
     instance_host_headers:

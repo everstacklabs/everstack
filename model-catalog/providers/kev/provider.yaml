@@ -1,0 +1,16 @@
+# Verified 2026-09-29: https://github.com/jaredpalmer/kev
+name: "kev"
+display_name: "Kev (self-hosted)"
+base_url: ""
+provider_type: "static"
+supports_model_discovery: false
+auth:
+  type: "api_key"
+  header_name: "Authorization"
+  header_format: "Bearer {api_key}"
+  env_var: "KEV_API_KEY"
+capabilities:
+  chat: false
+  embeddings: false
+  streaming: false
+  decisions: true

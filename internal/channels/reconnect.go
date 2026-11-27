@@ -3,6 +3,7 @@ package channels
 import (
 	"context"
 	"math"
+	"sync"
 	"time"
 
 	"github.com/everstacklabs/everstack/internal/lib/logger"
@@ -15,7 +16,22 @@ type ReconnectingConnector struct {
 	factory func() (Connector, error) // re-creates the connector on reconnect
 	config  ReconnectConfig
 
+	// mu guards inner and status: Start swaps inner on reconnect while Stop
+	// (e.g. the tenant-pause sweep) and Send run on other goroutines.
+	mu     sync.RWMutex
 	status ConnectorStatus
+}
+
+func (rc *ReconnectingConnector) setStatus(status ConnectorStatus) {
+	rc.mu.Lock()
+	rc.status = status
+	rc.mu.Unlock()
+}
+
+func (rc *ReconnectingConnector) current() Connector {
+	rc.mu.RLock()
+	defer rc.mu.RUnlock()
+	return rc.inner
 }
 
 // ReconnectConfig configures reconnection behavior.
@@ -66,20 +82,20 @@ func (rc *ReconnectingConnector) Start(ctx context.Context) error {
 	delay := rc.config.InitialDelay
 
 	for {
-		rc.status = StatusConnecting
+		rc.setStatus(StatusConnecting)
 
 		startedAt := time.Now()
-		err := rc.inner.Start(ctx)
+		err := rc.current().Start(ctx)
 		uptime := time.Since(startedAt)
 
 		// Check if context was cancelled (graceful shutdown)
 		if ctx.Err() != nil {
-			rc.status = StatusDisconnected
+			rc.setStatus(StatusDisconnected)
 			return ctx.Err()
 		}
 
 		// Connection dropped
-		rc.status = StatusError
+		rc.setStatus(StatusError)
 
 		// If the connection was stable (ran for a meaningful duration),
 		// reset backoff — this was a real disconnect, not a startup failure.
@@ -102,7 +118,7 @@ func (rc *ReconnectingConnector) Start(ctx context.Context) error {
 		// Wait with exponential backoff
 		select {
 		case <-ctx.Done():
-			rc.status = StatusDisconnected
+			rc.setStatus(StatusDisconnected)
 			return ctx.Err()
 		case <-time.After(delay):
 		}
@@ -120,34 +136,36 @@ func (rc *ReconnectingConnector) Start(ctx context.Context) error {
 				logger.WithError(err).Warn("channels: failed to recreate connector")
 				continue
 			}
+			rc.mu.Lock()
 			rc.inner = newConn
+			rc.mu.Unlock()
 		}
 	}
 }
 
 func (rc *ReconnectingConnector) Stop(ctx context.Context) error {
-	rc.status = StatusDisconnected
-	return rc.inner.Stop(ctx)
+	rc.setStatus(StatusDisconnected)
+	return rc.current().Stop(ctx)
 }
 
 func (rc *ReconnectingConnector) Send(ctx context.Context, channelRef string, threadRef string, msg OutboundMessage) (string, error) {
-	return rc.inner.Send(ctx, channelRef, threadRef, msg)
+	return rc.current().Send(ctx, channelRef, threadRef, msg)
 }
 
 func (rc *ReconnectingConnector) SendTyping(ctx context.Context, channelRef string) error {
-	return rc.inner.SendTyping(ctx, channelRef)
+	return rc.current().SendTyping(ctx, channelRef)
 }
 
 func (rc *ReconnectingConnector) EditMessage(ctx context.Context, channelRef string, messageRef string, msg OutboundMessage) error {
-	return rc.inner.EditMessage(ctx, channelRef, messageRef, msg)
+	return rc.current().EditMessage(ctx, channelRef, messageRef, msg)
 }
 
 func (rc *ReconnectingConnector) Status() ConnectorStatus {
-	return rc.inner.Status()
+	return rc.current().Status()
 }
 
 func (rc *ReconnectingConnector) Platform() Platform {
-	return rc.inner.Platform()
+	return rc.current().Platform()
 }
 
 // backoffDelay calculates the backoff delay for a given attempt.

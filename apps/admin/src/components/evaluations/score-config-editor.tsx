@@ -638,7 +638,7 @@ export function ScoreConfigEditorPage({ configId }: { configId?: string }) {
                 sub="Task and judgement nodes route by label; only a verdict leaf assigns the score — that is what makes the metric reproducible."
               >
                 {dagErrors.length > 0 && (
-                  <ul className="space-y-1 rounded border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-300 light:text-amber-700">
+                  <ul className="space-y-1 rounded border border-warning-border bg-warning-surface px-3 py-2 text-xs text-warning">
                     {dagErrors.map((e, i) => (
                       <li key={i}>{e}</li>
                     ))}
@@ -874,13 +874,13 @@ function ScorerTestPanel({
             </Button>
 
             {error && (
-              <div className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300 light:text-red-600">
+              <div className="rounded border border-danger-border bg-danger-surface px-3 py-2 text-xs text-danger">
                 {error}
               </div>
             )}
 
             {runErr && (
-              <div className="rounded border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-300 light:text-amber-700">
+              <div className="rounded border border-warning-border bg-warning-surface px-3 py-2 text-xs text-warning">
                 {runErr}
               </div>
             )}
@@ -891,7 +891,7 @@ function ScorerTestPanel({
                   <div className="flex items-center gap-3">
                     <span
                       className={`font-mono text-lg font-bold tabular-nums ${
-                        passes === false ? 'text-red-400' : 'text-emerald-400'
+                        passes === false ? 'text-danger' : 'text-success'
                       }`}
                     >
                       {hasScore ? scoreNum.toFixed(2) : '—'}
@@ -904,8 +904,8 @@ function ScorerTestPanel({
                     <span
                       className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                         passes
-                          ? 'bg-emerald-500/15 text-emerald-300 light:text-emerald-600'
-                          : 'bg-red-500/15 text-red-300 light:text-red-600'
+                          ? 'bg-success-surface-strong text-success'
+                          : 'bg-danger-surface-strong text-danger'
                       }`}
                     >
                       {passes ? 'PASS' : 'FAIL'} ≥ {passThreshold?.toFixed(2)}
@@ -936,7 +936,7 @@ function ScorerTestPanel({
                               key={c.choice}
                               className={`rounded border px-2 py-0.5 font-mono text-[10.5px] ${
                                 picked
-                                  ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300 light:text-emerald-600'
+                                  ? 'border-success-solid bg-success-surface text-success'
                                   : 'border-brand-main-700 text-white/45 light:border-brand-main-200 light:text-black/45'
                               }`}
                             >
@@ -1070,7 +1070,7 @@ function MessagesEditor({
               <button
                 type="button"
                 onClick={() => remove(i)}
-                className="text-white/35 hover:text-red-400 light:text-black/35"
+                className="text-white/35 hover:text-danger light:text-black/35"
                 aria-label="Remove message"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -1164,7 +1164,7 @@ function ChoiceScoresTable({
               <button
                 type="button"
                 onClick={() => remove(i)}
-                className="w-6 text-white/35 hover:text-red-400 light:text-black/35"
+                className="w-6 text-white/35 hover:text-danger light:text-black/35"
                 aria-label="Remove choice"
               >
                 <Trash2 className="h-3.5 w-3.5" />

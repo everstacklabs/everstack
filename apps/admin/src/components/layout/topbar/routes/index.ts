@@ -47,6 +47,7 @@ import {
   GatewayConfigActions,
   GatewayMcpGatewayActions,
   GatewayA2aActions,
+  GatewayBotsActions,
 } from './gateway'
 import {
   DeploymentsFunctionsActions,
@@ -106,6 +107,7 @@ export const routeActions: RouteActions = {
     '/config': GatewayConfigActions,
     '/mcp': GatewayMcpGatewayActions,
     '/a2a': GatewayA2aActions,
+    '/bots': GatewayBotsActions,
   },
   '/evaluations': {
     '': EvaluationsHomeActions,
